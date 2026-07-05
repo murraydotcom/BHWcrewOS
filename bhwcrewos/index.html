@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>BHWcrewOS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f7f5f2; --card:#fff; --ink:#2A3038; --ink-soft:#6B665E; --navy:#162433;
+  --blue:#80abbd; --clay:#b07a55; --sage:#a8b59a; --sand:#dcc8b1; --gold:#fab219; --teal:#5FA9A6;
+  --line:#e8e2d8; --ok:#4c8f6e; --warn:#c07a1f; --alert:#b0503c;
+  --pc-primary:#80abbd; --pc-charmed:#fab219; --pc-mind:#8e7cc3; --pc-porter:#8a6d5c; --pc-chronic:#b07a55; --pc-flow:#5FA9A6; --pc-admin:#162433;
+  --radius:14px; --shadow:0 2px 10px rgba(22,36,51,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+body{font-family:'Montserrat',sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.55}
+button{font-family:inherit;cursor:pointer}
+select,input,textarea{font-family:inherit;font-size:15px}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px;border-radius:6px}
+
+/* ---- Login ---- */
+#login{position:fixed;inset:0;background:var(--navy);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
+.login-card{background:var(--card);border-radius:var(--radius);padding:38px 32px;max-width:400px;width:100%}
+.login-card .mark{font-weight:800;letter-spacing:.14em;font-size:12px;color:var(--clay);text-transform:uppercase;text-align:center}
+.login-card h1{font-size:26px;font-weight:800;text-align:center;margin:6px 0 2px}
+.login-card h1 .os{color:var(--gold)}
+.login-card p{color:var(--ink-soft);font-size:13px;text-align:center;margin-bottom:20px}
+.login-card label{display:block;font-size:12px;font-weight:700;color:var(--ink-soft);margin:12px 0 5px;text-transform:uppercase;letter-spacing:.08em}
+.login-card select,.login-card input{width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:10px;background:#fff}
+.login-card input{text-align:center;letter-spacing:.25em;font-size:18px}
+.login-card button{width:100%;margin-top:18px;padding:14px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:15px}
+.login-err{color:var(--alert);font-size:13px;min-height:18px;margin-top:10px;text-align:center}
+
+/* ---- Shell ---- */
+#app{display:none}
+header.top{background:var(--navy);color:#fff;padding:0 20px}
+.top-inner{max-width:1240px;margin:0 auto;display:flex;align-items:center;gap:14px;height:60px}
+.wordmark{font-weight:800;font-size:17px;white-space:nowrap}
+.wordmark .os{color:var(--gold)}
+.whoami{font-size:12px;color:#9fb0c0;border-left:1px solid #33465c;padding-left:14px}
+.top-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.btn-ghost{background:transparent;border:1px solid #33465c;color:#dfe7ee;padding:7px 13px;border-radius:9px;font-size:12.5px;font-weight:600}
+.btn-ghost:hover{border-color:var(--blue);color:#fff}
+.gold-rule{height:3px;background:linear-gradient(90deg,var(--gold) 0 170px,var(--line) 170px 100%)}
+main{max-width:1240px;margin:0 auto;padding:24px 20px 90px;display:grid;grid-template-columns:230px 1fr;gap:24px}
+
+nav.rail{position:sticky;top:20px;align-self:start;display:flex;flex-direction:column;gap:5px}
+.rail-label{font-size:10.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);padding:10px 12px 4px}
+.tab{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:transparent;border:none;padding:12px;border-radius:10px;font-size:14px;font-weight:600;color:var(--ink)}
+.tab .spine{width:4px;height:22px;border-radius:3px;background:var(--spine,var(--line));flex:none}
+.tab:hover{background:#efeae2}
+.tab.active{background:var(--card);box-shadow:var(--shadow)}
+.tab .badge{margin-left:auto;font-size:11px;font-weight:800;color:#fff;background:var(--alert);border-radius:20px;padding:2px 8px;min-width:22px;text-align:center}
+.tab .badge:empty{display:none}
+
+/* ---- Cards ---- */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:20px}
+.kpi{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:15px 17px;border-top:3px solid var(--kc,var(--line));text-align:left;border-left:none;border-right:none;border-bottom:none;cursor:default}
+.kpi .n{font-size:25px;font-weight:800;line-height:1.1}
+.kpi .l{font-size:12px;color:var(--ink-soft);font-weight:600;margin-top:2px}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:19px 21px;margin-bottom:18px}
+.card h2{font-size:15.5px;font-weight:700;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.card h2 .grow{flex:1}
+.card .lede{font-size:12.5px;color:var(--ink-soft);margin:5px 0 13px}
+.prog-head{display:flex;gap:13px;margin-bottom:16px}
+.prog-head .bar{width:6px;border-radius:4px;background:var(--pc)}
+.prog-head h1{font-size:21px;font-weight:800}
+.prog-head p{font-size:13px;color:var(--ink-soft)}
+.btn{background:var(--navy);color:#fff;border:none;border-radius:9px;padding:9px 15px;font-weight:700;font-size:13px}
+.btn.sec{background:#efeae2;color:var(--ink)}
+.btn.sm{padding:6px 11px;font-size:12px}
+.btn.warn{background:var(--clay)}
+.btn:disabled{opacity:.5;cursor:default}
+
+/* ---- Inbox cards ---- */
+.inbox{display:flex;flex-direction:column;gap:10px}
+.hcard{border:1.5px solid var(--line);border-left:5px solid var(--alert);border-radius:11px;padding:13px 15px;display:flex;flex-direction:column;gap:7px}
+.hcard.ack{border-left-color:var(--warn)}
+.hcard.sched{border-left-color:var(--blue)}
+.hcard .h-top{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.hcard b{font-size:14px}
+.hcard .meta{font-size:12px;color:var(--ink-soft)}
+.hcard .sum{font-size:13px;background:#fbf9f6;border-radius:8px;padding:9px 11px}
+.hcard .acts{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ---- Tables ---- */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:620px}
+th{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-soft);text-align:left;padding:9px 10px;border-bottom:1.5px solid var(--line);font-weight:700}
+td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:hover td{background:#fbf9f6}
+.pill{display:inline-block;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.pill.ok{background:#e4efe8;color:var(--ok)}.pill.warn{background:#f8ecd8;color:var(--warn)}
+.pill.alert{background:#f5e1dc;color:var(--alert)}.pill.info{background:#e5edf1;color:#3d6a80}
+.pill.gray{background:#efeae2;color:var(--ink-soft)}
+
+/* ---- Forms / modal ---- */
+#modal{position:fixed;inset:0;background:rgba(22,36,51,.55);display:none;align-items:flex-start;justify-content:center;z-index:90;padding:22px;overflow-y:auto}
+#modal.open{display:flex}
+.mcard{background:#fff;border-radius:var(--radius);padding:24px;max-width:520px;width:100%;margin-top:4vh}
+.mcard h3{font-size:17px;font-weight:800;margin-bottom:4px}
+.mcard .msub{font-size:12.5px;color:var(--ink-soft);margin-bottom:14px}
+.f label{display:block;font-size:11.5px;font-weight:700;color:var(--ink-soft);margin:11px 0 4px;text-transform:uppercase;letter-spacing:.07em}
+.f select,.f input,.f textarea{width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:9px;background:#fff}
+.f textarea{min-height:84px;resize:vertical}
+.f .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.macts{display:flex;gap:10px;margin-top:18px;justify-content:flex-end}
+.ferr{color:var(--alert);font-size:12.5px;min-height:17px;margin-top:8px}
+.needs{display:flex;gap:7px;flex-wrap:wrap;margin-top:2px}
+.chip{border:1.5px solid var(--line);border-radius:20px;padding:6px 13px;font-size:12.5px;font-weight:600;background:#fff}
+.chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:12px 20px;border-radius:11px;font-weight:600;font-size:13.5px;display:none;z-index:95;max-width:92vw}
+.empty{color:var(--ink-soft);font-size:13px;padding:8px 2px}
+.view{display:none}.view.active{display:block}
+@media (max-width:900px){
+  main{grid-template-columns:1fr;padding:16px 13px 80px}
+  nav.rail{position:static;flex-direction:row;overflow-x:auto;gap:8px;padding-bottom:6px;-webkit-overflow-scrolling:touch}
+  .rail-label{display:none}
+  .tab{flex:none;background:var(--card);box-shadow:var(--shadow);padding:10px 13px}
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .whoami{display:none}
+}
+</style>
+</head>
+<body>
+
+<div id="login">
+  <div class="login-card">
+    <div class="mark">BHW Medical Group</div>
+    <h1>BHWcrew<span class="os">OS</span></h1>
+    <p>Internal operations. Sign in with your name and PIN.</p>
+    <label for="loginStaff">I am</label>
+    <select id="loginStaff"><option value="">Loading team…</option></select>
+    <label for="loginPin">PIN</label>
+    <input id="loginPin" type="password" inputmode="numeric" autocomplete="off" placeholder="••••">
+    <button onclick="doLogin()">Sign in</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<div id="app">
+<header class="top"><div class="top-inner">
+  <div class="wordmark">BHWcrew<span class="os">OS</span></div>
+  <div class="whoami" id="whoami"></div>
+  <div class="top-right">
+    <button class="btn-ghost" onclick="refresh()">Refresh</button>
+    <button class="btn-ghost" onclick="logout()">Sign out</button>
+  </div>
+</div></header>
+<div class="gold-rule"></div>
+<main>
+  <nav class="rail" id="rail" aria-label="Pages"></nav>
+  <div id="views"></div>
+</main>
+</div>
+
+<div id="modal" role="dialog" aria-modal="true"><div class="mcard" id="mcard"></div></div>
+<div id="toast" role="status"></div>
+
+<script>
+/* ============ BHWcrewOS front end ============ */
+const API_AUTH = "/.netlify/functions/auth";
+const API_DATA = "/.netlify/functions/ops-data";
+const API_ACT  = "/.netlify/functions/action";
+
+const DIV_COLORS = {
+  "Primary Care":"var(--pc-primary)", "CharmEd Minds":"var(--pc-charmed)",
+  "Mind & Mood Recovery":"var(--pc-mind)", "The Porter House":"var(--pc-porter)",
+  "Chronic Care":"var(--pc-chronic)", "Flow":"var(--pc-flow)", "Admin Master":"var(--pc-admin)"
+};
+const DIV_BLURBS = {
+  "Primary Care":"Panel care, referrals out, and warm handoffs across BHW.",
+  "CharmEd Minds":"Lifespan cognition and brain health — confidence through cognition and education.",
+  "Mind & Mood Recovery":"Behavioral health and the Pathway to the Sunrise program.",
+  "The Porter House":"Behavioral health transition housing — 2nd floor residents and coordination.",
+  "Chronic Care":"APCM, CCM, RPM, BHI, CoCM, and care coordination.",
+  "Flow":"Vascular stabilization referral pathway (Room 4).",
+  "Admin Master":"Whole-circle view: every division, every referral, the full schedule."
+};
+const SERVICES = ["Individual Therapy","Counseling","Med Management","Family Therapy","Group","Flow — Vascular Stabilization","CharmEd Session","Pediatric Visit","Sensory/Family Exam","Primary Care Visit","AWV/Physical","GYN","Intake","Biopsychosocial","Warm Handoff Meeting","1:1 Coordination","Case Mgmt Meeting","Staff Meeting","Training","Workshop","Cohort Session","Event","Nutrition Education","Admin Block"];
+const PROGRAMS = ["APCM","CCM","RPM","BHI","CoCM","Care Coordination"];
+const ACTIVITIES = ["Phone call","Care plan","Coordination","Device review","Chart review","Outreach"];
+const NEEDS = ["Consultation","Biopsychosocial","Intake","Med Eval"];
+const DEVICES = ["BP cuff","Pulse ox","Glucometer","Scale"];
+
+let TOKEN = sessionStorage.getItem("crewos_token") || "";
+let D = null; // data payload
+
+/* ---------- helpers ---------- */
+const esc = s => String(s??"").replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.style.display="block"; setTimeout(()=>t.style.display="none", 2600); }
+function pill(text, cls){ return `<span class="pill ${cls}">${esc(text)}</span>`; }
+function statusPill(s){
+  const map={"Sent":"warn","Received":"info","In Progress":"warn","Completed":"ok","Declined/Redirect":"alert","New":"alert","Acknowledged":"warn","Scheduled":"info","Cancelled":"alert","Urgent":"alert","Routine":"gray"};
+  return pill(s, map[s]||"gray");
+}
+const patLabel = id => (D && D.patientLabel[id]) || "—";
+const staffLabel = id => (D && D.staffName[id]) || "—";
+
+async function api(url, body){
+  const res = await fetch(url, {
+    method: body ? "POST" : "GET",
+    headers: { "Content-Type":"application/json", ...(TOKEN?{Authorization:`Bearer ${TOKEN}`}:{}) },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const data = await res.json().catch(()=>({error:"Server error"}));
+  if(res.status===401){ logout(); throw new Error("Signed out"); }
+  if(!res.ok) throw new Error(data.error||"Request failed");
+  return data;
+}
+
+/* ---------- login ---------- */
+async function loadRoster(){
+  try{
+    const {staff} = await api(API_AUTH+"", null) // never GET; fallthrough below
+  }catch{}
+}
+(async function initRoster(){
+  try{
+    const res = await fetch(API_AUTH,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"roster"})});
+    const data = await res.json();
+    const sel = document.getElementById("loginStaff");
+    sel.innerHTML = `<option value="">Select your name…</option>` +
+      (data.staff||[]).map(s=>`<option value="${s.id}">${esc(s.name)} — ${esc(s.role)}</option>`).join("");
+  }catch{ document.getElementById("loginErr").textContent = "Couldn't load the team list — check the connection."; }
+})();
+
+async function doLogin(){
+  const staffId = document.getElementById("loginStaff").value;
+  const pin = document.getElementById("loginPin").value.trim();
+  const err = document.getElementById("loginErr");
+  err.textContent = "";
+  try{
+    const res = await fetch(API_AUTH,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"login",staffId,pin})});
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error||"Sign-in failed");
+    TOKEN = data.token; sessionStorage.setItem("crewos_token",TOKEN);
+    document.getElementById("login").style.display="none";
+    document.getElementById("app").style.display="block";
+    await refresh();
+  }catch(e){ err.textContent = e.message; }
+}
+document.getElementById("loginPin").addEventListener("keydown",e=>{ if(e.key==="Enter") doLogin(); });
+function logout(){ TOKEN=""; sessionStorage.removeItem("crewos_token"); location.reload(); }
+
+/* ---------- data + render ---------- */
+async function refresh(){
+  D = await api(API_DATA);
+  document.getElementById("whoami").textContent = `${D.user.name} · ${D.user.access}`;
+  buildRail();
+  buildViews();
+  const start = document.querySelector(`.tab[data-view="${cssId(D.user.landing)}"]`) || document.querySelector(".tab");
+  activate(start.dataset.view);
+}
+const cssId = s => s.toLowerCase().replace(/[^a-z0-9]+/g,"-");
+
+function counts(div){
+  const rIn = D.referrals.filter(r=>r.to===div && r.status!=="Completed" && r.status!=="Declined/Redirect").length;
+  const hIn = D.handoffs.filter(h=>h.to===div && h.status!=="Completed").length;
+  return {rIn,hIn};
+}
+
+function buildRail(){
+  const rail = document.getElementById("rail");
+  let html = `<div class="rail-label">My pages</div>`;
+  const pages = [];
+  if(D.user.access==="Admin") pages.push("Admin Master");
+  for(const div of D.visibleDivisions) pages.push(div);
+  for(const p of pages){
+    const c = p==="Admin Master" ? {rIn:D.referrals.filter(r=>!["Completed","Declined/Redirect"].includes(r.status)).length, hIn:D.handoffs.filter(h=>h.status!=="Completed").length} : counts(p);
+    const badge = (c.rIn + c.hIn) || "";
+    html += `<button class="tab" data-view="${cssId(p)}" style="--spine:${DIV_COLORS[p]}">${esc(p)}<span class="badge">${badge}</span></button>`;
+  }
+  html += `<div class="rail-label">Tools</div>`;
+  html += `<button class="tab" data-view="myspace" style="--spine:var(--gold)">My Space</button>`;
+  rail.innerHTML = html;
+  rail.onclick = e => { const b=e.target.closest(".tab"); if(b) activate(b.dataset.view); };
+}
+
+function activate(viewId){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.view===viewId));
+  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id==="view-"+viewId));
+  window.scrollTo({top:0});
+}
+
+function buildViews(){
+  const host = document.getElementById("views");
+  let html = "";
+  if(D.user.access==="Admin") html += adminView();
+  for(const div of D.visibleDivisions) html += divisionView(div);
+  html += mySpaceView();
+  host.innerHTML = html;
+}
+
+/* ---------- division page ---------- */
+function divisionView(div){
+  const id = cssId(div);
+  const c = counts(div);
+  const inbox = D.handoffs.filter(h=>h.to===div && h.status!=="Completed");
+  const queue = D.referrals.filter(r=>r.to===div && !["Completed","Declined/Redirect"].includes(r.status));
+  const sent = D.referrals.filter(r=>r.from===div).slice(-12).reverse();
+  const todayStr = new Date().toISOString().slice(0,10);
+  const sched = D.schedule.filter(b=>b.division===div && b.status==="Scheduled" && b.date>=todayStr).slice(0,10);
+  const isPorter = div==="The Porter House";
+
+  return `<section class="view" id="view-${id}" style="--pc:${DIV_COLORS[div]}">
+    <div class="prog-head"><div class="bar"></div><div><h1>${esc(div)}</h1><p>${DIV_BLURBS[div]||""}</p></div></div>
+    <div class="kpis">
+      <div class="kpi" style="--kc:var(--alert)"><div class="n">${c.rIn}</div><div class="l">Incoming referrals open</div></div>
+      <div class="kpi" style="--kc:var(--warn)"><div class="n">${c.hIn}</div><div class="l">Warm handoffs in inbox</div></div>
+      <div class="kpi" style="--kc:${DIV_COLORS[div]}"><div class="n">${sent.filter(r=>r.status!=="Completed").length}</div><div class="l">Referrals we sent, pending</div></div>
+      <div class="kpi" style="--kc:var(--sage)"><div class="n">${sched.length}</div><div class="l">Upcoming bookings</div></div>
+    </div>
+
+    <div class="card">
+      <h2>Warm handoff inbox <span class="grow"></span><button class="btn sm" onclick="openHandoffForm('${esc(div)}')">+ New warm handoff</button></h2>
+      <p class="lede">Handoffs stay on this page until completed — nothing disappears unacknowledged.</p>
+      <div class="inbox">${inbox.length ? inbox.map(handoffCard).join("") : `<div class="empty">No open handoffs. New ones from other divisions land here.</div>`}</div>
+    </div>
+
+    <div class="card">
+      <h2>Incoming referral queue <span class="grow"></span><button class="btn sm" onclick="openReferralForm('${esc(div)}')">+ New referral</button></h2>
+      <div class="tbl-wrap"><table><thead><tr><th>Patient</th><th>From</th><th>Type</th><th>Details</th><th>Status</th><th>Action</th></tr></thead><tbody>
+      ${queue.length ? queue.map(r=>`<tr>
+        <td><b>${esc(patLabel(r.patient))}</b>${r.priority==="Urgent"?" "+statusPill("Urgent"):""}</td>
+        <td>${esc(r.from)}</td><td>${esc(r.type)}${r.device?` · ${esc(r.device)}`:""}</td>
+        <td style="max-width:260px">${esc(r.details)}</td><td>${statusPill(r.status)}</td>
+        <td>${referralActions(r)}</td></tr>`).join("")
+      : `<tr><td colspan="6" class="empty">Queue is clear.</td></tr>`}
+      </tbody></table></div>
+    </div>
+
+    <div class="card">
+      <h2>Referrals we sent</h2>
+      <div class="tbl-wrap"><table><thead><tr><th>Patient</th><th>To</th><th>Type</th><th>Status</th><th>Confirmation</th></tr></thead><tbody>
+      ${sent.length ? sent.map(r=>`<tr><td><b>${esc(patLabel(r.patient))}</b></td><td>${esc(r.to)}</td><td>${esc(r.type)}</td><td>${statusPill(r.status)}</td><td style="max-width:280px">${esc(r.completionNote)}</td></tr>`).join("") : `<tr><td colspan="5" class="empty">Nothing sent yet.</td></tr>`}
+      </tbody></table></div>
+    </div>
+
+    ${isPorter && D.porterhouse ? porterCensus() : ""}
+
+    <div class="card">
+      <h2>Upcoming schedule — ${esc(div)}</h2>
+      <div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Time</th><th>Service</th><th>Room</th><th>Staff</th></tr></thead><tbody>
+      ${sched.length ? sched.map(b=>`<tr><td>${esc(b.date)}</td><td>${esc(b.start)}–${esc(b.end)}</td><td>${esc(b.service)}</td><td>${esc(roomName(b.room))}</td><td>${b.staff.map(staffLabel).map(esc).join(", ")}</td></tr>`).join("") : `<tr><td colspan="5" class="empty">No upcoming bookings for this division.</td></tr>`}
+      </tbody></table></div>
+    </div>
+  </section>`;
+}
+
+function roomName(id){ const r=(D.rooms||[]).find(r=>r.id===id); return r?r.name:"—"; }
+
+function handoffCard(h){
+  const cls = h.status==="Acknowledged"?"ack":(h.status==="Scheduled"?"sched":"");
+  return `<div class="hcard ${cls}">
+    <div class="h-top"><b>${esc(patLabel(h.patient))}</b><span class="meta">from ${esc(h.from)} · ${esc(staffLabel(h.fromStaff))}</span>${statusPill(h.status)}${h.needs.map(n=>pill(n,"info")).join(" ")}</div>
+    <div class="sum">${esc(h.summary)}</div>
+    <div class="meta">${h.scheduledDate?`First visit: ${esc(h.scheduledDate)}`:"No visit scheduled yet"}</div>
+    <div class="acts">
+      ${h.status==="New"?`<button class="btn sm" onclick="act({action:'handoff-status',id:'${h.id}',status:'Acknowledged'},'Acknowledged')">Acknowledge</button>`:""}
+      ${h.status!=="Completed"?`<button class="btn sm sec" onclick="promptSchedule('${h.id}')">Set visit date</button>
+      <button class="btn sm sec" onclick="act({action:'handoff-status',id:'${h.id}',status:'Completed'},'Handoff completed')">Complete</button>`:""}
+    </div></div>`;
+}
+
+function referralActions(r){
+  if(r.status==="Sent") return `<button class="btn sm" onclick="act({action:'referral-status',id:'${r.id}',status:'Received'},'Marked received')">Receive</button>`;
+  if(r.status==="Received") return `<button class="btn sm sec" onclick="act({action:'referral-status',id:'${r.id}',status:'In Progress'},'In progress')">Start</button> <button class="btn sm" onclick="promptComplete('${r.id}')">Complete</button>`;
+  if(r.status==="In Progress") return `<button class="btn sm" onclick="promptComplete('${r.id}')">Complete</button>`;
+  return "";
+}
+
+function porterCensus(){
+  return `<div class="card"><h2>Resident census — The Porter House</h2>
+  <div class="tbl-wrap"><table><thead><tr><th>Resident</th><th>PH ID</th><th>Unit</th><th>Also receives</th><th>Status</th></tr></thead><tbody>
+  ${D.porterhouse.length ? D.porterhouse.map(r=>`<tr><td><b>${esc(r.resident)}</b></td><td>${esc(r.phId)}</td><td>${esc(r.unit)}</td><td>${r.alsoReceives.map(a=>pill(a,"info")).join(" ")||"—"}</td><td>${statusPill(r.status)}</td></tr>`).join("") : `<tr><td colspan="5" class="empty">No residents entered yet.</td></tr>`}
+  </tbody></table></div></div>`;
+}
+
+/* ---------- admin master ---------- */
+function adminView(){
+  const openR = D.referrals.filter(r=>!["Completed","Declined/Redirect"].includes(r.status));
+  const openH = D.handoffs.filter(h=>h.status!=="Completed");
+  const todayStr = new Date().toISOString().slice(0,10);
+  const upcoming = D.schedule.filter(b=>b.status==="Scheduled" && b.date>=todayStr).slice(0,20);
+  const aging = openR.map(r=>({...r, days: r.sentDate? Math.floor((Date.now()-new Date(r.sentDate))/86400000):0})).sort((a,b)=>b.days-a.days);
+  const rollup = D.adminRollup||{};
+  const divs = ["Primary Care","CharmEd Minds","Mind & Mood Recovery","The Porter House","Chronic Care","Flow"];
+  return `<section class="view" id="view-admin-master" style="--pc:var(--pc-admin)">
+    <div class="prog-head"><div class="bar"></div><div><h1>Admin Master</h1><p>${DIV_BLURBS["Admin Master"]}</p></div></div>
+    <div class="kpis">
+      <div class="kpi" style="--kc:var(--alert)"><div class="n">${openR.length}</div><div class="l">Open referrals · all divisions</div></div>
+      <div class="kpi" style="--kc:var(--warn)"><div class="n">${openH.length}</div><div class="l">Open warm handoffs</div></div>
+      <div class="kpi" style="--kc:var(--sage)"><div class="n">${upcoming.length}</div><div class="l">Upcoming bookings</div></div>
+      <div class="kpi" style="--kc:var(--gold)"><div class="n">${Object.values(rollup).reduce((a,b)=>a+b,0)}</div><div class="l">Care mgmt minutes · this month</div></div>
+    </div>
+    <div class="card"><h2>Division pulse</h2>
+      <div class="tbl-wrap"><table><thead><tr><th>Division</th><th>Referrals in queue</th><th>Handoffs open</th></tr></thead><tbody>
+      ${divs.map(d=>{const c=counts(d);return `<tr><td><b>${esc(d)}</b></td><td>${c.rIn?pill(c.rIn,"alert"):"0"}</td><td>${c.hIn?pill(c.hIn,"warn"):"0"}</td></tr>`}).join("")}
+      </tbody></table></div></div>
+    <div class="card"><h2>Referral aging <span class="grow"></span><button class="btn sm" onclick="openReferralForm('')">+ New referral</button></h2>
+      <div class="tbl-wrap"><table><thead><tr><th>Days</th><th>Patient</th><th>From → To</th><th>Type</th><th>Status</th></tr></thead><tbody>
+      ${aging.slice(0,15).map(r=>`<tr><td>${r.days>=5?pill(r.days+"d","alert"):r.days+"d"}</td><td><b>${esc(patLabel(r.patient))}</b></td><td>${esc(r.from)} → ${esc(r.to)}</td><td>${esc(r.type)}</td><td>${statusPill(r.status)}</td></tr>`).join("")||`<tr><td colspan="5" class="empty">All clear.</td></tr>`}
+      </tbody></table></div></div>
+    <div class="card"><h2>Full schedule <span class="grow"></span>${D.user.canSchedule?`<button class="btn sm" onclick="openBookingForm()">+ Book a room</button>`:""}</h2>
+      <div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Time</th><th>Service</th><th>Room</th><th>Division</th><th>Staff</th><th></th></tr></thead><tbody>
+      ${upcoming.map(b=>`<tr><td>${esc(b.date)}</td><td>${esc(b.start)}–${esc(b.end)}</td><td>${esc(b.service)}</td><td>${esc(roomName(b.room))}</td><td>${esc(b.division)}</td><td>${b.staff.map(staffLabel).map(esc).join(", ")}</td>
+      <td>${D.user.canSchedule?`<button class="btn sm sec" onclick="act({action:'booking-status',id:'${b.id}',status:'Cancelled'},'Cancelled')">Cancel</button>`:""}</td></tr>`).join("")||`<tr><td colspan="7" class="empty">Nothing booked yet.</td></tr>`}
+      </tbody></table></div></div>
+    <div class="card"><h2>Minutes rollup — this month</h2>
+      <div class="tbl-wrap"><table><thead><tr><th>Program</th><th>Minutes</th></tr></thead><tbody>
+      ${Object.keys(rollup).length?Object.entries(rollup).map(([p,m])=>`<tr><td><b>${esc(p)}</b></td><td>${m}</td></tr>`).join(""):`<tr><td colspan="2" class="empty">No minutes logged this month yet.</td></tr>`}
+      </tbody></table></div></div>
+  </section>`;
+}
+
+/* ---------- my space ---------- */
+function mySpaceView(){
+  const m = D.minutes;
+  const pending = m.mine.filter(x=>!x.inCharm);
+  return `<section class="view" id="view-myspace" style="--pc:var(--gold)">
+    <div class="prog-head"><div class="bar"></div><div><h1>My Space</h1><p>Your minutes, availability, and CharmHealth sync list.</p></div></div>
+    <div class="kpis">
+      <div class="kpi" style="--kc:var(--gold)"><div class="n">${m.monthTotal}</div><div class="l">My minutes · this month</div></div>
+      <div class="kpi" style="--kc:var(--alert)"><div class="n">${m.notInCharm}</div><div class="l">Entries not yet in CharmHealth</div></div>
+      <div class="kpi" style="--kc:var(--sage)"><div class="n">${m.mine.length}</div><div class="l">Total entries</div></div>
+      <div class="kpi" style="--kc:var(--blue)"><div class="n">${D.user.canSchedule?"Yes":"—"}</div><div class="l">Scheduling permission</div></div>
+    </div>
+    <div class="card"><h2>Log minutes <span class="grow"></span><button class="btn sm" onclick="openMinutesForm()">+ Log time</button> <button class="btn sm sec" onclick="openAvailabilityForm()">+ Submit availability</button>${D.user.canSchedule?` <button class="btn sm sec" onclick="openBookingForm()">+ Book a room</button>`:""}</h2>
+      <p class="lede">Log here first — then carry it into CharmHealth and tap "In Charm" so the sync list stays clean.</p>
+      <div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Program</th><th>Patient</th><th>Min</th><th>Activity</th><th>Charm</th></tr></thead><tbody>
+      ${m.mine.slice(-15).reverse().map(x=>`<tr><td>${esc(x.date)}</td><td>${esc(x.program)}</td><td>${esc(patLabel(x.patient))}</td><td><b>${x.minutes}</b></td><td>${esc(x.activity)}</td>
+        <td>${x.inCharm?pill("In Charm","ok"):`<button class="btn sm sec" onclick="act({action:'minutes-charm',id:'${x.id}'},'Marked in CharmHealth')">Mark</button>`}</td></tr>`).join("")||`<tr><td colspan="6" class="empty">No entries yet — tap Log time.</td></tr>`}
+      </tbody></table></div></div>
+  </section>`;
+}
+
+/* ---------- forms ---------- */
+function openModal(html){ document.getElementById("mcard").innerHTML=html; document.getElementById("modal").classList.add("open"); }
+function closeModal(){ document.getElementById("modal").classList.remove("open"); }
+document.getElementById("modal").addEventListener("click",e=>{ if(e.target.id==="modal") closeModal(); });
+
+function patientOptions(){ return D.patients.map(p=>`<option value="${p.id}">${esc(p.name)} — ${esc(p.bhwId)}</option>`).join(""); }
+function divisionOptions(list){ return list.map(d=>`<option>${esc(d)}</option>`).join(""); }
+
+function openReferralForm(from){
+  const froms = D.visibleDivisions;
+  openModal(`<h3>New referral</h3><div class="msub">Any division can refer to any division. The receiving team completes it here.</div>
+  <div class="f">
+    <label>Patient</label><select id="f-pat"><option value="">Select patient…</option>${patientOptions()}</select>
+    <div class="row"><div><label>From</label><select id="f-from">${divisionOptions(froms)}</select></div>
+    <div><label>To</label><select id="f-to">${divisionOptions(["Primary Care","CharmEd Minds","Mind & Mood Recovery","The Porter House","Chronic Care","Flow"])}</select></div></div>
+    <div class="row"><div><label>Type</label><select id="f-type"><option>Division Referral</option><option>SDH</option><option>Device Order</option><option>Flow Pathway</option><option>Lab/Imaging Follow-up</option><option>Other</option></select></div>
+    <div><label>Device (if device order)</label><select id="f-dev"><option value="">—</option>${DEVICES.map(d=>`<option>${d}</option>`).join("")}</select></div></div>
+    <label>Details — what's needed</label><textarea id="f-det"></textarea>
+    <label>Priority</label><select id="f-pri"><option>Routine</option><option>Urgent</option></select>
+    <div class="ferr" id="f-err"></div>
+    <div class="macts"><button class="btn sec" onclick="closeModal()">Cancel</button><button class="btn" onclick="submitReferral()">Send referral</button></div>
+  </div>`);
+  if(from) document.getElementById("f-from").value = from;
+}
+async function submitReferral(){
+  try{
+    await act({action:"referral-create", patientId:val("f-pat"), from:val("f-from"), to:val("f-to"), type:val("f-type"), device:val("f-dev"), details:val("f-det"), priority:val("f-pri")}, "Referral sent", true);
+    closeModal();
+  }catch(e){ document.getElementById("f-err").textContent = e.message; }
+}
+
+function openHandoffForm(from){
+  openModal(`<h3>New warm handoff</h3><div class="msub">Carries the summary across the division wall and lands in their inbox.</div>
+  <div class="f">
+    <label>Patient</label><select id="f-pat"><option value="">Select patient…</option>${patientOptions()}</select>
+    <div class="row"><div><label>From</label><select id="f-from">${divisionOptions(D.visibleDivisions)}</select></div>
+    <div><label>To</label><select id="f-to">${divisionOptions(["Primary Care","CharmEd Minds","Mind & Mood Recovery","The Porter House","Chronic Care","Flow"])}</select></div></div>
+    <label>Warm handoff summary — reason, context, what they need to know</label><textarea id="f-sum"></textarea>
+    <label>Needs</label><div class="needs" id="f-needs">${NEEDS.map(n=>`<button class="chip" type="button" onclick="this.classList.toggle('on')" data-n="${n}">${n}</button>`).join("")}</div>
+    <label>First visit date (if known)</label><input type="date" id="f-date">
+    <div class="ferr" id="f-err"></div>
+    <div class="macts"><button class="btn sec" onclick="closeModal()">Cancel</button><button class="btn" onclick="submitHandoff()">Send handoff</button></div>
+  </div>`);
+  if(from) document.getElementById("f-from").value = from;
+}
+async function submitHandoff(){
+  const needs=[...document.querySelectorAll("#f-needs .chip.on")].map(c=>c.dataset.n);
+  try{
+    await act({action:"handoff-create", patientId:val("f-pat"), from:val("f-from"), to:val("f-to"), summary:val("f-sum"), needs, scheduledDate:val("f-date")}, "Warm handoff sent", true);
+    closeModal();
+  }catch(e){ document.getElementById("f-err").textContent = e.message; }
+}
+
+function openMinutesForm(){
+  openModal(`<h3>Log minutes</h3><div class="msub">Logged here first; mark "In Charm" once documented in CharmHealth.</div>
+  <div class="f">
+    <div class="row"><div><label>Program</label><select id="f-prog">${PROGRAMS.map(p=>`<option>${p}</option>`).join("")}</select></div>
+    <div><label>Minutes</label><input type="number" id="f-min" min="1" max="480" inputmode="numeric"></div></div>
+    <label>Patient</label><select id="f-pat"><option value="">Select patient…</option>${patientOptions()}</select>
+    <div class="row"><div><label>Date</label><input type="date" id="f-date" value="${new Date().toISOString().slice(0,10)}"></div>
+    <div><label>Activity</label><select id="f-act">${ACTIVITIES.map(a=>`<option>${a}</option>`).join("")}</select></div></div>
+    <label>Brief note (full documentation goes in CharmHealth)</label><textarea id="f-note"></textarea>
+    <div class="ferr" id="f-err"></div>
+    <div class="macts"><button class="btn sec" onclick="closeModal()">Cancel</button><button class="btn" onclick="submitMinutes()">Log it</button></div>
+  </div>`);
+}
+async function submitMinutes(){
+  try{
+    await act({action:"minutes-log", program:val("f-prog"), minutes:val("f-min"), patientId:val("f-pat"), date:val("f-date"), activity:val("f-act"), note:val("f-note")}, "Minutes logged", true);
+    closeModal();
+  }catch(e){ document.getElementById("f-err").textContent = e.message; }
+}
+
+function openAvailabilityForm(){
+  openModal(`<h3>Submit availability</h3><div class="msub">Ops turns availability into room bookings.</div>
+  <div class="f">
+    <label>Date</label><input type="date" id="f-date">
+    <div class="row"><div><label>Start</label><input type="time" id="f-start"></div><div><label>End</label><input type="time" id="f-end"></div></div>
+    <label>Repeats</label><select id="f-rec"><option>One-time</option><option>Weekly</option><option>Biweekly</option></select>
+    <label>Notes</label><input type="text" id="f-note" placeholder="Prefer AM · telehealth only · etc.">
+    <div class="ferr" id="f-err"></div>
+    <div class="macts"><button class="btn sec" onclick="closeModal()">Cancel</button><button class="btn" onclick="submitAvailability()">Submit</button></div>
+  </div>`);
+}
+async function submitAvailability(){
+  try{
+    await act({action:"availability-submit", date:val("f-date"), start:val("f-start"), end:val("f-end"), recurring:val("f-rec"), notes:val("f-note")}, "Availability submitted", true);
+    closeModal();
+  }catch(e){ document.getElementById("f-err").textContent = e.message; }
+}
+
+function openBookingForm(){
+  openModal(`<h3>Book a room</h3><div class="msub">The room's allowed services are enforced — pick a room to filter services.</div>
+  <div class="f">
+    <label>Room</label><select id="f-room" onchange="filterServices()"><option value="">Select room…</option>${D.rooms.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join("")}</select>
+    <label>Service</label><select id="f-svc">${SERVICES.map(s=>`<option>${s}</option>`).join("")}</select>
+    <label>Staff (hold Ctrl/Cmd for multiple)</label><select id="f-staff" multiple size="4">${D.staff.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join("")}</select>
+    <div class="row"><div><label>Date</label><input type="date" id="f-date"></div><div><label>Division</label><select id="f-div">${divisionOptions(["Primary Care","CharmEd Minds","Mind & Mood Recovery","The Porter House","Chronic Care","Flow","Shared"])}</select></div></div>
+    <div class="row"><div><label>Start</label><input type="time" id="f-start"></div><div><label>End</label><input type="time" id="f-end"></div></div>
+    <label>Notes (no patient identifiers needed)</label><input type="text" id="f-note">
+    <div class="ferr" id="f-err"></div>
+    <div class="macts"><button class="btn sec" onclick="closeModal()">Cancel</button><button class="btn" onclick="submitBooking()">Book</button></div>
+  </div>`);
+}
+function filterServices(){
+  const roomId = val("f-room");
+  const room = D.rooms.find(r=>r.id===roomId);
+  const svc = document.getElementById("f-svc");
+  const list = room ? room.allowed : SERVICES;
+  svc.innerHTML = list.map(s=>`<option>${esc(s)}</option>`).join("");
+}
+async function submitBooking(){
+  const staffIds = [...document.getElementById("f-staff").selectedOptions].map(o=>o.value);
+  try{
+    await act({action:"booking-create", roomId:val("f-room"), service:val("f-svc"), staffIds, date:val("f-date"), start:val("f-start"), end:val("f-end"), division:val("f-div"), notes:val("f-note")}, "Booked", true);
+    closeModal();
+  }catch(e){ document.getElementById("f-err").textContent = e.message; }
+}
+
+function promptComplete(id){
+  const note = prompt("Completion note — what was done? (comes back to the sender)");
+  if(note===null) return;
+  act({action:"referral-status", id, status:"Completed", note}, "Referral completed");
+}
+function promptSchedule(id){
+  const d = prompt("First visit date (YYYY-MM-DD):");
+  if(!d) return;
+  act({action:"handoff-status", id, status:"Scheduled", scheduledDate:d}, "Visit date set");
+}
+
+const val = id => document.getElementById(id)?.value?.trim?.() ?? document.getElementById(id)?.value ?? "";
+
+async function act(body, okMsg, rethrow){
+  try{
+    await api(API_ACT, body);
+    toast(okMsg);
+    await refreshSoft();
+  }catch(e){
+    if(rethrow) throw e;
+    toast("⚠ " + e.message);
+  }
+}
+async function refreshSoft(){
+  const active = document.querySelector(".tab.active")?.dataset.view;
+  D = await api(API_DATA);
+  buildRail(); buildViews();
+  activate(active || cssId(D.user.landing));
+}
+
+/* ---------- boot ---------- */
+if(TOKEN){
+  document.getElementById("login").style.display="none";
+  document.getElementById("app").style.display="block";
+  refresh().catch(()=>logout());
+}
+</script>
+</body>
+</html>
