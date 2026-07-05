@@ -1,7 +1,0 @@
-{
-  "name": "bhwcrewos",
-  "private": true,
-  "dependencies": {
-    "@netlify/blobs": "^8.1.0"
-  }
-}
