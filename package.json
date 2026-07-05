@@ -1,7 +1,98 @@
-{
-  "name": "bhwcrewos",
-  "private": true,
-  "dependencies": {
-    "@netlify/blobs": "^8.1.0"
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>BHWcrewOS · PIN Setup</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--card:#fffdf9;--ink:#2e3d45;--soft:#7a7f78;--deep:#2f4551;--blue:#80abbd;--clay:#8f5c3d;--sand:#dcc8b1;--line:#e9e2d4;--ok:#6f8f6a;--alert:#a85846}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Montserrat',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
+background:radial-gradient(900px 600px at 20% 15%, rgba(128,171,189,.5), transparent 55%),linear-gradient(158deg,#3a5a68 0%,#2f4551 55%,#26383f 100%);color:var(--ink)}
+.card{background:var(--card);border-radius:22px;border:1px solid rgba(220,200,177,.7);padding:40px 34px;max-width:430px;width:100%;box-shadow:0 30px 80px -20px rgba(20,32,38,.5)}
+img.logo{display:block;width:70%;max-width:250px;margin:0 auto 12px}
+h1{font-size:22px;font-weight:300;text-align:center}
+h1 b{font-weight:800}
+h1::after{content:"";display:block;width:44px;height:2px;margin:9px auto 0;background:linear-gradient(120deg,#c68e63,#8f5c3d);border-radius:2px}
+p.sub{font-size:12.5px;color:var(--soft);text-align:center;margin:12px 0 8px}
+label{display:block;font-size:10px;font-weight:700;color:var(--soft);margin:15px 0 6px;text-transform:uppercase;letter-spacing:.22em}
+select,input{width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:12px;background:#fff;font-family:inherit;font-size:15px}
+select:focus,input:focus{border-color:var(--blue);outline:none}
+input.pin{text-align:center;letter-spacing:.3em;font-size:18px}
+button{width:100%;margin-top:22px;padding:15px;background:linear-gradient(120deg,#c68e63,#8f5c3d);color:#fff;border:none;border-radius:999px;font-weight:700;font-size:13px;letter-spacing:.12em;text-transform:uppercase;font-family:inherit;cursor:pointer}
+.msg{min-height:20px;margin-top:14px;font-size:13px;text-align:center;font-weight:600}
+.msg.ok{color:var(--ok)}.msg.err{color:var(--alert)}
+.done{margin-top:16px;font-size:12.5px;color:var(--soft)}
+.done b{color:var(--ink)}
+a.back{display:block;text-align:center;margin-top:18px;font-size:12px;color:var(--soft)}
+</style>
+</head>
+<body>
+<div class="card">
+  <img class="logo" src="assets/bhw-medical-logo.png" alt="BHW Medical">
+  <h1>PIN <b>Setup</b></h1>
+  <p class="sub">Admin only. Enter the setup key once, then set each person's PIN. Re-setting a name replaces their old PIN.</p>
+
+  <label>Setup key (SETUP_SECRET)</label>
+  <input id="secret" type="password" autocomplete="off" placeholder="Paste the setup key">
+
+  <label>Team member</label>
+  <select id="staff"><option value="">Loading team…</option></select>
+
+  <label>New PIN (4–8 digits)</label>
+  <input id="pin" class="pin" type="text" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="••••">
+
+  <button onclick="setPin()">Save PIN</button>
+  <div class="msg" id="msg"></div>
+  <div class="done" id="done"></div>
+  <a class="back" href="/">← Back to sign in</a>
+</div>
+
+<script>
+const API = "/.netlify/functions/auth";
+const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const saved = [];
+
+(async function loadRoster(){
+  const sel = document.getElementById("staff");
+  const msg = document.getElementById("msg");
+  try{
+    const res = await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"roster"})});
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error||`Server error ${res.status}`);
+    if(!data.staff||!data.staff.length) throw new Error("Connected, but no active staff in Staff & Roles.");
+    sel.innerHTML = `<option value="">Select team member…</option>` + data.staff.map(s=>`<option value="${s.id}">${esc(s.name)} — ${esc(s.role)}</option>`).join("");
+  }catch(e){
+    sel.innerHTML = `<option value="">Team list unavailable</option>`;
+    msg.className="msg err";
+    msg.textContent = e.message + " — check NOTION_TOKEN + Notion connection.";
   }
+})();
+
+async function setPin(){
+  const msg = document.getElementById("msg");
+  const secret = document.getElementById("secret").value.trim();
+  const staffSel = document.getElementById("staff");
+  const staffId = staffSel.value;
+  const name = staffSel.selectedOptions[0]?.textContent.split(" — ")[0] || "";
+  const pin = document.getElementById("pin").value.trim();
+  msg.className="msg"; msg.textContent="";
+  if(!secret){ msg.className="msg err"; msg.textContent="Enter the setup key."; return; }
+  if(!staffId){ msg.className="msg err"; msg.textContent="Pick a team member."; return; }
+  if(!/^\d{4,8}$/.test(pin)){ msg.className="msg err"; msg.textContent="PIN must be 4–8 digits."; return; }
+  try{
+    const res = await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"set-pin",setupSecret:secret,staffId,pin})});
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error||"Failed");
+    msg.className="msg ok"; msg.textContent = `✓ PIN saved for ${name}`;
+    if(!saved.includes(name)) saved.push(name);
+    document.getElementById("done").innerHTML = saved.length ? `<b>Done this session:</b> ${saved.map(esc).join(", ")}` : "";
+    document.getElementById("pin").value = "";
+    staffSel.value = "";
+  }catch(e){ msg.className="msg err"; msg.textContent = e.message; }
 }
+</script>
+</body>
+</html>
