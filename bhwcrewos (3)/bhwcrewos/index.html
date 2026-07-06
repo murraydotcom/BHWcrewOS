@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>BHWcrewOS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5f2ec; --card:#fffdf9; --ink:#2e3d45; --ink-soft:#7a7f78; --deep:#2f4551;
+  --blue:#80abbd; --clay:#b07a55; --clay-deep:#8f5c3d; --sage:#a8b59a; --sand:#dcc8b1; --teal:#5FA9A6;
+  --line:#e9e2d4; --ok:#6f8f6a; --warn:#b07a55; --alert:#a85846;
+  --pc-primary:#80abbd; --pc-charmed:#d9b45f; --pc-mind:#b07a55; --pc-porter:#8a6d5c; --pc-chronic:#a8b59a; --pc-flow:#5FA9A6; --pc-admin:#2f4551;
+  --radius:18px; --shadow:0 10px 34px -14px rgba(47,69,81,.22), 0 2px 8px rgba(47,69,81,.05);
+  --clay-grad:linear-gradient(120deg,#c68e63,#8f5c3d);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+body{font-family:'Montserrat',sans-serif;background:
+  radial-gradient(1200px 500px at 85% -10%, rgba(128,171,189,.13), transparent 60%),
+  radial-gradient(900px 420px at -10% 110%, rgba(220,200,177,.28), transparent 55%),
+  var(--bg);
+  color:var(--ink);font-size:15px;line-height:1.6}
+button{font-family:inherit;cursor:pointer}
+select,input,textarea{font-family:inherit;font-size:15px;color:var(--ink)}
+:focus-visible{outline:3px solid var(--sand);outline-offset:2px;border-radius:8px}
+
+/* ---- Login ---- */
+#login{position:fixed;inset:0;background:
+  radial-gradient(900px 600px at 20% 15%, rgba(128,171,189,.5), transparent 55%),
+  linear-gradient(158deg,#3a5a68 0%,#2f4551 55%,#26383f 100%);
+  display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
+.login-card{background:var(--card);border-radius:22px;padding:46px 38px;max-width:410px;width:100%;
+  border:1px solid rgba(220,200,177,.7);box-shadow:0 30px 80px -20px rgba(20,32,38,.5)}
+.login-card .mark{font-weight:600;letter-spacing:.34em;font-size:10.5px;color:var(--clay-deep);text-transform:uppercase;text-align:center}
+.login-card h1{font-size:30px;font-weight:300;letter-spacing:.01em;text-align:center;margin:10px 0 4px}
+.login-card h1 b{font-weight:800}
+.login-card h1 .os{color:var(--clay-deep);font-weight:800}
+.login-card p{color:var(--ink-soft);font-size:13px;text-align:center;margin-bottom:24px}
+.login-card label{display:block;font-size:10.5px;font-weight:700;color:var(--ink-soft);margin:14px 0 6px;text-transform:uppercase;letter-spacing:.22em}
+.login-card select,.login-card input{width:100%;padding:14px 15px;border:1.5px solid var(--line);border-radius:12px;background:#fff}
+.login-card select:focus,.login-card input:focus{border-color:var(--blue);outline:none}
+.login-card input{text-align:center;letter-spacing:.3em;font-size:18px}
+.login-card button{width:100%;margin-top:22px;padding:15px;background:var(--clay-grad);color:#fff;border:none;border-radius:999px;font-weight:700;font-size:14px;letter-spacing:.12em;text-transform:uppercase;box-shadow:0 10px 24px -10px rgba(143,92,61,.65);transition:transform .15s ease, box-shadow .15s ease}
+.login-card button:hover{transform:translateY(-1px);box-shadow:0 14px 28px -10px rgba(143,92,61,.7)}
+.login-err{color:var(--alert);font-size:13px;min-height:18px;margin-top:12px;text-align:center}
+
+/* ---- Shell ---- */
+#app{display:none}
+header.top{background:linear-gradient(120deg,#33505e,#2f4551 65%);color:#eef3f4;padding:0 22px}
+.top-inner{max-width:1240px;margin:0 auto;display:flex;align-items:center;gap:16px;height:66px}
+.wordmark{font-weight:300;font-size:18px;letter-spacing:.03em;white-space:nowrap;color:#f4f7f7}
+.wordmark b{font-weight:800}
+.wordmark .os{color:var(--sand);font-weight:800}
+.whoami{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:#a9c2cc;border-left:1px solid rgba(220,200,177,.35);padding-left:16px}
+.top-right{margin-left:auto;display:flex;gap:9px;align-items:center}
+.btn-ghost{background:rgba(244,247,247,.07);border:1px solid rgba(220,200,177,.4);color:#e9eef0;padding:8px 16px;border-radius:999px;font-size:11.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;transition:background .15s ease}
+.btn-ghost:hover{background:rgba(220,200,177,.22);border-color:var(--sand)}
+.gold-rule{height:2px;background:linear-gradient(90deg,#c68e63,#8f5c3d 190px,rgba(220,200,177,.5) 190px,rgba(220,200,177,0) 100%)}
+main{max-width:1240px;margin:0 auto;padding:30px 22px 100px;display:grid;grid-template-columns:238px 1fr;gap:30px}
+
+nav.rail{position:sticky;top:22px;align-self:start;display:flex;flex-direction:column;gap:4px}
+.rail-label{font-size:10px;font-weight:700;letter-spacing:.28em;text-transform:uppercase;color:var(--ink-soft);padding:14px 14px 6px}
+.tab{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:transparent;border:1px solid transparent;padding:13px 14px;border-radius:14px;font-size:13.5px;font-weight:600;color:var(--ink);transition:background .15s ease}
+.tab .spine{width:3px;height:24px;border-radius:3px;background:var(--spine,var(--line));flex:none}
+.tab:hover{background:rgba(255,253,249,.85)}
+.tab.active{background:var(--card);border-color:rgba(220,200,177,.65);box-shadow:var(--shadow)}
+.tab .badge{margin-left:auto;font-size:10.5px;font-weight:800;color:#fff;background:var(--alert);border-radius:20px;padding:2px 8px;min-width:22px;text-align:center}
+.tab .badge:empty{display:none}
+
+/* ---- Cards & KPIs ---- */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:24px}
+.kpi{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid rgba(220,200,177,.55);padding:18px 20px 16px;position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:3px;background:var(--kc,var(--sand))}
+.kpi .n{font-size:32px;font-weight:300;letter-spacing:-.01em;line-height:1.05}
+.kpi .l{font-size:10.5px;color:var(--ink-soft);font-weight:700;letter-spacing:.16em;text-transform:uppercase;margin-top:7px}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid rgba(220,200,177,.55);padding:24px 26px;margin-bottom:22px}
+.card h2{font-size:15px;font-weight:800;letter-spacing:.02em;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.card h2 .grow{flex:1}
+.card .lede{font-size:12.5px;color:var(--ink-soft);margin:6px 0 16px}
+.prog-head{display:flex;gap:16px;margin-bottom:22px;align-items:flex-start}
+.prog-head .bar{width:4px;border-radius:4px;background:linear-gradient(var(--pc),transparent);align-self:stretch}
+.prog-head h1{font-size:27px;font-weight:300;letter-spacing:-.01em}
+.prog-head h1::after{content:"";display:block;width:52px;height:2px;margin-top:8px;background:var(--clay-grad);border-radius:2px}
+.prog-head p{font-size:13px;color:var(--ink-soft);margin-top:9px;max-width:620px}
+.btn{background:var(--deep);color:#fff;border:none;border-radius:999px;padding:10px 18px;font-weight:700;font-size:12px;letter-spacing:.09em;text-transform:uppercase;transition:transform .15s ease,opacity .15s ease}
+.btn:hover{transform:translateY(-1px)}
+.btn.sec{background:transparent;color:var(--deep);border:1.5px solid var(--sand)}
+.btn.sec:hover{background:rgba(220,200,177,.22)}
+.btn.sm{padding:7px 14px;font-size:11px}
+.btn.warn{background:var(--clay-grad)}
+.btn:disabled{opacity:.5;cursor:default;transform:none}
+
+/* ---- Inbox cards ---- */
+.inbox{display:flex;flex-direction:column;gap:12px}
+.hcard{border:1px solid var(--line);border-left:4px solid var(--alert);border-radius:14px;padding:15px 17px;display:flex;flex-direction:column;gap:8px;background:linear-gradient(180deg,#fffdf9,#fdfaf4)}
+.hcard.ack{border-left-color:var(--clay)}
+.hcard.sched{border-left-color:var(--blue)}
+.hcard .h-top{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.hcard b{font-size:14px}
+.hcard .meta{font-size:12px;color:var(--ink-soft)}
+.hcard .sum{font-size:13px;background:rgba(220,200,177,.16);border:1px solid rgba(220,200,177,.4);border-radius:10px;padding:10px 13px}
+.hcard .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
+
+/* ---- Tables ---- */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:620px}
+th{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-soft);text-align:left;padding:10px 12px;border-bottom:1px solid var(--sand);font-weight:700}
+td{padding:13px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(220,200,177,.1)}
+.pill{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 11px;border-radius:20px;white-space:nowrap;border:1px solid transparent}
+.pill.ok{background:rgba(168,181,154,.22);color:#5c7a56;border-color:rgba(168,181,154,.5)}
+.pill.warn{background:rgba(176,122,85,.14);color:#96603f;border-color:rgba(176,122,85,.4)}
+.pill.alert{background:rgba(168,88,70,.12);color:var(--alert);border-color:rgba(168,88,70,.35)}
+.pill.info{background:rgba(128,171,189,.16);color:#4a7387;border-color:rgba(128,171,189,.45)}
+.pill.gray{background:rgba(122,127,120,.1);color:var(--ink-soft);border-color:var(--line)}
+
+/* ---- Forms / modal ---- */
+#modal{position:fixed;inset:0;background:rgba(38,56,63,.6);backdrop-filter:blur(3px);display:none;align-items:flex-start;justify-content:center;z-index:90;padding:22px;overflow-y:auto}
+#modal.open{display:flex}
+.mcard{background:var(--card);border-radius:20px;border:1px solid rgba(220,200,177,.7);padding:28px;max-width:530px;width:100%;margin-top:4vh;box-shadow:0 40px 90px -30px rgba(20,32,38,.55)}
+.mcard h3{font-size:20px;font-weight:300}
+.mcard h3::after{content:"";display:block;width:44px;height:2px;margin-top:7px;background:var(--clay-grad);border-radius:2px}
+.mcard .msub{font-size:12.5px;color:var(--ink-soft);margin:10px 0 14px}
+.f label{display:block;font-size:10px;font-weight:700;color:var(--ink-soft);margin:13px 0 5px;text-transform:uppercase;letter-spacing:.2em}
+.f select,.f input,.f textarea{width:100%;padding:12px 13px;border:1.5px solid var(--line);border-radius:11px;background:#fff}
+.f select:focus,.f input:focus,.f textarea:focus{border-color:var(--blue);outline:none}
+.f textarea{min-height:88px;resize:vertical}
+.f .row{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.macts{display:flex;gap:10px;margin-top:22px;justify-content:flex-end}
+.ferr{color:var(--alert);font-size:12.5px;min-height:17px;margin-top:8px}
+.needs{display:flex;gap:7px;flex-wrap:wrap;margin-top:2px}
+.chip{border:1.5px solid var(--sand);border-radius:999px;padding:7px 15px;font-size:12px;font-weight:600;background:#fff;transition:background .15s ease}
+.chip.on{background:var(--deep);color:#fff;border-color:var(--deep)}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--deep);color:#fff;padding:13px 24px;border-radius:999px;font-weight:600;font-size:13px;letter-spacing:.03em;display:none;z-index:95;max-width:92vw;box-shadow:0 16px 40px -14px rgba(20,32,38,.6)}
+.empty{color:var(--ink-soft);font-size:13px;padding:8px 2px}
+.view{display:none}.view.active{display:block}
+@media (max-width:900px){
+  main{grid-template-columns:1fr;padding:18px 14px 84px;gap:20px}
+  nav.rail{position:static;flex-direction:row;overflow-x:auto;gap:8px;padding-bottom:6px;-webkit-overflow-scrolling:touch}
+  .rail-label{display:none}
+  .tab{flex:none;background:var(--card);border-color:rgba(220,200,177,.6);box-shadow:var(--shadow);padding:11px 15px}
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .whoami{display:none}
+  .kpi .n{font-size:27px}
+  .prog-head h1{font-size:23px}
+}
+</style>
+</head>
+<body>
+
+<div id="login">
+  <div class="login-card">
+    <img src="assets/bhw-medical-logo.png" alt="BHW Medical" style="display:block;width:78%;max-width:280px;margin:0 auto 14px">
+    <h1 style="font-size:24px">BHW<b>crew</b><span class="os">OS</span></h1>
+    <p>Internal operations. Sign in with your name and PIN.</p>
+    <label for="loginStaff">I am</label>
+    <select id="loginStaff"><option value="">Loading team…</option></select>
+    <label for="loginPin">PIN</label>
+    <input id="loginPin" type="password" inputmode="numeric" autocomplete="off" placeholder="••••">
+    <button onclick="doLogin()">Sign in</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<div id="app">
+<header class="top"><div class="top-inner">
+  <svg class="mark-circles" width="34" height="34" viewBox="0 0 100 100" aria-hidden="true" style="flex:none">
+<g fill="none" stroke-linecap="round">
+<circle cx="38" cy="30" r="22" stroke="#dcc8b1" stroke-width="3.4" stroke-dasharray="126 12" transform="rotate(-35 38 30)"/>
+<circle cx="58" cy="52" r="28" stroke="#a8b59a" stroke-width="3.8" stroke-dasharray="162 14" transform="rotate(80 58 52)"/>
+<circle cx="30" cy="70" r="20" stroke="#80abbd" stroke-width="3.2" stroke-dasharray="114 12" transform="rotate(150 30 70)"/>
+</g></svg>
+  <div class="wordmark">BHW<b>crew</b><span class="os">OS</span></div>
+  <div class="whoami" id="whoami"></div>
+  <div class="top-right">
+    <button class="btn-ghost" onclick="refresh()">Refresh</button>
+    <button class="btn-ghost" onclick="logout()">Sign out</button>
+  </div>
+</div></header>
+<div class="gold-rule"></div>
+<main>
+  <nav class="rail" id="rail" aria-label="Pages"></nav>
+  <div id="views"></div>
+</main>
+</div>
+
+<div id="modal" role="dialog" aria-modal="true"><div class="mcard" id="mcard"></div></div>
+<div id="toast" role="status"></div>
+
+<script>
+/* ============ BHWcrewOS front end ============ */
+const API_AUTH = "/.netlify/functions/auth";
+const API_DATA = "/.netlify/functions/ops-data";
+const API_ACT  = "/.netlify/functions/action";
+
+const DIV_COLORS = {
+  "Primary Care":"var(--pc-primary)", "CharmEd Minds":"var(--pc-charmed)",
+  "Mind & Mood Recovery":"var(--pc-mind)", "The Porter House":"var(--pc-porter)",
+  "Chronic Care":"var(--pc-chronic)", "Flow":"var(--pc-flow)", "Admin Master":"var(--pc-admin)"
+};
+const DIV_BLURBS = {
+  "Primary Care":"Panel care, referrals out, and warm handoffs across BHW.",
+  "CharmEd Minds":"Lifespan cognition and brain health — confidence through cognition and education.",
+  "Mind & Mood Recovery":"Behavioral health and the Pathway to the Sunrise program.",
+  "The Porter House":"Behavioral health transition housing — 2nd floor residents and coordination.",
+  "Chronic Care":"APCM, CCM, RPM, BHI, CoCM, and care coordination.",
+  "Flow":"Vascular stabilization referral pathway (Room 4).",
+  "Admin Master":"Whole-circle view: every division, every referral, the full schedule."
+};
+const SERVICES = ["Individual Therapy","Counseling","Med Management","Family Therapy","Group","Flow — Vascular Stabilization","CharmEd Session","Pediatric Visit","Sensory/Family Exam","Primary Care Visit","AWV/Physical","GYN","Intake","Biopsychosocial","Warm Handoff Meeting","1:1 Coordination","Case Mgmt Meeting","Staff Meeting","Training","Workshop","Cohort Session","Event","Nutrition Education","Admin Block"];
+const PROGRAMS = ["APCM","CCM","RPM","BHI","CoCM","Care Coordination"];
+const ACTIVITIES = ["Phone call","Care plan","Coordination","Device review","Chart review","Outreach"];
+const NEEDS = ["Consultation","Biopsychosocial","Intake","Med Eval"];
+const DEVICES = ["BP cuff","Pulse ox","Glucometer","Scale"];
+
+let TOKEN = sessionStorage.getItem("crewos_token") || "";
+let D = null; // data payload
+
+/* ---------- helpers ---------- */
+const esc = s => String(s??"").replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.style.display="block"; setTimeout(()=>t.style.display="none", 2600); }
+function pill(text, cls){ return `<span class="pill ${cls}">${esc(text)}</span>`; }
+function statusPill(s){
+  const map={"Sent":"warn","Received":"info","In Progress":"warn","Completed":"ok","Declined/Redirect":"alert","New":"alert","Acknowledged":"warn","Scheduled":"info","Cancelled":"alert","Urgent":"alert","Routine":"gray"};
+  return pill(s, map[s]||"gray");
+}
+const patLabel = id => (D && D.patientLabel[id]) || "—";
+const staffLabel = id => (D && D.staffName[id]) || "—";
+
+async function api(url, body){
+  const res = await fetch(url, {
+    method: body ? "POST" : "GET",
+    headers: { "Content-Type":"application/json", ...(TOKEN?{Authorization:`Bearer ${TOKEN}`}:{}) },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const data = await res.json().catch(()=>({error:"Server error"}));
+  if(res.status===401){ logout(); throw new Error("Signed out"); }
+  if(!res.ok) throw new Error(data.error||"Request failed");
+  return data;
+}
+
+/* ---------- login ---------- */
+(async function initRoster(){
+  const sel = document.getElementById("loginStaff");
+  const err = document.getElementById("loginErr");
+  try{
+    const res = await fetch(API_AUTH,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"roster"})});
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || `Server error ${res.status}`);
+    if(!data.staff || !data.staff.length) throw new Error("Connected, but no active staff found in Staff & Roles.");
+    sel.innerHTML = `<option value="">Select your name…</option>` +
+      data.staff.map(s=>`<option value="${s.id}">${esc(s.name)} — ${esc(s.role)}</option>`).join("");
+    err.textContent = "";
+  }catch(e){
+    sel.innerHTML = `<option value="">Team list unavailable</option>`;
+    err.textContent = "⚠ " + e.message + " — check NOTION_TOKEN and that the Data Layer page is shared with the integration, then refresh.";
+  }
+})();
+
+async function doLogin(){
+  const staffId = document.getElementById("loginStaff").value;
+  const pin = document.getElementById("loginPin").value.trim();
+  const err = document.getElementById("loginErr");
+  err.textContent = "";
+  try{
+    const res = await fetch(API_AUTH,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"login",staffId,pin})});
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error||"Sign-in failed");
+    TOKEN = data.token; sessionStorage.setItem("crewos_token",TOKEN);
+    document.getElementById("login").style.display="none";
+    document.getElementById("app").style.display="block";
+    await refresh();
+  }catch(e){ err.textContent = e.message; }
+}
+document.getElementById("loginPin").addEventListener("keydown",e=>{ if(e.key==="Enter") doLogin(); });
+function logout(){ TOKEN=""; sessionStorage.removeItem("crewos_token"); location.reload(); }
+
+/* ---------- data + render ---------- */
+async function refresh(){
+  D = await api(API_DATA);
+  document.getElementById("whoami").textContent = `${D.user.name} · ${D.user.access}`;
+  buildRail();
+  buildViews();
+  const start = document.querySelector(`.tab[data-view="${cssId(D.user.landing)}"]`) || document.querySelector(".tab");
+  activate(start.dataset.view);
+}
+const cssId = s => s.toLowerCase().replace(/[^a-z0-9]+/g,"-");
+
+function counts(div){
+  const rIn = D.referrals.filter(r=>r.to===div && r.status!=="Completed" && r.status!=="Declined/Redirect").length;
+  const hIn = D.handoffs.filter(h=>h.to===div && h.status!=="Completed").length;
+  return {rIn,hIn};
+}
+
+function buildRail(){
+  const rail = document.getElementById("rail");
+  let html = `<div class="rail-label">My pages</div>`;
+  const pages = [];
+  if(D.user.access==="Admin") pages.push("Admin Master");
+  for(const div of D.visibleDivisions) pages.push(div);
+  for(const p of pages){
+    const c = p==="Admin Master" ? {rIn:D.referrals.filter(r=>!["Completed","Declined/Redirect"].includes(r.status)).length, hIn:D.handoffs.filter(h=>h.status!=="Completed").length} : counts(p);
+    const badge = (c.rIn + c.hIn) || "";
+    html += `<button class="tab" data-view="${cssId(p)}" style="--spine:${DIV_COLORS[p]}">${esc(p)}<span class="badge">${badge}</span></button>`;
+  }
+  html += `<div class="rail-label">Tools</div>`;
+  html += `<button class="tab" data-view="myspace" style="--spine:var(--clay)">My Space</button>`;
+  rail.innerHTML = html;
+  rail.onclick = e => { const b=e.target.closest(".tab"); if(b) activate(b.dataset.view); };
+}
+
+function activate(viewId){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.view===viewId));
+  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id==="view-"+viewId));
+  window.scrollTo({top:0});
+}
+
+function buildViews(){
+  const host = document.getElementById("views");
+  let html = "";
+  if(D.user.access==="Admin") html += adminView();
+  for(const div of D.visibleDivisions) html += divisionView(div);
+  html += mySpaceView();
+  host.innerHTML = html;
+}
+
+/* ---------- division page ---------- */
+function divisionView(div){
+  const id = cssId(div);
+  const c = counts(div);
+  const inbox = D.handoffs.filter(h=>h.to===div && h.status!=="Completed");
+  const queue = D.referrals.filter(r=>r.to===div && !["Completed","Declined/Redirect"].includes(r.status));
+  const sent = D.referrals.filter(r=>r.from===div).slice(-12).reverse();
+  const todayStr = new Date().toISOString().slice(0,10);
+  const sched = D.schedule.filter(b=>b.division===div && b.status==="Scheduled" && b.date>=todayStr).slice(0,10);
+  const isPorter = div==="The Porter House";
+
+  return `<section class="view" id="view-${id}" style="--pc:${DIV_COLORS[div]}">
+    <div class="prog-head"><div class="bar"></div><div><h1>${esc(div)}</h1><p>${DIV_BLURBS[div]||""}</p></div></div>
+    <div class="kpis">
+      <div class="kpi" style="--kc:var(--alert)"><div class="n">${c.rIn}</div><div class="l">Incoming referrals open</div></div>
+      <div class="kpi" style="--kc:var(--warn)"><div class="n">${c.hIn}</div><div class="l">Warm handoffs in inbox</div></div>
+      <div class="kpi" style="--kc:${DIV_COLORS[div]}"><div class="n">${sent.filter(r=>r.status!=="Completed").length}</div><div class="l">Referrals we sent, pending</div></div>
+      <div class="kpi" style="--kc:var(--sage)"><div class="n">${sched.length}</div><div class="l">Upcoming bookings</div></div>
+    </div>
+
+    <div class="card">
+      <h2>Warm handoff inbox <span class="grow"></span><button class="btn sm" onclick="openHandoffForm('${esc(div)}')">+ New warm handoff</button></h2>
+      <p class="lede">Handoffs stay on this page until completed — nothing disappears unacknowledged.</p>
+      <div class="inbox">${inbox.length ? inbox.map(handoffCard).join("") : `<div class="empty">No open handoffs. New ones from other divisions land here.</div>`}</div>
+    </div>
+
+    <div class="card">
+      <h2>Incoming referral queue <span class="grow"></span><button class="btn sm" onclick="openReferralForm('${esc(div)}')">+ New referral</button></h2>
+      <div class="tbl-wrap"><table><thead><tr><th>Patient</th><th>From</th><th>Type</th><th>Details</th><th>Status</th><th>Action</th></tr></thead><tbody>
+      ${queue.length ? queue.map(r=>`<tr>
+        <td><b>${esc(patLabel(r.patient))}</b>${r.priority==="Urgent"?" "+statusPill("Urgent"):""}</td>
+        <td>${esc(r.from)}</td><td>${esc(r.type)}${r.device?` · ${esc(r.device)}`:""}</td>
+        <td style="max-width:260px">${esc(r.details)}</td><td>${statusPill(r.status)}</td>
+        <td>${referralActions(r)}</td></tr>`).join("")
+      : `<tr><td colspan="6" class="empty">Queue is clear.</td></tr>`}
+      </tbody></table></div>
+    </div>
+
+    <div class="card">
+      <h2>Referrals we sent</h2>
+      <div class="tbl-wrap"><table><thead><tr><th>Patient</th><th>To</th><th>Type</th><th>Status</th><th>Confirmation</th></tr></thead><tbody>
+      ${sent.length ? sent.map(r=>`<tr><td><b>${esc(patLabel(r.patient))}</b></td><td>${esc(r.to)}</td><td>${esc(r.type)}</td><td>${statusPill(r.status)}</td><td style="max-width:280px">${esc(r.completionNote)}</td></tr>`).join("") : `<tr><td colspan="5" class="empty">Nothing sent yet.</td></tr>`}
+      </tbody></table></div>
+    </div>
+
+    ${isPorter && D.porterhouse ? porterCensus() : ""}
+
+    <div class="card">
+      <h2>Upcoming schedule — ${esc(div)}</h2>
+      <div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Time</th><th>Service</th><th>Room</th><th>Staff</th></tr></thead><tbody>
+      ${sched.length ? sched.map(b=>`<tr><td>${esc(b.date)}</td><td>${esc(b.start)}–${esc(b.end)}</td><td>${esc(b.service)}</td><td>${esc(roomName(b.room))}</td><td>${b.staff.map(staffLabel).map(esc).join(", ")}</td></tr>`).join("") : `<tr><td colspan="5" class="empty">No upcoming bookings for this division.</td></tr>`}
+      </tbody></table></div>
+    </div>
+  </section>`;
+}
+
+function roomName(id){ const r=(D.rooms||[]).find(r=>r.id===id); return r?r.name:"—"; }
+
+function handoffCard(h){
+  const cls = h.status==="Acknowledged"?"ack":(h.status==="Scheduled"?"sched":"");
+  return `<div class="hcard ${cls}">
+    <div class="h-top"><b>${esc(patLabel(h.patient))}</b><span class="meta">from ${esc(h.from)} · ${esc(staffLabel(h.fromStaff))}</span>${statusPill(h.status)}${h.needs.map(n=>pill(n,"info")).join(" ")}</div>
+    <div class="sum">${esc(h.summary)}</div>
+    <div class="meta">${h.scheduledDate?`First visit: ${esc(h.scheduledDate)}`:"No visit scheduled yet"}</div>
+    <div class="acts">
+      ${h.status==="New"?`<button class="btn sm" onclick="act({action:'handoff-status',id:'${h.id}',status:'Acknowledged'},'Acknowledged')">Acknowledge</button>`:""}
+      ${h.status!=="Completed"?`<button class="btn sm sec" onclick="promptSchedule('${h.id}')">Set visit date</button>
+      <button class="btn sm sec" onclick="act({action:'handoff-status',id:'${h.id}',status:'Completed'},'Handoff completed')">Complete</button>`:""}
+    </div></div>`;
+}
+
+function referralActions(r){
+  if(r.status==="Sent") return `<button class="btn sm" onclick="act({action:'referral-status',id:'${r.id}',status:'Received'},'Marked received')">Receive</button>`;
+  if(r.status==="Received") return `<button class="btn sm sec" onclick="act({action:'referral-status',id:'${r.id}',status:'In Progress'},'In progress')">Start</button> <button class="btn sm" onclick="promptComplete('${r.id}')">Complete</button>`;
+  if(r.status==="In Progress") return `<button class="btn sm" onclick="promptComplete('${r.id}')">Complete</button>`;
+  return "";
+}
+
+function porterCensus(){
+  return `<div class="card"><h2>Resident census — The Porter House</h2>
+  <div class="tbl-wrap"><table><thead><tr><th>Resident</th><th>PH ID</th><th>Unit</th><th>Also receives</th><th>Status</th></tr></thead><tbody>
+  ${D.porterhouse.length ? D.porterhouse.map(r=>`<tr><td><b>${esc(r.resident)}</b></td><td>${esc(r.phId)}</td><td>${esc(r.unit)}</td><td>${r.alsoReceives.map(a=>pill(a,"info")).join(" ")||"—"}</td><td>${statusPill(r.status)}</td></tr>`).join("") : `<tr><td colspan="5" class="empty">No residents entered yet.</td></tr>`}
+  </tbody></table></div></div>`;
+}
+
+/* ---------- admin master ---------- */
+function adminView(){
+  const openR = D.referrals.filter(r=>!["Completed","Declined/Redirect"].includes(r.status));
+  const openH = D.handoffs.filter(h=>h.status!=="Completed");
+  const todayStr = new Date().toISOString().slice(0,10);
+  const upcoming = D.schedule.filter(b=>b.status==="Scheduled" && b.date>=todayStr).slice(0,20);
+  const aging = openR.map(r=>({...r, days: r.sentDate? Math.floor((Date.now()-new Date(r.sentDate))/86400000):0})).sort((a,b)=>b.days-a.days);
+  const rollup = D.adminRollup||{};
+  const divs = ["Primary Care","CharmEd Minds","Mind & Mood Recovery","The Porter House","Chronic Care","Flow"];
+  return `<section class="view" id="view-admin-master" style="--pc:var(--pc-admin)">
+    <div class="prog-head"><div class="bar"></div><div><h1>Admin Master</h1><p>${DIV_BLURBS["Admin Master"]}</p></div></div>
+    <div class="kpis">
+      <div class="kpi" style="--kc:var(--alert)"><div class="n">${openR.length}</div><div class="l">Open referrals · all divisions</div></div>
+      <div class="kpi" style="--kc:var(--warn)"><div class="n">${openH.length}</div><div class="l">Open warm handoffs</div></div>
+      <div class="kpi" style="--kc:var(--sage)"><div class="n">${upcoming.length}</div><div class="l">Upcoming bookings</div></div>
+      <div class="kpi" style="--kc:var(--clay)"><div class="n">${Object.values(rollup).reduce((a,b)=>a+b,0)}</div><div class="l">Care mgmt minutes · this month</div></div>
+    </div>
+    <div class="card"><h2>Division pulse</h2>
+      <div class="tbl-wrap"><table><thead><tr><th>Division</th><th>Referrals in queue</th><th>Handoffs open</th></tr></thead><tbody>
+      ${divs.map(d=>{const c=counts(d);return `<tr><td><b>${esc(d)}</b></td><td>${c.rIn?pill(c.rIn,"alert"):"0"}</td><td>${c.hIn?pill(c.hIn,"warn"):"0"}</td></tr>`}).join("")}
+      </tbody></table></div></div>
+    <div class="card"><h2>Referral aging <span class="grow"></span><button class="btn sm" onclick="openReferralForm('')">+ New referral</button></h2>
+      <div class="tbl-wrap"><table><thead><tr><th>Days</th><th>Patient</th><th>From → To</th><th>Type</th><th>Status</th></tr></thead><tbody>
+      ${aging.slice(0,15).map(r=>`<tr><td>${r.days>=5?pill(r.days+"d","alert"):r.days+"d"}</td><td><b>${esc(patLabel(r.patient))}</b></td><td>${esc(r.from)} → ${esc(r.to)}</td><td>${esc(r.type)}</td><td>${statusPill(r.status)}</td></tr>`).join("")||`<tr><td colspan="5" class="empty">All clear.</td></tr>`}
+      </tbody></table></div></div>
+    <div class="card"><h2>Full schedule <span class="grow"></span>${D.user.canSchedule?`<button class="btn sm" onclick="openBookingForm()">+ Book a room</button>`:""}</h2>
+      <div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Time</th><th>Service</th><th>Room</th><th>Division</th><th>Staff</th><th></th></tr></thead><tbody>
+      ${upcoming.map(b=>`<tr><td>${esc(b.date)}</td><td>${esc(b.start)}–${esc(b.end)}</td><td>${esc(b.service)}</td><td>${esc(roomName(b.room))}</td><td>${esc(b.division)}</td><td>${b.staff.map(staffLabel).map(esc).join(", ")}</td>
+      <td>${D.user.canSchedule?`<button class="btn sm sec" onclick="act({action:'booking-status',id:'${b.id}',status:'Cancelled'},'Cancelled')">Cancel</button>`:""}</td></tr>`).join("")||`<tr><td colspan="7" class="empty">Nothing booked yet.</td></tr>`}
+      </tbody></table></div></div>
+    <div class="card"><h2>Minutes rollup — this month</h2>
+      <div class="tbl-wrap"><table><thead><tr><th>Program</th><th>Minutes</th></tr></thead><tbody>
+      ${Object.keys(rollup).length?Object.entries(rollup).map(([p,m])=>`<tr><td><b>${esc(p)}</b></td><td>${m}</td></tr>`).join(""):`<tr><td colspan="2" class="empty">No minutes logged this month yet.</td></tr>`}
+      </tbody></table></div></div>
+  </section>`;
+}
+
+/* ---------- my space ---------- */
+function mySpaceView(){
+  const m = D.minutes;
+  const pending = m.mine.filter(x=>!x.inCharm);
+  return `<section class="view" id="view-myspace" style="--pc:var(--clay)">
+    <div class="prog-head"><div class="bar"></div><div><h1>My Space</h1><p>Your minutes, availability, and CharmHealth sync list.</p></div></div>
+    <div class="kpis">
+      <div class="kpi" style="--kc:var(--clay)"><div class="n">${m.monthTotal}</div><div class="l">My minutes · this month</div></div>
+      <div class="kpi" style="--kc:var(--alert)"><div class="n">${m.notInCharm}</div><div class="l">Entries not yet in CharmHealth</div></div>
+      <div class="kpi" style="--kc:var(--sage)"><div class="n">${m.mine.length}</div><div class="l">Total entries</div></div>
+      <div class="kpi" style="--kc:var(--blue)"><div class="n">${D.user.canSchedule?"Yes":"—"}</div><div class="l">Scheduling permission</div></div>
+    </div>
+    <div class="card"><h2>Log minutes <span class="grow"></span><button class="btn sm" onclick="openMinutesForm()">+ Log time</button> <button class="btn sm sec" onclick="openAvailabilityForm()">+ Submit availability</button>${D.user.canSchedule?` <button class="btn sm sec" onclick="openBookingForm()">+ Book a room</button>`:""}</h2>
+      <p class="lede">Log here first — then carry it into CharmHealth and tap "In Charm" so the sync list stays clean.</p>
+      <div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Program</th><th>Patient</th><th>Min</th><th>Activity</th><th>Charm</th></tr></thead><tbody>
+      ${m.mine.slice(-15).reverse().map(x=>`<tr><td>${esc(x.date)}</td><td>${esc(x.program)}</td><td>${esc(patLabel(x.patient))}</td><td><b>${x.minutes}</b></td><td>${esc(x.activity)}</td>
+        <td>${x.inCharm?pill("In Charm","ok"):`<button class="btn sm sec" onclick="act({action:'minutes-charm',id:'${x.id}'},'Marked in CharmHealth')">Mark</button>`}</td></tr>`).join("")||`<tr><td colspan="6" class="empty">No entries yet — tap Log time.</td></tr>`}
+      </tbody></table></div></div>
+  </section>`;
+}
+
+/* ---------- forms ---------- */
+function openModal(html){ document.getElementById("mcard").innerHTML=html; document.getElementById("modal").classList.add("open"); }
+function closeModal(){ document.getElementById("modal").classList.remove("open"); }
+document.getElementById("modal").addEventListener("click",e=>{ if(e.target.id==="modal") closeModal(); });
+
+function patientOptions(){ return D.patients.map(p=>`<option value="${p.id}">${esc(p.name)} — ${esc(p.bhwId)}</option>`).join(""); }
+function divisionOptions(list){ return list.map(d=>`<option>${esc(d)}</option>`).join(""); }
+
+function openReferralForm(from){
+  const froms = D.visibleDivisions;
+  openModal(`<h3>New referral</h3><div class="msub">Any division can refer to any division. The receiving team completes it here.</div>
+  <div class="f">
+    <label>Patient</label><select id="f-pat"><option value="">Select patient…</option>${patientOptions()}</select>
+    <div class="row"><div><label>From</label><select id="f-from">${divisionOptions(froms)}</select></div>
+    <div><label>To</label><select id="f-to">${divisionOptions(["Primary Care","CharmEd Minds","Mind & Mood Recovery","The Porter House","Chronic Care","Flow"])}</select></div></div>
+    <div class="row"><div><label>Type</label><select id="f-type"><option>Division Referral</option><option>SDH</option><option>Device Order</option><option>Flow Pathway</option><option>Lab/Imaging Follow-up</option><option>Other</option></select></div>
+    <div><label>Device (if device order)</label><select id="f-dev"><option value="">—</option>${DEVICES.map(d=>`<option>${d}</option>`).join("")}</select></div></div>
+    <label>Details — what's needed</label><textarea id="f-det"></textarea>
+    <label>Priority</label><select id="f-pri"><option>Routine</option><option>Urgent</option></select>
+    <div class="ferr" id="f-err"></div>
+    <div class="macts"><button class="btn sec" onclick="closeModal()">Cancel</button><button class="btn" onclick="submitReferral()">Send referral</button></div>
+  </div>`);
+  if(from) document.getElementById("f-from").value = from;
+}
+async function submitReferral(){
+  try{
+    await act({action:"referral-create", patientId:val("f-pat"), from:val("f-from"), to:val("f-to"), type:val("f-type"), device:val("f-dev"), details:val("f-det"), priority:val("f-pri")}, "Referral sent", true);
+    closeModal();
+  }catch(e){ document.getElementById("f-err").textContent = e.message; }
+}
+
+function openHandoffForm(from){
+  openModal(`<h3>New warm handoff</h3><div class="msub">Carries the summary across the division wall and lands in their inbox.</div>
+  <div class="f">
+    <label>Patient</label><select id="f-pat"><option value="">Select patient…</option>${patientOptions()}</select>
+    <div class="row"><div><label>From</label><select id="f-from">${divisionOptions(D.visibleDivisions)}</select></div>
+    <div><label>To</label><select id="f-to">${divisionOptions(["Primary Care","CharmEd Minds","Mind & Mood Recovery","The Porter House","Chronic Care","Flow"])}</select></div></div>
+    <label>Warm handoff summary — reason, context, what they need to know</label><textarea id="f-sum"></textarea>
+    <label>Needs</label><div class="needs" id="f-needs">${NEEDS.map(n=>`<button class="chip" type="button" onclick="this.classList.toggle('on')" data-n="${n}">${n}</button>`).join("")}</div>
+    <label>First visit date (if known)</label><input type="date" id="f-date">
+    <div class="ferr" id="f-err"></div>
+    <div class="macts"><button class="btn sec" onclick="closeModal()">Cancel</button><button class="btn" onclick="submitHandoff()">Send handoff</button></div>
+  </div>`);
+  if(from) document.getElementById("f-from").value = from;
+}
+async function submitHandoff(){
+  const needs=[...document.querySelectorAll("#f-needs .chip.on")].map(c=>c.dataset.n);
+  try{
+    await act({action:"handoff-create", patientId:val("f-pat"), from:val("f-from"), to:val("f-to"), summary:val("f-sum"), needs, scheduledDate:val("f-date")}, "Warm handoff sent", true);
+    closeModal();
+  }catch(e){ document.getElementById("f-err").textContent = e.message; }
+}
+
+function openMinutesForm(){
+  openModal(`<h3>Log minutes</h3><div class="msub">Logged here first; mark "In Charm" once documented in CharmHealth.</div>
+  <div class="f">
+    <div class="row"><div><label>Program</label><select id="f-prog">${PROGRAMS.map(p=>`<option>${p}</option>`).join("")}</select></div>
+    <div><label>Minutes</label><input type="number" id="f-min" min="1" max="480" inputmode="numeric"></div></div>
+    <label>Patient</label><select id="f-pat"><option value="">Select patient…</option>${patientOptions()}</select>
+    <div class="row"><div><label>Date</label><input type="date" id="f-date" value="${new Date().toISOString().slice(0,10)}"></div>
+    <div><label>Activity</label><select id="f-act">${ACTIVITIES.map(a=>`<option>${a}</option>`).join("")}</select></div></div>
+    <label>Brief note (full documentation goes in CharmHealth)</label><textarea id="f-note"></textarea>
+    <div class="ferr" id="f-err"></div>
+    <div class="macts"><button class="btn sec" onclick="closeModal()">Cancel</button><button class="btn" onclick="submitMinutes()">Log it</button></div>
+  </div>`);
+}
+async function submitMinutes(){
+  try{
+    await act({action:"minutes-log", program:val("f-prog"), minutes:val("f-min"), patientId:val("f-pat"), date:val("f-date"), activity:val("f-act"), note:val("f-note")}, "Minutes logged", true);
+    closeModal();
+  }catch(e){ document.getElementById("f-err").textContent = e.message; }
+}
+
+function openAvailabilityForm(){
+  openModal(`<h3>Submit availability</h3><div class="msub">Ops turns availability into room bookings.</div>
+  <div class="f">
+    <label>Date</label><input type="date" id="f-date">
+    <div class="row"><div><label>Start</label><input type="time" id="f-start"></div><div><label>End</label><input type="time" id="f-end"></div></div>
+    <label>Repeats</label><select id="f-rec"><option>One-time</option><option>Weekly</option><option>Biweekly</option></select>
+    <label>Notes</label><input type="text" id="f-note" placeholder="Prefer AM · telehealth only · etc.">
+    <div class="ferr" id="f-err"></div>
+    <div class="macts"><button class="btn sec" onclick="closeModal()">Cancel</button><button class="btn" onclick="submitAvailability()">Submit</button></div>
+  </div>`);
+}
+async function submitAvailability(){
+  try{
+    await act({action:"availability-submit", date:val("f-date"), start:val("f-start"), end:val("f-end"), recurring:val("f-rec"), notes:val("f-note")}, "Availability submitted", true);
+    closeModal();
+  }catch(e){ document.getElementById("f-err").textContent = e.message; }
+}
+
+function openBookingForm(){
+  openModal(`<h3>Book a room</h3><div class="msub">The room's allowed services are enforced — pick a room to filter services.</div>
+  <div class="f">
+    <label>Room</label><select id="f-room" onchange="filterServices()"><option value="">Select room…</option>${D.rooms.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join("")}</select>
+    <label>Service</label><select id="f-svc">${SERVICES.map(s=>`<option>${s}</option>`).join("")}</select>
+    <label>Staff (hold Ctrl/Cmd for multiple)</label><select id="f-staff" multiple size="4">${D.staff.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join("")}</select>
+    <div class="row"><div><label>Date</label><input type="date" id="f-date"></div><div><label>Division</label><select id="f-div">${divisionOptions(["Primary Care","CharmEd Minds","Mind & Mood Recovery","The Porter House","Chronic Care","Flow","Shared"])}</select></div></div>
+    <div class="row"><div><label>Start</label><input type="time" id="f-start"></div><div><label>End</label><input type="time" id="f-end"></div></div>
+    <label>Notes (no patient identifiers needed)</label><input type="text" id="f-note">
+    <div class="ferr" id="f-err"></div>
+    <div class="macts"><button class="btn sec" onclick="closeModal()">Cancel</button><button class="btn" onclick="submitBooking()">Book</button></div>
+  </div>`);
+}
+function filterServices(){
+  const roomId = val("f-room");
+  const room = D.rooms.find(r=>r.id===roomId);
+  const svc = document.getElementById("f-svc");
+  const list = room ? room.allowed : SERVICES;
+  svc.innerHTML = list.map(s=>`<option>${esc(s)}</option>`).join("");
+}
+async function submitBooking(){
+  const staffIds = [...document.getElementById("f-staff").selectedOptions].map(o=>o.value);
+  try{
+    await act({action:"booking-create", roomId:val("f-room"), service:val("f-svc"), staffIds, date:val("f-date"), start:val("f-start"), end:val("f-end"), division:val("f-div"), notes:val("f-note")}, "Booked", true);
+    closeModal();
+  }catch(e){ document.getElementById("f-err").textContent = e.message; }
+}
+
+function promptComplete(id){
+  const note = prompt("Completion note — what was done? (comes back to the sender)");
+  if(note===null) return;
+  act({action:"referral-status", id, status:"Completed", note}, "Referral completed");
+}
+function promptSchedule(id){
+  const d = prompt("First visit date (YYYY-MM-DD):");
+  if(!d) return;
+  act({action:"handoff-status", id, status:"Scheduled", scheduledDate:d}, "Visit date set");
+}
+
+const val = id => document.getElementById(id)?.value?.trim?.() ?? document.getElementById(id)?.value ?? "";
+
+async function act(body, okMsg, rethrow){
+  try{
+    await api(API_ACT, body);
+    toast(okMsg);
+    await refreshSoft();
+  }catch(e){
+    if(rethrow) throw e;
+    toast("⚠ " + e.message);
+  }
+}
+async function refreshSoft(){
+  const active = document.querySelector(".tab.active")?.dataset.view;
+  D = await api(API_DATA);
+  buildRail(); buildViews();
+  activate(active || cssId(D.user.landing));
+}
+
+/* ---------- boot ---------- */
+if(TOKEN){
+  document.getElementById("login").style.display="none";
+  document.getElementById("app").style.display="block";
+  refresh().catch(()=>logout());
+}
+</script>
+</body>
+</html>
