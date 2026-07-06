@@ -65,7 +65,7 @@ exports.handler = async (event) => {
   const inVis = (d) => vis.includes(d);
 
   try {
-    const [staffPages, patientPages, roomPages, referralPages, handoffPages, schedulePages, minutePages, resourcePages] =
+    const [staffPages, patientPages, roomPages, referralPages, handoffPages, schedulePages, minutePages] =
       await Promise.all([
         queryDb(DB.staff),
         queryDb(DB.patients),
@@ -74,7 +74,6 @@ exports.handler = async (event) => {
         queryDb(DB.handoffs),
         queryDb(DB.schedule),
         queryDb(DB.minutes),
-        queryDb(DB.resources),
       ]);
 
     const staff = staffPages.map((pg) => ({
@@ -153,18 +152,6 @@ exports.handler = async (event) => {
       }
     }
 
-    const resources = resourcePages
-      .map((pg) => ({
-        title: P.title(pg.properties["Resource"]),
-        division: P.sel(pg.properties["Division"]),
-        category: P.sel(pg.properties["Category"]) || "Documentation",
-        link: pg.properties["Link"]?.url || "",
-        notes: P.text(pg.properties["Notes"]),
-        pinned: P.check(pg.properties["Pinned"]),
-      }))
-      .filter((r) => r.link && (r.division === "All Divisions" || inVis(r.division)))
-      .sort((a, b) => (b.pinned - a.pinned) || a.title.localeCompare(b.title));
-
     return json(200, {
       user: { name: session.name, divisions: session.divisions, access: session.access, landing: session.landing, canSchedule: session.canSchedule, staffId: session.staffId },
       visibleDivisions: vis,
@@ -179,7 +166,6 @@ exports.handler = async (event) => {
       minutes: { mine: myMinutes.slice(-100), monthTotal: myMonthMinutes.reduce((a, m) => a + m.minutes, 0), notInCharm },
       adminRollup,
       porterhouse,
-      resources,
     });
   } catch (err) {
     return json(500, { error: err.message });

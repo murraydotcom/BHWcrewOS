@@ -15,7 +15,6 @@ const DB = {
   minutes: "818f2fa362aa40fc9032d1388a047a3f",
   meetings: "f498ac069a0447e78d3aa0763bf81827",
   porterhouse: "d5d6639fe9464c56b48b42d2a8ed9fac",
-  resources: "96dd6b0fd4f9423e849df6e540caed94",
 };
 
 const DIVISIONS = ["Primary Care", "CharmEd Minds", "Mind & Mood Recovery", "The Porter House", "Chronic Care", "Flow"];
