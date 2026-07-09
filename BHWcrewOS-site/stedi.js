@@ -15,9 +15,13 @@ const BHW_NPI = "1306511597";
 const AWV_CODES = ["G0402", "G0438", "G0439"];
 
 function stediKey() {
-  const pre = process.env.STEDI_KEY_PREFIX || "";
-  const suf = process.env.STEDI_KEY_SUFFIX || "";
-  return (pre + suf).trim();
+  const pre = (process.env.STEDI_KEY_PREFIX || "").trim();
+  const suf = (process.env.STEDI_KEY_SUFFIX || "").trim();
+  let key = (pre + suf).trim();
+  if (!key) return "";
+  // Stedi expects the "Key" auth scheme — add it unless it's already there
+  if (!/^key\s/i.test(key)) key = `Key ${key}`;
+  return key;
 }
 
 function stediRequest(path, body, clientIp) {
