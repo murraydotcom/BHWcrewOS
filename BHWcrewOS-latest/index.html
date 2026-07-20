@@ -345,9 +345,15 @@ function buildRail(){
     html += `<button class="tab" data-view="${cssId(p)}" style="--spine:${DIV_COLORS[p]}">${esc(p)}<span class="badge">${badge}</span></button>`;
   }
   html += `<div class="rail-label">Tools</div>`;
-  html += `<button class="tab" data-view="myspace" style="--spine:var(--clay)">My Space</button>`;
+ html += `<button class="tab" data-view="myspace" style="--spine:var(--clay)">My Space</button>`;
+  html += `<div class="rail-label">Pages</div>`;
+  html += `<a class="tab" href="/bhw-front-desk.html" target="_blank" rel="noopener" style="--spine:var(--blue);text-decoration:none">📞 Front Desk OS</a>`;
+  html += `<a class="tab" href="/bhw-panel-performance.html" target="_blank" rel="noopener" style="--spine:var(--teal);text-decoration:none">📊 Panel & Discharges</a>`;
+  html += `<a class="tab" href="/bhw-hormone-analysis.html" target="_blank" rel="noopener" style="--spine:var(--sand);text-decoration:none">🧬 Hormone Analysis</a>`;
+  html += `<a class="tab" href="https://app.notion.com/p/3a1580758d3081c48b90fdab7b442fcb" target="_blank" rel="noopener" style="--spine:var(--sage);text-decoration:none">🌿 Patient Pages Hub</a>`;
+  html += `<a class="tab" href="https://app.notion.com/p/3a3580758d30812aa387d8a6ae463c12" target="_blank" rel="noopener" style="--spine:var(--clay-deep);text-decoration:none">🌅 Launch Punch List</a>`;
   rail.innerHTML = html;
-  rail.onclick = e => { const b=e.target.closest(".tab"); if(b) activate(b.dataset.view); };
+  rail.onclick = e => { const b=e.target.closest(".tab"); if(b && b.dataset.view) activate(b.dataset.view); }
 }
 
 function activate(viewId){
@@ -378,6 +384,7 @@ function divisionView(div){
 
   return `<section class="view" id="view-${id}" style="--pc:${DIV_COLORS[div]}">
     <div class="prog-head"><div class="bar"></div><div><h1>${esc(div)}</h1><p>${DIV_BLURBS[div]||""}</p></div></div>
+    ${div==="Primary Care"?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:-8px 0 18px"><a class="btn sm warn" style="text-decoration:none" href="/bhw-front-desk.html#rg" target="_blank" rel="noopener">📠 Generate a referral</a><a class="btn sm sec" style="text-decoration:none" href="/bhw-front-desk.html" target="_blank" rel="noopener">📞 Front desk & patient lookup</a></div>`:""}
     <div class="kpis">
       <div class="kpi" style="--kc:var(--alert)"><div class="n">${c.rIn}</div><div class="l">Incoming referrals open</div></div>
       <div class="kpi" style="--kc:var(--warn)"><div class="n">${c.hIn}</div><div class="l">Warm handoffs in inbox</div></div>
