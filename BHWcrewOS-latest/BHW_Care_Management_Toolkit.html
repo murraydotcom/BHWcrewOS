@@ -1,0 +1,1826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Care Management Compliance Toolkit — BHW Medical Group</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bhw-teal:#80abbd;
+    --bhw-teal-dark:#5d8a9e;
+    --bhw-rust:#b07a55;
+    --bhw-sage:#a8b59a;
+    --bhw-sand:#dcc8b1;
+    --bhw-cream:#f7f5f2;
+    --bhw-ink:#2A3038;
+    --bhw-white:#ffffff;
+    --bhw-teal-tint:rgba(128,171,189,0.14);
+    --bhw-teal-dark-tint:rgba(93,138,158,0.12);
+    --bhw-rust-tint:rgba(176,122,85,0.14);
+    --bhw-sage-tint:rgba(168,181,154,0.22);
+    --bhw-sand-tint:rgba(220,200,177,0.35);
+  }
+
+  *{ box-sizing:border-box; }
+
+  html,body{
+    margin:0; padding:0;
+    background:#ede8e1;
+    font-family:'Montserrat',-apple-system,BlinkMacSystemFont,sans-serif;
+    color:var(--bhw-ink);
+    line-height:1.4;
+  }
+
+  .doc{
+    max-width:1180px;
+    margin:28px auto 60px;
+    background:var(--bhw-cream);
+    border:1px solid var(--bhw-sand);
+    border-radius:4px;
+    overflow:hidden;
+  }
+
+  /* ---------- PageHeader component ---------- */
+  .page-header{
+    background:var(--bhw-teal);
+    padding:26px 40px 22px;
+    color:#fff;
+  }
+  .page-header .wordmark{
+    font-weight:600;
+    font-size:1.55rem;
+    letter-spacing:0.02em;
+  }
+  .page-header .subtitle{
+    font-weight:500;
+    font-size:0.85rem;
+    opacity:0.92;
+    margin-top:3px;
+  }
+  .page-header .tool-badge{
+    display:inline-block;
+    margin-top:10px;
+    font-size:0.7rem;
+    font-weight:600;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    background:rgba(255,255,255,0.18);
+    padding:4px 10px;
+    border-radius:3px;
+  }
+  .rust-stripe{ height:5px; background:var(--bhw-rust); }
+
+  /* ---------- Tab nav ---------- */
+  .tab-nav{
+    display:flex;
+    gap:2px;
+    background:var(--bhw-teal-dark);
+    padding:0 40px;
+  }
+  .tab-btn{
+    font-family:inherit;
+    border:none;
+    background:transparent;
+    color:rgba(255,255,255,0.72);
+    font-weight:600;
+    font-size:0.88rem;
+    padding:14px 20px;
+    cursor:pointer;
+    transition:background-color 150ms ease, color 150ms ease;
+    border-bottom:3px solid transparent;
+  }
+  .tab-btn:hover{ background:rgba(255,255,255,0.08); color:#fff; }
+  .tab-btn.active{
+    color:#fff;
+    background:rgba(255,255,255,0.14);
+    border-bottom:3px solid var(--bhw-rust);
+  }
+
+  .content{ padding:32px 40px 10px; }
+  .tab-content{ display:none; }
+  .tab-content.active{ display:block; }
+
+  /* ---------- Sub tab nav (within Audit Tool) ---------- */
+  .subtab-nav{
+    display:flex; flex-wrap:wrap; gap:8px;
+    margin-bottom:22px;
+  }
+  .subtab-btn{
+    font-family:inherit;
+    border:1px solid var(--bhw-sand);
+    background:#fff;
+    color:var(--bhw-teal-dark);
+    font-weight:600;
+    font-size:0.8rem;
+    padding:8px 14px;
+    border-radius:3px;
+    cursor:pointer;
+    transition:background-color 150ms ease, color 150ms ease;
+  }
+  .subtab-btn:hover{ background:var(--bhw-teal-tint); }
+  .subtab-btn.active{ background:var(--bhw-teal-dark); color:#fff; border-color:var(--bhw-teal-dark); }
+  .subtab-content{ display:none; }
+  .subtab-content.active{ display:block; }
+
+  /* ---------- Typography ---------- */
+  h1.doc-title{
+    font-size:1.5rem; font-weight:700; color:var(--bhw-teal-dark);
+    margin:0 0 6px;
+  }
+  p.lede{
+    font-size:0.92rem; color:var(--bhw-ink); opacity:0.85; margin:0 0 22px;
+    max-width:820px;
+  }
+  h2.section-header{
+    font-size:1.05rem; font-weight:700; color:var(--bhw-teal-dark);
+    margin:30px 0 4px;
+    padding-bottom:8px;
+    border-bottom:1px solid var(--bhw-sand);
+  }
+  h2.section-header .num{ color:var(--bhw-rust); margin-right:6px; }
+  h3.sub-header{
+    font-size:0.92rem; font-weight:600; color:var(--bhw-ink);
+    margin:16px 0 8px;
+  }
+  p.body-text{ font-size:0.88rem; margin:0 0 10px; }
+  .small{ font-size:0.78rem; }
+  .italic{ font-style:italic; }
+
+  ul.bhw-bullets{ list-style:none; margin:0 0 14px; padding:0; }
+  ul.bhw-bullets li{
+    position:relative; padding-left:16px; margin-bottom:7px;
+    font-size:0.88rem;
+  }
+  ul.bhw-bullets li::before{
+    content:"•"; position:absolute; left:0; color:var(--bhw-teal-dark); font-weight:700;
+  }
+
+  /* ---------- InfoBox component ---------- */
+  .infobox{ border-radius:4px; overflow:hidden; margin:16px 0 22px; }
+  .infobox-head{
+    color:#fff; font-weight:600; font-size:0.82rem;
+    padding:9px 14px;
+  }
+  .infobox-body{ background:var(--bhw-cream); padding:14px 16px; font-size:0.85rem; }
+  .infobox.tip .infobox-head{ background:var(--bhw-sage); color:var(--bhw-ink); }
+  .infobox.warn .infobox-head{ background:var(--bhw-rust); }
+  .infobox.info .infobox-head{ background:var(--bhw-teal-dark); }
+
+  /* ---------- Cards / form blocks ---------- */
+  .card{
+    background:#fff;
+    border:1px solid var(--bhw-sand);
+    border-radius:4px;
+    padding:20px 22px;
+    margin-bottom:20px;
+  }
+  .field-grid{
+    display:grid; grid-template-columns:1fr 1fr; gap:14px 24px;
+  }
+  .field-grid.cols-3{ grid-template-columns:1fr 1fr 1fr; }
+  .field{ display:flex; flex-direction:column; gap:5px; }
+  .field label{
+    font-size:0.72rem; font-weight:700; text-transform:uppercase;
+    letter-spacing:0.03em; color:var(--bhw-teal-dark);
+  }
+  .field input[type=text], .field input[type=date], .field select, .field textarea{
+    font-family:inherit; font-size:0.86rem; color:var(--bhw-ink);
+    border:1px solid var(--bhw-sand); background:var(--bhw-cream);
+    border-radius:3px; padding:8px 10px;
+    transition:border-color 150ms ease, background-color 150ms ease;
+  }
+  .field textarea{ resize:vertical; min-height:54px; font-family:inherit; }
+  .field input:focus, .field select:focus, .field textarea:focus{
+    outline:none; border-color:var(--bhw-teal-dark); background:#fff;
+  }
+
+  .check-row{
+    display:flex; align-items:flex-start; gap:9px; margin-bottom:10px; font-size:0.86rem;
+  }
+  .check-row input[type=checkbox]{
+    margin-top:3px; width:16px; height:16px; accent-color:var(--bhw-teal-dark); flex-shrink:0;
+    cursor:pointer;
+  }
+  .check-row label{ cursor:pointer; }
+
+  .radio-row{ display:flex; align-items:flex-start; gap:9px; margin-bottom:10px; font-size:0.86rem; }
+  .radio-row input[type=radio]{ margin-top:3px; accent-color:var(--bhw-teal-dark); flex-shrink:0; cursor:pointer; }
+  .radio-row label{ cursor:pointer; }
+
+  /* ---------- DataTable component ---------- */
+  .table-wrap{ overflow-x:auto; border:1px solid var(--bhw-sand); border-radius:4px; margin-bottom:14px; }
+  table.bhw-table{ border-collapse:collapse; width:100%; min-width:640px; background:#fff; }
+  table.bhw-table thead th{
+    background:var(--bhw-teal-dark); color:#fff; font-size:0.7rem; font-weight:700;
+    text-transform:uppercase; letter-spacing:0.02em; padding:9px 8px; text-align:left;
+    white-space:normal; vertical-align:bottom; line-height:1.25;
+  }
+  table.bhw-table tbody td{
+    padding:8px; font-size:0.8rem; border-bottom:1px solid var(--bhw-sand);
+    vertical-align:middle;
+  }
+  table.bhw-table tbody tr:nth-child(even){ background:var(--bhw-cream); }
+  table.bhw-table tbody tr.example-row{ background:var(--bhw-sand-tint) !important; }
+  table.bhw-table input[type=text], table.bhw-table input[type=date], table.bhw-table select{
+    width:100%; font-family:inherit; font-size:0.78rem; padding:5px 6px;
+    border:1px solid var(--bhw-sand); border-radius:3px; background:#fff; color:var(--bhw-ink);
+  }
+  table.bhw-table input:focus, table.bhw-table select:focus{ outline:none; border-color:var(--bhw-teal-dark); }
+  td.center{ text-align:center; }
+  td.remove-cell{ text-align:center; }
+
+  /* ---------- Badges ---------- */
+  .badge{
+    display:inline-block; font-size:0.72rem; font-weight:700; padding:4px 9px;
+    border-radius:3px; white-space:nowrap;
+  }
+  .badge-pass{ background:var(--bhw-sage-tint); color:#3f4d36; }
+  .badge-review{ background:var(--bhw-rust-tint); color:var(--bhw-rust); }
+  .badge-error{ background:var(--bhw-rust); color:#fff; }
+  .badge-neutral{ background:var(--bhw-sand-tint); color:var(--bhw-ink); }
+
+  /* ---------- Buttons ---------- */
+  .btn{
+    font-family:inherit; font-size:0.78rem; font-weight:700; cursor:pointer;
+    border-radius:3px; padding:8px 14px; border:1px solid var(--bhw-teal-dark);
+    background:#fff; color:var(--bhw-teal-dark);
+    transition:background-color 150ms ease, color 150ms ease;
+  }
+  .btn:hover{ background:var(--bhw-teal-dark); color:#fff; }
+  .btn-solid{ background:var(--bhw-teal-dark); color:#fff; }
+  .btn-solid:hover{ background:var(--bhw-teal); border-color:var(--bhw-teal); }
+  .btn-rust{ border-color:var(--bhw-rust); color:var(--bhw-rust); }
+  .btn-rust:hover{ background:var(--bhw-rust); color:#fff; }
+  .btn-sm{ padding:4px 9px; font-size:0.7rem; }
+  .btn-row{ display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+
+  /* ---------- Dashboard ---------- */
+  .stat-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:10px; }
+  .stat-card{
+    background:#fff; border:1px solid var(--bhw-sand); border-radius:4px;
+    padding:16px 18px; text-align:center;
+  }
+  .stat-card .stat-value{ font-size:1.7rem; font-weight:700; color:var(--bhw-teal-dark); }
+  .stat-card .stat-label{ font-size:0.72rem; text-transform:uppercase; letter-spacing:0.03em; color:var(--bhw-ink); opacity:0.75; margin-top:3px; }
+  .stat-card.rust .stat-value{ color:var(--bhw-rust); }
+  .stat-card.sage .stat-value{ color:#5c6e4f; }
+
+  /* ---------- Footer ---------- */
+  .doc-footer{
+    background:var(--bhw-cream); border-top:3px solid var(--bhw-sage);
+    padding:16px 40px 22px; font-size:0.76rem; color:var(--bhw-ink);
+  }
+  .doc-footer .clinic-line{ font-weight:600; margin-bottom:3px; }
+  .doc-footer .disclaimer{ font-style:italic; opacity:0.8; margin-top:8px; max-width:900px; }
+
+  @media print{
+    body{ background:#fff; }
+    .doc{ max-width:none; margin:0; border:none; border-radius:0; }
+    .no-print{ display:none !important; }
+    .tab-content{ display:none !important; }
+    .tab-content.active{ display:block !important; }
+  }
+
+  @media (max-width:720px){
+    .field-grid, .field-grid.cols-3{ grid-template-columns:1fr; }
+    .stat-grid{ grid-template-columns:repeat(2,1fr); }
+    .page-header, .content, .doc-footer{ padding-left:20px; padding-right:20px; }
+    .tab-nav{ padding:0 20px; overflow-x:auto; }
+  }
+</style>
+</head>
+<body>
+
+<div class="doc">
+
+  <div class="page-header">
+    <div class="wordmark">BHW MEDICAL GROUP</div>
+    <div class="subtitle">Baltimore Healthcare and Wellness — 2131 Maryland Ave, Baltimore, MD 21218</div>
+    <div class="tool-badge">Internal use — billing &amp; compliance staff</div>
+  </div>
+  <div class="rust-stripe"></div>
+
+  <div class="tab-nav no-print">
+    <button class="tab-btn active" onclick="showTab('template')" id="tabbtn-template">Documentation Template</button>
+    <button class="tab-btn" onclick="showTab('audit')" id="tabbtn-audit">Auditing Tool</button>
+  </div>
+
+  <div class="content">
+
+    <!-- ================= TAB 1: DOCUMENTATION TEMPLATE ================= -->
+    <div class="tab-content active" id="tab-template">
+      <h1 class="doc-title">Care Management Monthly Documentation Template</h1>
+      <p class="lede">Complete one copy of this template per patient, per calendar month, before submitting a claim. Covers APCM (G0556/G0557/G0558), BHI add-on (G0568/G0569/G0570), RPM, CCM, PCM, and CoCM. Complete only the sections that apply to the program(s) billed this month.</p>
+
+      <div class="btn-row no-print">
+        <button class="btn btn-solid" onclick="window.print()">Print this template</button>
+        <button class="btn btn-rust" onclick="resetTemplate()">Clear all fields</button>
+      </div>
+
+      <div class="card">
+        <div class="field-grid cols-3">
+          <div class="field"><label>Practice / organization</label><input type="text" value="BHW Medical Group" data-field="practice"></div>
+          <div class="field"><label>Billing provider (name &amp; credentials)</label><input type="text" data-field="provider"></div>
+          <div class="field"><label>Billing provider NPI</label><input type="text" data-field="npi"></div>
+          <div class="field"><label>Patient name</label><input type="text" data-field="patient"></div>
+          <div class="field"><label>Patient DOB / MRN</label><input type="text" data-field="dobmrn"></div>
+          <div class="field"><label>Service month / year</label><input type="text" placeholder="MM/YYYY" data-field="svcmonth"></div>
+        </div>
+      </div>
+
+      <p class="body-text"><b>Program(s) billed this month</b> (check all that apply — no time/activity may count toward more than one program):</p>
+      <div class="check-row"><input type="checkbox" id="prog-apcm"><label for="prog-apcm">APCM (G0556/G0557/G0558) — Section 1</label></div>
+      <div class="check-row"><input type="checkbox" id="prog-bhi"><label for="prog-bhi">BHI add-on (G0568/G0569/G0570, billed with APCM) — Section 10</label></div>
+      <div class="check-row"><input type="checkbox" id="prog-rpm"><label for="prog-rpm">RPM (99453/99445/99454/99470/99457/99458/99091) — Section 11</label></div>
+      <div class="check-row"><input type="checkbox" id="prog-ccm"><label for="prog-ccm">CCM (99490/99439/99491/99437/99487/99489) — Section 12</label></div>
+      <div class="check-row"><input type="checkbox" id="prog-pcm"><label for="prog-pcm">PCM (99424/99425/99426/99427) — Section 13</label></div>
+      <div class="check-row"><input type="checkbox" id="prog-cocm"><label for="prog-cocm">CoCM (99492/99493/99494/G2214) — Section 14</label></div>
+
+      <h2 class="section-header"><span class="num">1.</span>Code selection</h2>
+      <p class="body-text">Select the single APCM base code being billed this month for this patient. Only one code may be billed per patient, per calendar month.</p>
+      <div class="radio-row"><input type="radio" name="apcm-code" id="code556"><label for="code556"><b>G0556</b> — 1 chronic condition or fewer (≥12 months duration or until death; significant risk of death, acute exacerbation/decompensation, or functional decline)</label></div>
+      <div class="radio-row"><input type="radio" name="apcm-code" id="code557"><label for="code557"><b>G0557</b> — 2 or more chronic conditions (same risk criteria as above)</label></div>
+      <div class="radio-row"><input type="radio" name="apcm-code" id="code558"><label for="code558"><b>G0558</b> — 2 or more chronic conditions AND patient is a Qualified Medicare Beneficiary (QMB)</label></div>
+
+      <h3 class="sub-header">Chronic conditions addressed this month</h3>
+      <div class="table-wrap">
+        <table class="bhw-table" id="conditionsTable">
+          <thead><tr><th>Condition</th><th>ICD-10 code</th><th>Expected ≥12 mo. / until death?</th><th>Risk factor present?</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <button class="btn btn-sm no-print" onclick="addSimpleRow('conditionsTable',4)">+ Add condition</button>
+
+      <h2 class="section-header"><span class="num">2.</span>Practitioner eligibility &amp; patient consent</h2>
+      <div class="check-row"><input type="checkbox" id="c-eligible"><label for="c-eligible">Billing practitioner is responsible for ALL of this patient's primary care and is the continuing focal point for needed health care services.</label></div>
+      <div class="card">
+        <div class="field-grid cols-3">
+          <div class="field"><label>Consent obtained (date)</label><input type="date" data-field="consent-date"></div>
+          <div class="field"><label>Consent method</label><select data-field="consent-method"><option value="">Select…</option><option>Verbal</option><option>Written</option></select></div>
+          <div class="field"><label>Obtained by (staff name)</label><input type="text" data-field="consent-staff"></div>
+        </div>
+      </div>
+      <p class="body-text"><b>Confirm the patient was informed of the following</b> (required — one-time consent, not needed monthly):</p>
+      <div class="check-row"><input type="checkbox" data-field="consent-oneprovider" id="cc-oneprovider"><label for="cc-oneprovider">Only one practitioner may bill and be paid for APCM during a calendar month</label></div>
+      <div class="check-row"><input type="checkbox" data-field="consent-stopanytime" id="cc-stopanytime"><label for="cc-stopanytime">Patient may stop APCM services at any time</label></div>
+      <div class="check-row"><input type="checkbox" data-field="consent-costshare" id="cc-costshare"><label for="cc-costshare">Cost-sharing (deductible/coinsurance) applies</label></div>
+
+      <h2 class="section-header"><span class="num">3.</span>Initiating visit (new patients only)</h2>
+      <div class="radio-row"><input type="radio" name="init-visit" id="init-na"><label for="init-na">N/A — patient seen within the past 3 years, or another care management service (CCM/PCM) furnished within the past year</label></div>
+      <div class="radio-row"><input type="radio" name="init-visit" id="init-done"><label for="init-done">Initiating visit completed — details below</label></div>
+      <div class="card">
+        <div class="field-grid cols-3">
+          <div class="field"><label>Visit date</label><input type="date" data-field="initvisit-date"></div>
+          <div class="field"><label>Visit type</label><input type="text" placeholder="E/M, AWV, other" data-field="initvisit-type"></div>
+          <div class="field"><label>Performed by</label><input type="text" data-field="initvisit-by"></div>
+        </div>
+      </div>
+
+      <h2 class="section-header"><span class="num">4.</span>24/7 access, continuity &amp; comprehensive care management</h2>
+      <div class="check-row"><input type="checkbox" id="cc-247" data-field="access-247"><label for="cc-247">24/7 access to the practitioner or a care team member is available for urgent needs</label></div>
+      <div class="check-row"><input type="checkbox" id="cc-realtime" data-field="access-realtime"><label for="cc-realtime">Real-time access to the patient's medical information is available to the care team</label></div>
+      <div class="check-row"><input type="checkbox" id="cc-schedule" data-field="access-schedule"><label for="cc-schedule">Patient can schedule successive routine appointments with a designated care team member</label></div>
+      <div class="check-row"><input type="checkbox" id="cc-altcare" data-field="access-altcare"><label for="cc-altcare">Alternative care delivery available (e.g., home visits, expanded hours)</label></div>
+      <div class="check-row"><input type="checkbox" id="cc-assessment" data-field="ccm-assessment"><label for="cc-assessment">Systematic needs assessment completed (medical AND psychosocial)</label></div>
+      <div class="check-row"><input type="checkbox" id="cc-preventive" data-field="ccm-preventive"><label for="cc-preventive">Systems-based approach used to ensure receipt of applicable preventive services</label></div>
+      <div class="check-row"><input type="checkbox" id="cc-medrec" data-field="ccm-medrec"><label for="cc-medrec">Medication reconciliation and management completed</label></div>
+      <div class="check-row"><input type="checkbox" id="cc-selfmgmt" data-field="ccm-selfmgmt"><label for="cc-selfmgmt">Oversight of patient self-management provided</label></div>
+
+      <h2 class="section-header"><span class="num">5.</span>Comprehensive care plan</h2>
+      <div class="card">
+        <div class="field-grid cols-3">
+          <div class="field"><label>Care plan created</label><input type="date" data-field="careplan-created"></div>
+          <div class="field"><label>Care plan last revised</label><input type="date" data-field="careplan-revised"></div>
+          <div class="field"><label>Electronic &amp; accessible outside practice?</label><select data-field="careplan-electronic"><option>Select…</option><option>Y</option><option>N</option></select></div>
+          <div class="field"><label>Care team able to access/update?</label><select data-field="careplan-teamaccess"><option>Select…</option><option>Y</option><option>N</option></select></div>
+          <div class="field"><label>Copy given to patient/caregiver?</label><select data-field="careplan-copygiven"><option>Select…</option><option>Y</option><option>N</option></select></div>
+        </div>
+      </div>
+      <h3 class="sub-header">Personalized health goals (specific &amp; measurable)</h3>
+      <div class="table-wrap">
+        <table class="bhw-table" id="goalsTable">
+          <thead><tr><th>Goal</th><th>Target / measure</th><th>Status this month</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <button class="btn btn-sm no-print" onclick="addSimpleRow('goalsTable',3)">+ Add goal</button>
+
+      <h2 class="section-header"><span class="num">6.</span>Care transitions management</h2>
+      <p class="body-text">Log every care transition (ED visit, hospital discharge, SNF/other facility discharge, referral). Follow-up communication with patient/caregiver must occur within 7 days of discharge.</p>
+      <div class="table-wrap">
+        <table class="bhw-table" id="transitionsTable">
+          <thead><tr><th>Date of discharge/transition</th><th>Setting / facility</th><th>Follow-up method</th><th>Completed within 7 days? (date)</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <button class="btn btn-sm no-print" onclick="addSimpleRow('transitionsTable',4)">+ Add transition</button>
+
+      <h2 class="section-header"><span class="num">7.</span>Home &amp; community-based care coordination</h2>
+      <p class="body-text">Document ongoing communication regarding the patient's psychosocial strengths, functional deficits, and goals/preferences/desired outcomes shared across providers.</p>
+      <div class="table-wrap">
+        <table class="bhw-table" id="coordTable">
+          <thead><tr><th>Date</th><th>Provider(s) involved</th><th>Summary of coordination</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <button class="btn btn-sm no-print" onclick="addSimpleRow('coordTable',3)">+ Add entry</button>
+
+      <h2 class="section-header"><span class="num">8.</span>Patient interaction &amp; communication log</h2>
+      <p class="body-text">Record every patient interaction and care-coordination effort this month (phone, telehealth, in-person, portal/secure message, virtual check-in, remote evaluation, interprofessional consult).</p>
+      <div class="table-wrap">
+        <table class="bhw-table" id="commLogTable">
+          <thead><tr><th>Date</th><th>Type of contact</th><th>Staff member</th><th>Summary / outcome</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <button class="btn btn-sm no-print" onclick="addSimpleRow('commLogTable',4)">+ Add entry</button>
+
+      <h2 class="section-header"><span class="num">9.</span>Population data review &amp; performance reporting</h2>
+      <div class="check-row"><input type="checkbox" id="cc-poprev" data-field="poprev-checkbox"><label for="cc-poprev">Reviewed data (claims/EHR/other electronic sources) this month to identify care gaps and organize care by diagnosis</label></div>
+      <div class="card">
+        <div class="field-grid">
+          <div class="field"><label>Quality/cost/EHR performance reporting mechanism used</label><input type="text" data-field="poprev-mechanism"></div>
+          <div class="field"><label>Reporting period covered</label><input type="text" data-field="poprev-period"></div>
+        </div>
+      </div>
+
+      <h2 class="section-header"><span class="num">10.</span>BHI add-on codes <span class="small">(complete only if billing with APCM this month)</span></h2>
+      <div class="infobox warn">
+        <div class="infobox-head">Add-on billing rule</div>
+        <div class="infobox-body">An add-on code may never be billed alone — it must be billed on the same claim as the APCM base code selected in Section 1.</div>
+      </div>
+      <div class="radio-row"><input type="radio" name="bhi-code" id="bhi-na"><label for="bhi-na">Not applicable this month</label></div>
+      <div class="radio-row"><input type="radio" name="bhi-code" id="bhi568"><label for="bhi568"><b>G0568</b> — Psychiatric Collaborative Care Model (COCM), initial month (based on CPT 99492)</label></div>
+      <div class="radio-row"><input type="radio" name="bhi-code" id="bhi569"><label for="bhi569"><b>G0569</b> — Psychiatric Collaborative Care Model (COCM), subsequent month (based on CPT 99493)</label></div>
+      <div class="radio-row"><input type="radio" name="bhi-code" id="bhi570"><label for="bhi570"><b>G0570</b> — General BHI, non-COCM model of care (based on CPT 99484)</label></div>
+
+      <h3 class="sub-header">Care team roles (complete as applicable)</h3>
+      <div class="card">
+        <div class="field-grid">
+          <div class="field"><label>Treating / billing practitioner</label><input type="text" data-field="bhi-role-practitioner"></div>
+          <div class="field"><label>Behavioral health care manager</label><input type="text" data-field="bhi-role-bhcm"></div>
+          <div class="field"><label>Psychiatric consultant</label><input type="text" data-field="bhi-role-psychconsultant"></div>
+          <div class="field"><label>Clinical staff involved</label><input type="text" data-field="bhi-role-clinicalstaff"></div>
+        </div>
+      </div>
+
+      <h3 class="sub-header">COCM elements (G0568 initial / G0569 subsequent)</h3>
+      <div class="check-row"><input type="checkbox" id="cc-cocm-registry" data-field="cocm-registry"><label for="cc-cocm-registry">Patient entered in registry; follow-up/progress tracked</label></div>
+      <div class="check-row"><input type="checkbox" id="cc-cocm-rating" data-field="cocm-ratingscale"><label for="cc-cocm-rating">Validated rating scale administered and documented (name/score noted in chart)</label></div>
+      <div class="check-row"><input type="checkbox" id="cc-cocm-consult" data-field="cocm-weeklyconsult"><label for="cc-cocm-consult">Weekly caseload consultation with psychiatric consultant completed</label></div>
+      <div class="check-row"><input type="checkbox" id="cc-cocm-plan" data-field="cocm-treatmentplan"><label for="cc-cocm-plan">Treatment plan developed/reviewed by psychiatric consultant, with recommendations documented</label></div>
+      <div class="check-row"><input type="checkbox" id="cc-cocm-brief" data-field="cocm-briefintervention"><label for="cc-cocm-brief">Brief evidence-based intervention provided (e.g., behavioral activation, motivational interviewing)</label></div>
+      <div class="check-row"><input type="checkbox" id="cc-cocm-relapse" data-field="cocm-relapseprevention"><label for="cc-cocm-relapse">Relapse-prevention planning documented (if applicable — patient nearing remission/discharge)</label></div>
+
+      <h3 class="sub-header">General BHI elements (G0570)</h3>
+      <div class="check-row"><input type="checkbox" id="cc-genbhi-assess" data-field="genbhi-assessment"><label for="cc-genbhi-assess">Initial assessment or follow-up monitoring completed, including validated rating scale</label></div>
+      <div class="check-row"><input type="checkbox" id="cc-genbhi-plan" data-field="genbhi-careplan"><label for="cc-genbhi-plan">Behavioral health care plan created/revised</label></div>
+      <div class="check-row"><input type="checkbox" id="cc-genbhi-treat" data-field="genbhi-treatment"><label for="cc-genbhi-treat">Treatment facilitated/coordinated (psychotherapy, pharmacotherapy, counseling, and/or psychiatric consultation)</label></div>
+      <div class="check-row"><input type="checkbox" id="cc-genbhi-cont" data-field="genbhi-continuity"><label for="cc-genbhi-cont">Continuity of care maintained with a designated care team member</label></div>
+
+      <h3 class="sub-header">BHI advance consent</h3>
+      <div class="card">
+        <div class="field-grid">
+          <div class="field"><label>Advance consent obtained (date, verbal or written)</label><input type="text" data-field="advconsent-date"></div>
+          <div class="field"><label>Patient informed cost-sharing applies (face-to-face &amp; non-face-to-face)?</label><select data-field="advconsent-costshare"><option>Select…</option><option>Y</option><option>N</option></select></div>
+        </div>
+      </div>
+
+      <h2 class="section-header"><span class="num">11.</span>Remote Patient Monitoring (RPM)</h2>
+      <div class="check-row"><input type="checkbox" id="rpm-na"><label for="rpm-na">Not applicable this month</label></div>
+      <div class="infobox warn">
+        <div class="infobox-head">Device requirement</div>
+        <div class="infobox-body">RPM requires a connected, FDA-defined medical device that automatically transmits data. Manually entered patient-reported readings do not satisfy the device-supply codes.</div>
+      </div>
+      <p class="body-text">Codes billed this month:</p>
+      <div class="check-row"><input type="checkbox" id="rpm-99453" data-field="rpm-code-99453"><label for="rpm-99453"><b>99453</b> — initial setup &amp; patient education (once per episode of care)</label></div>
+      <div class="check-row"><input type="checkbox" id="rpm-99445" data-field="rpm-code-99445"><label for="rpm-99445"><b>99445</b> — device supply, 2–15 days of data in 30-day period (2026)</label></div>
+      <div class="check-row"><input type="checkbox" id="rpm-99454" data-field="rpm-code-99454"><label for="rpm-99454"><b>99454</b> — device supply, 16–30 days of data in 30-day period</label></div>
+      <div class="check-row"><input type="checkbox" id="rpm-99470" data-field="rpm-code-99470"><label for="rpm-99470"><b>99470</b> — treatment management, 10–19 min/calendar month (2026)</label></div>
+      <div class="check-row"><input type="checkbox" id="rpm-99457" data-field="rpm-code-99457"><label for="rpm-99457"><b>99457</b> — treatment management, first 20 min w/ ≥1 real-time interactive communication</label></div>
+      <div class="check-row"><input type="checkbox" id="rpm-99458" data-field="rpm-code-99458"><label for="rpm-99458"><b>99458</b> — each additional 20 min treatment management</label></div>
+      <div class="check-row"><input type="checkbox" id="rpm-99091" data-field="rpm-code-99091"><label for="rpm-99091"><b>99091</b> — data collection/interpretation, ≥30 min in 30 days, personally performed by physician/QHP</label></div>
+      <div class="card">
+        <div class="field-grid">
+          <div class="field"><label>Condition / clinical purpose of RPM</label><input type="text" data-field="rpm-condition"></div>
+          <div class="field"><label>Device / monitored parameter</label><input type="text" data-field="rpm-device"></div>
+          <div class="field"><label>30-day monitoring period</label><input type="text" placeholder="Start–end date" data-field="rpm-period"></div>
+          <div class="field"><label>Number of qualifying transmission days</label><input type="text" data-field="rpm-txdays"></div>
+        </div>
+      </div>
+      <div class="check-row"><input type="checkbox" id="cc-rpm-plan" data-field="rpm-plan"><label for="cc-rpm-plan">Monitoring plan documented (parameter, frequency, alert thresholds, response protocol)</label></div>
+      <div class="check-row"><input type="checkbox" id="cc-rpm-consent" data-field="rpm-consent"><label for="cc-rpm-consent">Patient/caregiver consent &amp; ability to use device documented</label></div>
+      <div class="check-row"><input type="checkbox" id="cc-rpm-oneprac" data-field="rpm-oneprac"><label for="cc-rpm-oneprac">Confirmed only one practitioner is billing device supply this 30-day period</label></div>
+      <div class="card">
+        <div class="field-grid">
+          <div class="field"><label>Trend interpretation / clinically significant alerts</label><textarea data-field="rpm-trend"></textarea></div>
+          <div class="field"><label>Medication or care-plan decisions this month</label><textarea data-field="rpm-decisions"></textarea></div>
+          <div class="field"><label>Date &amp; substance of synchronous interactive communication</label><textarea data-field="rpm-comm"></textarea></div>
+          <div class="field"><label>Escalations / ED instructions / follow-up plan</label><textarea data-field="rpm-escalation"></textarea></div>
+        </div>
+      </div>
+
+      <h2 class="section-header"><span class="num">12.</span>Chronic Care Management (CCM)</h2>
+      <div class="check-row"><input type="checkbox" id="ccm-na"><label for="ccm-na">Not applicable this month</label></div>
+      <h3 class="sub-header">Qualifying chronic conditions (2 or more required)</h3>
+      <div class="table-wrap">
+        <table class="bhw-table" id="ccmConditionsTable">
+          <thead><tr><th>Condition</th><th>ICD-10 code</th><th>Expected ≥12 mo. / until death?</th><th>Significant risk present?</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <button class="btn btn-sm no-print" onclick="addSimpleRow('ccmConditionsTable',4)">+ Add condition</button>
+      <p class="body-text" style="margin-top:14px;">Code billed this month:</p>
+      <div class="check-row"><input type="checkbox" id="ccm-99490" data-field="ccm-code-99490"><label for="ccm-99490"><b>99490</b> — clinical staff, first 20 min/month, general supervision</label></div>
+      <div class="check-row"><input type="checkbox" id="ccm-99439" data-field="ccm-code-99439"><label for="ccm-99439"><b>99439</b> — each additional 20 min clinical staff (add-on to 99490)</label></div>
+      <div class="check-row"><input type="checkbox" id="ccm-99491" data-field="ccm-code-99491"><label for="ccm-99491"><b>99491</b> — physician/QHP personally, first 30 min/month</label></div>
+      <div class="check-row"><input type="checkbox" id="ccm-99437" data-field="ccm-code-99437"><label for="ccm-99437"><b>99437</b> — each additional 30 min physician/QHP (add-on to 99491)</label></div>
+      <div class="check-row"><input type="checkbox" id="ccm-99487" data-field="ccm-code-99487"><label for="ccm-99487"><b>99487</b> — complex CCM, clinical staff, first 60 min/month (requires moderate/high MDM + care-plan establishment or substantial revision)</label></div>
+      <div class="check-row"><input type="checkbox" id="ccm-99489" data-field="ccm-code-99489"><label for="ccm-99489"><b>99489</b> — each additional 30 min clinical staff (add-on to 99487)</label></div>
+      <div class="infobox tip">
+        <div class="infobox-head">Complex CCM decision rule</div>
+        <div class="infobox-body">Use 99487 — not simply "more CCM." High minutes alone do not create complex CCM; the record must support moderate/high MDM and substantial care-plan revision.</div>
+      </div>
+      <div class="check-row"><input type="checkbox" id="cc-ccm-consent" data-field="ccm-consent"><label for="cc-ccm-consent">Consent on file (one-time, cost sharing / one-provider rule disclosed)</label></div>
+      <div class="check-row"><input type="checkbox" id="cc-ccm-access" data-field="ccm-access"><label for="cc-ccm-access">24/7 access &amp; continuity of care confirmed</label></div>
+      <div class="check-row"><input type="checkbox" id="cc-ccm-plan" data-field="ccm-plan"><label for="cc-ccm-plan">Comprehensive care plan current</label></div>
+      <div class="check-row"><input type="checkbox" id="cc-ccm-medrec" data-field="ccm-medrec"><label for="cc-ccm-medrec">Medication reconciliation completed this month</label></div>
+      <div class="card">
+        <div class="field-grid">
+          <div class="field"><label>Care coordination / transitions this month</label><textarea data-field="ccm-coordination"></textarea></div>
+          <div class="field"><label>MDM complexity / care-plan revision summary (if 99487/99489)</label><textarea data-field="ccm-mdm"></textarea></div>
+          <div class="field"><label>Total qualifying minutes this month</label><input type="text" data-field="ccm-minutes"></div>
+          <div class="field"><label>Monthly summary signed?</label><select data-field="ccm-summarysigned"><option value="">Select…</option><option>Y</option><option>N</option></select></div>
+        </div>
+      </div>
+
+      <h2 class="section-header"><span class="num">13.</span>Principal Care Management (PCM)</h2>
+      <div class="check-row"><input type="checkbox" id="pcm-na"><label for="pcm-na">Not applicable this month</label></div>
+      <div class="card">
+        <div class="field-grid">
+          <div class="field"><label>Single high-risk chronic condition (disease)</label><input type="text" data-field="pcm-condition"></div>
+          <div class="field"><label>ICD-10 code</label><input type="text" data-field="pcm-icd10"></div>
+          <div class="field"><label>Expected duration (≥3 months required)</label><input type="text" data-field="pcm-duration"></div>
+          <div class="field"><label>Initiating visit date (new patients; annual renewal after 1 yr)</label><input type="date" data-field="pcm-initvisit"></div>
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:14px;"><label>Why condition independently creates significant risk</label><textarea data-field="pcm-riskreason"></textarea></div>
+      <p class="body-text">Code billed this month:</p>
+      <div class="check-row"><input type="checkbox" id="pcm-99424" data-field="pcm-code-99424"><label for="pcm-99424"><b>99424</b> — physician/QHP personally, first 30 min/month</label></div>
+      <div class="check-row"><input type="checkbox" id="pcm-99425" data-field="pcm-code-99425"><label for="pcm-99425"><b>99425</b> — each additional 30 min physician/QHP (add-on to 99424)</label></div>
+      <div class="check-row"><input type="checkbox" id="pcm-99426" data-field="pcm-code-99426"><label for="pcm-99426"><b>99426</b> — clinical staff under physician/QHP direction, first 30 min/month, general supervision</label></div>
+      <div class="check-row"><input type="checkbox" id="pcm-99427" data-field="pcm-code-99427"><label for="pcm-99427"><b>99427</b> — each additional 30 min clinical staff (add-on to 99426)</label></div>
+      <div class="card">
+        <div class="field-grid">
+          <div class="field"><label>Disease-specific care plan created/revised (date)</label><input type="date" data-field="pcm-planrevised"></div>
+          <div class="field"><label>Total qualifying minutes this month</label><input type="text" data-field="pcm-minutes"></div>
+          <div class="field"><label>Medication adjustments / complex management this month</label><textarea data-field="pcm-medadjust"></textarea></div>
+          <div class="field"><label>Comorbidities complicating management (if any)</label><textarea data-field="pcm-comorbid"></textarea></div>
+          <div class="field"><label>Patient/caregiver communication &amp; coordination</label><textarea data-field="pcm-comm"></textarea></div>
+        </div>
+      </div>
+      <div class="check-row"><input type="checkbox" id="cc-pcm-noccm" data-field="pcm-noccm"><label for="cc-pcm-noccm">Confirmed: no CCM billed for this patient in the same month, and no time duplicated with RPM/TCM/E&#47;M</label></div>
+
+      <h2 class="section-header"><span class="num">14.</span>Psychiatric Collaborative Care Model (CoCM)</h2>
+      <div class="check-row"><input type="checkbox" id="cocm-na"><label for="cocm-na">Not applicable this month</label></div>
+      <div class="infobox info">
+        <div class="infobox-head">Relationship to BHI add-on codes</div>
+        <div class="infobox-body">CoCM (99492/99493/99494/G2214) is the standard time-based CPT/G-code pathway and is distinct from the BHI add-on codes in Section 10. Do not bill both CoCM and general BHI (99484/G0570) for the same patient in the same calendar month.</div>
+      </div>
+      <h3 class="sub-header">Care team</h3>
+      <div class="card">
+        <div class="field-grid cols-3">
+          <div class="field"><label>Treating / billing practitioner</label><input type="text" data-field="cocm-role-practitioner"></div>
+          <div class="field"><label>Behavioral health care manager (BHCM)</label><input type="text" data-field="cocm-role-bhcm"></div>
+          <div class="field"><label>Psychiatric consultant</label><input type="text" data-field="cocm-role-consultant"></div>
+        </div>
+      </div>
+      <p class="body-text">Code billed this month:</p>
+      <div class="check-row"><input type="checkbox" id="cocm-99492" data-field="cocm-code-99492"><label for="cocm-99492"><b>99492</b> — initial calendar month, first 70 min BHCM activities</label></div>
+      <div class="check-row"><input type="checkbox" id="cocm-99493" data-field="cocm-code-99493"><label for="cocm-99493"><b>99493</b> — subsequent calendar month, first 60 min BHCM activities</label></div>
+      <div class="check-row"><input type="checkbox" id="cocm-99494" data-field="cocm-code-99494"><label for="cocm-99494"><b>99494</b> — each additional 30 min (add-on to 99492/99493)</label></div>
+      <div class="check-row"><input type="checkbox" id="cocm-g2214" data-field="cocm-code-g2214"><label for="cocm-g2214"><b>G2214</b> — initial or subsequent month, first 30 min (below CPT base-code threshold)</label></div>
+      <h3 class="sub-header">Required clinical elements this month</h3>
+      <div class="check-row"><input type="checkbox" id="cc-cocm2-diag" data-field="cocm2-diagnosis"><label for="cc-cocm2-diag">Behavioral diagnosis and current treatment targets documented</label></div>
+      <div class="check-row"><input type="checkbox" id="cc-cocm2-scale" data-field="cocm2-scale"><label for="cc-cocm2-scale">Validated rating scale administered and documented</label></div>
+      <div class="check-row"><input type="checkbox" id="cc-cocm2-registry" data-field="cocm2-registry"><label for="cc-cocm2-registry">Patient entered/tracked in registry, including outcomes and non-improving status</label></div>
+      <div class="check-row"><input type="checkbox" id="cc-cocm2-review" data-field="cocm2-review"><label for="cc-cocm2-review">Caseload review with psychiatric consultant completed</label></div>
+      <div class="check-row"><input type="checkbox" id="cc-cocm2-target" data-field="cocm2-target"><label for="cc-cocm2-target">Treatment-to-target change made if symptoms not improving as expected</label></div>
+      <div class="check-row"><input type="checkbox" id="cc-cocm2-brief" data-field="cocm2-brief"><label for="cc-cocm2-brief">Brief evidence-based behavioral intervention provided within BHCM scope</label></div>
+      <div class="check-row"><input type="checkbox" id="cc-cocm2-referral" data-field="cocm2-referral"><label for="cc-cocm2-referral">Referrals / care coordination / SDOH follow-up documented</label></div>
+      <div class="check-row"><input type="checkbox" id="cc-cocm2-relapse" data-field="cocm2-relapse"><label for="cc-cocm2-relapse">Relapse-prevention planning documented (if applicable — nearing remission/discharge)</label></div>
+      <div class="card">
+        <div class="field-grid">
+          <div class="field"><label>Total qualifying BHCM minutes this month</label><input type="text" data-field="cocm2-minutes"></div>
+          <div class="field"><label>Excluded psychotherapy/E&#47;M/administrative time</label><input type="text" data-field="cocm2-excluded"></div>
+        </div>
+      </div>
+
+      <h2 class="section-header"><span class="num">15.</span>Provider attestation</h2>
+      <p class="body-text">I attest that the care-management services documented above (APCM, BHI, RPM, CCM, PCM, and/or CoCM, as checked) were furnished as described, meet all applicable Medicare requirements for the code(s) selected, that no time or activity was counted toward more than one program, and that this documentation is complete and accurate as of the date signed.</p>
+      <div class="card">
+        <div class="field-grid cols-3">
+          <div class="field"><label>Provider signature</label><input type="text" data-field="attest-signature"></div>
+          <div class="field"><label>Printed name &amp; credentials</label><input type="text" data-field="attest-name"></div>
+          <div class="field"><label>Date</label><input type="date" data-field="attest-date"></div>
+        </div>
+      </div>
+
+      <h2 class="section-header"><span class="num">16.</span>Chart note summary</h2>
+      <p class="body-text">Generate a plain-text summary of everything entered above, formatted for pasting into the patient's chart in your EHR. Blank/unanswered fields are left out automatically.</p>
+      <div class="btn-row no-print">
+        <button class="btn btn-solid" onclick="generateChartNote()">Generate chart note</button>
+        <button class="btn" id="copyNoteBtn" onclick="copyChartNote()">Copy to clipboard</button>
+      </div>
+      <textarea id="chartNoteOutput" readonly placeholder="Click “Generate chart note” to build a copy-paste-ready summary from the fields above." style="width:100%; min-height:320px; font-family:'Montserrat',sans-serif; font-size:0.82rem; line-height:1.5; padding:14px 16px; border:1px solid var(--bhw-sand); border-radius:4px; background:#fff; color:var(--bhw-ink); white-space:pre-wrap;"></textarea>
+      <p class="small" id="copyStatus" style="opacity:0.7; margin-top:6px;">&nbsp;</p>
+    </div>
+
+    <!-- ================= TAB 2: AUDITING TOOL ================= -->
+    <div class="tab-content" id="tab-audit">
+      <h1 class="doc-title">Care Management Compliance Auditing Tool</h1>
+      <p class="lede">Log one row per patient, per calendar month, to audit APCM, BHI add-on, RPM, CCM, PCM, and CoCM billing — either as a pre-bill review or a periodic retrospective compliance audit. Compliance % and Overall Result calculate automatically.</p>
+
+      <div class="infobox tip">
+        <div class="infobox-head">How to use this tool</div>
+        <div class="infobox-body">
+          Use the Y / N / N/A dropdown in each requirement column — N/A only where an exception is explicitly allowed (e.g., initiating visit not required, no discharge this month). Rows shaded tan are examples; use “Remove example rows” before real audits so they don't skew the dashboard.
+        </div>
+      </div>
+
+      <div class="subtab-nav no-print">
+        <button class="subtab-btn active" onclick="showSubtab('apcm')">APCM core audit</button>
+        <button class="subtab-btn" onclick="showSubtab('bhi')">BHI add-on audit</button>
+        <button class="subtab-btn" onclick="showSubtab('rpm')">RPM audit</button>
+        <button class="subtab-btn" onclick="showSubtab('ccm')">CCM audit</button>
+        <button class="subtab-btn" onclick="showSubtab('pcm')">PCM audit</button>
+        <button class="subtab-btn" onclick="showSubtab('cocm')">CoCM audit</button>
+        <button class="subtab-btn" onclick="showSubtab('overlap')">Overlap &amp; frequency check</button>
+        <button class="subtab-btn" onclick="showSubtab('stacking')">Program stacking check</button>
+        <button class="subtab-btn" onclick="showSubtab('dashboard')">Summary dashboard</button>
+      </div>
+
+      <!-- APCM CORE AUDIT -->
+      <div class="subtab-content active" id="subtab-apcm">
+        <h3 class="sub-header">APCM core requirements audit</h3>
+        <div class="btn-row no-print">
+          <button class="btn btn-solid" onclick="addAuditRow('apcm')">+ Add patient row</button>
+          <button class="btn btn-rust" onclick="removeExamples('apcm')">Remove example rows</button>
+          <button class="btn" onclick="window.print()">Print this tab</button>
+        </div>
+        <div class="table-wrap">
+          <table class="bhw-table" id="apcmTable">
+            <thead>
+              <tr>
+                <th>Patient</th><th>MRN</th><th>Svc month</th><th>Auditor</th><th>Audit date</th>
+                <th>Code billed</th><th>QMB status<br>(if G0558)</th>
+                <th>Chronic count<br>matches code</th>
+                <th>Consent obtained<br>&amp; documented</th>
+                <th>Consent elements<br>disclosed</th>
+                <th>Initiating visit met<br>or correctly N/A</th>
+                <th>24/7 access &amp;<br>continuity documented</th>
+                <th>Comprehensive care<br>mgmt documented</th>
+                <th>Electronic care plan<br>current &amp; shared</th>
+                <th>7-day transition<br>follow-up (or N/A)</th>
+                <th>Home/community<br>coordination documented</th>
+                <th>Enhanced comm. /<br>CTBS documented</th>
+                <th>Population review &amp;<br>perf. reporting</th>
+                <th class="key-col">No overlapping<br>CCM/PCM/TCM</th>
+                <th>Provider attestation<br>on file</th>
+                <th># Met</th><th># Not met</th><th># N/A</th><th>Compliance %</th><th>Overall result</th><th>Notes</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="apcmBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- BHI ADD-ON AUDIT -->
+      <div class="subtab-content" id="subtab-bhi">
+        <h3 class="sub-header">BHI add-on requirements audit</h3>
+        <div class="btn-row no-print">
+          <button class="btn btn-solid" onclick="addAuditRow('bhi')">+ Add patient row</button>
+          <button class="btn btn-rust" onclick="removeExamples('bhi')">Remove example rows</button>
+          <button class="btn" onclick="window.print()">Print this tab</button>
+        </div>
+        <div class="table-wrap">
+          <table class="bhw-table" id="bhiTable">
+            <thead>
+              <tr>
+                <th>Patient</th><th>MRN</th><th>Svc month</th>
+                <th>APCM code<br>billed same claim</th><th>BHI add-on<br>code</th><th>Model type</th>
+                <th>Required care team<br>roles documented</th>
+                <th>Registry entry / follow-up<br>tracking or continuity</th>
+                <th>Validated rating scale<br>administered</th>
+                <th>Weekly caseload consult<br>w/ psych. consultant</th>
+                <th>Treatment plan reviewed<br>by psych. consultant</th>
+                <th>Brief evidence-based<br>intervention documented</th>
+                <th>Advance consent &amp;<br>cost-share disclosure</th>
+                <th class="key-col">Add-on billed on<br>same claim as APCM</th>
+                <th># Met</th><th># Not met</th><th># N/A</th><th>Compliance %</th><th>Overall result</th><th>Notes</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="bhiBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- RPM AUDIT -->
+      <div class="subtab-content" id="subtab-rpm">
+        <h3 class="sub-header">RPM requirements audit</h3>
+        <div class="btn-row no-print">
+          <button class="btn btn-solid" onclick="addAuditRow('rpm')">+ Add patient row</button>
+          <button class="btn btn-rust" onclick="removeExamples('rpm')">Remove example rows</button>
+          <button class="btn" onclick="window.print()">Print this tab</button>
+        </div>
+        <div class="table-wrap">
+          <table class="bhw-table" id="rpmTable">
+            <thead>
+              <tr>
+                <th>Patient</th><th>MRN</th><th>Svc month</th><th>Auditor</th><th>Audit date</th>
+                <th>Codes billed</th>
+                <th>Device is FDA-defined &amp;<br>auto-transmits data</th>
+                <th>Qualifying transmission<br>days meet threshold</th>
+                <th>Monitoring plan<br>documented</th>
+                <th>Patient/caregiver consent &amp;<br>ability documented</th>
+                <th>Only one practitioner billing<br>device supply this period</th>
+                <th>Interactive communication<br>documented (or N/A)</th>
+                <th>Clinical decisions /<br>care-plan updates documented</th>
+                <th>Payer verified for<br>exact 2026 code</th>
+                <th class="key-col">No duplicate time w/<br>CCM/PCM/CoCM</th>
+                <th># Met</th><th># Not met</th><th># N/A</th><th>Compliance %</th><th>Overall result</th><th>Notes</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="rpmBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CCM AUDIT -->
+      <div class="subtab-content" id="subtab-ccm">
+        <h3 class="sub-header">CCM requirements audit</h3>
+        <div class="btn-row no-print">
+          <button class="btn btn-solid" onclick="addAuditRow('ccm')">+ Add patient row</button>
+          <button class="btn btn-rust" onclick="removeExamples('ccm')">Remove example rows</button>
+          <button class="btn" onclick="window.print()">Print this tab</button>
+        </div>
+        <div class="table-wrap">
+          <table class="bhw-table" id="ccmTable">
+            <thead>
+              <tr>
+                <th>Patient</th><th>MRN</th><th>Svc month</th><th>Auditor</th><th>Audit date</th>
+                <th>Code billed</th>
+                <th>2+ qualifying chronic<br>conditions documented</th>
+                <th>Consent on file</th>
+                <th>Comprehensive care<br>plan current</th>
+                <th>24/7 access &amp;<br>continuity documented</th>
+                <th>Medication reconciliation<br>completed</th>
+                <th>Care coordination /<br>transitions documented</th>
+                <th>Threshold met for<br>code billed</th>
+                <th>Complex CCM MDM &amp; plan<br>revision documented (or N/A)</th>
+                <th>Monthly summary<br>signed</th>
+                <th class="key-col">No APCM / duplicate<br>time same month</th>
+                <th># Met</th><th># Not met</th><th># N/A</th><th>Compliance %</th><th>Overall result</th><th>Notes</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="ccmBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PCM AUDIT -->
+      <div class="subtab-content" id="subtab-pcm">
+        <h3 class="sub-header">PCM requirements audit</h3>
+        <div class="btn-row no-print">
+          <button class="btn btn-solid" onclick="addAuditRow('pcm')">+ Add patient row</button>
+          <button class="btn btn-rust" onclick="removeExamples('pcm')">Remove example rows</button>
+          <button class="btn" onclick="window.print()">Print this tab</button>
+        </div>
+        <div class="table-wrap">
+          <table class="bhw-table" id="pcmTable">
+            <thead>
+              <tr>
+                <th>Patient</th><th>MRN</th><th>Svc month</th><th>Auditor</th><th>Audit date</th>
+                <th>Code billed</th>
+                <th>Single high-risk condition meets<br>≥3-mo &amp; high-risk criteria</th>
+                <th>Initiating visit valid /<br>annual renewal tracked</th>
+                <th>Consent<br>documented</th>
+                <th>Disease-specific care<br>plan current</th>
+                <th>≥30 min threshold met for<br>correct performer pathway</th>
+                <th>Medication/management<br>complexity documented</th>
+                <th>No CCM billed same<br>patient/month</th>
+                <th class="key-col">No time duplicated w/<br>RPM/TCM/E-M</th>
+                <th># Met</th><th># Not met</th><th># N/A</th><th>Compliance %</th><th>Overall result</th><th>Notes</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="pcmBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CoCM AUDIT -->
+      <div class="subtab-content" id="subtab-cocm">
+        <h3 class="sub-header">CoCM requirements audit</h3>
+        <div class="btn-row no-print">
+          <button class="btn btn-solid" onclick="addAuditRow('cocm')">+ Add patient row</button>
+          <button class="btn btn-rust" onclick="removeExamples('cocm')">Remove example rows</button>
+          <button class="btn" onclick="window.print()">Print this tab</button>
+        </div>
+        <div class="table-wrap">
+          <table class="bhw-table" id="cocmTable">
+            <thead>
+              <tr>
+                <th>Patient</th><th>MRN</th><th>Svc month</th><th>Auditor</th><th>Audit date</th>
+                <th>Code billed</th>
+                <th>3-part team documented<br>(practitioner, BHCM, consultant)</th>
+                <th>Registry entry &amp;<br>caseload tracking</th>
+                <th>Validated rating scale<br>administered</th>
+                <th>Regular caseload review<br>w/ psychiatric consultant</th>
+                <th>Treatment-to-target change<br>documented when needed</th>
+                <th>Brief evidence-based<br>intervention documented</th>
+                <th>Correct code/threshold<br>selected per CMS table</th>
+                <th>Relapse-prevention/transition<br>documented (or N/A)</th>
+                <th class="key-col">No double-billing w/<br>general BHI same month</th>
+                <th># Met</th><th># Not met</th><th># N/A</th><th>Compliance %</th><th>Overall result</th><th>Notes</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="cocmBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- OVERLAP CHECK -->
+      <div class="subtab-content" id="subtab-overlap">
+        <h3 class="sub-header">Overlap &amp; frequency check <span class="small">(APCM vs. CCM/PCM/TCM)</span></h3>
+        <div class="btn-row no-print">
+          <button class="btn btn-solid" onclick="addAuditRow('overlap')">+ Add patient row</button>
+          <button class="btn btn-rust" onclick="removeExamples('overlap')">Remove example rows</button>
+          <button class="btn" onclick="window.print()">Print this tab</button>
+        </div>
+        <div class="table-wrap">
+          <table class="bhw-table" id="overlapTable">
+            <thead>
+              <tr>
+                <th>Patient</th><th>MRN</th><th>Svc month</th>
+                <th>APCM billed<br>this month</th>
+                <th>APCM billed more than<br>once this month</th>
+                <th>CCM billed<br>same month</th>
+                <th>PCM billed<br>same month</th>
+                <th>TCM billed<br>same month</th>
+                <th>Result</th><th>Notes</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="overlapBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PROGRAM STACKING CHECK -->
+      <div class="subtab-content" id="subtab-stacking">
+        <h3 class="sub-header">Program stacking check <span class="small">(RPM / CCM / PCM / CoCM / General BHI)</span></h3>
+        <p class="body-text small">Log every patient billing more than one care-management program this month. Flags: CCM+PCM same month, APCM+CCM/PCM same month, and CoCM+General BHI (99484/G0570) same month.</p>
+        <div class="btn-row no-print">
+          <button class="btn btn-solid" onclick="addAuditRow('stacking')">+ Add patient row</button>
+          <button class="btn btn-rust" onclick="removeExamples('stacking')">Remove example rows</button>
+          <button class="btn" onclick="window.print()">Print this tab</button>
+        </div>
+        <div class="table-wrap">
+          <table class="bhw-table" id="stackingTable">
+            <thead>
+              <tr>
+                <th>Patient</th><th>MRN</th><th>Svc month</th>
+                <th>APCM billed<br>(Y/N)</th>
+                <th>CCM billed<br>(Y/N)</th>
+                <th>PCM billed<br>(Y/N)</th>
+                <th>CoCM billed<br>(Y/N)</th>
+                <th>RPM billed<br>(Y/N)</th>
+                <th>General BHI (99484/<br>G0570) billed (Y/N)</th>
+                <th>Result</th><th>Notes</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="stackingBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- DASHBOARD -->
+      <div class="subtab-content" id="subtab-dashboard">
+        <h3 class="sub-header">Summary dashboard</h3>
+        <p class="body-text small">Updates automatically from the three audit tabs (example rows are excluded from patient counts).</p>
+
+        <h3 class="sub-header" style="margin-top:22px;">APCM core audit</h3>
+        <div class="stat-grid">
+          <div class="stat-card"><div class="stat-value" id="apcm-audited">0</div><div class="stat-label">Patients audited</div></div>
+          <div class="stat-card sage"><div class="stat-value" id="apcm-pass">0</div><div class="stat-label">Passed</div></div>
+          <div class="stat-card rust"><div class="stat-value" id="apcm-review">0</div><div class="stat-label">Review needed</div></div>
+          <div class="stat-card rust"><div class="stat-value" id="apcm-error">0</div><div class="stat-label">Billing errors</div></div>
+        </div>
+        <div class="stat-grid" style="grid-template-columns:1fr;">
+          <div class="stat-card"><div class="stat-value" id="apcm-avg">—</div><div class="stat-label">Average compliance %</div></div>
+        </div>
+
+        <h3 class="sub-header">BHI add-on audit</h3>
+        <div class="stat-grid">
+          <div class="stat-card"><div class="stat-value" id="bhi-audited">0</div><div class="stat-label">Patients audited</div></div>
+          <div class="stat-card sage"><div class="stat-value" id="bhi-pass">0</div><div class="stat-label">Passed</div></div>
+          <div class="stat-card rust"><div class="stat-value" id="bhi-review">0</div><div class="stat-label">Review needed</div></div>
+          <div class="stat-card rust"><div class="stat-value" id="bhi-error">0</div><div class="stat-label">Billing errors</div></div>
+        </div>
+        <div class="stat-grid" style="grid-template-columns:1fr;">
+          <div class="stat-card"><div class="stat-value" id="bhi-avg">—</div><div class="stat-label">Average compliance %</div></div>
+        </div>
+
+        <h3 class="sub-header">RPM audit</h3>
+        <div class="stat-grid">
+          <div class="stat-card"><div class="stat-value" id="rpm-audited">0</div><div class="stat-label">Patients audited</div></div>
+          <div class="stat-card sage"><div class="stat-value" id="rpm-pass">0</div><div class="stat-label">Passed</div></div>
+          <div class="stat-card rust"><div class="stat-value" id="rpm-review">0</div><div class="stat-label">Review needed</div></div>
+          <div class="stat-card rust"><div class="stat-value" id="rpm-error">0</div><div class="stat-label">Billing errors</div></div>
+        </div>
+        <div class="stat-grid" style="grid-template-columns:1fr;">
+          <div class="stat-card"><div class="stat-value" id="rpm-avg">—</div><div class="stat-label">Average compliance %</div></div>
+        </div>
+
+        <h3 class="sub-header">CCM audit</h3>
+        <div class="stat-grid">
+          <div class="stat-card"><div class="stat-value" id="ccm-audited">0</div><div class="stat-label">Patients audited</div></div>
+          <div class="stat-card sage"><div class="stat-value" id="ccm-pass">0</div><div class="stat-label">Passed</div></div>
+          <div class="stat-card rust"><div class="stat-value" id="ccm-review">0</div><div class="stat-label">Review needed</div></div>
+          <div class="stat-card rust"><div class="stat-value" id="ccm-error">0</div><div class="stat-label">Billing errors</div></div>
+        </div>
+        <div class="stat-grid" style="grid-template-columns:1fr;">
+          <div class="stat-card"><div class="stat-value" id="ccm-avg">—</div><div class="stat-label">Average compliance %</div></div>
+        </div>
+
+        <h3 class="sub-header">PCM audit</h3>
+        <div class="stat-grid">
+          <div class="stat-card"><div class="stat-value" id="pcm-audited">0</div><div class="stat-label">Patients audited</div></div>
+          <div class="stat-card sage"><div class="stat-value" id="pcm-pass">0</div><div class="stat-label">Passed</div></div>
+          <div class="stat-card rust"><div class="stat-value" id="pcm-review">0</div><div class="stat-label">Review needed</div></div>
+          <div class="stat-card rust"><div class="stat-value" id="pcm-error">0</div><div class="stat-label">Billing errors</div></div>
+        </div>
+        <div class="stat-grid" style="grid-template-columns:1fr;">
+          <div class="stat-card"><div class="stat-value" id="pcm-avg">—</div><div class="stat-label">Average compliance %</div></div>
+        </div>
+
+        <h3 class="sub-header">CoCM audit</h3>
+        <div class="stat-grid">
+          <div class="stat-card"><div class="stat-value" id="cocm-audited">0</div><div class="stat-label">Patients audited</div></div>
+          <div class="stat-card sage"><div class="stat-value" id="cocm-pass">0</div><div class="stat-label">Passed</div></div>
+          <div class="stat-card rust"><div class="stat-value" id="cocm-review">0</div><div class="stat-label">Review needed</div></div>
+          <div class="stat-card rust"><div class="stat-value" id="cocm-error">0</div><div class="stat-label">Billing errors</div></div>
+        </div>
+        <div class="stat-grid" style="grid-template-columns:1fr;">
+          <div class="stat-card"><div class="stat-value" id="cocm-avg">—</div><div class="stat-label">Average compliance %</div></div>
+        </div>
+
+        <h3 class="sub-header">Overlap &amp; frequency check (APCM)</h3>
+        <div class="stat-grid" style="grid-template-columns:repeat(3,1fr);">
+          <div class="stat-card"><div class="stat-value" id="ov-logged">0</div><div class="stat-label">Patients logged</div></div>
+          <div class="stat-card sage"><div class="stat-value" id="ov-ok">0</div><div class="stat-label">OK</div></div>
+          <div class="stat-card rust"><div class="stat-value" id="ov-error">0</div><div class="stat-label">Billing errors</div></div>
+        </div>
+
+        <h3 class="sub-header">Program stacking check</h3>
+        <div class="stat-grid" style="grid-template-columns:repeat(3,1fr);">
+          <div class="stat-card"><div class="stat-value" id="stacking-logged">0</div><div class="stat-label">Patients logged</div></div>
+          <div class="stat-card sage"><div class="stat-value" id="stacking-ok">0</div><div class="stat-label">OK</div></div>
+          <div class="stat-card rust"><div class="stat-value" id="stacking-error">0</div><div class="stat-label">Billing errors</div></div>
+        </div>
+        <button class="btn no-print" style="margin-top:8px;" onclick="recomputeDashboard()">Refresh dashboard</button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="doc-footer">
+    <div class="clinic-line">BHW Medical Group — Baltimore Healthcare and Wellness</div>
+    <div>2131 Maryland Ave, Baltimore, MD 21218</div>
+    <div class="disclaimer">This toolkit is an internal documentation and compliance aid based on a Medicare Administrative Contractor "Stay Connected" care management webinar covering APCM (effective 2025) and BHI add-on codes (effective January 1, 2026), and the BHW Care Management Billing &amp; Operations Guide covering RPM, CCM, PCM, and CoCM (rules reviewed through July 20, 2026). It is not a legal document, does not replace official CMS guidance or member-specific payer policy, and does not constitute legal or billing advice. Confirm current requirements at cms.gov and with each payer before making final billing or compliance determinations. For education only.</div>
+  </div>
+
+</div>
+
+<script>
+function showTab(name){
+  document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  document.getElementById('tabbtn-'+name).classList.add('active');
+  if(name==='audit') recomputeDashboard();
+}
+function showSubtab(name){
+  document.querySelectorAll('.subtab-content').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.subtab-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById('subtab-'+name).classList.add('active');
+  event.target.classList.add('active');
+  if(name==='dashboard') recomputeDashboard();
+}
+
+function resetTemplate(){
+  if(!confirm('Clear all fields in the documentation template?')) return;
+  document.querySelectorAll('#tab-template input[type=text], #tab-template input[type=date], #tab-template textarea').forEach(el=>el.value='');
+  document.querySelectorAll('#tab-template select').forEach(el=>el.selectedIndex=0);
+  document.querySelectorAll('#tab-template input[type=checkbox], #tab-template input[type=radio]').forEach(el=>el.checked=false);
+  ['conditionsTable','goalsTable','transitionsTable','coordTable','commLogTable','ccmConditionsTable'].forEach(id=>{
+    document.getElementById(id).querySelector('tbody').innerHTML='';
+  });
+  document.querySelector('#tab-template .field-grid.cols-3 input').value='BHW Medical Group';
+  document.getElementById('chartNoteOutput').value='';
+  document.getElementById('copyStatus').textContent=' ';
+}
+
+function fv(selector){
+  const el = document.querySelector(selector);
+  if(!el) return '';
+  const v = el.value;
+  return (v && v.trim() && v!=='Select…') ? v.trim() : '';
+}
+function isChecked(selector){
+  const el = document.querySelector(selector);
+  return el ? el.checked : false;
+}
+function radioLabel(name){
+  const el = document.querySelector(`input[name="${name}"]:checked`);
+  if(!el) return null;
+  const label = document.querySelector(`label[for="${el.id}"]`);
+  return label ? label.textContent.trim() : el.id;
+}
+function tableRows(tableId, colLabels){
+  const rows = Array.from(document.getElementById(tableId).querySelectorAll('tbody tr'));
+  const out = [];
+  rows.forEach(tr=>{
+    const inputs = Array.from(tr.querySelectorAll('td input[type=text]'));
+    const vals = inputs.map(i=>i.value.trim());
+    if(vals.every(v=>!v)) return; /* skip fully blank rows */
+    const parts = colLabels.map((label,i)=> vals[i] ? `${label}: ${vals[i]}` : null).filter(Boolean);
+    out.push(parts.join(' | '));
+  });
+  return out;
+}
+
+function generateChartNote(){
+  const lines = [];
+  const patient = fv('[data-field="patient"]') || '[patient name not entered]';
+  const svcMonth = fv('[data-field="svcmonth"]');
+
+  lines.push('CARE MANAGEMENT DOCUMENTATION SUMMARY');
+  lines.push(`Patient: ${patient}${svcMonth ? '  |  Service month: '+svcMonth : ''}`);
+  const dobmrn = fv('[data-field="dobmrn"]');
+  if(dobmrn) lines.push(`DOB/MRN: ${dobmrn}`);
+  const provider = fv('[data-field="provider"]');
+  if(provider) lines.push(`Billing provider: ${provider}${fv('[data-field="npi"]') ? ' (NPI '+fv('[data-field="npi"]')+')' : ''}`);
+  lines.push('');
+
+  /* Code selection */
+  const code = radioLabel('apcm-code');
+  if(code){
+    lines.push('CODE SELECTION');
+    lines.push(`- ${code}`);
+    const conditions = tableRows('conditionsTable', ['Condition','ICD-10','≥12 mo./until death','Risk factor present']);
+    conditions.forEach(c=>lines.push(`  - ${c}`));
+    lines.push('');
+  }
+
+  /* Consent */
+  const consentDate = fv('[data-field="consent-date"]');
+  const consentMethod = fv('[data-field="consent-method"]');
+  const consentStaff = fv('[data-field="consent-staff"]');
+  const consentItems = [];
+  if(isChecked('[data-field="consent-oneprovider"]')) consentItems.push('Patient informed only one practitioner may bill APCM per calendar month');
+  if(isChecked('[data-field="consent-stopanytime"]')) consentItems.push('Patient informed services may be stopped at any time');
+  if(isChecked('[data-field="consent-costshare"]')) consentItems.push('Patient informed cost-sharing (deductible/coinsurance) applies');
+  if(consentDate || consentMethod || consentStaff || consentItems.length || isChecked('#c-eligible')){
+    lines.push('CONSENT');
+    if(isChecked('#c-eligible')) lines.push('- Billing practitioner confirmed responsible for all primary care / focal point of care');
+    if(consentDate) lines.push(`- Obtained: ${consentDate}${consentMethod ? ' ('+consentMethod+')' : ''}${consentStaff ? ', by '+consentStaff : ''}`);
+    consentItems.forEach(i=>lines.push(`- ${i}`));
+    lines.push('');
+  }
+
+  /* Initiating visit */
+  const initChoice = radioLabel('init-visit');
+  if(initChoice){
+    lines.push('INITIATING VISIT');
+    lines.push(`- ${initChoice}`);
+    const ivDate = fv('[data-field="initvisit-date"]');
+    const ivType = fv('[data-field="initvisit-type"]');
+    const ivBy = fv('[data-field="initvisit-by"]');
+    if(ivDate || ivType || ivBy){
+      lines.push(`  ${[ivDate, ivType, ivBy && 'by '+ivBy].filter(Boolean).join(' | ')}`);
+    }
+    lines.push('');
+  }
+
+  /* 24/7 access & comprehensive care mgmt */
+  const accessItems = [
+    ['[data-field="access-247"]','24/7 access to practitioner/care team for urgent needs confirmed'],
+    ['[data-field="access-realtime"]','Real-time access to patient medical information confirmed'],
+    ['[data-field="access-schedule"]','Patient can schedule successive routine appointments with designated care team member'],
+    ['[data-field="access-altcare"]','Alternative care delivery available (home visits/expanded hours)'],
+    ['[data-field="ccm-assessment"]','Systematic needs assessment completed (medical and psychosocial)'],
+    ['[data-field="ccm-preventive"]','Systems-based approach used for preventive services'],
+    ['[data-field="ccm-medrec"]','Medication reconciliation and management completed'],
+    ['[data-field="ccm-selfmgmt"]','Oversight of patient self-management provided'],
+  ].filter(([sel])=>isChecked(sel)).map(([,label])=>label);
+  if(accessItems.length){
+    lines.push('24/7 ACCESS & COMPREHENSIVE CARE MANAGEMENT');
+    accessItems.forEach(i=>lines.push(`- ${i}`));
+    lines.push('');
+  }
+
+  /* Care plan */
+  const cpCreated = fv('[data-field="careplan-created"]');
+  const cpRevised = fv('[data-field="careplan-revised"]');
+  const cpElectronic = fv('[data-field="careplan-electronic"]');
+  const cpTeam = fv('[data-field="careplan-teamaccess"]');
+  const cpCopy = fv('[data-field="careplan-copygiven"]');
+  const goals = tableRows('goalsTable', ['Goal','Target/measure','Status this month']);
+  if(cpCreated || cpRevised || cpElectronic || cpTeam || cpCopy || goals.length){
+    lines.push('COMPREHENSIVE CARE PLAN');
+    if(cpCreated) lines.push(`- Created: ${cpCreated}`);
+    if(cpRevised) lines.push(`- Last revised: ${cpRevised}`);
+    if(cpElectronic) lines.push(`- Electronic & accessible outside practice: ${cpElectronic}`);
+    if(cpTeam) lines.push(`- Care team can access/update: ${cpTeam}`);
+    if(cpCopy) lines.push(`- Copy given to patient/caregiver: ${cpCopy}`);
+    goals.forEach(g=>lines.push(`  - Goal: ${g}`));
+    lines.push('');
+  }
+
+  /* Care transitions */
+  const transitions = tableRows('transitionsTable', ['Discharge/transition date','Setting/facility','Follow-up method','Completed within 7 days']);
+  if(transitions.length){
+    lines.push('CARE TRANSITIONS');
+    transitions.forEach(t=>lines.push(`- ${t}`));
+    lines.push('');
+  }
+
+  /* Home/community coordination */
+  const coord = tableRows('coordTable', ['Date','Provider(s) involved','Summary']);
+  if(coord.length){
+    lines.push('HOME/COMMUNITY-BASED CARE COORDINATION');
+    coord.forEach(c=>lines.push(`- ${c}`));
+    lines.push('');
+  }
+
+  /* Communication log */
+  const commLog = tableRows('commLogTable', ['Date','Type of contact','Staff','Summary/outcome']);
+  if(commLog.length){
+    lines.push('PATIENT INTERACTION & COMMUNICATION LOG');
+    commLog.forEach(c=>lines.push(`- ${c}`));
+    lines.push('');
+  }
+
+  /* Population review */
+  const poprevMech = fv('[data-field="poprev-mechanism"]');
+  const poprevPeriod = fv('[data-field="poprev-period"]');
+  if(isChecked('[data-field="poprev-checkbox"]') || poprevMech || poprevPeriod){
+    lines.push('POPULATION DATA REVIEW & PERFORMANCE REPORTING');
+    if(isChecked('[data-field="poprev-checkbox"]')) lines.push('- Population-level data reviewed this month to identify care gaps');
+    if(poprevMech) lines.push(`- Reporting mechanism: ${poprevMech}`);
+    if(poprevPeriod) lines.push(`- Reporting period: ${poprevPeriod}`);
+    lines.push('');
+  }
+
+  /* BHI add-on — only if a real BHI code is selected (not "not applicable" and not unset) */
+  const bhiChecked = document.querySelector('input[name="bhi-code"]:checked');
+  if(bhiChecked && bhiChecked.id !== 'bhi-na'){
+    const bhiChoice = radioLabel('bhi-code');
+    lines.push('BHI ADD-ON');
+    lines.push(`- ${bhiChoice}`);
+    const roles = [
+      ['[data-field="bhi-role-practitioner"]','Treating/billing practitioner'],
+      ['[data-field="bhi-role-bhcm"]','Behavioral health care manager'],
+      ['[data-field="bhi-role-psychconsultant"]','Psychiatric consultant'],
+      ['[data-field="bhi-role-clinicalstaff"]','Clinical staff involved'],
+    ];
+    roles.forEach(([sel,label])=>{
+      const v = fv(sel);
+      if(v) lines.push(`- ${label}: ${v}`);
+    });
+
+    if(bhiChecked.id==='bhi568' || bhiChecked.id==='bhi569'){
+      const cocmItems = [
+        ['[data-field="cocm-registry"]','Patient entered in registry; follow-up/progress tracked'],
+        ['[data-field="cocm-ratingscale"]','Validated rating scale administered and documented'],
+        ['[data-field="cocm-weeklyconsult"]','Weekly caseload consultation with psychiatric consultant completed'],
+        ['[data-field="cocm-treatmentplan"]','Treatment plan developed/reviewed by psychiatric consultant'],
+        ['[data-field="cocm-briefintervention"]','Brief evidence-based intervention provided'],
+        ['[data-field="cocm-relapseprevention"]','Relapse-prevention planning documented'],
+      ].filter(([sel])=>isChecked(sel)).map(([,label])=>label);
+      cocmItems.forEach(i=>lines.push(`- ${i}`));
+    }
+    if(bhiChecked.id==='bhi570'){
+      const genItems = [
+        ['[data-field="genbhi-assessment"]','Initial assessment/follow-up monitoring completed, including validated rating scale'],
+        ['[data-field="genbhi-careplan"]','Behavioral health care plan created/revised'],
+        ['[data-field="genbhi-treatment"]','Treatment facilitated/coordinated'],
+        ['[data-field="genbhi-continuity"]','Continuity of care maintained with designated care team member'],
+      ].filter(([sel])=>isChecked(sel)).map(([,label])=>label);
+      genItems.forEach(i=>lines.push(`- ${i}`));
+    }
+    const advDate = fv('[data-field="advconsent-date"]');
+    const advCost = fv('[data-field="advconsent-costshare"]');
+    if(advDate || advCost){
+      lines.push(`- Advance consent: ${[advDate, advCost && 'cost-sharing disclosed: '+advCost].filter(Boolean).join(', ')}`);
+    }
+    lines.push('');
+  }
+
+  /* RPM — only if not marked not-applicable */
+  if(!isChecked('#rpm-na')){
+    const rpmCodes = [
+      ['#rpm-99453','99453 (initial setup & education)'],
+      ['#rpm-99445','99445 (device supply, 2-15 days)'],
+      ['#rpm-99454','99454 (device supply, 16-30 days)'],
+      ['#rpm-99470','99470 (treatment mgmt, 10-19 min)'],
+      ['#rpm-99457','99457 (treatment mgmt, first 20 min)'],
+      ['#rpm-99458','99458 (treatment mgmt, additional 20 min)'],
+      ['#rpm-99091','99091 (data collection/interpretation)'],
+    ].filter(([sel])=>isChecked(sel)).map(([,label])=>label);
+    const rpmCondition = fv('[data-field="rpm-condition"]');
+    const rpmDevice = fv('[data-field="rpm-device"]');
+    const rpmPeriod = fv('[data-field="rpm-period"]');
+    const rpmTxdays = fv('[data-field="rpm-txdays"]');
+    const rpmTrend = fv('[data-field="rpm-trend"]');
+    const rpmDecisions = fv('[data-field="rpm-decisions"]');
+    const rpmComm = fv('[data-field="rpm-comm"]');
+    const rpmEscalation = fv('[data-field="rpm-escalation"]');
+    if(rpmCodes.length || rpmCondition || rpmDevice || rpmPeriod || rpmTxdays || rpmTrend || rpmDecisions || rpmComm || rpmEscalation){
+      lines.push('REMOTE PATIENT MONITORING (RPM)');
+      if(rpmCodes.length) lines.push(`- Codes billed: ${rpmCodes.join(', ')}`);
+      if(rpmCondition) lines.push(`- Condition/purpose: ${rpmCondition}`);
+      if(rpmDevice) lines.push(`- Device/parameter: ${rpmDevice}`);
+      if(rpmPeriod) lines.push(`- 30-day monitoring period: ${rpmPeriod}`);
+      if(rpmTxdays) lines.push(`- Qualifying transmission days: ${rpmTxdays}`);
+      if(isChecked('[data-field="rpm-plan"]')) lines.push('- Monitoring plan documented (parameter/frequency/alerts/protocol)');
+      if(isChecked('[data-field="rpm-consent"]')) lines.push('- Patient/caregiver consent & ability to use device documented');
+      if(isChecked('[data-field="rpm-oneprac"]')) lines.push('- Confirmed only one practitioner billing device supply this 30-day period');
+      if(rpmTrend) lines.push(`- Trend interpretation/alerts: ${rpmTrend}`);
+      if(rpmDecisions) lines.push(`- Medication/care-plan decisions: ${rpmDecisions}`);
+      if(rpmComm) lines.push(`- Interactive communication: ${rpmComm}`);
+      if(rpmEscalation) lines.push(`- Escalations/follow-up: ${rpmEscalation}`);
+      lines.push('');
+    }
+  }
+
+  /* CCM — only if not marked not-applicable */
+  if(!isChecked('#ccm-na')){
+    const ccmConditions = tableRows('ccmConditionsTable', ['Condition','ICD-10','≥12 mo./until death','Significant risk']);
+    const ccmCodes = [
+      ['#ccm-99490','99490'], ['#ccm-99439','99439'], ['#ccm-99491','99491'],
+      ['#ccm-99437','99437'], ['#ccm-99487','99487'], ['#ccm-99489','99489'],
+    ].filter(([sel])=>isChecked(sel)).map(([,label])=>label);
+    const ccmCoordination = fv('[data-field="ccm-coordination"]');
+    const ccmMdm = fv('[data-field="ccm-mdm"]');
+    const ccmMinutes = fv('[data-field="ccm-minutes"]');
+    const ccmSigned = fv('[data-field="ccm-summarysigned"]');
+    if(ccmConditions.length || ccmCodes.length || ccmCoordination || ccmMdm || ccmMinutes || ccmSigned){
+      lines.push('CHRONIC CARE MANAGEMENT (CCM)');
+      if(ccmCodes.length) lines.push(`- Code(s) billed: ${ccmCodes.join(', ')}`);
+      ccmConditions.forEach(c=>lines.push(`  - ${c}`));
+      if(isChecked('[data-field="ccm-consent"]')) lines.push('- Consent on file (one-time, cost sharing/one-provider rule disclosed)');
+      if(isChecked('[data-field="ccm-access"]')) lines.push('- 24/7 access & continuity of care confirmed');
+      if(isChecked('[data-field="ccm-plan"]')) lines.push('- Comprehensive care plan current');
+      if(isChecked('[data-field="ccm-medrec"]')) lines.push('- Medication reconciliation completed this month');
+      if(ccmCoordination) lines.push(`- Care coordination/transitions: ${ccmCoordination}`);
+      if(ccmMdm) lines.push(`- MDM complexity/care-plan revision (99487/99489): ${ccmMdm}`);
+      if(ccmMinutes) lines.push(`- Total qualifying minutes: ${ccmMinutes}`);
+      if(ccmSigned) lines.push(`- Monthly summary signed: ${ccmSigned}`);
+      lines.push('');
+    }
+  }
+
+  /* PCM — only if not marked not-applicable */
+  if(!isChecked('#pcm-na')){
+    const pcmCondition = fv('[data-field="pcm-condition"]');
+    const pcmIcd10 = fv('[data-field="pcm-icd10"]');
+    const pcmDuration = fv('[data-field="pcm-duration"]');
+    const pcmInitVisit = fv('[data-field="pcm-initvisit"]');
+    const pcmRiskReason = fv('[data-field="pcm-riskreason"]');
+    const pcmCodes = [
+      ['#pcm-99424','99424'], ['#pcm-99425','99425'], ['#pcm-99426','99426'], ['#pcm-99427','99427'],
+    ].filter(([sel])=>isChecked(sel)).map(([,label])=>label);
+    const pcmPlanRevised = fv('[data-field="pcm-planrevised"]');
+    const pcmMinutes = fv('[data-field="pcm-minutes"]');
+    const pcmMedAdjust = fv('[data-field="pcm-medadjust"]');
+    const pcmComorbid = fv('[data-field="pcm-comorbid"]');
+    const pcmComm = fv('[data-field="pcm-comm"]');
+    if(pcmCondition || pcmCodes.length || pcmPlanRevised || pcmMinutes || pcmMedAdjust || pcmComorbid || pcmComm){
+      lines.push('PRINCIPAL CARE MANAGEMENT (PCM)');
+      if(pcmCondition) lines.push(`- Condition: ${pcmCondition}${pcmIcd10 ? ' ('+pcmIcd10+')' : ''}`);
+      if(pcmDuration) lines.push(`- Expected duration: ${pcmDuration}`);
+      if(pcmInitVisit) lines.push(`- Initiating visit date: ${pcmInitVisit}`);
+      if(pcmRiskReason) lines.push(`- Why condition creates significant risk: ${pcmRiskReason}`);
+      if(pcmCodes.length) lines.push(`- Code(s) billed: ${pcmCodes.join(', ')}`);
+      if(pcmPlanRevised) lines.push(`- Disease-specific care plan created/revised: ${pcmPlanRevised}`);
+      if(pcmMedAdjust) lines.push(`- Medication adjustments/complex management: ${pcmMedAdjust}`);
+      if(pcmComorbid) lines.push(`- Comorbidities complicating management: ${pcmComorbid}`);
+      if(pcmComm) lines.push(`- Patient/caregiver communication: ${pcmComm}`);
+      if(pcmMinutes) lines.push(`- Total qualifying minutes: ${pcmMinutes}`);
+      if(isChecked('[data-field="pcm-noccm"]')) lines.push('- Confirmed: no CCM billed same patient/month; no time duplicated with RPM/TCM/E-M');
+      lines.push('');
+    }
+  }
+
+  /* CoCM (full CPT/G-code pathway) — only if not marked not-applicable */
+  if(!isChecked('#cocm-na')){
+    const cocmRoles = [
+      ['[data-field="cocm-role-practitioner"]','Treating/billing practitioner'],
+      ['[data-field="cocm-role-bhcm"]','Behavioral health care manager'],
+      ['[data-field="cocm-role-consultant"]','Psychiatric consultant'],
+    ].map(([sel,label])=>{ const v=fv(sel); return v ? `${label}: ${v}` : null; }).filter(Boolean);
+    const cocmCodes = [
+      ['#cocm-99492','99492'], ['#cocm-99493','99493'], ['#cocm-99494','99494'], ['#cocm-g2214','G2214'],
+    ].filter(([sel])=>isChecked(sel)).map(([,label])=>label);
+    const cocmMinutes = fv('[data-field="cocm2-minutes"]');
+    const cocmExcluded = fv('[data-field="cocm2-excluded"]');
+    const cocmClinicalItems = [
+      ['[data-field="cocm2-diagnosis"]','Behavioral diagnosis and current treatment targets documented'],
+      ['[data-field="cocm2-scale"]','Validated rating scale administered and documented'],
+      ['[data-field="cocm2-registry"]','Patient entered/tracked in registry, including outcomes and non-improving status'],
+      ['[data-field="cocm2-review"]','Caseload review with psychiatric consultant completed'],
+      ['[data-field="cocm2-target"]','Treatment-to-target change made as needed'],
+      ['[data-field="cocm2-brief"]','Brief evidence-based intervention provided'],
+      ['[data-field="cocm2-referral"]','Referrals/care coordination/SDOH follow-up documented'],
+      ['[data-field="cocm2-relapse"]','Relapse-prevention planning documented'],
+    ].filter(([sel])=>isChecked(sel)).map(([,label])=>label);
+    if(cocmRoles.length || cocmCodes.length || cocmClinicalItems.length || cocmMinutes || cocmExcluded){
+      lines.push('PSYCHIATRIC COLLABORATIVE CARE MODEL (CoCM)');
+      if(cocmCodes.length) lines.push(`- Code(s) billed: ${cocmCodes.join(', ')}`);
+      cocmRoles.forEach(r=>lines.push(`- ${r}`));
+      cocmClinicalItems.forEach(i=>lines.push(`- ${i}`));
+      if(cocmMinutes) lines.push(`- Total qualifying BHCM minutes: ${cocmMinutes}`);
+      if(cocmExcluded) lines.push(`- Excluded psychotherapy/E-M/administrative time: ${cocmExcluded}`);
+      lines.push('');
+    }
+  }
+
+  /* Attestation */
+  const attestName = fv('[data-field="attest-name"]');
+  const attestDate = fv('[data-field="attest-date"]');
+  if(attestName || attestDate){
+    lines.push('PROVIDER ATTESTATION');
+    lines.push(`- Attested by ${attestName || '[name not entered]'}${attestDate ? ' on '+attestDate : ''}`);
+    lines.push('');
+  }
+
+  lines.push('— Generated from the BHW Medical Group Care Management Documentation Template. Verify against source documentation before finalizing in the chart.');
+
+  document.getElementById('chartNoteOutput').value = lines.join('\n');
+  document.getElementById('copyStatus').textContent = ' ';
+}
+
+function copyChartNote(){
+  const ta = document.getElementById('chartNoteOutput');
+  if(!ta.value.trim()){
+    generateChartNote();
+  }
+  ta.select();
+  const status = document.getElementById('copyStatus');
+  navigator.clipboard.writeText(ta.value).then(()=>{
+    status.textContent = 'Copied to clipboard.';
+  }).catch(()=>{
+    try{
+      document.execCommand('copy');
+      status.textContent = 'Copied to clipboard.';
+    }catch(e){
+      status.textContent = 'Could not copy automatically — text is selected, use Ctrl/Cmd+C.';
+    }
+  });
+}
+
+function addSimpleRow(tableId, ncols){
+  const tbody = document.getElementById(tableId).querySelector('tbody');
+  const tr = document.createElement('tr');
+  for(let i=0;i<ncols;i++){
+    const td = document.createElement('td');
+    td.innerHTML = '<input type="text">';
+    tr.appendChild(td);
+  }
+  const rtd = document.createElement('td');
+  rtd.className='remove-cell';
+  rtd.innerHTML = '<button class="btn btn-sm btn-rust no-print" onclick="this.closest(\'tr\').remove()">Remove</button>';
+  tr.appendChild(rtd);
+  tbody.appendChild(tr);
+}
+
+/* ---------------- AUDIT TABLES ---------------- */
+
+const AUDIT_CONFIG = {
+  apcm: {
+    bodyId:'apcmBody',
+    reqCount:13,
+    keyIndex:12, /* zero-based index within reqSelects (QMB select is reqSelects[0], so "no overlapping" lands at 12) */
+    keyErrorLabel:'BILLING ERROR - OVERLAP',
+    leadCols:[
+      {ph:'Patient name'}, {ph:'MRN'}, {ph:'MM/YYYY'}, {ph:'Auditor'}, {type:'date'},
+    ],
+    codeCol:true, qmbCol:true,
+    example:[
+      {vals:['EXAMPLE — Doe, Jane','MRN00123','01/2026','A. Murray','2026-02-05'], code:'G0557', qmb:'N/A',
+       req:['Y','Y','Y','N/A','Y','Y','Y','N/A','Y','Y','Y','Y','Y'], notes:'Sample row — delete or overwrite before real use.'},
+      {vals:['EXAMPLE — Smith, Robert','MRN00456','01/2026','A. Murray','2026-02-05'], code:'G0558', qmb:'Y',
+       req:['Y','Y','N','Y','Y','N','Y','Y','Y','Y','Y','Y','N'], notes:'Initiating visit not documented in chart — corrected before billing.'}
+    ]
+  },
+  bhi: {
+    bodyId:'bhiBody',
+    reqCount:8,
+    keyIndex:7,
+    keyErrorLabel:'BILLING ERROR - NOT SAME CLAIM',
+    leadCols:[{ph:'Patient name'},{ph:'MRN'},{ph:'MM/YYYY'}],
+    apcmCodeCol:true, bhiCodeCol:true, modelCol:true,
+    example:[
+      {vals:['EXAMPLE — Doe, Jane','MRN00123','01/2026'], apcmCode:'G0557', bhiCode:'G0568', model:'COCM',
+       req:['Y','Y','Y','Y','Y','Y','Y','Y'], notes:'Sample row — delete or overwrite before real use.'},
+      {vals:['EXAMPLE — Lee, Min','MRN00789','01/2026'], apcmCode:'G0556', bhiCode:'G0570', model:'General BHI',
+       req:['Y','Y','N','N/A','N/A','Y','Y','Y'], notes:'No validated rating scale on file — flagged for provider follow-up.'}
+    ]
+  },
+  overlap: {
+    bodyId:'overlapBody',
+    reqCount:5,
+    example:[
+      {vals:['EXAMPLE — Doe, Jane','MRN00123','01/2026'], req:['Y','N','N','N','N'], notes:'Sample row — delete before real use.'}
+    ]
+  },
+  rpm: {
+    bodyId:'rpmBody',
+    reqCount:9,
+    keyIndex:8,
+    keyErrorLabel:'BILLING ERROR - OVERLAP',
+    leadTypes:['text','text','text','text','date','text'],
+    example:[
+      {vals:['EXAMPLE — Patel, Raj','MRN00234','01/2026','A. Murray','2026-02-05','99454, 99457'],
+       req:['Y','Y','Y','Y','Y','Y','Y','Y','Y'], notes:'Sample row — delete or overwrite before real use.'},
+      {vals:['EXAMPLE — Nguyen, Thu','MRN00567','01/2026','A. Murray','2026-02-05','99445, 99470'],
+       req:['Y','N','Y','Y','Y','N/A','Y','N','Y'], notes:'Only 12 transmission days (short of 2026 code threshold); payer adoption of 99445/99470 not yet verified.'}
+    ]
+  },
+  ccm: {
+    bodyId:'ccmBody',
+    reqCount:10,
+    keyIndex:9,
+    keyErrorLabel:'BILLING ERROR - OVERLAP',
+    leadTypes:['text','text','text','text','date','text'],
+    example:[
+      {vals:['EXAMPLE — Johnson, Mary','MRN00321','01/2026','A. Murray','2026-02-05','99490'],
+       req:['Y','Y','Y','Y','Y','Y','Y','N/A','Y','Y'], notes:'Sample row — delete or overwrite before real use.'},
+      {vals:['EXAMPLE — Davis, Carl','MRN00654','01/2026','A. Murray','2026-02-05','99487'],
+       req:['Y','Y','Y','Y','N','Y','Y','Y','N','Y'], notes:'Medication reconciliation and monthly summary signature missing — sent back to care manager.'}
+    ]
+  },
+  pcm: {
+    bodyId:'pcmBody',
+    reqCount:8,
+    keyIndex:7,
+    keyErrorLabel:'BILLING ERROR - OVERLAP',
+    leadTypes:['text','text','text','text','date','text'],
+    example:[
+      {vals:['EXAMPLE — Ramirez, Elena','MRN00888','01/2026','A. Murray','2026-02-05','99424'],
+       req:['Y','Y','Y','Y','Y','Y','Y','Y'], notes:'Sample row — delete or overwrite before real use.'},
+      {vals:['EXAMPLE — Chen, Wei','MRN00999','01/2026','A. Murray','2026-02-05','99426'],
+       req:['Y','N','Y','Y','N','Y','Y','Y'], notes:'Annual initiating-visit renewal overdue; only 22 minutes documented this month.'}
+    ]
+  },
+  cocm: {
+    bodyId:'cocmBody',
+    reqCount:9,
+    keyIndex:8,
+    keyErrorLabel:'BILLING ERROR - GENERAL BHI OVERLAP',
+    leadTypes:['text','text','text','text','date','text'],
+    example:[
+      {vals:['EXAMPLE — Brooks, Alicia','MRN01111','01/2026','A. Murray','2026-02-05','99492'],
+       req:['Y','Y','Y','Y','Y','Y','Y','N/A','Y'], notes:'Sample row — delete or overwrite before real use.'},
+      {vals:['EXAMPLE — Kim, Daniel','MRN02222','01/2026','A. Murray','2026-02-05','99493'],
+       req:['Y','N','N','Y','Y','Y','Y','N/A','Y'], notes:'Registry not updated and no validated rating scale on file this month — escalated to BHCM.'}
+    ]
+  },
+  stacking: {
+    bodyId:'stackingBody',
+    reqCount:6,
+    example:[
+      {vals:['EXAMPLE — Ortiz, Luis','MRN03333','01/2026'], req:['N','Y','N','Y','Y','N'],
+       notes:'CCM + CoCM + RPM billed same month — teams/logs kept separate; confirmed distinct purpose.'}
+    ]
+  }
+};
+
+const BODY_IDS = {apcm:'apcmBody', bhi:'bhiBody', rpm:'rpmBody', ccm:'ccmBody', pcm:'pcmBody', cocm:'cocmBody', overlap:'overlapBody', stacking:'stackingBody'};
+const TABLE_KIND = {apcmTable:'apcm', bhiTable:'bhi', rpmTable:'rpm', ccmTable:'ccm', pcmTable:'pcm', cocmTable:'cocm'};
+
+function ynSelect(value, options){
+  options = options || ['Y','N','N/A'];
+  let html = '<select class="req-cell" onchange="recalcRow(this)">';
+  html += '<option value="">—</option>';
+  options.forEach(o=>{
+    html += `<option value="${o}"${value===o?' selected':''}>${o}</option>`;
+  });
+  html += '</select>';
+  return html;
+}
+
+function buildApcmRow(data, isExample){
+  const tr = document.createElement('tr');
+  if(isExample) tr.classList.add('example-row');
+  let html = '';
+  const vals = data ? data.vals : ['','','','',''];
+  html += `<td><input type="text" value="${vals[0]||''}"></td>`;
+  html += `<td><input type="text" value="${vals[1]||''}"></td>`;
+  html += `<td><input type="text" value="${vals[2]||''}"></td>`;
+  html += `<td><input type="text" value="${vals[3]||''}"></td>`;
+  html += `<td><input type="date" value="${vals[4]||''}"></td>`;
+  html += `<td><select>${['','G0556','G0557','G0558'].map(o=>`<option${data&&data.code===o?' selected':''}>${o}</option>`).join('')}</select></td>`;
+  html += `<td>${ynSelect(data?data.qmb:'')}</td>`;
+  const req = data ? data.req : new Array(AUDIT_CONFIG.apcm.reqCount).fill('');
+  for(let i=0;i<AUDIT_CONFIG.apcm.reqCount;i++){
+    html += `<td>${ynSelect(req[i])}</td>`;
+  }
+  html += `<td class="center metcell">0</td><td class="center notmetcell">0</td><td class="center nacell">0</td><td class="center pctcell">—</td><td class="center resultcell"><span class="badge badge-neutral">—</span></td>`;
+  html += `<td><input type="text" value="${data?data.notes||'':''}"></td>`;
+  html += `<td class="remove-cell"><button class="btn btn-sm btn-rust no-print" onclick="removeAuditRow(this)">Remove</button></td>`;
+  tr.innerHTML = html;
+  return tr;
+}
+
+function buildBhiRow(data, isExample){
+  const tr = document.createElement('tr');
+  if(isExample) tr.classList.add('example-row');
+  const vals = data ? data.vals : ['','',''];
+  let html = '';
+  html += `<td><input type="text" value="${vals[0]||''}"></td>`;
+  html += `<td><input type="text" value="${vals[1]||''}"></td>`;
+  html += `<td><input type="text" value="${vals[2]||''}"></td>`;
+  html += `<td><select>${['','G0556','G0557','G0558'].map(o=>`<option${data&&data.apcmCode===o?' selected':''}>${o}</option>`).join('')}</select></td>`;
+  html += `<td><select>${['','G0568','G0569','G0570'].map(o=>`<option${data&&data.bhiCode===o?' selected':''}>${o}</option>`).join('')}</select></td>`;
+  html += `<td><select>${['','COCM','General BHI'].map(o=>`<option${data&&data.model===o?' selected':''}>${o}</option>`).join('')}</select></td>`;
+  const req = data ? data.req : new Array(AUDIT_CONFIG.bhi.reqCount).fill('');
+  for(let i=0;i<AUDIT_CONFIG.bhi.reqCount;i++){
+    html += `<td>${ynSelect(req[i])}</td>`;
+  }
+  html += `<td class="center metcell">0</td><td class="center notmetcell">0</td><td class="center nacell">0</td><td class="center pctcell">—</td><td class="center resultcell"><span class="badge badge-neutral">—</span></td>`;
+  html += `<td><input type="text" value="${data?data.notes||'':''}"></td>`;
+  html += `<td class="remove-cell"><button class="btn btn-sm btn-rust no-print" onclick="removeAuditRow(this)">Remove</button></td>`;
+  tr.innerHTML = html;
+  return tr;
+}
+
+function buildOverlapRow(data, isExample){
+  const tr = document.createElement('tr');
+  if(isExample) tr.classList.add('example-row');
+  const vals = data ? data.vals : ['','',''];
+  let html = '';
+  html += `<td><input type="text" value="${vals[0]||''}"></td>`;
+  html += `<td><input type="text" value="${vals[1]||''}"></td>`;
+  html += `<td><input type="text" value="${vals[2]||''}"></td>`;
+  const req = data ? data.req : new Array(5).fill('');
+  for(let i=0;i<5;i++){
+    html += `<td>${ynSelect(req[i], ['Y','N'])}</td>`;
+  }
+  html += `<td class="center resultcell"><span class="badge badge-neutral">—</span></td>`;
+  html += `<td><input type="text" value="${data?data.notes||'':''}"></td>`;
+  html += `<td class="remove-cell"><button class="btn btn-sm btn-rust no-print" onclick="removeAuditRow(this)">Remove</button></td>`;
+  tr.innerHTML = html;
+  return tr;
+}
+
+function buildGenericRow(kind, data, isExample){
+  const cfg = AUDIT_CONFIG[kind];
+  const tr = document.createElement('tr');
+  if(isExample) tr.classList.add('example-row');
+  let html = '';
+  const vals = data ? data.vals : new Array(cfg.leadTypes.length).fill('');
+  cfg.leadTypes.forEach((t,i)=>{
+    const v = vals[i]||'';
+    html += t==='date' ? `<td><input type="date" value="${v}"></td>` : `<td><input type="text" value="${v}"></td>`;
+  });
+  const req = data ? data.req : new Array(cfg.reqCount).fill('');
+  for(let i=0;i<cfg.reqCount;i++){
+    html += `<td>${ynSelect(req[i])}</td>`;
+  }
+  html += `<td class="center metcell">0</td><td class="center notmetcell">0</td><td class="center nacell">0</td><td class="center pctcell">—</td><td class="center resultcell"><span class="badge badge-neutral">—</span></td>`;
+  html += `<td><input type="text" value="${data?data.notes||'':''}"></td>`;
+  html += `<td class="remove-cell"><button class="btn btn-sm btn-rust no-print" onclick="removeAuditRow(this)">Remove</button></td>`;
+  tr.innerHTML = html;
+  return tr;
+}
+
+function buildStackingRow(data, isExample){
+  const tr = document.createElement('tr');
+  if(isExample) tr.classList.add('example-row');
+  const vals = data ? data.vals : ['','',''];
+  let html = '';
+  html += `<td><input type="text" value="${vals[0]||''}"></td>`;
+  html += `<td><input type="text" value="${vals[1]||''}"></td>`;
+  html += `<td><input type="text" value="${vals[2]||''}"></td>`;
+  const req = data ? data.req : new Array(6).fill('');
+  for(let i=0;i<6;i++){
+    html += `<td>${ynSelect(req[i], ['Y','N'])}</td>`;
+  }
+  html += `<td class="center resultcell"><span class="badge badge-neutral">—</span></td>`;
+  html += `<td><input type="text" value="${data?data.notes||'':''}"></td>`;
+  html += `<td class="remove-cell"><button class="btn btn-sm btn-rust no-print" onclick="removeAuditRow(this)">Remove</button></td>`;
+  tr.innerHTML = html;
+  return tr;
+}
+
+function addAuditRow(kind, data, isExample){
+  let tr;
+  if(kind==='apcm'){ tr = buildApcmRow(data, isExample); }
+  else if(kind==='bhi'){ tr = buildBhiRow(data, isExample); }
+  else if(kind==='overlap'){ tr = buildOverlapRow(data, isExample); }
+  else if(kind==='stacking'){ tr = buildStackingRow(data, isExample); }
+  else { tr = buildGenericRow(kind, data, isExample); }
+  document.getElementById(BODY_IDS[kind]).appendChild(tr);
+  if(kind==='overlap') recalcOverlapRow(tr.querySelector('select'));
+  if(kind==='stacking') recalcStackingRow(tr.querySelector('select'));
+  recomputeDashboard();
+  return tr;
+}
+
+function removeAuditRow(btn){
+  btn.closest('tr').remove();
+  recomputeDashboard();
+}
+
+function removeExamples(kind){
+  document.getElementById(BODY_IDS[kind]).querySelectorAll('tr.example-row').forEach(tr=>tr.remove());
+  recomputeDashboard();
+}
+
+function setBadge(cell, label, cls){
+  cell.innerHTML = `<span class="badge ${cls}">${label}</span>`;
+}
+
+function recalcRow(selectEl){
+  const tr = selectEl.closest('tr');
+  const table = selectEl.closest('table');
+  const reqSelects = Array.from(tr.querySelectorAll('select.req-cell'));
+  let met=0, notmet=0, na=0;
+  reqSelects.forEach(s=>{
+    if(s.value==='Y') met++;
+    else if(s.value==='N') notmet++;
+    else if(s.value==='N/A') na++;
+  });
+  const metcell = tr.querySelector('.metcell');
+  const notmetcell = tr.querySelector('.notmetcell');
+  const nacell = tr.querySelector('.nacell');
+  const pctcell = tr.querySelector('.pctcell');
+  const resultcell = tr.querySelector('.resultcell');
+  if(metcell) metcell.textContent = met;
+  if(notmetcell) notmetcell.textContent = notmet;
+  if(nacell) nacell.textContent = na;
+  const denom = met+notmet;
+  const pct = denom>0 ? Math.round((met/denom)*100) : null;
+  if(pctcell) pctcell.textContent = pct===null ? '—' : pct+'%';
+
+  const kind = TABLE_KIND[table.id];
+  const cfg = kind ? AUDIT_CONFIG[kind] : null;
+  let keyIndex = cfg && cfg.keyIndex!=null ? cfg.keyIndex : null;
+  let keyErrorLabel = cfg ? cfg.keyErrorLabel : null;
+
+  if(resultcell){
+    const patientNameFilled = tr.querySelector('td input[type=text]').value.trim() !== '';
+    if(!patientNameFilled && denom===0){
+      setBadge(resultcell,'—','badge-neutral');
+    } else if(keyIndex!==null && reqSelects[keyIndex] && reqSelects[keyIndex].value==='N'){
+      setBadge(resultcell, keyErrorLabel, 'badge-error');
+    } else if(notmet===0 && denom>0){
+      setBadge(resultcell,'PASS','badge-pass');
+    } else if(denom===0){
+      setBadge(resultcell,'—','badge-neutral');
+    } else {
+      setBadge(resultcell,'REVIEW NEEDED','badge-review');
+    }
+  }
+  recomputeDashboard();
+}
+
+function recalcOverlapRow(selectEl){
+  const tr = selectEl.closest('tr');
+  const selects = Array.from(tr.querySelectorAll('select.req-cell'));
+  const resultcell = tr.querySelector('.resultcell');
+  const patientNameFilled = tr.querySelector('td input[type=text]').value.trim() !== '';
+  const [apcmBilled, apcmDup, ccm, pcm, tcm] = selects.map(s=>s.value);
+  if(!patientNameFilled){
+    setBadge(resultcell,'—','badge-neutral');
+  } else if(apcmDup==='Y'){
+    setBadge(resultcell,'BILLING ERROR - DUPLICATE','badge-error');
+  } else if(ccm==='Y'||pcm==='Y'||tcm==='Y'){
+    setBadge(resultcell,'BILLING ERROR - OVERLAP','badge-error');
+  } else {
+    setBadge(resultcell,'OK','badge-pass');
+  }
+  recomputeDashboard();
+}
+
+function recalcStackingRow(selectEl){
+  const tr = selectEl.closest('tr');
+  const selects = Array.from(tr.querySelectorAll('select.req-cell'));
+  const resultcell = tr.querySelector('.resultcell');
+  const patientNameFilled = tr.querySelector('td input[type=text]').value.trim() !== '';
+  const [apcm, ccm, pcm, cocm, rpm, genbhi] = selects.map(s=>s.value);
+  if(!patientNameFilled){
+    setBadge(resultcell,'—','badge-neutral');
+  } else if(ccm==='Y' && pcm==='Y'){
+    setBadge(resultcell,'BILLING ERROR - CCM+PCM SAME MONTH','badge-error');
+  } else if(apcm==='Y' && (ccm==='Y'||pcm==='Y')){
+    setBadge(resultcell,'BILLING ERROR - APCM+CCM/PCM','badge-error');
+  } else if(cocm==='Y' && genbhi==='Y'){
+    setBadge(resultcell,'BILLING ERROR - COCM+GENERAL BHI','badge-error');
+  } else {
+    setBadge(resultcell,'OK','badge-pass');
+  }
+  recomputeDashboard();
+}
+
+/* wire overlap & stacking selects specially since they use a different formula */
+document.addEventListener('change', function(e){
+  if(e.target.matches('#overlapTable select.req-cell')){
+    recalcOverlapRow(e.target);
+  }
+  if(e.target.matches('#stackingTable select.req-cell')){
+    recalcStackingRow(e.target);
+  }
+});
+
+function countRows(bodyId, opts){
+  opts = opts||{};
+  const rows = Array.from(document.getElementById(bodyId).querySelectorAll('tr'));
+  let audited=0, pass=0, review=0, error=0, pctSum=0, pctCount=0;
+  rows.forEach(tr=>{
+    const nameInput = tr.querySelector('td input[type=text]');
+    const name = nameInput ? nameInput.value.trim() : '';
+    if(!name) return;
+    audited++;
+    const badge = tr.querySelector('.resultcell .badge');
+    if(!badge) return;
+    const text = badge.textContent;
+    if(text==='PASS'||text==='OK') pass++;
+    else if(text==='REVIEW NEEDED') review++;
+    else if(text.startsWith('BILLING ERROR')) error++;
+    const pctcell = tr.querySelector('.pctcell');
+    if(pctcell && pctcell.textContent!=='—'){
+      pctSum += parseInt(pctcell.textContent);
+      pctCount++;
+    }
+  });
+  return {audited, pass, review, error, avg: pctCount>0 ? Math.round(pctSum/pctCount) : null};
+}
+
+function recomputeDashboard(){
+  [['apcm','apcmBody'], ['bhi','bhiBody'], ['rpm','rpmBody'], ['ccm','ccmBody'], ['pcm','pcmBody'], ['cocm','cocmBody']].forEach(([prefix,bodyId])=>{
+    const r = countRows(bodyId);
+    document.getElementById(prefix+'-audited').textContent = r.audited;
+    document.getElementById(prefix+'-pass').textContent = r.pass;
+    document.getElementById(prefix+'-review').textContent = r.review;
+    document.getElementById(prefix+'-error').textContent = r.error;
+    document.getElementById(prefix+'-avg').textContent = r.avg===null?'—':r.avg+'%';
+  });
+
+  const o = countRows('overlapBody');
+  document.getElementById('ov-logged').textContent = o.audited;
+  document.getElementById('ov-ok').textContent = o.pass;
+  document.getElementById('ov-error').textContent = o.error;
+
+  const s = countRows('stackingBody');
+  document.getElementById('stacking-logged').textContent = s.audited;
+  document.getElementById('stacking-ok').textContent = s.pass;
+  document.getElementById('stacking-error').textContent = s.error;
+}
+
+/* wire generic req-cell change (delegated) to recalc for the six requirement-scored tables */
+document.addEventListener('change', function(e){
+  if(e.target.matches('#apcmTable select.req-cell, #bhiTable select.req-cell, #rpmTable select.req-cell, #ccmTable select.req-cell, #pcmTable select.req-cell, #cocmTable select.req-cell')){
+    recalcRow(e.target);
+  }
+});
+/* recompute dashboard also when patient-name text fields change */
+document.addEventListener('input', function(e){
+  if(e.target.matches('#apcmTable input[type=text], #bhiTable input[type=text], #rpmTable input[type=text], #ccmTable input[type=text], #pcmTable input[type=text], #cocmTable input[type=text], #overlapTable input[type=text], #stackingTable input[type=text]')){
+    recomputeDashboard();
+  }
+});
+
+/* ---------------- INITIALIZE ---------------- */
+(function init(){
+  ['apcm','bhi','rpm','ccm','pcm','cocm','overlap','stacking'].forEach(kind=>{
+    AUDIT_CONFIG[kind].example.forEach(d=>addAuditRow(kind, d, true));
+    for(let i=0;i<3;i++) addAuditRow(kind);
+  });
+
+  /* recalc all pre-populated rows to fill in computed cells */
+  document.querySelectorAll('#apcmTable select.req-cell, #bhiTable select.req-cell, #rpmTable select.req-cell, #ccmTable select.req-cell, #pcmTable select.req-cell, #cocmTable select.req-cell').forEach(recalcRow);
+  document.querySelectorAll('#overlapTable select.req-cell').forEach(recalcOverlapRow);
+  document.querySelectorAll('#stackingTable select.req-cell').forEach(recalcStackingRow);
+  recomputeDashboard();
+})();
+</script>
+
+</body>
+</html>
