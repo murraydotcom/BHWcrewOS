@@ -320,6 +320,12 @@ async function refresh(){
   activate(start.dataset.view);
 }
 const cssId = s => s.toLowerCase().replace(/[^a-z0-9]+/g,"-");
+const PATIENT_PAGES = {
+  "Primary Care": "/bhw-patient-portal-mockup.html",
+  "Mind & Mood Recovery": "/bhw-mindmood-patient-mockup.html",
+  "CharmEd Minds": "/bhw-charmed-patient-mockup.html",
+  "Flow": "/bhw-flow-patient-mockup.html",
+};
 
 function awvPending(){ return (D.awv||[]).filter(e=>e.status==="Completed" && e.review==="Pending Review"); }
 function daysSince(d){ return d ? Math.max(0, Math.floor((Date.now()-new Date(d))/86400000)) : 0; }
@@ -346,12 +352,19 @@ function buildRail(){
   }
   html += `<div class="rail-label">Tools</div>`;
  html += `<button class="tab" data-view="myspace" style="--spine:var(--clay)">My Space</button>`;
+  html += `<button class="tab" data-view="front-desk" style="--spine:var(--blue)">📞 Front Desk</button>`;
   html += `<div class="rail-label">Pages</div>`;
-  html += `<a class="tab" href="/bhw-front-desk.html" target="_blank" rel="noopener" style="--spine:var(--blue);text-decoration:none">📞 Front Desk OS</a>`;
+  html += `<a class="tab" href="/bhw-front-desk.html" target="_blank" rel="noopener" style="--spine:var(--blue);text-decoration:none">📞 Front Desk OS ↗</a>`;
+  html += `<a class="tab" href="/BHW_Care_Management_Toolkit.html" target="_blank" rel="noopener" style="--spine:var(--ok, #1F6961);text-decoration:none">💵 Billing Toolkit</a>`;
   html += `<a class="tab" href="/bhw-panel-performance.html" target="_blank" rel="noopener" style="--spine:var(--teal);text-decoration:none">📊 Panel & Discharges</a>`;
   html += `<a class="tab" href="/bhw-hormone-analysis.html" target="_blank" rel="noopener" style="--spine:var(--sand);text-decoration:none">🧬 Hormone Analysis</a>`;
   html += `<a class="tab" href="https://app.notion.com/p/3a1580758d3081c48b90fdab7b442fcb" target="_blank" rel="noopener" style="--spine:var(--sage);text-decoration:none">🌿 Patient Pages Hub</a>`;
   html += `<a class="tab" href="https://app.notion.com/p/3a3580758d30812aa387d8a6ae463c12" target="_blank" rel="noopener" style="--spine:var(--clay-deep);text-decoration:none">🌅 Launch Punch List</a>`;
+  html += `<div class="rail-label">Design previews</div>`;
+  html += `<a class="tab" href="/bhw-care-console-mockup.html" target="_blank" rel="noopener" style="--spine:var(--clay);text-decoration:none">🩺 Care Console</a>`;
+  html += `<a class="tab" href="/bhw-patient-portal-mockup.html" target="_blank" rel="noopener" style="--spine:var(--sage);text-decoration:none">🌿 Patient Portal</a>`;
+  html += `<a class="tab" href="/bhw-mindmood-patient-mockup.html" target="_blank" rel="noopener" style="--spine:#A06A82;text-decoration:none">🌅 M&M Patient Page</a>`;
+  html += `<a class="tab" href="/bhw-flow-patient-mockup.html" target="_blank" rel="noopener" style="--spine:#167A9A;text-decoration:none">💧 Flow Patient Page</a>`;
   rail.innerHTML = html;
   rail.onclick = e => { const b=e.target.closest(".tab"); if(b && b.dataset.view) activate(b.dataset.view); }
 }
@@ -367,6 +380,7 @@ function buildViews(){
   let html = "";
   if(D.user.access==="Admin") html += adminView();
   for(const div of D.visibleDivisions) html += divisionView(div);
+  html += frontDeskView();
   html += mySpaceView();
   host.innerHTML = html;
 }
@@ -383,7 +397,9 @@ function divisionView(div){
   const isPorter = div==="The Porter House";
 
   return `<section class="view" id="view-${id}" style="--pc:${DIV_COLORS[div]}">
-    <div class="prog-head"><div class="bar"></div><div><h1>${esc(div)}</h1><p>${DIV_BLURBS[div]||""}</p></div></div>
+    <div class="prog-head"><div class="bar"></div><div><h1>${esc(div)}</h1><p>${DIV_BLURBS[div]||""}</p></div>${div==="Primary Care"?`<img src="/assets/bhw-logo-full.png" alt="BHW" style="height:84px;width:auto;margin-left:auto" onerror="this.style.display='none'">`:""}</div>
+    ${div==="Primary Care"?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:-8px 0 18px"><a class="btn sm warn" style="text-decoration:none" href="/bhw-front-desk.html#rg" target="_blank" rel="noopener">📠 Generate a referral</a><button class="btn sm sec" onclick="activate('front-desk')">📞 Front desk &amp; lookup</button></div>`:""}
+    ${PATIENT_PAGES[div]?`<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:-4px 0 18px;padding:12px 14px;background:var(--card,#fff);border-radius:12px"><span style="font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;opacity:.65">🌿 Patient pages</span><a class="btn sm sec" style="text-decoration:none" href="${PATIENT_PAGES[div]}" target="_blank" rel="noopener">View patient page</a><a class="btn sm sec" style="text-decoration:none" href="https://app.notion.com/p/3a1580758d3081c48b90fdab7b442fcb" target="_blank" rel="noopener">Manage content ↗</a><a class="btn sm sec" style="text-decoration:none" href="https://app.notion.com/p/3a1580758d3081c48b90fdab7b442fcb" target="_blank" rel="noopener">Sign-up steps</a></div>`:""}
     ${div==="Primary Care"?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:-8px 0 18px"><a class="btn sm warn" style="text-decoration:none" href="/bhw-front-desk.html#rg" target="_blank" rel="noopener">📠 Generate a referral</a><a class="btn sm sec" style="text-decoration:none" href="/bhw-front-desk.html" target="_blank" rel="noopener">📞 Front desk & patient lookup</a></div>`:""}
     <div class="kpis">
       <div class="kpi" style="--kc:var(--alert)"><div class="n">${c.rIn}</div><div class="l">Incoming referrals open</div></div>
@@ -532,6 +548,16 @@ function adminView(){
 }
 
 /* ---------- my space ---------- */
+function frontDeskView(){
+  return `<section class="view" id="view-front-desk" style="--pc:var(--blue)">
+    <div class="prog-head"><div class="bar"></div><div><h1>Front Desk OS</h1><p>Live inbox, patient lookup, referral finder &amp; generator — SLA colors show what's next.</p></div></div>
+    <div class="card" style="padding:8px">
+      <iframe src="/bhw-front-desk.html" title="Front Desk OS" style="width:100%;height:calc(100vh - 250px);min-height:640px;border:0;border-radius:12px;background:#fff"></iframe>
+    </div>
+    <p style="margin-top:10px;font-size:12.5px"><a href="/bhw-front-desk.html" target="_blank" rel="noopener" style="color:var(--clay-deep);font-weight:700">Open full-screen ↗</a> · referral generator is near the bottom of the page</p>
+  </section>`;
+}
+
 function mySpaceView(){
   const m = D.minutes;
   const pending = m.mine.filter(x=>!x.inCharm);
