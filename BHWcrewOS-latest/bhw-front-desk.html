@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>BHW Front Desk — crewOS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --river:#80abbd; --linen:#f7f5f2; --clay:#b07a55; --sage:#a8b59a; --sand:#dcc8b1;
+    --ink:#22303a; --ink-soft:#5b6b76; --white:#ffffff; --line:#e6e0d8;
+    --urgent:#b0525a; --ok:#5f8a63;
+    --radius:14px; --shadow:0 2px 10px rgba(34,48,58,.07);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Montserrat',sans-serif;background:var(--linen);color:var(--ink);min-height:100vh}
+  a{color:inherit}
+  .wrap{max-width:1100px;margin:0 auto;padding:20px 16px 60px}
+
+  /* header */
+  header{display:flex;align-items:center;gap:14px;padding:6px 2px 18px}
+  .sun{width:38px;height:19px;position:relative;overflow:visible;flex:none}
+  .sun .disc{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:26px;height:13px;background:var(--clay);border-radius:26px 26px 0 0}
+  .sun i{position:absolute;bottom:12px;left:50%;width:2px;height:8px;background:var(--clay);border-radius:2px;transform-origin:bottom center}
+  header h1{font-size:1.05rem;font-weight:800;letter-spacing:.04em}
+  header .sub{font-size:.7rem;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-soft)}
+  header .right{margin-left:auto;font-size:.72rem;color:var(--ink-soft);font-weight:600;text-align:right}
+
+  /* referral cards */
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:26px}
+  .card{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px;position:relative;overflow:hidden}
+  .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--river)}
+  .card.clay::before{background:var(--clay)} .card.sage::before{background:var(--sage)} .card.sand::before{background:var(--sand)}
+  .card .k{font-size:1.7rem;font-weight:800;line-height:1.1}
+  .card .l{font-size:.68rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);margin-top:4px}
+  .card .hint{font-size:.68rem;color:var(--ink-soft);margin-top:6px}
+  @media(max-width:760px){.cards{grid-template-columns:repeat(2,1fr)}}
+
+  /* sections */
+  section{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;margin-bottom:22px}
+  section>h2{font-size:.78rem;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+  section>h2::after{content:"";flex:1;height:1px;background:var(--line)}
+
+  /* lookup */
+  .lookuprow{display:flex;gap:10px}
+  .lookuprow input{flex:1;padding:13px 16px;border:1.5px solid var(--line);border-radius:10px;font:inherit;font-size:.95rem;background:var(--linen)}
+  .lookuprow input:focus{outline:2px solid var(--river);outline-offset:1px;background:var(--white)}
+  .btn{padding:13px 22px;border:none;border-radius:10px;background:var(--river);color:#fff;font:inherit;font-weight:700;font-size:.85rem;letter-spacing:.05em;cursor:pointer}
+  .btn:hover{filter:brightness(.95)}
+  .btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  .status{font-size:.8rem;color:var(--ink-soft);margin-top:10px;min-height:1.2em}
+
+  /* profile card */
+  .profile{display:none;margin-top:16px;border:1.5px solid var(--river);border-radius:var(--radius);overflow:hidden}
+  .profile.show{display:block}
+  .p-head{background:var(--river);color:#fff;padding:14px 18px;display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline}
+  .p-head .name{font-size:1.15rem;font-weight:800}
+  .p-head .meta{font-size:.78rem;font-weight:600;opacity:.94}
+  .p-grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
+  .p-col{padding:14px 18px}
+  .p-col+.p-col{border-left:1px solid var(--line)}
+  .p-col h3{font-size:.66rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:8px}
+  .kv{font-size:.85rem;margin-bottom:5px}
+  .kv b{font-weight:700}
+  .kv.allergy{background:#fdf3f3;border:1px solid #ecd2d4;border-radius:8px;padding:6px 10px;color:var(--urgent);font-weight:600}
+  .kv.allergy.nkda{background:var(--linen);border-color:var(--line);color:var(--ink-soft)}
+  .kv.medblock{background:var(--linen);border-radius:8px;padding:8px 10px;line-height:1.55;margin-top:8px}
+  .kv.snapnote{font-size:.68rem;color:var(--ink-soft);font-style:italic;margin-top:8px}
+  .req{border-left:3px solid var(--sand);padding:6px 10px;margin-bottom:8px;background:var(--linen);border-radius:0 8px 8px 0;font-size:.8rem}
+  .req .top{display:flex;justify-content:space-between;gap:8px;font-weight:700}
+  .req .top .when{color:var(--ink-soft);font-weight:600;font-size:.72rem}
+  .req.urgent{border-left-color:var(--urgent)}
+  .req .sub{color:var(--ink-soft);margin-top:2px}
+  .pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:.66rem;font-weight:700;letter-spacing:.05em;background:var(--sand);color:var(--ink)}
+  .pill.open{background:var(--sage);color:#fff}
+  @media(max-width:700px){.p-grid{grid-template-columns:1fr}.p-col+.p-col{border-left:none;border-top:1px solid var(--line)}}
+
+  /* referral finder */
+  .findrow{display:grid;grid-template-columns:1fr 1fr auto;gap:10px}
+  .findrow select{padding:13px 14px;border:1.5px solid var(--line);border-radius:10px;font:inherit;font-size:.9rem;background:var(--linen)}
+  .findrow select:focus{outline:2px solid var(--clay);outline-offset:1px;background:var(--white)}
+  @media(max-width:700px){.findrow{grid-template-columns:1fr}}
+  .spec{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-top:12px;display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center}
+  .spec.preferred{border-color:var(--clay);background:#fdfaf6}
+  .spec .who{flex:1 1 240px}
+  .spec .who .n{font-weight:800;font-size:.95rem}
+  .spec .who .n .star{color:var(--clay)}
+  .spec .who .org{font-size:.78rem;color:var(--ink-soft);margin-top:2px}
+  .spec .contact{font-size:.8rem;line-height:1.5}
+  .spec .contact b{font-weight:700}
+  .copyfax{border:1.5px solid var(--clay);background:transparent;color:var(--clay);padding:8px 14px;border-radius:9px;font:inherit;font-weight:700;font-size:.75rem;cursor:pointer}
+  .copyfax:hover{background:var(--clay);color:#fff}
+  .wait{font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:20px;background:var(--linen);border:1px solid var(--line)}
+  .netlist{font-size:.72rem;color:var(--ink-soft);flex-basis:100%}
+  .empty{padding:22px;text-align:center;color:var(--ink-soft);font-size:.85rem;background:var(--linen);border-radius:10px;margin-top:12px}
+  .samplenote{font-size:.7rem;color:var(--clay);font-weight:700;margin-top:10px}
+
+  /* quick links */
+  .links{display:flex;flex-wrap:wrap;gap:10px}
+  .links a{display:block;padding:11px 16px;border:1.5px solid var(--line);border-radius:10px;background:var(--linen);font-size:.8rem;font-weight:700;text-decoration:none}
+  .links a:hover{border-color:var(--river);background:var(--white)}
+  footer{font-size:.68rem;color:var(--ink-soft);text-align:center;margin-top:8px;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="sun" aria-hidden="true">
+      <div class="disc"></div>
+      <i style="transform:translateX(-50%) rotate(-65deg)"></i><i style="transform:translateX(-50%) rotate(-35deg)"></i><i style="transform:translateX(-50%) rotate(0deg)"></i><i style="transform:translateX(-50%) rotate(35deg)"></i><i style="transform:translateX(-50%) rotate(65deg)"></i>
+    </div>
+    <div>
+      <h1>Front Desk</h1>
+      <div class="sub">BHW Medical Group · crewOS</div>
+    </div>
+    <div class="right" id="todaystamp"></div>
+  </header>
+
+  <!-- REFERRAL CARDS -->
+  <div class="cards" role="list" aria-label="Referral snapshot">
+    <div class="card" role="listitem"><div class="k" id="c-open">–</div><div class="l">Referrals in progress</div><div class="hint">Sent, not yet scheduled</div></div>
+    <div class="card clay" role="listitem"><div class="k" id="c-await">–</div><div class="l">Awaiting our action</div><div class="hint">Form not yet sent</div></div>
+    <div class="card sage" role="listitem"><div class="k" id="c-spec">–</div><div class="l">Specialists on file</div><div class="hint">In the directory</div></div>
+    <div class="card sand" role="listitem"><div class="k" id="c-pref">–</div><div class="l">⭐ Preferred partners</div><div class="hint">Verified go-tos</div></div>
+  </div>
+
+  <!-- LIVE INBOX -->
+  <section aria-labelledby="li" id="inboxsection" style="display:none">
+    <h2 id="li">Today's inbox <span id="livechip" style="letter-spacing:0;text-transform:none;font-size:.66rem;background:var(--sage);color:#fff;padding:2px 10px;border-radius:20px">live · refreshes every 60s</span></h2>
+    <div id="inboxcols" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+      <div><h3 class="colh">📞 Calls & voicemails</h3><div id="col-voice"></div></div>
+      <div><h3 class="colh">💬 Texts & portal</h3><div id="col-text"></div></div>
+      <div><h3 class="colh">📠 Faxes & other</h3><div id="col-fax"></div></div>
+    </div>
+  </section>
+  <style>
+    .colh{font-size:.68rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:8px}
+    .inb{border:1px solid var(--line);border-left:3px solid var(--sand);border-radius:0 10px 10px 0;padding:8px 10px;margin-bottom:8px;font-size:.78rem;background:var(--white)}
+    .inb.breach{border-left-color:var(--urgent);background:#fdf6f6}
+    .inb .t{display:flex;justify-content:space-between;gap:8px;font-weight:700}
+    .inb .t .w{color:var(--ink-soft);font-weight:600;font-size:.68rem;white-space:nowrap}
+    .inb .s{color:var(--ink-soft);margin-top:2px}
+    .inb .done{text-decoration:line-through;opacity:.55}
+    .actrow{margin-top:6px;display:flex;gap:6px}
+    .act{border:1.5px solid var(--line);background:var(--linen);border-radius:8px;padding:4px 12px;font:inherit;font-size:.7rem;font-weight:700;cursor:pointer}
+    .act:hover{border-color:var(--river)}
+    .act.primary{border-color:var(--sage);background:var(--sage);color:#fff}
+    .act[disabled]{opacity:.5;cursor:wait}
+    .act.reply{border-color:var(--river);color:var(--river)}
+    .act.reply:hover{background:var(--river);color:#fff}
+    .replybox{margin-top:8px;padding:8px;background:var(--linen);border-radius:8px;display:flex;flex-direction:column;gap:6px}
+    .replybox select,.replybox textarea{font:inherit;font-size:.76rem;padding:7px 9px;border:1.5px solid var(--line);border-radius:7px;background:var(--white)}
+    .replybox textarea{resize:vertical}
+    .replybox select:focus,.replybox textarea:focus{outline:2px solid var(--river);outline-offset:1px}
+    @media(max-width:820px){#inboxcols{grid-template-columns:1fr}}
+  </style>
+
+  <!-- PATIENT LOOKUP -->
+  <section aria-labelledby="lk">
+    <h2 id="lk">Patient lookup</h2>
+    <div class="lookuprow">
+      <input id="q" type="search" inputmode="tel" placeholder="Phone number or name…" aria-label="Search patient by phone or name">
+      <button class="btn" id="go">Look up</button>
+    </div>
+    <div class="status" id="lkstatus"></div>
+
+    <div class="profile" id="profile">
+      <div class="p-head">
+        <span class="name" id="p-name"></span>
+        <span class="meta" id="p-meta"></span>
+      </div>
+      <div class="p-grid">
+        <div class="p-col">
+          <h3>Coverage & contact</h3>
+          <div id="p-info"></div>
+        </div>
+        <div class="p-col">
+          <h3>Recent requests & communications</h3>
+          <div id="p-reqs"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- REFERRAL FINDER -->
+  <section aria-labelledby="rf">
+    <h2 id="rf">Referral finder</h2>
+    <div class="findrow">
+      <select id="f-spec" aria-label="Specialty"><option value="">Specialty — any</option></select>
+      <select id="f-net" aria-label="Patient's insurance"><option value="">Patient's insurance — any</option></select>
+      <button class="btn" id="f-go" style="background:var(--clay)">Find in-network</button>
+    </div>
+    <div id="results"></div>
+    <div class="samplenote" id="samplenote"></div>
+  </section>
+
+  <!-- QUICK LINKS -->
+  <section aria-labelledby="ql">
+    <h2 id="ql">Open in Notion</h2>
+    <div class="links">
+      <a href="https://app.notion.com/p/8ae69b6a2f1a42679848744f3a17acb6" target="_rel">🩺 Specialist Directory</a>
+      <a href="https://app.notion.com/p/de7906906a134b65bb0fc6966ba20b13" target="_rel">📥 Triage Queue</a>
+      <a href="https://app.notion.com/p/39a580758d3081fcb425cdb1d2b4cb33" target="_rel">📋 Triage SOP</a>
+    </div>
+  </section>
+
+  <footer>Internal tool · patient information governed by BHW privacy policy · lookups query live BHW records when connected<br>Referral form template: BHW-MD-Uniform-Referral-TEMPLATE.pdf</footer>
+</div>
+
+<script>
+/* ================= CONFIG =================
+   When the Netlify function is deployed, set API to
+   '/.netlify/functions/frontdesk-data' and lookups + cards go live.
+   Until then the page runs on the embedded data below.       */
+const API = '';           // e.g. '/.netlify/functions/frontdesk-data'
+const DASH_KEY = '';      // optional shared key, matches function env
+const DEMO = true;        // set false when API is connected — shows sample inbox so you can preview the live experience
+
+/* ============ SPECIALIST DIRECTORY (regenerated from Notion) ============ */
+const SAMPLE = true; // set false when real directory data is pasted in
+const SPECIALISTS = [
+  {name:"Example, Cardio A.", specialty:"Cardiology", org:"Sample Cardiology Associates", phone:"(410) 555-0101", fax:"(410) 555-0102", networks:["Aetna","CareFirst BCBS","Priority Partners"], preferred:true,  wait:"2–4 weeks", notes:"Sends consult notes back"},
+  {name:"Example, Endo B.",   specialty:"Endocrinology", org:"Sample Endocrine Center", phone:"(410) 555-0201", fax:"(410) 555-0202", networks:["CareFirst BCBS","Medicare"], preferred:false, wait:"1–2 months", notes:""},
+  {name:"Example, GI C.",     specialty:"Gastroenterology", org:"Sample Digestive Health", phone:"(410) 555-0301", fax:"(410) 555-0302", networks:["Maryland Medicaid FFS","Wellpoint (Amerigroup)","Jai Medical"], preferred:true, wait:"Under 2 weeks", notes:"Requires auth first for scopes"},
+];
+
+/* ============ EMBEDDED QUEUE SNAPSHOT (optional, non-live mode) ============ */
+const QUEUE_SNAPSHOT = { referralsOpen:null, awaitingAction:null };
+
+/* ================= UI wiring ================= */
+const $=id=>document.getElementById(id);
+$('todaystamp').textContent=new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+
+/* cards */
+function paintCards(){
+  $('c-spec').textContent=SPECIALISTS.length;
+  $('c-pref').textContent=SPECIALISTS.filter(s=>s.preferred).length;
+  $('c-open').textContent=QUEUE_SNAPSHOT.referralsOpen??'—';
+  $('c-await').textContent=QUEUE_SNAPSHOT.awaitingAction??'—';
+}
+paintCards();
+
+/* finder dropdowns */
+const specs=[...new Set(SPECIALISTS.map(s=>s.specialty))].sort();
+const nets=[...new Set(SPECIALISTS.flatMap(s=>s.networks))].sort();
+specs.forEach(s=>$('f-spec').insertAdjacentHTML('beforeend',`<option>${s}</option>`));
+nets.forEach(n=>$('f-net').insertAdjacentHTML('beforeend',`<option>${n}</option>`));
+if(SAMPLE)$('samplenote').textContent='Showing sample rows — the live directory loads here once the payer imports are done.';
+
+function findSpecialists(){
+  const sp=$('f-spec').value, nt=$('f-net').value;
+  const hits=SPECIALISTS.filter(s=>(!sp||s.specialty===sp)&&(!nt||s.networks.includes(nt)))
+    .sort((a,b)=>(b.preferred-a.preferred)||a.name.localeCompare(b.name));
+  const r=$('results'); r.innerHTML='';
+  if(!hits.length){r.innerHTML='<div class="empty">No in-network match on file yet. Check the Notion directory, or add the specialist after this referral so next time it\u2019s one tap.</div>';return;}
+  hits.forEach(s=>{
+    r.insertAdjacentHTML('beforeend',`
+    <div class="spec ${s.preferred?'preferred':''}">
+      <div class="who"><div class="n">${s.preferred?'<span class="star">⭐</span> ':''}${s.name}</div>
+      <div class="org">${s.specialty} · ${s.org}</div></div>
+      <div class="contact"><b>Ph</b> ${s.phone}<br><b>Fax</b> ${s.fax}</div>
+      <span class="wait">${s.wait||''}</span>
+      <button class="copyfax" onclick="navigator.clipboard.writeText('${s.fax}').then(()=>{this.textContent='Copied ✓';setTimeout(()=>this.textContent='Copy fax',1400)})">Copy fax</button>
+      <div class="netlist">${s.networks.join(' · ')}${s.notes?' — '+s.notes:''}</div>
+    </div>`);
+  });
+}
+$('f-go').addEventListener('click',findSpecialists);
+
+/* live inbox feed */
+function bucket(src){ if(/voicemail|phone/i.test(src))return'voice'; if(/text|sms|portal|website|email/i.test(src))return'text'; return'fax'; }
+function renderInbox(items){
+  $('inboxsection').style.display='block';
+  const cols={voice:[],text:[],fax:[]};
+  const today=new Date().toISOString().slice(0,10);
+  items.forEach(it=>cols[bucket(it.source||'')].push(it));
+  ['voice','text','fax'].forEach(k=>{
+    const el=$('col-'+k); el.innerHTML='';
+    if(!cols[k].length){el.innerHTML='<div class="inb"><div class="s">Nothing waiting.</div></div>';return;}
+    cols[k].slice(0,10).forEach(it=>{
+      const breach=/BREACH|At risk/i.test(it.sla||'');
+      const done=/done/i.test(it.status||'');
+      const started=/progress/i.test(it.status||'');
+      const when=it.received? (it.received.slice(0,10)===today? (it.received.slice(11,16)||'today') : it.received.slice(5,10)) : '';
+      const btn = done
+        ? `<button class="act" data-id="${it.id}" data-a="reopen">Reopen</button>`
+        : `${started?'':`<button class="act" data-id="${it.id}" data-a="start">Start</button>`}<button class="act primary" data-id="${it.id}" data-a="done">✓ Done</button>${it.phone?`<button class="act reply" data-id="${it.id}" data-phone="${it.phone}">💬 Reply</button>`:''}`;
+      el.insertAdjacentHTML('beforeend',`<div class="inb ${breach?'breach':''}">
+        <div class="t ${done?'done':''}"><span>${it.name||it.type||'Item'}${it.type?' · '+it.type:''}</span><span class="w">${when}</span></div>
+        <div class="s ${done?'done':''}">${it.summary||it.source||''}${it.assigned?' — '+it.assigned:''}${breach?' · <b style="color:var(--urgent)">'+it.sla+'</b>':''}</div>
+        <div class="actrow">${btn}</div>
+      </div>`);
+    });
+  });
+  // cards from live data
+  const openRef=items.filter(i=>/referral/i.test(i.type||'')&&!/done/i.test(i.status||''));
+  $('c-open').textContent=openRef.filter(i=>/progress|scheduled|sent/i.test(i.status||'')).length||openRef.length;
+  $('c-await').textContent=items.filter(i=>!/done/i.test(i.status||'')&&/BREACH|At risk/i.test(i.sla||'')).length;
+}
+async function poll(){
+  if(!API)return;
+  try{
+    const res=await fetch(`${API}?${DASH_KEY?`key=${DASH_KEY}`:''}`);
+    if(!res.ok)return;
+    const d=await res.json();
+    if(d.items)renderInbox(d.items);
+  }catch(e){}
+}
+poll(); setInterval(poll,60000);
+
+/* demo preview — sample data so the live layout is visible pre-deployment */
+if(DEMO && !API){
+  const t=new Date().toISOString();
+  renderInbox([
+    {id:'demo1',type:'Refill / Rx',source:'Voicemail',priority:'Urgent — same day',status:'Not started',sla:'🔴 BREACH',received:t,summary:'Critical lab callback — LabCorp ref #19055310',name:'Allen, Peter',phone:'+14105550111',assigned:'Amaris'},
+    {id:'demo2',type:'New Patient',source:'Text / SMS',priority:'High — 48 hr',status:'Not started',sla:'🟢 On track',received:t,summary:'Asking about Mind & Mood intake for her son',name:'Greene, Zelda',phone:'+14105550122',assigned:'Margaret'},
+    {id:'demo3',type:'Reschedule',source:'CharmHealth Portal',priority:'Routine — 1 week',status:'In progress',sla:'🟢 On track',received:t,summary:'Wants to move Thursday to next week',name:'Hinton, Gary',phone:'+14105550133',assigned:'Amanda'},
+    {id:'demo4',type:'Referral Needed',source:'Fax',priority:'High — 48 hr',status:'Not started',sla:'🟠 At risk',received:t,summary:'Cardiology consult request — Aetna, needs uniform form',name:'Messner, Cathy',phone:'',assigned:'Shadé'},
+    {id:'demo5',type:'Records Request',source:'Fax',priority:'Routine — 1 week',status:'Done',sla:'✅ Closed',received:t,summary:'Records sent to new PCP',name:'Johnson, Carl',phone:'+14105550155',assigned:'Amanda'},
+  ]);
+  $('livechip').textContent='demo preview — connects live after deployment';
+  $('livechip').style.background='var(--clay)';
+}
+
+/* write-back: Start / Done / Reopen buttons -> Notion */
+const CANNED = [
+  ["Rx sent","Good news — your prescription was sent to your pharmacy today. Please allow a few hours for them to process it before pickup. — BHW Medical Group"],
+  ["Refill received","We received your refill request and sent it to the clinical team. Please allow 1–2 business days. — BHW Medical Group"],
+  ["Appt confirmed","You're confirmed! We'll see you at your scheduled time at 2131 Maryland Ave. Reply R if you need to reschedule. — BHW Medical Group"],
+  ["We'll call you","Got your message — a team member will call you back today. — BHW Medical Group"],
+  ["Records sent","Your records request is complete and has been sent. — BHW Medical Group"],
+  ["Running behind","We're running a little behind today — thank you for your patience. Your care team hasn't forgotten you. — BHW Medical Group"],
+];
+function openReply(btn){
+  const card=btn.closest('.inb');
+  if(card.querySelector('.replybox'))return;
+  const opts=CANNED.map((c,i)=>`<option value="${i}">${c[0]}</option>`).join('');
+  card.insertAdjacentHTML('beforeend',`
+    <div class="replybox">
+      <select class="canned"><option value="">Canned response…</option>${opts}</select>
+      <textarea rows="2" placeholder="Type a reply — sends from the BHW main line"></textarea>
+      <div class="actrow"><button class="act primary send">Send text</button><button class="act cancel">Cancel</button></div>
+    </div>`);
+  const box=card.querySelector('.replybox');
+  box.querySelector('.canned').addEventListener('change',e=>{
+    if(e.target.value!=='')box.querySelector('textarea').value=CANNED[+e.target.value][1];
+  });
+  box.querySelector('.cancel').addEventListener('click',()=>box.remove());
+  box.querySelector('.send').addEventListener('click',async()=>{
+    const msg=box.querySelector('textarea').value.trim();
+    if(!msg)return;
+    const s=box.querySelector('.send'); s.disabled=true; s.textContent='Sending…';
+    try{
+      const res=await fetch(`${API}${DASH_KEY?`?key=${DASH_KEY}`:''}`,{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({action:'sms',pageId:btn.dataset.id,to:btn.dataset.phone,text:msg})
+      });
+      if(res.ok){s.textContent='Sent ✓';setTimeout(()=>box.remove(),900);poll();}
+      else{s.textContent='Failed — retry';s.disabled=false;}
+    }catch(_){s.textContent='Failed — retry';s.disabled=false;}
+  });
+}
+document.addEventListener('click', async e=>{
+  const r=e.target.closest('.reply'); if(r){openReply(r);return;}
+  const b=e.target.closest('.act'); if(!b||!API||b.classList.contains('send')||b.classList.contains('cancel'))return;
+  b.disabled=true; b.textContent='…';
+  try{
+    const res=await fetch(`${API}${DASH_KEY?`?key=${DASH_KEY}`:''}`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({pageId:b.dataset.id,action:b.dataset.a})
+    });
+    if(res.ok){await poll();}else{b.textContent='Retry';b.disabled=false;}
+  }catch(_){b.textContent='Retry';b.disabled=false;}
+});
+
+/* patient lookup */
+async function lookup(){
+  const q=$('q').value.trim();
+  if(!q){$('lkstatus').textContent='Enter a phone number or name to search.';return;}
+  $('profile').classList.remove('show');
+  if(!API){
+    if(DEMO){
+      $('p-name').textContent='Allen, Peter';
+      $('p-meta').textContent='BHW0676 · DOB 12/24/1948';
+      $('p-info').innerHTML=`
+        <div class="kv allergy"><b>⚠️ Allergies:</b> Penicillin — hives · Sulfa — rash</div>
+        <div class="kv"><b>Phone:</b> (410) 555-0111</div>
+        <div class="kv"><b>Payer:</b> Medicare — Priority Partners</div>
+        <div class="kv"><b>Member #:</b> ●●●●●4821</div>
+        <div class="kv"><b>Last visit:</b> 2026-06-24</div>
+        <div class="kv"><b>Next visit:</b> 2026-07-28</div>
+        <div class="kv"><b>Status:</b> <span class="pill open">Active · CCM enrolled</span></div>
+        <div class="kv medblock"><b>Medications:</b><br>Lisinopril 20mg daily<br>Metformin 1000mg BID<br>Atorvastatin 40mg nightly<br>Eliquis 5mg BID</div>
+        <div class="kv snapnote">Clinical snapshot as of 2026-07-10 — chart is source of truth</div>`;
+      $('p-reqs').innerHTML=`
+        <div class="req urgent"><div class="top"><span>Refill / Rx · Voicemail</span><span class="when">today 11:43 PM</span></div><div class="sub">Critical lab callback — LabCorp ref #19055310 — <b>Not started</b></div></div>
+        <div class="req"><div class="top"><span>Reschedule · Text / SMS</span><span class="when">Jul 02</span></div><div class="sub">Moved follow-up to the 14th — <b>Done</b></div></div>
+        <div class="req"><div class="top"><span>Records Request · Fax</span><span class="when">Jun 18</span></div><div class="sub">Sent cardiology consult to Dr. Example — <b>Done</b></div></div>`;
+      $('profile').classList.add('show');
+      $('lkstatus').textContent='Demo profile — live search connects after deployment.';
+      return;
+    }
+    $('lkstatus').innerHTML='Live lookup isn\u2019t connected yet — open the patient in <a href="https://app.notion.com/p/2cf580758d3080f0825de4bbfb6c7528" target="_rel"><b>Patients Master List</b></a> for now.';
+    return;
+  }
+  $('lkstatus').textContent='Searching…';
+  try{
+    const res=await fetch(`${API}?q=${encodeURIComponent(q)}${DASH_KEY?`&key=${DASH_KEY}`:''}`);
+    if(!res.ok)throw new Error(res.status);
+    const d=await res.json();
+    if(!d.patient){$('lkstatus').textContent='No match found — could be a new patient. Check spelling or search the Master List directly.';return;}
+    const p=d.patient;
+    $('p-name').textContent=p.name;
+    $('p-meta').textContent=[p.ctl,p.dob?`DOB ${p.dob}`:null].filter(Boolean).join(' · ');
+    $('p-info').innerHTML=[
+      p.allergies?`<div class="kv allergy"><b>⚠️ Allergies:</b> ${p.allergies}</div>`:'<div class="kv allergy nkda"><b>Allergies:</b> not on file — verify</div>',
+      p.phone?`<div class="kv"><b>Phone:</b> ${p.phone}</div>`:'',
+      p.payer?`<div class="kv"><b>Payer:</b> ${p.payer}${p.mco?' — '+p.mco:''}</div>`:'',
+      p.member?`<div class="kv"><b>Member #:</b> ${p.member}</div>`:'',
+      p.lastVisit?`<div class="kv"><b>Last visit:</b> ${p.lastVisit.slice(0,10)}</div>`:'',
+      p.nextVisit?`<div class="kv"><b>Next visit:</b> ${p.nextVisit.slice(0,10)}</div>`:'<div class="kv"><b>Next visit:</b> none scheduled</div>',
+      p.status?`<div class="kv"><b>Status:</b> <span class="pill open">${p.status}</span></div>`:'',
+      p.meds?`<div class="kv medblock"><b>Medications:</b><br>${p.meds.replace(/\n/g,'<br>')}</div>`:'',
+      p.snapshot?`<div class="kv snapnote">Clinical snapshot as of ${p.snapshot.slice(0,10)} — chart is source of truth</div>`:''
+    ].join('');
+    $('p-reqs').innerHTML=(d.requests&&d.requests.length)?d.requests.map(r=>`
+      <div class="req ${/urgent/i.test(r.priority||'')?'urgent':''}">
+        <div class="top"><span>${r.type||'Request'} · ${r.source||''}</span><span class="when">${r.received||''}</span></div>
+        <div class="sub">${r.summary||''} ${r.status?`— <b>${r.status}</b>`:''}</div>
+      </div>`).join(''):'<div class="req"><div class="sub">No logged requests yet.</div></div>';
+    $('profile').classList.add('show');
+    $('lkstatus').textContent='';
+  }catch(e){$('lkstatus').textContent='Lookup failed — check the connection or search the Master List directly.';}
+}
+$('go').addEventListener('click',lookup);
+$('q').addEventListener('keydown',e=>{if(e.key==='Enter')lookup();});
+</script>
+</body>
+</html>
