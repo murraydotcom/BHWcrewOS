@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BHWCrewCare Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400;1,500&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--obsidian:#1B1B22;--river:#80abbd;--linen:#f7f5f2;--clay:#b07a55;--clay-deep:#8C5A3C;--sage:#a8b59a;--sand:#dcc8b1;--ink:#2b2b33;--soft:#6f6f7a;--ok:#1F6961;--urgent:#B4544B;
+--serif:'Playfair Display',Georgia,serif;--sans:'Montserrat',system-ui,sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--sans);background:var(--linen);color:var(--ink);font-size:14px;line-height:1.55}
+header{background:var(--obsidian);color:#EFEAE3;padding:16px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+header img{height:38px}
+header h1{font-family:var(--serif);font-weight:400;font-size:21px}
+header .sub{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:#B9AFA2}
+nav{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+nav button{font-family:var(--sans);font-size:12.5px;font-weight:600;padding:9px 16px;border-radius:99px;border:1px solid #3a3a44;background:transparent;color:#D8D2C8;cursor:pointer}
+nav button.on{background:var(--river);border-color:var(--river);color:#12242c}
+main{max-width:1060px;margin:0 auto;padding:22px 18px 60px}
+.view{display:none}.view.on{display:block}
+.card{background:#fff;border:1px solid #e5e0d8;border-radius:14px;padding:20px;margin-bottom:16px}
+h2{font-family:var(--serif);font-weight:500;font-size:20px;margin-bottom:4px}
+.eyebrow{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--clay-deep);font-weight:700}
+label{display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--soft);margin:12px 0 4px}
+input,select,textarea{width:100%;font-family:var(--sans);font-size:14px;padding:10px 12px;border:1px solid #ddd6cc;border-radius:9px;background:var(--linen)}
+textarea{resize:vertical}
+.btn{background:var(--river);color:#12242c;border:0;border-radius:99px;padding:11px 22px;font-family:var(--sans);font-weight:700;font-size:13px;cursor:pointer}
+.btn.warm{background:var(--clay);color:#fff}
+.btn.ghost{background:transparent;border:1px solid #ddd6cc;color:var(--ink)}
+.status{font-size:12.5px;margin-top:10px;color:var(--clay-deep);font-weight:600;min-height:18px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}}
+.item{display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid #eee8df;border-radius:11px;margin-bottom:9px;background:#fff}
+.item.done{opacity:.55}
+.item .who{font-weight:700}
+.item .meta{font-size:11px;color:var(--soft)}
+.item .sum{font-size:13px;margin-top:3px}
+.tag{font-size:10px;font-weight:700;letter-spacing:.08em;padding:3px 9px;border-radius:99px;background:var(--linen)}
+.tag.urgent{background:#fdf0ef;color:var(--urgent)}
+.tag.high{background:#fdf6ec;color:var(--clay-deep)}
+.item .acts{margin-left:auto;display:flex;gap:6px;flex-shrink:0}
+.item .acts button{font-size:11px;font-weight:700;padding:6px 12px;border-radius:99px;border:1px solid #ddd6cc;background:#fff;cursor:pointer}
+.ai-slot{font-size:12px;background:var(--linen);border:1px dashed #cfc7ba;border-radius:9px;padding:9px 12px;margin-top:8px;color:var(--soft)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--soft);padding:9px 10px;border-bottom:1px solid #e5e0d8}
+td{padding:10px;border-bottom:1px solid #f0ebe2}
+td a{color:var(--clay-deep);font-weight:700;text-decoration:none}
+.warn{color:var(--urgent);font-weight:700;font-size:11px}
+.planbox{white-space:pre-wrap;background:var(--linen);border-radius:11px;padding:14px;font-size:12.5px;max-height:420px;overflow:auto}
+</style>
+</head>
+<body>
+<header>
+  <img src="/assets/bhw-logo-mark.png" alt="" onerror="this.style.display='none'">
+  <div><h1>BHWCrewCare Portal</h1><div class="sub">provider side · care in motion</div></div>
+  <nav>
+    <button class="on" data-v="inbox">Inbox</button>
+    <button data-v="plan">Care plan builder</button>
+    <button data-v="results">Post results</button>
+    <button data-v="patients">Patients</button>
+  </nav>
+</header>
+<main>
+
+<section class="view on" id="v-inbox">
+  <div class="card"><span class="eyebrow">Clinical triage</span><h2>Inbox</h2>
+    <p style="font-size:12.5px;color:var(--soft)">Live from the triage queue — same queue the front desk works, provider lens. SLA colors live on the front desk page.</p>
+  </div>
+  <div id="inbox-list"><div class="card">Loading…</div></div>
+</section>
+
+<section class="view" id="v-plan">
+  <div class="card"><span class="eyebrow">From plan to pathway</span><h2>Care plan builder</h2>
+    <p style="font-size:12.5px;color:var(--soft)">Pulls the patient's existing care plan from Notion. Write each week in your voice, publish, and it appears on their patient page.</p>
+    <div class="grid2" style="margin-top:8px">
+      <div>
+        <label>Patient</label><select id="p-pat"></select>
+        <button class="btn ghost" style="margin-top:10px" onclick="loadPlan()">Load their care plan</button>
+        <div class="status" id="p-loadst"></div>
+        <div class="planbox" id="p-source">Care plan appears here…</div>
+      </div>
+      <div>
+        <label>Week #</label><input id="p-week" inputmode="numeric" placeholder="1–12">
+        <label>Week title</label><input id="p-title" placeholder="e.g., Protecting your mornings">
+        <label>This week's plan (one line per point — becomes their page content)</label>
+        <textarea id="p-body" rows="9" placeholder="What we're focusing on&#10;What to do each day&#10;What to notice"></textarea>
+        <label>Provider note — in your voice (optional, shows with 💛)</label>
+        <textarea id="p-note" rows="3" placeholder="A direct word to this patient…"></textarea>
+        <label>Signed</label>
+        <select id="p-prov">
+          <option>Amaris, CRNP</option><option>Yahaira, CRNP</option><option>Tanya, PMHNP</option><option>Eleshiea, LCSW-C</option>
+        </select>
+        <button class="btn warm" style="margin-top:14px" onclick="publishWeek()">🌿 Publish week to patient page</button>
+        <div class="status" id="p-st"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="view" id="v-results">
+  <div class="card"><span class="eyebrow">Never a raw number</span><h2>Post results with interpretation</h2>
+    <label>Patient</label><select id="r-pat"></select>
+    <div class="grid2">
+      <div><label>Lab / result</label><input id="r-lab" placeholder="e.g., Ferritin"></div>
+      <div><label>Value</label><input id="r-val" placeholder="e.g., 31 ng/mL (up from 18)"></div>
+    </div>
+    <label>What this means for you (patient language)</label>
+    <textarea id="r-mean" rows="4" placeholder="Your iron stores are rebuilding — this is why the fatigue is lifting…"></textarea>
+    <label>Signed</label>
+    <select id="r-prov"><option>Amaris, CRNP</option><option>Yahaira, CRNP</option><option>Tanya, PMHNP</option></select>
+    <button class="btn warm" style="margin-top:14px" onclick="postResult()">🧪 Post to patient page</button>
+    <div class="status" id="r-st"></div>
+  </div>
+</section>
+
+<section class="view" id="v-patients">
+  <div class="card"><span class="eyebrow">Panel</span><h2>Patients</h2>
+    <div id="pt-table">Loading…</div>
+  </div>
+</section>
+
+</main>
+<script>
+const API='/.netlify/functions/console-data';
+const KEY='02142022';
+const $=id=>document.getElementById(id);
+let PATIENTS=[];
+
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); $('v-'+b.dataset.v).classList.add('on');
+});
+
+async function api(params,body){
+  const url=`${API}?key=${encodeURIComponent(KEY)}&${params||''}`;
+  const res= body? await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,key:KEY})})
+                 : await fetch(url);
+  const d=await res.json().catch(()=>({error:'bad response'}));
+  if(!res.ok||d.error) throw new Error(d.error||res.status);
+  return d;
+}
+
+async function boot(){
+  try{
+    const d=await api('mode=patients');
+    PATIENTS=d.patients;
+    ['p-pat','r-pat'].forEach(id=>{
+      const s=$(id); s.innerHTML='<option value="">Choose patient…</option>';
+      PATIENTS.forEach((p,i)=>{const o=document.createElement('option');o.value=i;
+        o.textContent=`${p.name}${p.ctl?' · '+p.ctl:''}${p.pageId?'':' — ⚠ no page linked'}`;s.appendChild(o);});
+    });
+    renderPatients();
+  }catch(e){ $('pt-table').innerHTML=`<div class="warn">Couldn't load patients: ${e.message}</div>`; }
+  loadInbox();
+}
+
+function renderPatients(){
+  let h='<table><tr><th>Patient</th><th>Ctl #</th><th>Program</th><th>Payer</th><th>Patient page</th></tr>';
+  PATIENTS.forEach(p=>{
+    h+=`<tr><td><b>${p.name}</b></td><td>${p.ctl||''}</td><td>${p.program||''}</td><td>${p.payer||''}</td>
+    <td>${p.pageUrl?`<a href="${p.pageUrl}" target="_blank" rel="noopener">Open ↗</a>`:'<span class="warn">not linked</span>'}</td></tr>`;
+  });
+  $('pt-table').innerHTML=h+'</table>';
+}
+
+async function loadInbox(){
+  try{
+    const d=await api('mode=inbox');
+    if(!d.items.length){ $('inbox-list').innerHTML='<div class="card">Queue is clear. 🌅</div>'; return; }
+    $('inbox-list').innerHTML=d.items.map(it=>`
+      <div class="item ${it.status==='Done'?'done':''}">
+        <div>
+          <div class="who">${it.who||'—'} <span class="tag ${/Urgent/i.test(it.priority)?'urgent':/High/i.test(it.priority)?'high':''}">${it.priority||'Routine'}</span> <span class="tag">${it.source||''}</span></div>
+          <div class="meta">${it.type||''} · ${it.received? new Date(it.received).toLocaleString():''} · ${it.status}</div>
+          <div class="sum">${(it.summary||'').slice(0,220)}</div>
+          <div class="ai-slot">🤖 AI draft in your voice — arrives when the AI layer connects (Anthropic key + BAA decision, on the punch list)</div>
+        </div>
+        <div class="acts">
+          ${it.status!=='In progress'?`<button onclick="act('start','${it.id}',this)">Start</button>`:''}
+          ${it.status!=='Done'?`<button onclick="act('done','${it.id}',this)">✓ Done</button>`:''}
+        </div>
+      </div>`).join('');
+  }catch(e){ $('inbox-list').innerHTML=`<div class="card warn">Inbox error: ${e.message}</div>`; }
+}
+async function act(a,id,btn){ btn.disabled=true; try{ await api('',{action:a,id}); loadInbox(); }catch(e){ btn.disabled=false; alert(e.message);} }
+
+async function loadPlan(){
+  const p=PATIENTS[$('p-pat').value]; const st=$('p-loadst');
+  if(!p){ st.textContent='Pick a patient first.'; return; }
+  st.textContent='Loading their care plan…';
+  try{
+    const d=await api(`mode=plan&pid=${p.id}`);
+    if(!d.plan){ st.textContent=d.note||'No plan linked.'; $('p-source').textContent='—'; return; }
+    st.textContent=`Loaded: ${d.plan.title}`;
+    $('p-source').textContent=d.plan.text||'(plan is empty)';
+  }catch(e){ st.textContent='Error: '+e.message; }
+}
+
+async function publishWeek(){
+  const p=PATIENTS[$('p-pat').value]; const st=$('p-st');
+  if(!p){ st.textContent='Pick a patient.'; return; }
+  if(!p.pageId){ st.textContent='⚠ This patient has no Patient Page URL on the Master List — add it there first.'; return; }
+  if(!$('p-body').value.trim()){ st.textContent='Write the week content first.'; return; }
+  st.textContent='Publishing…';
+  try{
+    await api('',{action:'publishweek',pageId:p.pageId,week:$('p-week').value,title:$('p-title').value,
+      body:$('p-body').value,providerNote:$('p-note').value,provider:$('p-prov').value});
+    st.textContent=`✓ Week ${$('p-week').value||''} published to ${p.name.split(',')[0]}'s page.`;
+    $('p-body').value='';$('p-note').value='';
+  }catch(e){ st.textContent='Error: '+e.message; }
+}
+
+async function postResult(){
+  const p=PATIENTS[$('r-pat').value]; const st=$('r-st');
+  if(!p){ st.textContent='Pick a patient.'; return; }
+  if(!p.pageId){ st.textContent='⚠ No Patient Page URL on the Master List for this patient.'; return; }
+  if(!$('r-lab').value.trim()||!$('r-mean').value.trim()){ st.textContent='Lab and interpretation are both required — never a raw number alone.'; return; }
+  st.textContent='Posting…';
+  try{
+    await api('',{action:'postresult',pageId:p.pageId,lab:$('r-lab').value,value:$('r-val').value,
+      meaning:$('r-mean').value,provider:$('r-prov').value});
+    st.textContent=`✓ Posted to ${p.name.split(',')[0]}'s page with your interpretation.`;
+    ['r-lab','r-val','r-mean'].forEach(id=>$(id).value='');
+  }catch(e){ st.textContent='Error: '+e.message; }
+}
+
+boot();
+</script>
+</body>
+</html>
