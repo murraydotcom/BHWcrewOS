@@ -1,0 +1,1000 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CharmEd Minds — My Strategy Hub (Patient Page)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+/* ============================================================
+   BHW family — shared tokens + cross-brand patterns
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Lora:ital,wght@0,400;0,500;1,400&family=Caveat:wght@500;600&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  /* ---- BHW parent (mineral / geode) ---- */
+  --bhw-deep-obsidian:#0F141A; --bhw-ink-navy:#162433; --bhw-charcoal:#2A3038;
+  --bhw-mineral-taupe:#6B665E; --bhw-sea-glass:#5FA9A6; --bhw-deep-teal-vein:#266D7A;
+  --bhw-opal-mist:#DCE3EA; --bhw-lavender-opal:#92889B; --bhw-rose-opal:#C9A0A0;
+  --bhw-pale-gold-light:#E8C98A; --bhw-bronze-clay:#8C5A3C; --bhw-pyrite-gold:#C4A038;
+  --bhw-limestone:#EDE5D8; --bhw-warm-ivory:#F7F3EA;
+
+  /* default semantic */
+  --bg:var(--bhw-warm-ivory); --bg-warm:var(--bhw-limestone); --bg-muted:var(--bhw-opal-mist);
+  --surface-dark:var(--bhw-ink-navy); --surface-deepest:var(--bhw-deep-obsidian);
+  --fg:var(--bhw-ink-navy); --fg-strong:var(--bhw-deep-obsidian); --fg-muted:var(--bhw-mineral-taupe);
+  --fg-on-dark:var(--bhw-warm-ivory); --fg-on-dark-muted:rgba(247,243,234,0.65);
+  --accent:var(--bhw-bronze-clay); --accent-gold:var(--bhw-pyrite-gold);
+  --accent-soft:var(--bhw-sea-glass); --accent-deep:var(--bhw-deep-teal-vein);
+  --border:rgba(22,36,51,0.12); --border-on-dark:rgba(247,243,234,0.16);
+
+  --font-sans:'Montserrat',ui-sans-serif,system-ui,sans-serif;
+  --font-serif:'Playfair Display',Georgia,serif;
+  --font-lora:'Lora',Georgia,serif;
+  --font-script:'Caveat',cursive;
+
+  --radius-md:8px; --radius-lg:14px; --radius-xl:22px; --radius-pill:999px;
+  --shadow-sm:0 2px 6px rgba(15,20,26,0.08);
+  --shadow-md:0 8px 20px -8px rgba(15,20,26,0.18);
+  --shadow-lg:0 20px 40px -16px rgba(15,20,26,0.28);
+  --ease-out:cubic-bezier(0.16,1,0.3,1);
+}
+
+/* ---- Per-brand palette overrides (apply via .brand-flow etc on <body>) ---- */
+.brand-flow{
+  --brand-deep:#083547; --brand-mid:#0B5D73; --brand-blue:#167A9A; --brand-light:#79C2D6;
+  --brand-pale:#D7ECF4; --brand-gold:#E7C45A; --brand-cream:#FAF2DF;
+  --bg:#FAF2DF; --bg-warm:#D7ECF4; --fg:#083547; --fg-strong:#083547;
+  --accent:#0B5D73; --accent-soft:#79C2D6; --accent-gold:#E7C45A;
+}
+.brand-charmed{
+  --brand-deep:#0B1228; --brand-reef:#114766; --brand-teal:#2CA7A6; --brand-gold:#F2B134;
+  --brand-lavender:#B7A4F7; --brand-sand:#E9E2D6;
+  --bg:#FAF7F2; --bg-warm:#E9E2D6; --fg:#0B1228; --fg-strong:#0B1228;
+  --accent:#2CA7A6; --accent-soft:#B7A4F7; --accent-gold:#F2B134;
+}
+.brand-mindmood{
+  --brand-plum:#4B3558; --brand-mauve:#A98AA9; --brand-lavender:#C9B3CF;
+  --brand-peach:#E8B39D; --brand-apricot:#F3C291; --brand-gold:#E7C95B; --brand-blue:#8CA3B3;
+  --bg:#F7F1E8; --bg-warm:#EFE3D8; --fg:#4B3558; --fg-strong:#3A2944;
+  --accent:#4B3558; --accent-soft:#C9B3CF; --accent-gold:#E7C95B;
+  --font-display:var(--font-serif);
+}
+.brand-foundation{
+  --brand-opal:#C9D9DC; --brand-seaglass:#5FA9A6; --brand-ocean:#266D7A;
+  --brand-opal:#9FE3C1; --brand-seaglass:#5BC3B4; --brand-ocean:#2B6F7B;
+  --brand-sky:#7DA8D6; --brand-violet:#8A80C7; --brand-gold:#D7B56D;
+  --brand-ink:#1F1F1F; --brand-stone:#E8E3D7; --brand-cream:#F6F2EA; --brand-sagemist:#D9E6DF;
+  --bg:#F6F2EA; --bg-warm:#E8E3D7; --fg:#1F1F1F; --fg-strong:#1F1F1F;
+  --accent:#2B6F7B; --accent-soft:#5BC3B4; --accent-gold:#D7B56D;
+  --font-display:var(--font-serif);
+}
+.brand-healthirl{
+  --brand-slate:#3D5061; --brand-blue:#5E7B8E; --brand-sage:#7F9B8A;
+  --brand-fresh:#9DBDA6; --brand-softsage:#D4E1D8; --brand-sand:#F2EDE4;
+  --bg:#F2EDE4; --bg-warm:#D4E1D8; --fg:#3D5061; --fg-strong:#2A3845;
+  --accent:#3D5061; --accent-soft:#9DBDA6; --accent-gold:#7F9B8A;
+  --font-display:var(--font-serif); --font-script:'Caveat',cursive;
+}
+.brand-beyondnormal{
+  --brand-slate:#60748A; --brand-teal:#8FB5AE; --brand-sage:#A8B89F;
+  --brand-slate:#60748A; --brand-mistyteal:#8FB5AE; --brand-mutedsage:#A8B89F;
+  --brand-lavender:#B9B4C7; --brand-sand:#D9CFAB; --brand-stone:#E6E4DF; --brand-ivory:#FAF8F4;
+  --bg:#FAF8F4; --bg-warm:#E6E4DF; --fg:#2A3847; --fg-strong:#1B2530;
+  --accent:#60748A; --accent-soft:#8FB5AE; --accent-gold:#D9CFAB;
+  --font-display:var(--font-serif);
+}
+.brand-bhwmedical{
+  --brand-labradorite:#2F3F4F; --brand-teal:#6FA7A6; --brand-sage:#A9BBA7;
+  --brand-ivory:#F7F4EE; --brand-limestone:#E6E0D5; --brand-bronze:#A66E49; --brand-gold:#D4B06A;
+  --bg:#F7F4EE; --bg-warm:#E6E0D5; --fg:#2F3F4F; --fg-strong:#1F2B38;
+  --accent:#A66E49; --accent-soft:#6FA7A6; --accent-gold:#D4B06A;
+}
+
+/* ---- Brand logo lockup (hero) ---- */
+.brand-logo-hero{display:block; max-width:340px; width:100%; height:auto; margin-bottom:22px;}
+.brand-logo-hero--sm{max-width:240px;}
+.brand-logo-hero--lg{max-width:420px;}
+
+/* ---- Base ---- */
+*,*::before,*::after{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:var(--font-sans); background:var(--bg); color:var(--fg);
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  font-size:16px; line-height:1.55;
+}
+a{color:inherit;}
+img{max-width:100%; display:block;}
+button{font-family:inherit;}
+.font-display{font-family:var(--font-display,var(--font-sans));}
+.font-serif{font-family:var(--font-serif);}
+.font-script{font-family:var(--font-script);}
+
+/* ---- Typography helpers ---- */
+.eyebrow{
+  font-size:11px; font-weight:600; letter-spacing:0.2em; text-transform:uppercase;
+  color:var(--fg-muted); margin:0;
+}
+.eyebrow--accent{color:var(--accent);}
+.tagline{
+  font-size:12px; font-weight:500; letter-spacing:0.22em; text-transform:uppercase;
+  color:var(--accent);
+}
+.gold-rule{display:inline-block; width:48px; height:1px; background:var(--accent-gold,var(--accent)); vertical-align:middle;}
+.gold-rule--v{display:inline-block; width:1px; height:100%; background:var(--accent-gold,var(--accent));}
+
+h1,h2,h3,h4,h5{margin:0; color:var(--fg-strong); text-wrap:balance;}
+.h-display{font-family:var(--font-display,var(--font-sans)); font-weight:300; letter-spacing:-0.025em; line-height:1.04; font-size:clamp(48px,6vw,84px);}
+.h-section{font-family:var(--font-display,var(--font-sans)); font-weight:300; letter-spacing:-0.02em; line-height:1.1; font-size:clamp(32px,4vw,52px);}
+.h-card{font-weight:500; font-size:22px; line-height:1.25; letter-spacing:-0.01em;}
+.lede{font-size:19px; font-weight:300; line-height:1.7; color:var(--fg);}
+
+/* ---- Layout helpers ---- */
+.container{max-width:1280px; margin:0 auto; padding:0 48px;}
+.container-narrow{max-width:960px; margin:0 auto; padding:0 48px;}
+.section{padding:96px 0;}
+.section-tight{padding:64px 0;}
+.grid{display:grid; gap:24px;}
+
+/* ---- Buttons ---- */
+.btn{
+  display:inline-flex; align-items:center; gap:10px;
+  font-family:var(--font-sans); font-weight:500; font-size:13px;
+  letter-spacing:0.05em; padding:14px 26px; border-radius:999px;
+  border:1px solid transparent; cursor:pointer; text-decoration:none;
+  transition:all 220ms var(--ease-out); white-space:nowrap;
+}
+.btn--primary{background:var(--fg-strong); color:var(--bg);}
+.btn--primary:hover{background:#000; transform:translateY(-1px);}
+.btn--accent{background:var(--accent); color:#fff;}
+.btn--accent:hover{filter:brightness(0.92);}
+.btn--ghost{background:transparent; color:var(--fg); border-color:rgba(22,36,51,0.24);}
+.btn--ghost:hover{border-color:var(--accent); color:var(--accent);}
+.btn--ghost-dark{background:transparent; color:var(--fg-on-dark); border-color:rgba(247,243,234,0.32);}
+.btn--ghost-dark:hover{border-color:var(--fg-on-dark); }
+.btn--text{padding:6px 0; border-radius:0; border-bottom:1px solid var(--accent); background:transparent; color:var(--fg);}
+
+/* ---- Cards ---- */
+.card{
+  background:#F4EFE5; border:1px solid var(--border); border-radius:var(--radius-lg);
+  padding:32px; box-shadow:var(--shadow-sm);
+  transition:all 220ms var(--ease-out);
+}
+.card:hover{border-color:rgba(140,90,60,0.5); box-shadow:var(--shadow-md);}
+.card-ivory{background:var(--bg);}
+.card-dark{background:var(--surface-dark); color:var(--fg-on-dark); border:1px solid var(--border-on-dark);}
+
+/* ---- Form controls ---- */
+.field{display:flex; flex-direction:column; gap:6px;}
+.field label{font-size:10px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:var(--fg-muted);}
+.field input,.field select,.field textarea{
+  font-family:var(--font-sans); font-size:14px; padding:12px 14px;
+  background:var(--bg); border:1px solid var(--border); border-radius:8px;
+  color:var(--fg); outline:none; width:100%;
+}
+.field input:focus,.field select:focus,.field textarea:focus{
+  border-color:var(--accent); box-shadow:0 0 0 3px rgba(140,90,60,0.15);
+}
+
+/* ---- Pills / badges ---- */
+.pill{display:inline-flex; align-items:center; gap:8px; padding:6px 12px;
+  border-radius:999px; font-size:11px; font-weight:600; letter-spacing:0.16em;
+  text-transform:uppercase;}
+.pill-dot{width:6px; height:6px; border-radius:999px; background:var(--accent-soft);}
+
+/* ---- Shared header / footer ---- */
+.bhw-header{
+  position:sticky; top:0; z-index:50; background:var(--bg-warm);
+  border-bottom:1px solid var(--border);
+}
+.bhw-header__inner{
+  max-width:1280px; margin:0 auto; padding:14px 48px;
+  display:flex; align-items:center; justify-content:space-between; gap:24px;
+}
+.bhw-header__lockup{display:flex; align-items:center; gap:12px; text-decoration:none; color:var(--fg);}
+.bhw-header__mark{width:32px; height:auto;}
+.bhw-header__wm{display:flex; flex-direction:column; gap:2px; line-height:1;}
+.bhw-header__wm span:first-child{font-size:18px; font-weight:300; letter-spacing:0.04em; color:var(--fg-strong);}
+.bhw-header__wm span:last-child{font-size:8.5px; font-weight:600; letter-spacing:0.22em; text-transform:uppercase; color:var(--fg-muted);}
+.bhw-header__brand-name{display:inline-flex; align-items:center; gap:10px; font-size:12px; font-weight:500; letter-spacing:0.18em; text-transform:uppercase; padding-left:18px; margin-left:18px; border-left:1px solid var(--border); color:var(--accent);}
+.bhw-header__brand-name::before{content:""; display:inline-block; width:22px; height:26px; background:url(assets/logo-geode.png) center/contain no-repeat; flex-shrink:0;}
+.hero-mark{display:inline-block; width:64px; height:auto; margin-bottom:18px;}
+.hero-brand-lockup{display:flex; align-items:center; gap:14px; margin-bottom:18px;}
+.hero-brand-lockup img{width:48px; height:auto;}
+.hero-brand-lockup .name{font-family:var(--font-serif); font-style:italic; font-weight:500; font-size:22px; color:var(--fg-strong); letter-spacing:-0.01em;}
+.bhw-header__nav{display:flex; gap:28px; align-items:center;}
+.bhw-header__nav a{font-size:12px; font-weight:500; letter-spacing:0.06em; text-decoration:none; color:var(--fg); padding:6px 0; border-bottom:1px solid transparent; transition:all 200ms;}
+.bhw-header__nav a:hover,.bhw-header__nav a.active{color:var(--accent); border-color:var(--accent);}
+
+.bhw-footer{background:var(--bhw-deep-obsidian); color:var(--bhw-warm-ivory); padding:72px 0 28px;}
+.bhw-footer .container{max-width:1280px;}
+.bhw-footer__top{display:grid; grid-template-columns:1.3fr 3fr; gap:64px; padding-bottom:48px; border-bottom:1px solid rgba(230,223,210,0.10);}
+.bhw-footer__brand{display:flex; flex-direction:column; gap:16px;}
+.bhw-footer__brand .tagline{color:var(--bhw-pale-gold-light);}
+.bhw-footer__brand p{font-size:13px; color:rgba(230,223,210,0.7); margin:8px 0 0; max-width:340px; line-height:1.7;}
+.bhw-footer__groups{display:grid; grid-template-columns:repeat(4,1fr); gap:24px;}
+.bhw-footer__groups h5{font-size:10px; font-weight:600; letter-spacing:0.2em; text-transform:uppercase; color:rgba(230,223,210,0.55); margin:0 0 16px; color:#fff;}
+.bhw-footer__groups ul{list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:9px;}
+.bhw-footer__groups a{font-size:12.5px; color:var(--bhw-warm-ivory); opacity:0.82; text-decoration:none;}
+.bhw-footer__groups a:hover{color:var(--bhw-bronze-clay); opacity:1;}
+.bhw-footer__bottom{display:flex; justify-content:space-between; align-items:center; gap:24px; margin-top:24px; font-size:11px; color:rgba(230,223,210,0.45); letter-spacing:0.06em;}
+
+/* ---- Geode network — the cross-brand connective motif ---- */
+.geode-network{position:absolute; inset:0; pointer-events:none; opacity:0.5;}
+.geode-network circle{fill:var(--accent-soft);}
+.geode-network line{stroke:var(--accent-soft); stroke-width:0.6; opacity:0.5;}
+
+/* ---- Common section header ---- */
+.section-head{display:flex; gap:14px; align-items:center; margin-bottom:28px;}
+.section-head .num{font-size:11px; font-weight:600; letter-spacing:0.2em; color:var(--accent);}
+
+/* ---- Tab switcher (audience pages) ---- */
+.audience-tabs{
+  display:inline-flex; padding:5px; background:rgba(22,36,51,0.05);
+  border-radius:999px; border:1px solid var(--border); gap:4px;
+}
+.audience-tabs button{
+  background:transparent; border:0; padding:9px 22px; border-radius:999px;
+  font-family:var(--font-sans); font-size:12px; font-weight:600; letter-spacing:0.12em;
+  text-transform:uppercase; color:var(--fg-muted); cursor:pointer;
+  transition:all 200ms; white-space:nowrap;
+}
+.audience-tabs button.active{background:var(--fg-strong); color:var(--bg);}
+
+/* ---- Insurance strip ---- */
+.insurance-strip{
+  display:flex; flex-wrap:wrap; align-items:center; gap:20px 36px;
+  padding:18px 24px; background:var(--bg-warm); border:1px solid var(--border);
+  border-radius:12px;
+}
+.insurance-strip .ix-label{font-size:10px; font-weight:600; letter-spacing:0.2em; text-transform:uppercase; color:var(--fg-muted);}
+.insurance-strip .ix-item{font-size:13px; font-weight:500; color:var(--fg);}
+
+/* ---- Audience hero split ---- */
+.audience-hero{display:grid; grid-template-columns:1.1fr 1fr; gap:64px; align-items:center;}
+@media (max-width:900px){
+  .audience-hero{grid-template-columns:1fr;}
+  .bhw-footer__top{grid-template-columns:1fr;}
+  .bhw-footer__groups{grid-template-columns:repeat(2,1fr);}
+  .container,.container-narrow{padding:0 24px;}
+  .bhw-header__nav{display:none;}
+}
+
+/* ==========================================================================
+   BHW Integrative Wellness — Design Tokens
+   "Depth Restores Clarity."
+   ========================================================================== */
+
+/* Webfont — Montserrat (the brand's primary). Loaded from Google Fonts. */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  /* --------------------------------------------------------------------
+     COLOR — Mineral Palette
+     Dark, grounded, geode-inspired. Warm bronze + cool sea-glass accents
+     against neutral limestone & opal mist surfaces.
+     -------------------------------------------------------------------- */
+
+  /* Core palette — Opal mineral.
+     The geode has FIVE colors of light inside the dark stone: sea-glass,
+     deep teal vein, lavender, rose, and pale gold. Plus two metals
+     (bronze, pyrite) and two warm backgrounds (limestone, ivory). */
+
+  /* Darks */
+  --bhw-deep-obsidian:  #0F141A;  /* Near-black, the deepest tone in the geode    */
+  --bhw-ink-navy:       #162433;  /* Primary brand blue — logos / headlines       */
+  --bhw-charcoal:       #2A3038;  /* Secondary dark surface                       */
+  --bhw-mineral-taupe:  #6B665E;  /* Warm grey — quiet text, dividers            */
+
+  /* Opal lights (the "fire" inside the stone) */
+  --bhw-sea-glass:        #5FA9A6;  /* Highlights, icons, buttons, "clarity" moments */
+  --bhw-deep-teal-vein:   #266D7A;  /* Supporting brand accent, hover, section markers */
+  --bhw-opal-mist:        #DCE3EA;  /* Light opal background, cards, subtle contrast */
+  --bhw-lavender-opal:    #92889B;  /* Iridescent accents, gradients, secondary detail (sparingly) */
+  --bhw-rose-opal:        #C9A0A0;  /* Warmth inside gradients (very sparingly)       */
+  --bhw-pale-gold-light:  #E8C98A;  /* "Light inside the opal" — small dividers, premium accent lines */
+
+  /* Metallic / grounding accents */
+  --bhw-bronze-clay:    #8C5A3C;  /* Warmth, CTAs, print, bridge to mineral palette */
+  --bhw-pyrite-gold:    #C4A038;  /* Logo outline, fine lines, dividers, premium emphasis */
+
+  /* Backgrounds */
+  --bhw-limestone:      #EDE5D8;  /* Main warm background                          */
+  --bhw-warm-ivory:     #F7F3EA;  /* Website body background, forms, cards, patient-facing */
+
+  /* Tonal extensions (derived for UI states) */
+  --bhw-limestone-50:   #F7F3EA;  /* alias of warm-ivory */
+  --bhw-limestone-200:  #DBD0BA;  /* hover / borders on warm surfaces */
+  --bhw-ink-navy-80:    #2C3D50;
+  --bhw-ink-navy-60:    #5C6E80;
+  --bhw-bronze-clay-12: rgba(140, 90, 60, 0.12);
+  --bhw-sea-glass-12:   rgba(95, 169, 166, 0.12);
+  --bhw-deep-teal-12:   rgba(38, 109, 122, 0.12);
+
+  /* Semantic — Light theme.
+     Default body uses Warm Ivory (patient-facing); marketing surfaces
+     and section breaks use Limestone for the warmer, more editorial feel. */
+  --bg:           var(--bhw-warm-ivory);     /* website body, forms, cards */
+  --bg-warm:      var(--bhw-limestone);      /* marketing / section breaks */
+  --bg-elev:      var(--bhw-warm-ivory);     /* cards, raised surfaces */
+  --bg-muted:     var(--bhw-opal-mist);      /* opal alt sections, side panels */
+  --surface-dark: var(--bhw-ink-navy);       /* inverse hero panels */
+
+  --fg:          var(--bhw-ink-navy);      /* primary text on light  */
+  --fg-strong:   var(--bhw-deep-obsidian); /* display headlines      */
+  --fg-muted:    var(--bhw-mineral-taupe); /* secondary text         */
+  --fg-on-dark:  var(--bhw-warm-ivory);    /* primary text on dark   */
+  --fg-on-dark-muted: rgba(247, 243, 234, 0.65);
+
+  --accent:           var(--bhw-bronze-clay);     /* CTAs, warmth, print */
+  --accent-gold:      var(--bhw-pyrite-gold);     /* logo outline, dividers, premium emphasis */
+  --accent-soft:      var(--bhw-sea-glass);       /* icons, highlights, "clarity" moments */
+  --accent-deep:      var(--bhw-deep-teal-vein);  /* hover, section markers, program connections */
+  --accent-iridescent: var(--bhw-lavender-opal);  /* iridescent accents — sparingly */
+  --accent-warm:      var(--bhw-rose-opal);       /* warmth inside gradients — very sparingly */
+  --accent-gold-light: var(--bhw-pale-gold-light); /* small premium dividers */
+
+  --border:      rgba(22, 36, 51, 0.12);   /* subtle hairline on light */
+  --border-strong: rgba(22, 36, 51, 0.24);
+  --border-on-dark: rgba(247, 243, 234, 0.16);
+  --divider-gold: var(--bhw-pyrite-gold);  /* the brand's signature gold rule (logo-grade) */
+  --divider-bronze: var(--bhw-bronze-clay);
+
+  --focus-ring:  rgba(95, 169, 166, 0.55);
+
+  /* --------------------------------------------------------------------
+     RADIUS — minimal, never playful. Refined surfaces.
+     -------------------------------------------------------------------- */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;   /* card corners — subtle */
+  --radius-xl: 22px;   /* hero panels */
+  --radius-pill: 999px;
+
+  /* --------------------------------------------------------------------
+     SHADOW — quiet depth. Cool-shifted, not generic black.
+     -------------------------------------------------------------------- */
+  --shadow-xs: 0 1px 2px rgba(15, 20, 26, 0.06);
+  --shadow-sm: 0 2px 6px rgba(15, 20, 26, 0.08);
+  --shadow-md: 0 8px 20px -8px rgba(15, 20, 26, 0.18);
+  --shadow-lg: 0 20px 40px -16px rgba(15, 20, 26, 0.28);
+  --shadow-inset-hairline: inset 0 0 0 1px var(--border);
+
+  /* --------------------------------------------------------------------
+     SPACING — 4px base. Generous in hero / editorial blocks.
+     -------------------------------------------------------------------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+  --space-10: 128px;
+
+  /* --------------------------------------------------------------------
+     TYPE — Montserrat throughout. Wide-tracked uppercase labels are
+     a brand signature ("DEPTH RESTORES CLARITY.").
+     -------------------------------------------------------------------- */
+  --font-sans: 'Montserrat', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Montserrat', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
+
+  --weight-light: 300;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* Type scale (rem-equivalent in px for clarity) */
+  --fs-display: 88px;   /* hero — see "BHW" wordmark feel */
+  --fs-h1: 56px;
+  --fs-h2: 40px;
+  --fs-h3: 28px;
+  --fs-h4: 22px;
+  --fs-h5: 18px;
+  --fs-body: 16px;
+  --fs-small: 14px;
+  --fs-eyebrow: 12px;   /* uppercase tracked labels */
+
+  --lh-tight: 1.05;
+  --lh-snug: 1.2;
+  --lh-normal: 1.5;
+  --lh-loose: 1.75;
+
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.08em;
+  --tracking-eyebrow: 0.18em;   /* the brand's signature wide tracking */
+
+  /* --------------------------------------------------------------------
+     MOTION
+     -------------------------------------------------------------------- */
+  --ease-standard: cubic-bezier(0.2, 0.6, 0.2, 1);
+  --ease-out:     cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 140ms;
+  --dur-base: 220ms;
+  --dur-slow: 420ms;
+}
+
+/* ==========================================================================
+   SEMANTIC ELEMENT STYLES — opt-in via class. Apply .bhw on a container to
+   inherit the brand's typographic & background defaults.
+   ========================================================================== */
+
+.bhw {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: var(--lh-normal);
+  font-weight: var(--weight-regular);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.bhw h1, .bhw .h1 {
+  font-family: var(--font-display);
+  font-size: var(--fs-h1);
+  font-weight: var(--weight-light);  /* the wordmark is light-weight */
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg-strong);
+  margin: 0 0 var(--space-5);
+}
+.bhw h2, .bhw .h2 {
+  font-family: var(--font-display);
+  font-size: var(--fs-h2);
+  font-weight: var(--weight-light);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg-strong);
+  margin: 0 0 var(--space-4);
+}
+.bhw h3, .bhw .h3 {
+  font-family: var(--font-display);
+  font-size: var(--fs-h3);
+  font-weight: var(--weight-medium);
+  line-height: var(--lh-snug);
+  color: var(--fg);
+  margin: 0 0 var(--space-3);
+}
+.bhw h4, .bhw .h4 {
+  font-size: var(--fs-h4);
+  font-weight: var(--weight-semibold);
+  line-height: var(--lh-snug);
+  color: var(--fg);
+  margin: 0 0 var(--space-2);
+}
+.bhw h5, .bhw .h5 {
+  font-size: var(--fs-h5);
+  font-weight: var(--weight-semibold);
+  line-height: var(--lh-snug);
+  color: var(--fg);
+  margin: 0 0 var(--space-2);
+}
+.bhw p {
+  margin: 0 0 var(--space-4);
+  max-width: 65ch;
+}
+.bhw .lede {
+  font-size: var(--fs-h5);
+  font-weight: var(--weight-light);
+  line-height: var(--lh-loose);
+  color: var(--fg);
+}
+.bhw .eyebrow {
+  font-size: var(--fs-eyebrow);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.bhw .tagline {
+  /* "DEPTH RESTORES CLARITY." style */
+  font-size: var(--fs-small);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.bhw .wordmark {
+  font-family: var(--font-display);
+  font-weight: var(--weight-light);
+  letter-spacing: 0.02em;
+  color: var(--fg-strong);
+  line-height: 1;
+}
+.bhw small, .bhw .small { font-size: var(--fs-small); color: var(--fg-muted); }
+.bhw code, .bhw kbd { font-family: var(--font-mono); font-size: 0.9em; }
+
+/* The brand's signature gold rule */
+.bhw .gold-rule {
+  display: block;
+  width: 1px;
+  background: var(--divider-gold);
+}
+.bhw hr.gold-rule {
+  height: 1px;
+  width: 64px;
+  background: var(--divider-gold);
+  border: 0;
+  margin: var(--space-5) 0;
+}
+
+/* Dark surface variant */
+.bhw.bhw--dark, .bhw .on-dark {
+  background: var(--surface-dark);
+  color: var(--fg-on-dark);
+}
+.bhw.bhw--dark h1, .bhw.bhw--dark h2, .bhw.bhw--dark h3,
+.bhw.bhw--dark h4, .bhw.bhw--dark h5 {
+  color: var(--fg-on-dark);
+}
+.bhw.bhw--dark .eyebrow { color: var(--fg-on-dark-muted); }
+
+</style>
+<style>
+  body{background:var(--bg);}
+  .switch-bar{position:sticky; top:62px; z-index:40; background:var(--bg); border-bottom:1px solid var(--border); padding:14px 0;}
+  .switch-bar .container{display:flex; align-items:center; justify-content:space-between; gap:18px;}
+  .switch-meta{font-size:11.5px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:var(--fg-muted);}
+  [data-pane]{display:none;} [data-pane].active{display:block;}
+
+  /* Hero — playful, neuro */
+  .ch-hero{padding:88px 0 80px; position:relative; overflow:hidden;}
+  .ch-hero::before{content:""; position:absolute; right:-100px; top:-50px; width:520px; height:520px;
+    background:radial-gradient(circle,#B7A4F7 0%,transparent 65%); opacity:0.55; pointer-events:none;}
+  .ch-hero::after{content:""; position:absolute; left:-80px; bottom:-100px; width:380px; height:380px;
+    background:radial-gradient(circle,#2CA7A6 0%,transparent 65%); opacity:0.35; pointer-events:none;}
+  .ch-hero h1{font-family:var(--font-sans); font-weight:200; letter-spacing:-0.03em; line-height:1.02; font-size:clamp(54px,7vw,108px); color:#0B1228;}
+  .ch-hero h1 em{font-style:italic; font-weight:300; background:linear-gradient(110deg,#2CA7A6,#B7A4F7 60%,#F2B134); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;}
+  .ch-pill{display:inline-flex; gap:10px; align-items:center; padding:7px 14px 7px 9px; background:rgba(44,167,166,0.14); border-radius:999px; border:1px solid rgba(44,167,166,0.3); margin-bottom:22px;}
+  .ch-pill span:first-child{width:7px; height:7px; border-radius:999px; background:#2CA7A6;}
+  .ch-pill span:last-child{font-size:11px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:#114766;}
+
+  .ages{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:48px;}
+  @media(max-width:900px){.ages{grid-template-columns:1fr 1fr;}}
+  .age{background:#fff; border:1px solid rgba(11,18,40,0.12); border-radius:14px; padding:24px; position:relative; overflow:hidden;}
+  .age .pop{font-family:var(--font-script); font-size:30px; color:#F2B134; line-height:1; margin-bottom:6px;}
+  .age .l{font-size:10.5px; letter-spacing:0.2em; text-transform:uppercase; color:#114766; font-weight:700;}
+  .age h4{font-size:18px; font-weight:500; margin:6px 0 10px; color:#0B1228;}
+  .age p{font-size:12.5px; line-height:1.6; color:var(--fg-muted); margin:0;}
+
+  /* What we do — tabs of services */
+  .services{padding:96px 0; background:var(--bg-warm);}
+  .svc-tabs{display:flex; gap:6px; padding:6px; background:#fff; border-radius:999px; width:fit-content; box-shadow:var(--shadow-sm); margin-top:20px; flex-wrap:wrap;}
+  .svc-tabs button{background:transparent; border:0; padding:11px 22px; border-radius:999px; font-family:var(--font-sans); font-size:12px; font-weight:600; letter-spacing:0.1em; color:var(--fg-muted); cursor:pointer;}
+  .svc-tabs button.active{background:#2CA7A6; color:#fff;}
+  .svc-pane{display:none; grid-template-columns:1fr 1fr; gap:48px; margin-top:36px; align-items:start;}
+  .svc-pane.active{display:grid;}
+  @media(max-width:900px){.svc-pane{grid-template-columns:1fr;}}
+  .svc-pane h3{font-family:var(--font-sans); font-weight:300; font-size:36px; color:#0B1228; letter-spacing:-0.02em;}
+  .svc-pane ul{list-style:none; padding:0; display:flex; flex-direction:column; gap:14px;}
+  .svc-pane li{display:flex; gap:14px; padding:14px 18px; background:#fff; border-radius:10px; border-left:3px solid #B7A4F7;}
+  .svc-pane li .n{font-family:var(--font-serif); font-size:18px; font-weight:600; color:#2CA7A6; min-width:24px;}
+  .svc-pane li .t{font-size:13.5px; color:#0B1228; line-height:1.55;}
+
+  /* Two paths */
+  .paths{padding:96px 0;}
+  .path-row{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:36px;}
+  @media(max-width:900px){.path-row{grid-template-columns:1fr;}}
+  .path{padding:36px; border-radius:18px; position:relative; overflow:hidden;}
+  .path.in{background:linear-gradient(155deg,#0B1228,#114766);}
+  .path.on{background:linear-gradient(155deg,#2CA7A6,#B7A4F7);}
+  .path h3{color:#fff; font-weight:300; font-size:30px; letter-spacing:-0.02em; line-height:1.1;}
+  .path .l{font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:#F2B134; font-weight:700;}
+  .path p{color:rgba(255,255,255,0.85); font-size:14px; line-height:1.65; margin:16px 0 24px;}
+  .path .pr{font-family:var(--font-serif); font-size:30px; color:#fff; font-weight:500;}
+  .path .pr small{font-size:13px; font-weight:400; color:rgba(255,255,255,0.7); margin-left:6px;}
+  .path .feat{list-style:none; padding:0; margin:18px 0 28px;}
+  .path .feat li{font-size:13px; color:rgba(255,255,255,0.9); padding:8px 0; border-top:1px solid rgba(255,255,255,0.18);}
+  .path .feat li:first-child{border-top:0;}
+
+  /* schedule */
+  .sched{padding:96px 0; background:var(--bg-warm);}
+  .sched-card{display:grid; grid-template-columns:1.05fr 1fr; background:#fff; border-radius:18px; overflow:hidden; box-shadow:var(--shadow-md);}
+  @media(max-width:900px){.sched-card{grid-template-columns:1fr;}}
+  .sched-card .left{padding:48px; background:#0B1228; color:#fff;}
+  .sched-card .right{padding:40px;}
+  .form-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  .form-grid .col-2{grid-column:1/-1;}
+
+  /* PORTAL */
+  .h-banner{padding:32px 0; background:var(--bg-warm); border-bottom:1px solid var(--border);}
+  .h-banner .container{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:18px;}
+  .portal{display:grid; grid-template-columns:1.3fr 1fr; gap:18px; margin:36px 0 80px;}
+  @media(max-width:1000px){.portal{grid-template-columns:1fr;}}
+  .panel{background:#fff; border:1px solid var(--border); border-radius:14px; padding:24px;}
+  .panel h3{font-size:16px; font-weight:600; color:#0B1228;}
+
+  .strategy-card{background:linear-gradient(155deg,#0B1228,#2CA7A6 90%); color:#fff; padding:28px; border-radius:14px;}
+  .strategy-card .h{font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:#F2B134;}
+  .strategy-card h3{font-family:var(--font-serif); font-style:italic; color:#fff; font-weight:500; font-size:24px; margin:10px 0 14px; line-height:1.3;}
+  .strategy-card p{color:rgba(255,255,255,0.85); font-size:13.5px; line-height:1.65;}
+
+  .ef-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-top:14px;}
+  .ef{background:#fff; border:1px solid var(--border); border-radius:12px; padding:18px;}
+  .ef .l{font-size:10.5px; letter-spacing:0.18em; text-transform:uppercase; color:var(--fg-muted); font-weight:600;}
+  .ef .b{display:flex; align-items:flex-end; gap:8px; margin-top:8px;}
+  .ef .v{font-family:var(--font-sans); font-weight:300; font-size:34px; line-height:1; color:#0B1228; letter-spacing:-0.02em;}
+  .ef .ch{font-size:11.5px; color:#2CA7A6; font-weight:600;}
+  .bars{display:flex; gap:3px; height:34px; align-items:flex-end; margin-top:10px;}
+  .bars span{flex:1; background:linear-gradient(180deg,#2CA7A6,#B7A4F7); border-radius:2px; opacity:0.85;}
+
+  .tool{display:flex; gap:14px; padding:14px 0; border-bottom:1px solid var(--border); align-items:center;}
+  .tool:last-child{border-bottom:0;}
+  .tool .ic{width:42px; height:42px; border-radius:10px; background:#B7A4F7; display:grid; place-items:center; color:#0B1228; font-family:var(--font-serif); font-weight:600; flex-shrink:0;}
+  .tool .nm{font-size:14px; font-weight:600; color:#0B1228;}
+  .tool .ps{font-size:12px; color:var(--fg-muted); margin-top:2px;}
+  .tool .st{font-size:10.5px; font-weight:600; letter-spacing:0.16em; text-transform:uppercase; padding:5px 10px; border-radius:999px;}
+
+</style>
+
+<style>
+[data-pane="potential"]{display:none!important}
+[data-pane="current"]{display:block!important}
+[data-pane-btn]{display:none!important}
+.bhw-header__nav{display:none!important}
+#pp-demo{position:sticky;top:0;z-index:99;background:#111;color:#eee;text-align:center;font:600 10.5px/1 Montserrat,sans-serif;letter-spacing:.16em;text-transform:uppercase;padding:7px}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+  document.querySelectorAll('[data-pane]').forEach(function(p){p.classList.toggle('active', p.getAttribute('data-pane')==='current');});
+  var b=document.createElement('div');b.id='pp-demo';b.textContent='Patient page preview \u00b7 sample data';document.body.prepend(b);
+});
+</script>
+</head>
+<body class="brand-charmed" data-screen-label="CharmEd Minds">
+
+<header class="bhw-header">
+  <div class="bhw-header__inner">
+    <a href="index.html" class="bhw-header__lockup">
+      <img class="bhw-header__mark" src="assets/logo-geode.png" alt="">
+      <div class="bhw-header__wm"><span>BHW</span><span>Integrative Wellness</span></div>
+      <div class="bhw-header__brand-name" style="color:#2CA7A6;">CharmEd Minds</div>
+    </a>
+    <nav class="bhw-header__nav">
+      <a href="#who">Who we help</a>
+      <a href="#services">What we do</a>
+      <a href="#paths">In-clinic + online</a>
+      <a href="#schedule">Schedule</a>
+      <a href="index.html">← Family</a>
+    </nav>
+  </div>
+</header>
+
+<div class="switch-bar">
+  <div class="container">
+    <div style="display:flex; gap:14px; align-items:center;">
+      <span class="switch-meta">CharmEd Minds</span>
+      <span style="color:rgba(0,0,0,0.2); font-size:18px;">/</span>
+      <span class="switch-meta" id="audLabel" style="color:#2CA7A6;">For new clients</span>
+    </div>
+    <div class="audience-tabs">
+      <button class="active" data-pane-btn="potential">For new clients</button>
+      <button data-pane-btn="current">My strategy hub</button>
+    </div>
+  </div>
+</div>
+
+<!-- POTENTIAL -->
+<div data-pane="potential" class="active">
+  <section class="ch-hero">
+    <div class="container" style="position:relative;">
+      <div class="ch-pill"><span></span><span>03 · Cognitive · executive function</span></div>
+      <img src="assets/logos/charmed.png" alt="CharmEd Minds" class="brand-logo-hero brand-logo-hero--sm">
+        <h1>Understand<br>the brain.<br><em>Build the strategy.</em></h1>
+      <div style="display:grid; grid-template-columns:1.1fr 1fr; gap:64px; margin-top:36px; align-items:start;">
+        <p class="lede" style="max-width:520px;">
+          CharmEd Minds is the cognitive support arm of BHW — for the kid who's bright but stuck, the student who can do hard things but not boring ones, and the adult who hides exhausting compensation under "I'm fine."
+          <br><br>
+          We test, we explain, we build the system. <strong style="color:#2CA7A6;">Available in-clinic at BHW (insurance-accepted) and online cash-based, nationwide.</strong>
+        </p>
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <div style="background:#fff; padding:22px; border-radius:14px; box-shadow:var(--shadow-sm); border-top:3px solid #F2B134;">
+            <div class="eyebrow eyebrow--accent" style="color:#2CA7A6;">Bright Insights™</div>
+            <p style="font-size:13.5px; color:#0B1228; line-height:1.6; margin:8px 0 0;">A 90-minute cognitive workup that converts standardized testing into a one-page strategy your family can actually use.</p>
+          </div>
+          <div style="display:flex; gap:12px; flex-wrap:wrap;">
+            <a class="btn btn--accent" href="#schedule" style="background:#2CA7A6;">Schedule a screening</a>
+            <a class="btn btn--ghost" href="#services">What we do</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHO -->
+  <section style="padding:0 0 96px;" id="who">
+    <div class="container">
+      <div class="section-head"><span class="num" style="color:#2CA7A6;">02</span><span class="eyebrow">Who we help</span></div>
+      <h2 class="h-section" style="max-width:760px;">Across the lifespan — <em style="color:#2CA7A6; font-style:italic;">because executive function shifts with every season.</em></h2>
+      <div class="ages">
+        <div class="age"><div class="l">Ages 6–11</div><div class="pop">elementary</div><h4>The bright kid who can't start</h4><p>Reading strong, attention scattered, homework a battle. Often missed on standard screeners.</p></div>
+        <div class="age"><div class="l">Ages 12–17</div><div class="pop">adolescence</div><h4>The capable student who's burned out</h4><p>Honors classes plus invisible accommodation labor. Anxiety masking attention struggles.</p></div>
+        <div class="age"><div class="l">College · 18–25</div><div class="pop">launching</div><h4>Working harder, dropping pieces</h4><p>Structure of high school is gone. Time-blindness and task initiation surface fast.</p></div>
+        <div class="age"><div class="l">Adults · 26+</div><div class="pop">midlife</div><h4>The high-functioning quiet struggler</h4><p>Career on track, evenings collapsed. Late ADHD/AuDHD identification often surfaces here.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SERVICES TABS -->
+  <section class="services" id="services">
+    <div class="container">
+      <div class="section-head"><span class="num" style="color:#2CA7A6;">03</span><span class="eyebrow">What we actually do</span></div>
+      <h2 class="h-section" style="max-width:680px;">Assessment, coaching, family work — <em style="color:#2CA7A6; font-style:italic;">choose what fits.</em></h2>
+
+      <div class="svc-tabs">
+        <button class="active" data-svc="assess">Assessment</button>
+        <button data-svc="coach">EF Coaching</button>
+        <button data-svc="family">Family work</button>
+        <button data-svc="school">School advocacy</button>
+      </div>
+
+      <div class="svc-pane active" data-svc-pane="assess">
+        <div>
+          <h3>The Bright Insights™ workup</h3>
+          <p style="font-size:14.5px; color:#0B1228; line-height:1.65; margin-top:14px;">A 90-minute structured evaluation drawing on validated EF, attention, and processing measures — translated into a one-page action map you can hand to a teacher, coach, or therapist on day one.</p>
+        </div>
+        <ul>
+          <li><span class="n">01</span><span class="t">Intake interview · history, school records, prior testing</span></li>
+          <li><span class="n">02</span><span class="t">Structured testing · attention, working memory, processing speed, EF</span></li>
+          <li><span class="n">03</span><span class="t">Mood + sleep + screen-time screen</span></li>
+          <li><span class="n">04</span><span class="t">One-page strategy map · clear, no jargon</span></li>
+          <li><span class="n">05</span><span class="t">Family debrief · everyone in the same room</span></li>
+        </ul>
+      </div>
+      <div class="svc-pane" data-svc-pane="coach">
+        <div>
+          <h3>Executive function coaching</h3>
+          <p style="font-size:14.5px; color:#0B1228; line-height:1.65; margin-top:14px;">8 or 16-week skills programs. We work on real things from your week — not generic worksheets.</p>
+        </div>
+        <ul>
+          <li><span class="n">A</span><span class="t">Task initiation + transitions</span></li>
+          <li><span class="n">B</span><span class="t">Time mapping + estimation</span></li>
+          <li><span class="n">C</span><span class="t">Working memory scaffolds</span></li>
+          <li><span class="n">D</span><span class="t">Emotional regulation in the moment</span></li>
+          <li><span class="n">E</span><span class="t">Tool stack: planners, captures, reminders that fit you</span></li>
+        </ul>
+      </div>
+      <div class="svc-pane" data-svc-pane="family">
+        <div>
+          <h3>Family systems work</h3>
+          <p style="font-size:14.5px; color:#0B1228; line-height:1.65; margin-top:14px;">EF is a household sport. We work with parents and kids together so structure becomes a shared system, not a battleground.</p>
+        </div>
+        <ul>
+          <li><span class="n">01</span><span class="t">Parent skills · scaffold without rescue</span></li>
+          <li><span class="n">02</span><span class="t">Morning + bedtime routine architecture</span></li>
+          <li><span class="n">03</span><span class="t">Homework system without nagging</span></li>
+          <li><span class="n">04</span><span class="t">Sibling dynamics + sensory load</span></li>
+        </ul>
+      </div>
+      <div class="svc-pane" data-svc-pane="school">
+        <div>
+          <h3>School + workplace advocacy</h3>
+          <p style="font-size:14.5px; color:#0B1228; line-height:1.65; margin-top:14px;">We translate assessment data into the documentation schools and HR teams need — IEP/504 prep, ADA letters, accommodation drafts.</p>
+        </div>
+        <ul>
+          <li><span class="n">01</span><span class="t">IEP / 504 documentation</span></li>
+          <li><span class="n">02</span><span class="t">Pre-meeting strategy</span></li>
+          <li><span class="n">03</span><span class="t">In-meeting support</span></li>
+          <li><span class="n">04</span><span class="t">Workplace ADA accommodation letters</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- PATHS -->
+  <section class="paths" id="paths">
+    <div class="container">
+      <div class="section-head"><span class="num" style="color:#2CA7A6;">04</span><span class="eyebrow">Two ways to work with us</span></div>
+      <h2 class="h-section" style="max-width:680px;">In-clinic in Baltimore — or online, <em style="color:#2CA7A6; font-style:italic;">anywhere in the country.</em></h2>
+      <div class="path-row">
+        <div class="path in">
+          <div class="l">Option A · in clinic</div>
+          <h3>At BHW Medical, Baltimore</h3>
+          <p>Coordinated with primary care, Flow, and behavioral teams. Insurance accepted. Best when there are co-occurring physical or mood findings.</p>
+          <div class="pr">Insurance<small>· copay rates apply</small></div>
+          <ul class="feat">
+            <li>◆ CareFirst, Aetna, Cigna, United, Hopkins EHP, Medicare</li>
+            <li>◆ Records shared with BHW Medical care team</li>
+            <li>◆ Same-day medical workup if indicated</li>
+            <li>◆ Family debriefs in-person</li>
+          </ul>
+          <a class="btn btn--accent" href="#schedule" style="background:#F2B134; color:#0B1228;">Book in-clinic →</a>
+        </div>
+        <div class="path on">
+          <div class="l" style="color:#0B1228;">Option B · online cash-based</div>
+          <h3>Anywhere in the US</h3>
+          <p style="color:rgba(11,18,40,0.85);">Telehealth-only program. Cash, HSA/FSA eligible. Best for families outside MD and for adults who want privacy + flexibility.</p>
+          <div class="pr" style="color:#0B1228;">$1,850<small style="color:rgba(11,18,40,0.7);">· Bright Insights™ full workup</small></div>
+          <ul class="feat" style="color:#0B1228;">
+            <li style="border-color:rgba(11,18,40,0.18); color:rgba(11,18,40,0.9);">◆ 90-min structured evaluation</li>
+            <li style="border-color:rgba(11,18,40,0.18); color:rgba(11,18,40,0.9);">◆ One-page strategy map</li>
+            <li style="border-color:rgba(11,18,40,0.18); color:rgba(11,18,40,0.9);">◆ 60-min family debrief</li>
+            <li style="border-color:rgba(11,18,40,0.18); color:rgba(11,18,40,0.9);">◆ 30-day check-in included</li>
+          </ul>
+          <a class="btn btn--accent" href="#schedule" style="background:#0B1228; color:#fff;">Start online →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCHEDULE -->
+  <section class="sched" id="schedule">
+    <div class="container-narrow">
+      <div class="sched-card">
+        <div class="left">
+          <div class="eyebrow" style="color:#F2B134;">05 · Schedule</div>
+          <h3 style="color:#fff; font-weight:300; font-size:34px; letter-spacing:-0.02em;">Start with a 20-min screener</h3>
+          <p style="color:rgba(255,255,255,0.78); font-size:14.5px; line-height:1.7; margin-top:14px;">Free, phone-based. We figure out whether assessment is the right next step — and whether in-clinic or online makes more sense.</p>
+          <ul style="list-style:none; padding:0; margin-top:24px; display:flex; flex-direction:column; gap:12px; font-size:13.5px;">
+            <li>◆ Family-led intake (kids welcome)</li>
+            <li>◆ No commitment to test</li>
+            <li>◆ Insurance verified before in-clinic visits</li>
+            <li>◆ HSA/FSA receipts for online program</li>
+          </ul>
+        </div>
+        <div class="right">
+          <form onsubmit="event.preventDefault(); this.querySelector('.sent').style.display='block'; this.querySelector('.fields').style.display='none';">
+            <div class="fields">
+              <div class="form-grid">
+                <div class="field"><label>Your name</label><input required></div>
+                <div class="field"><label>Client's name</label><input placeholder="If different"></div>
+                <div class="field col-2"><label>Email</label><input type="email" required></div>
+                <div class="field col-2"><label>Age of client</label>
+                  <select><option>Child (6–11)</option><option>Adolescent (12–17)</option><option>College (18–25)</option><option>Adult (26+)</option></select>
+                </div>
+                <div class="field col-2"><label>Preferred path</label>
+                  <select><option>In-clinic (Baltimore, insurance)</option><option>Online (cash-based, US-wide)</option><option>Not sure yet</option></select>
+                </div>
+                <div class="field col-2"><label>What's coming up for you right now?</label><textarea rows="3"></textarea></div>
+              </div>
+              <button class="btn btn--accent" type="submit" style="background:#2CA7A6; margin-top:18px; width:100%; justify-content:center;">Request screener</button>
+            </div>
+            <div class="sent" style="display:none; padding:32px 16px; text-align:center;">
+              <div style="font-family:var(--font-serif); font-size:28px; color:#0B1228; font-style:italic;">Lovely.</div>
+              <p style="color:var(--fg-muted); font-size:14px;">We'll be in touch within one business day.</p>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- CURRENT — strategy hub -->
+<div data-pane="current">
+  <section class="h-banner">
+    <div class="container">
+      <div>
+        <div class="eyebrow eyebrow--accent" style="color:#2CA7A6;">My strategy hub</div>
+        <div style="font-family:var(--font-sans); font-weight:300; font-size:30px; color:#0B1228; margin-top:4px;">Hi Theo — week <em style="color:#2CA7A6;">4</em> of your EF program.</div>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button class="btn btn--ghost">Message coach</button>
+        <button class="btn btn--accent" style="background:#2CA7A6;">Today's check-in</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="container">
+    <div class="portal">
+      <!-- LEFT -->
+      <div style="display:flex; flex-direction:column; gap:18px;">
+        <div class="strategy-card">
+          <div class="h">Your one-page strategy</div>
+          <h3>"Start small, start visible, start now."</h3>
+          <p>Theo's plan, this week: 3-minute starts on hard tasks, externalized timer, body-double sessions Tue/Thu evenings. Working memory: write the next move down before standing up.</p>
+          <div style="display:flex; gap:10px; margin-top:18px;">
+            <button class="btn btn--accent" style="background:#F2B134; color:#0B1228;">Open full map →</button>
+            <button class="btn btn--ghost-dark">Print</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Executive function · this month</h3>
+          <p class="eyebrow" style="margin:6px 0 0;">From your weekly self-report</p>
+          <div class="ef-grid">
+            <div class="ef"><div class="l">Task initiation</div><div class="b"><div class="v">6.4</div><div class="ch">↑ 1.2</div></div><div class="bars"><span style="height:30%;"></span><span style="height:38%;"></span><span style="height:42%;"></span><span style="height:55%;"></span><span style="height:64%;"></span></div></div>
+            <div class="ef"><div class="l">Time mapping</div><div class="b"><div class="v">5.1</div><div class="ch">↑ 0.4</div></div><div class="bars"><span style="height:40%;"></span><span style="height:44%;"></span><span style="height:48%;"></span><span style="height:50%;"></span><span style="height:51%;"></span></div></div>
+            <div class="ef"><div class="l">Working memory</div><div class="b"><div class="v">7.0</div><div class="ch">↑ 0.6</div></div><div class="bars"><span style="height:55%;"></span><span style="height:58%;"></span><span style="height:64%;"></span><span style="height:66%;"></span><span style="height:70%;"></span></div></div>
+            <div class="ef"><div class="l">Emotional regulation</div><div class="b"><div class="v">6.8</div><div class="ch">↑ 0.9</div></div><div class="bars"><span style="height:42%;"></span><span style="height:48%;"></span><span style="height:55%;"></span><span style="height:62%;"></span><span style="height:68%;"></span></div></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>This week's tools</h3>
+          <div class="tool"><div class="ic">⏱</div><div style="flex:1;"><div class="nm">Pomodoro · 18/4</div><div class="ps">Tweaked from 25/5 to match your initiation curve.</div></div><div class="st" style="background:rgba(44,167,166,0.15); color:#2CA7A6;">Active</div></div>
+          <div class="tool"><div class="ic" style="background:#F2B134;">✎</div><div style="flex:1;"><div class="nm">Next-move note</div><div class="ps">Write the very next physical action before leaving the room.</div></div><div class="st" style="background:rgba(44,167,166,0.15); color:#2CA7A6;">Active</div></div>
+          <div class="tool"><div class="ic" style="background:#2CA7A6;">⟁</div><div style="flex:1;"><div class="nm">Body-double · Tu/Th 7:30p</div><div class="ps">Co-working call with your coach. Cameras on, mics optional.</div></div><div class="st" style="background:rgba(242,177,52,0.18); color:#8B5A0A;">Tonight</div></div>
+          <div class="tool"><div class="ic" style="background:#0B1228; color:#F2B134;">◆</div><div style="flex:1;"><div class="nm">Weekly capture</div><div class="ps">Friday review · 10 min · pre-loaded prompts</div></div><div class="st" style="background:rgba(255,255,255,0); color:var(--fg-muted);">Fri 5p</div></div>
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div style="display:flex; flex-direction:column; gap:18px;">
+        <div class="panel">
+          <h3>Next session</h3>
+          <div style="background:linear-gradient(135deg,#B7A4F7,#2CA7A6); border-radius:12px; padding:22px; color:#fff; margin-top:14px;">
+            <div style="font-size:11px; letter-spacing:0.18em; text-transform:uppercase; opacity:0.8;">Thursday · 4:30p · 50 min</div>
+            <div style="font-family:var(--font-serif); font-size:22px; font-weight:500; margin:8px 0;">EF Coaching · Session 5</div>
+            <div style="font-size:13px; opacity:0.9;">Focus: midterm task map + first-draft scaffold</div>
+            <button style="margin-top:18px;" class="btn btn--accent">Join video →</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>From your coach</h3>
+          <p style="font-family:var(--font-serif); font-size:17px; font-style:italic; color:#0B1228; line-height:1.5; margin:10px 0;">"Wins last week — the pre-flight note worked. Two starts vs. zero. Let's protect Tu/Th body-doubles and try moving Thursdays 30 min earlier."</p>
+          <div style="font-size:11px; letter-spacing:0.18em; text-transform:uppercase; color:#2CA7A6; font-weight:700; margin-top:14px;">— Ms. Coltrane, EF Coach</div>
+          <div style="display:flex; gap:10px; margin-top:18px;">
+            <button class="btn btn--accent" style="background:#2CA7A6;">Reply</button>
+            <button class="btn btn--ghost">Audio note</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Assessment summary</h3>
+          <p class="eyebrow" style="margin:6px 0 14px;">Bright Insights™ · Jan 14</p>
+          <div style="display:flex; flex-direction:column; gap:10px; font-size:13.5px;">
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border);"><span style="color:var(--fg-muted);">Processing speed</span><strong style="color:#0B1228;">High average</strong></div>
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border);"><span style="color:var(--fg-muted);">Working memory</span><strong style="color:#0B1228;">Average</strong></div>
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border);"><span style="color:var(--fg-muted);">Sustained attention</span><strong style="color:#A0421B;">Below avg.</strong></div>
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border);"><span style="color:var(--fg-muted);">Task initiation</span><strong style="color:#A0421B;">Below avg.</strong></div>
+            <div style="display:flex; justify-content:space-between; padding:8px 0;"><span style="color:var(--fg-muted);">Emotional regulation</span><strong style="color:#0B1228;">Average</strong></div>
+          </div>
+          <button class="btn btn--text" style="margin-top:18px;">Read full report →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="bhw-footer">
+  <div class="container">
+    <div class="bhw-footer__top">
+      <div class="bhw-footer__brand">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <img src="assets/logo-geode.png" alt="" style="width:34px; filter:invert(0.95);">
+          <div class="bhw-header__wm"><span style="color:#fff;">CharmEd</span><span style="color:rgba(255,255,255,0.7);">Minds</span></div>
+        </div>
+        <p>Executive function and cognitive support across the lifespan. In-clinic (insurance) + online (cash).</p>
+      </div>
+      <div class="bhw-footer__groups">
+        <div><h5>Services</h5><ul><li><a href="#">Bright Insights™</a></li><li><a href="#">EF Coaching</a></li><li><a href="#">Family work</a></li></ul></div>
+        <div><h5>For families</h5><ul><li><a href="#">Online program</a></li><li><a href="#">In-clinic visits</a></li><li><a href="#">School advocacy</a></li></ul></div>
+        <div><h5>Resources</h5><ul><li><a href="#">Parent library</a></li><li><a href="#">Tool stack</a></li></ul></div>
+        <div><h5>Family</h5><ul><li><a href="index.html">All brands</a></li><li><a href="bhw-medical.html">BHW Medical</a></li></ul></div>
+      </div>
+    </div>
+    <div class="bhw-footer__bottom"><div>© 2026 CharmEd Minds · A BHW family brand</div><div>Licensed in Maryland · Online available US-wide</div></div>
+  </div>
+</footer>
+
+<script>
+document.querySelectorAll('[data-pane-btn]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('[data-pane-btn]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const key = btn.getAttribute('data-pane-btn');
+    document.querySelectorAll('[data-pane]').forEach(p=>p.classList.toggle('active', p.getAttribute('data-pane')===key));
+    document.getElementById('audLabel').textContent = key==='potential'?'For new clients':'My strategy hub';
+    window.scrollTo({top:0, behavior:'smooth'});
+  });
+});
+document.querySelectorAll('[data-svc]').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('[data-svc]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    const k = b.getAttribute('data-svc');
+    document.querySelectorAll('[data-svc-pane]').forEach(p=>p.classList.toggle('active', p.getAttribute('data-svc-pane')===k));
+  });
+});
+</script>
+</body>
+</html>

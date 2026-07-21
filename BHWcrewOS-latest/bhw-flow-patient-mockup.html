@@ -1,0 +1,971 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Flow — Your Plan (Patient Page)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+/* ============================================================
+   BHW family — shared tokens + cross-brand patterns
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Lora:ital,wght@0,400;0,500;1,400&family=Caveat:wght@500;600&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  /* ---- BHW parent (mineral / geode) ---- */
+  --bhw-deep-obsidian:#0F141A; --bhw-ink-navy:#162433; --bhw-charcoal:#2A3038;
+  --bhw-mineral-taupe:#6B665E; --bhw-sea-glass:#5FA9A6; --bhw-deep-teal-vein:#266D7A;
+  --bhw-opal-mist:#DCE3EA; --bhw-lavender-opal:#92889B; --bhw-rose-opal:#C9A0A0;
+  --bhw-pale-gold-light:#E8C98A; --bhw-bronze-clay:#8C5A3C; --bhw-pyrite-gold:#C4A038;
+  --bhw-limestone:#EDE5D8; --bhw-warm-ivory:#F7F3EA;
+
+  /* default semantic */
+  --bg:var(--bhw-warm-ivory); --bg-warm:var(--bhw-limestone); --bg-muted:var(--bhw-opal-mist);
+  --surface-dark:var(--bhw-ink-navy); --surface-deepest:var(--bhw-deep-obsidian);
+  --fg:var(--bhw-ink-navy); --fg-strong:var(--bhw-deep-obsidian); --fg-muted:var(--bhw-mineral-taupe);
+  --fg-on-dark:var(--bhw-warm-ivory); --fg-on-dark-muted:rgba(247,243,234,0.65);
+  --accent:var(--bhw-bronze-clay); --accent-gold:var(--bhw-pyrite-gold);
+  --accent-soft:var(--bhw-sea-glass); --accent-deep:var(--bhw-deep-teal-vein);
+  --border:rgba(22,36,51,0.12); --border-on-dark:rgba(247,243,234,0.16);
+
+  --font-sans:'Montserrat',ui-sans-serif,system-ui,sans-serif;
+  --font-serif:'Playfair Display',Georgia,serif;
+  --font-lora:'Lora',Georgia,serif;
+  --font-script:'Caveat',cursive;
+
+  --radius-md:8px; --radius-lg:14px; --radius-xl:22px; --radius-pill:999px;
+  --shadow-sm:0 2px 6px rgba(15,20,26,0.08);
+  --shadow-md:0 8px 20px -8px rgba(15,20,26,0.18);
+  --shadow-lg:0 20px 40px -16px rgba(15,20,26,0.28);
+  --ease-out:cubic-bezier(0.16,1,0.3,1);
+}
+
+/* ---- Per-brand palette overrides (apply via .brand-flow etc on <body>) ---- */
+.brand-flow{
+  --brand-deep:#083547; --brand-mid:#0B5D73; --brand-blue:#167A9A; --brand-light:#79C2D6;
+  --brand-pale:#D7ECF4; --brand-gold:#E7C45A; --brand-cream:#FAF2DF;
+  --bg:#FAF2DF; --bg-warm:#D7ECF4; --fg:#083547; --fg-strong:#083547;
+  --accent:#0B5D73; --accent-soft:#79C2D6; --accent-gold:#E7C45A;
+}
+.brand-charmed{
+  --brand-deep:#0B1228; --brand-reef:#114766; --brand-teal:#2CA7A6; --brand-gold:#F2B134;
+  --brand-lavender:#B7A4F7; --brand-sand:#E9E2D6;
+  --bg:#FAF7F2; --bg-warm:#E9E2D6; --fg:#0B1228; --fg-strong:#0B1228;
+  --accent:#2CA7A6; --accent-soft:#B7A4F7; --accent-gold:#F2B134;
+}
+.brand-mindmood{
+  --brand-plum:#4B3558; --brand-mauve:#A98AA9; --brand-lavender:#C9B3CF;
+  --brand-peach:#E8B39D; --brand-apricot:#F3C291; --brand-gold:#E7C95B; --brand-blue:#8CA3B3;
+  --bg:#F7F1E8; --bg-warm:#EFE3D8; --fg:#4B3558; --fg-strong:#3A2944;
+  --accent:#4B3558; --accent-soft:#C9B3CF; --accent-gold:#E7C95B;
+  --font-display:var(--font-serif);
+}
+.brand-foundation{
+  --brand-opal:#C9D9DC; --brand-seaglass:#5FA9A6; --brand-ocean:#266D7A;
+  --brand-opal:#9FE3C1; --brand-seaglass:#5BC3B4; --brand-ocean:#2B6F7B;
+  --brand-sky:#7DA8D6; --brand-violet:#8A80C7; --brand-gold:#D7B56D;
+  --brand-ink:#1F1F1F; --brand-stone:#E8E3D7; --brand-cream:#F6F2EA; --brand-sagemist:#D9E6DF;
+  --bg:#F6F2EA; --bg-warm:#E8E3D7; --fg:#1F1F1F; --fg-strong:#1F1F1F;
+  --accent:#2B6F7B; --accent-soft:#5BC3B4; --accent-gold:#D7B56D;
+  --font-display:var(--font-serif);
+}
+.brand-healthirl{
+  --brand-slate:#3D5061; --brand-blue:#5E7B8E; --brand-sage:#7F9B8A;
+  --brand-fresh:#9DBDA6; --brand-softsage:#D4E1D8; --brand-sand:#F2EDE4;
+  --bg:#F2EDE4; --bg-warm:#D4E1D8; --fg:#3D5061; --fg-strong:#2A3845;
+  --accent:#3D5061; --accent-soft:#9DBDA6; --accent-gold:#7F9B8A;
+  --font-display:var(--font-serif); --font-script:'Caveat',cursive;
+}
+.brand-beyondnormal{
+  --brand-slate:#60748A; --brand-teal:#8FB5AE; --brand-sage:#A8B89F;
+  --brand-slate:#60748A; --brand-mistyteal:#8FB5AE; --brand-mutedsage:#A8B89F;
+  --brand-lavender:#B9B4C7; --brand-sand:#D9CFAB; --brand-stone:#E6E4DF; --brand-ivory:#FAF8F4;
+  --bg:#FAF8F4; --bg-warm:#E6E4DF; --fg:#2A3847; --fg-strong:#1B2530;
+  --accent:#60748A; --accent-soft:#8FB5AE; --accent-gold:#D9CFAB;
+  --font-display:var(--font-serif);
+}
+.brand-bhwmedical{
+  --brand-labradorite:#2F3F4F; --brand-teal:#6FA7A6; --brand-sage:#A9BBA7;
+  --brand-ivory:#F7F4EE; --brand-limestone:#E6E0D5; --brand-bronze:#A66E49; --brand-gold:#D4B06A;
+  --bg:#F7F4EE; --bg-warm:#E6E0D5; --fg:#2F3F4F; --fg-strong:#1F2B38;
+  --accent:#A66E49; --accent-soft:#6FA7A6; --accent-gold:#D4B06A;
+}
+
+/* ---- Brand logo lockup (hero) ---- */
+.brand-logo-hero{display:block; max-width:340px; width:100%; height:auto; margin-bottom:22px;}
+.brand-logo-hero--sm{max-width:240px;}
+.brand-logo-hero--lg{max-width:420px;}
+
+/* ---- Base ---- */
+*,*::before,*::after{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:var(--font-sans); background:var(--bg); color:var(--fg);
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  font-size:16px; line-height:1.55;
+}
+a{color:inherit;}
+img{max-width:100%; display:block;}
+button{font-family:inherit;}
+.font-display{font-family:var(--font-display,var(--font-sans));}
+.font-serif{font-family:var(--font-serif);}
+.font-script{font-family:var(--font-script);}
+
+/* ---- Typography helpers ---- */
+.eyebrow{
+  font-size:11px; font-weight:600; letter-spacing:0.2em; text-transform:uppercase;
+  color:var(--fg-muted); margin:0;
+}
+.eyebrow--accent{color:var(--accent);}
+.tagline{
+  font-size:12px; font-weight:500; letter-spacing:0.22em; text-transform:uppercase;
+  color:var(--accent);
+}
+.gold-rule{display:inline-block; width:48px; height:1px; background:var(--accent-gold,var(--accent)); vertical-align:middle;}
+.gold-rule--v{display:inline-block; width:1px; height:100%; background:var(--accent-gold,var(--accent));}
+
+h1,h2,h3,h4,h5{margin:0; color:var(--fg-strong); text-wrap:balance;}
+.h-display{font-family:var(--font-display,var(--font-sans)); font-weight:300; letter-spacing:-0.025em; line-height:1.04; font-size:clamp(48px,6vw,84px);}
+.h-section{font-family:var(--font-display,var(--font-sans)); font-weight:300; letter-spacing:-0.02em; line-height:1.1; font-size:clamp(32px,4vw,52px);}
+.h-card{font-weight:500; font-size:22px; line-height:1.25; letter-spacing:-0.01em;}
+.lede{font-size:19px; font-weight:300; line-height:1.7; color:var(--fg);}
+
+/* ---- Layout helpers ---- */
+.container{max-width:1280px; margin:0 auto; padding:0 48px;}
+.container-narrow{max-width:960px; margin:0 auto; padding:0 48px;}
+.section{padding:96px 0;}
+.section-tight{padding:64px 0;}
+.grid{display:grid; gap:24px;}
+
+/* ---- Buttons ---- */
+.btn{
+  display:inline-flex; align-items:center; gap:10px;
+  font-family:var(--font-sans); font-weight:500; font-size:13px;
+  letter-spacing:0.05em; padding:14px 26px; border-radius:999px;
+  border:1px solid transparent; cursor:pointer; text-decoration:none;
+  transition:all 220ms var(--ease-out); white-space:nowrap;
+}
+.btn--primary{background:var(--fg-strong); color:var(--bg);}
+.btn--primary:hover{background:#000; transform:translateY(-1px);}
+.btn--accent{background:var(--accent); color:#fff;}
+.btn--accent:hover{filter:brightness(0.92);}
+.btn--ghost{background:transparent; color:var(--fg); border-color:rgba(22,36,51,0.24);}
+.btn--ghost:hover{border-color:var(--accent); color:var(--accent);}
+.btn--ghost-dark{background:transparent; color:var(--fg-on-dark); border-color:rgba(247,243,234,0.32);}
+.btn--ghost-dark:hover{border-color:var(--fg-on-dark); }
+.btn--text{padding:6px 0; border-radius:0; border-bottom:1px solid var(--accent); background:transparent; color:var(--fg);}
+
+/* ---- Cards ---- */
+.card{
+  background:#F4EFE5; border:1px solid var(--border); border-radius:var(--radius-lg);
+  padding:32px; box-shadow:var(--shadow-sm);
+  transition:all 220ms var(--ease-out);
+}
+.card:hover{border-color:rgba(140,90,60,0.5); box-shadow:var(--shadow-md);}
+.card-ivory{background:var(--bg);}
+.card-dark{background:var(--surface-dark); color:var(--fg-on-dark); border:1px solid var(--border-on-dark);}
+
+/* ---- Form controls ---- */
+.field{display:flex; flex-direction:column; gap:6px;}
+.field label{font-size:10px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:var(--fg-muted);}
+.field input,.field select,.field textarea{
+  font-family:var(--font-sans); font-size:14px; padding:12px 14px;
+  background:var(--bg); border:1px solid var(--border); border-radius:8px;
+  color:var(--fg); outline:none; width:100%;
+}
+.field input:focus,.field select:focus,.field textarea:focus{
+  border-color:var(--accent); box-shadow:0 0 0 3px rgba(140,90,60,0.15);
+}
+
+/* ---- Pills / badges ---- */
+.pill{display:inline-flex; align-items:center; gap:8px; padding:6px 12px;
+  border-radius:999px; font-size:11px; font-weight:600; letter-spacing:0.16em;
+  text-transform:uppercase;}
+.pill-dot{width:6px; height:6px; border-radius:999px; background:var(--accent-soft);}
+
+/* ---- Shared header / footer ---- */
+.bhw-header{
+  position:sticky; top:0; z-index:50; background:var(--bg-warm);
+  border-bottom:1px solid var(--border);
+}
+.bhw-header__inner{
+  max-width:1280px; margin:0 auto; padding:14px 48px;
+  display:flex; align-items:center; justify-content:space-between; gap:24px;
+}
+.bhw-header__lockup{display:flex; align-items:center; gap:12px; text-decoration:none; color:var(--fg);}
+.bhw-header__mark{width:32px; height:auto;}
+.bhw-header__wm{display:flex; flex-direction:column; gap:2px; line-height:1;}
+.bhw-header__wm span:first-child{font-size:18px; font-weight:300; letter-spacing:0.04em; color:var(--fg-strong);}
+.bhw-header__wm span:last-child{font-size:8.5px; font-weight:600; letter-spacing:0.22em; text-transform:uppercase; color:var(--fg-muted);}
+.bhw-header__brand-name{display:inline-flex; align-items:center; gap:10px; font-size:12px; font-weight:500; letter-spacing:0.18em; text-transform:uppercase; padding-left:18px; margin-left:18px; border-left:1px solid var(--border); color:var(--accent);}
+.bhw-header__brand-name::before{content:""; display:inline-block; width:22px; height:26px; background:url(assets/logo-geode.png) center/contain no-repeat; flex-shrink:0;}
+.hero-mark{display:inline-block; width:64px; height:auto; margin-bottom:18px;}
+.hero-brand-lockup{display:flex; align-items:center; gap:14px; margin-bottom:18px;}
+.hero-brand-lockup img{width:48px; height:auto;}
+.hero-brand-lockup .name{font-family:var(--font-serif); font-style:italic; font-weight:500; font-size:22px; color:var(--fg-strong); letter-spacing:-0.01em;}
+.bhw-header__nav{display:flex; gap:28px; align-items:center;}
+.bhw-header__nav a{font-size:12px; font-weight:500; letter-spacing:0.06em; text-decoration:none; color:var(--fg); padding:6px 0; border-bottom:1px solid transparent; transition:all 200ms;}
+.bhw-header__nav a:hover,.bhw-header__nav a.active{color:var(--accent); border-color:var(--accent);}
+
+.bhw-footer{background:var(--bhw-deep-obsidian); color:var(--bhw-warm-ivory); padding:72px 0 28px;}
+.bhw-footer .container{max-width:1280px;}
+.bhw-footer__top{display:grid; grid-template-columns:1.3fr 3fr; gap:64px; padding-bottom:48px; border-bottom:1px solid rgba(230,223,210,0.10);}
+.bhw-footer__brand{display:flex; flex-direction:column; gap:16px;}
+.bhw-footer__brand .tagline{color:var(--bhw-pale-gold-light);}
+.bhw-footer__brand p{font-size:13px; color:rgba(230,223,210,0.7); margin:8px 0 0; max-width:340px; line-height:1.7;}
+.bhw-footer__groups{display:grid; grid-template-columns:repeat(4,1fr); gap:24px;}
+.bhw-footer__groups h5{font-size:10px; font-weight:600; letter-spacing:0.2em; text-transform:uppercase; color:rgba(230,223,210,0.55); margin:0 0 16px; color:#fff;}
+.bhw-footer__groups ul{list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:9px;}
+.bhw-footer__groups a{font-size:12.5px; color:var(--bhw-warm-ivory); opacity:0.82; text-decoration:none;}
+.bhw-footer__groups a:hover{color:var(--bhw-bronze-clay); opacity:1;}
+.bhw-footer__bottom{display:flex; justify-content:space-between; align-items:center; gap:24px; margin-top:24px; font-size:11px; color:rgba(230,223,210,0.45); letter-spacing:0.06em;}
+
+/* ---- Geode network — the cross-brand connective motif ---- */
+.geode-network{position:absolute; inset:0; pointer-events:none; opacity:0.5;}
+.geode-network circle{fill:var(--accent-soft);}
+.geode-network line{stroke:var(--accent-soft); stroke-width:0.6; opacity:0.5;}
+
+/* ---- Common section header ---- */
+.section-head{display:flex; gap:14px; align-items:center; margin-bottom:28px;}
+.section-head .num{font-size:11px; font-weight:600; letter-spacing:0.2em; color:var(--accent);}
+
+/* ---- Tab switcher (audience pages) ---- */
+.audience-tabs{
+  display:inline-flex; padding:5px; background:rgba(22,36,51,0.05);
+  border-radius:999px; border:1px solid var(--border); gap:4px;
+}
+.audience-tabs button{
+  background:transparent; border:0; padding:9px 22px; border-radius:999px;
+  font-family:var(--font-sans); font-size:12px; font-weight:600; letter-spacing:0.12em;
+  text-transform:uppercase; color:var(--fg-muted); cursor:pointer;
+  transition:all 200ms; white-space:nowrap;
+}
+.audience-tabs button.active{background:var(--fg-strong); color:var(--bg);}
+
+/* ---- Insurance strip ---- */
+.insurance-strip{
+  display:flex; flex-wrap:wrap; align-items:center; gap:20px 36px;
+  padding:18px 24px; background:var(--bg-warm); border:1px solid var(--border);
+  border-radius:12px;
+}
+.insurance-strip .ix-label{font-size:10px; font-weight:600; letter-spacing:0.2em; text-transform:uppercase; color:var(--fg-muted);}
+.insurance-strip .ix-item{font-size:13px; font-weight:500; color:var(--fg);}
+
+/* ---- Audience hero split ---- */
+.audience-hero{display:grid; grid-template-columns:1.1fr 1fr; gap:64px; align-items:center;}
+@media (max-width:900px){
+  .audience-hero{grid-template-columns:1fr;}
+  .bhw-footer__top{grid-template-columns:1fr;}
+  .bhw-footer__groups{grid-template-columns:repeat(2,1fr);}
+  .container,.container-narrow{padding:0 24px;}
+  .bhw-header__nav{display:none;}
+}
+
+/* ==========================================================================
+   BHW Integrative Wellness — Design Tokens
+   "Depth Restores Clarity."
+   ========================================================================== */
+
+/* Webfont — Montserrat (the brand's primary). Loaded from Google Fonts. */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  /* --------------------------------------------------------------------
+     COLOR — Mineral Palette
+     Dark, grounded, geode-inspired. Warm bronze + cool sea-glass accents
+     against neutral limestone & opal mist surfaces.
+     -------------------------------------------------------------------- */
+
+  /* Core palette — Opal mineral.
+     The geode has FIVE colors of light inside the dark stone: sea-glass,
+     deep teal vein, lavender, rose, and pale gold. Plus two metals
+     (bronze, pyrite) and two warm backgrounds (limestone, ivory). */
+
+  /* Darks */
+  --bhw-deep-obsidian:  #0F141A;  /* Near-black, the deepest tone in the geode    */
+  --bhw-ink-navy:       #162433;  /* Primary brand blue — logos / headlines       */
+  --bhw-charcoal:       #2A3038;  /* Secondary dark surface                       */
+  --bhw-mineral-taupe:  #6B665E;  /* Warm grey — quiet text, dividers            */
+
+  /* Opal lights (the "fire" inside the stone) */
+  --bhw-sea-glass:        #5FA9A6;  /* Highlights, icons, buttons, "clarity" moments */
+  --bhw-deep-teal-vein:   #266D7A;  /* Supporting brand accent, hover, section markers */
+  --bhw-opal-mist:        #DCE3EA;  /* Light opal background, cards, subtle contrast */
+  --bhw-lavender-opal:    #92889B;  /* Iridescent accents, gradients, secondary detail (sparingly) */
+  --bhw-rose-opal:        #C9A0A0;  /* Warmth inside gradients (very sparingly)       */
+  --bhw-pale-gold-light:  #E8C98A;  /* "Light inside the opal" — small dividers, premium accent lines */
+
+  /* Metallic / grounding accents */
+  --bhw-bronze-clay:    #8C5A3C;  /* Warmth, CTAs, print, bridge to mineral palette */
+  --bhw-pyrite-gold:    #C4A038;  /* Logo outline, fine lines, dividers, premium emphasis */
+
+  /* Backgrounds */
+  --bhw-limestone:      #EDE5D8;  /* Main warm background                          */
+  --bhw-warm-ivory:     #F7F3EA;  /* Website body background, forms, cards, patient-facing */
+
+  /* Tonal extensions (derived for UI states) */
+  --bhw-limestone-50:   #F7F3EA;  /* alias of warm-ivory */
+  --bhw-limestone-200:  #DBD0BA;  /* hover / borders on warm surfaces */
+  --bhw-ink-navy-80:    #2C3D50;
+  --bhw-ink-navy-60:    #5C6E80;
+  --bhw-bronze-clay-12: rgba(140, 90, 60, 0.12);
+  --bhw-sea-glass-12:   rgba(95, 169, 166, 0.12);
+  --bhw-deep-teal-12:   rgba(38, 109, 122, 0.12);
+
+  /* Semantic — Light theme.
+     Default body uses Warm Ivory (patient-facing); marketing surfaces
+     and section breaks use Limestone for the warmer, more editorial feel. */
+  --bg:           var(--bhw-warm-ivory);     /* website body, forms, cards */
+  --bg-warm:      var(--bhw-limestone);      /* marketing / section breaks */
+  --bg-elev:      var(--bhw-warm-ivory);     /* cards, raised surfaces */
+  --bg-muted:     var(--bhw-opal-mist);      /* opal alt sections, side panels */
+  --surface-dark: var(--bhw-ink-navy);       /* inverse hero panels */
+
+  --fg:          var(--bhw-ink-navy);      /* primary text on light  */
+  --fg-strong:   var(--bhw-deep-obsidian); /* display headlines      */
+  --fg-muted:    var(--bhw-mineral-taupe); /* secondary text         */
+  --fg-on-dark:  var(--bhw-warm-ivory);    /* primary text on dark   */
+  --fg-on-dark-muted: rgba(247, 243, 234, 0.65);
+
+  --accent:           var(--bhw-bronze-clay);     /* CTAs, warmth, print */
+  --accent-gold:      var(--bhw-pyrite-gold);     /* logo outline, dividers, premium emphasis */
+  --accent-soft:      var(--bhw-sea-glass);       /* icons, highlights, "clarity" moments */
+  --accent-deep:      var(--bhw-deep-teal-vein);  /* hover, section markers, program connections */
+  --accent-iridescent: var(--bhw-lavender-opal);  /* iridescent accents — sparingly */
+  --accent-warm:      var(--bhw-rose-opal);       /* warmth inside gradients — very sparingly */
+  --accent-gold-light: var(--bhw-pale-gold-light); /* small premium dividers */
+
+  --border:      rgba(22, 36, 51, 0.12);   /* subtle hairline on light */
+  --border-strong: rgba(22, 36, 51, 0.24);
+  --border-on-dark: rgba(247, 243, 234, 0.16);
+  --divider-gold: var(--bhw-pyrite-gold);  /* the brand's signature gold rule (logo-grade) */
+  --divider-bronze: var(--bhw-bronze-clay);
+
+  --focus-ring:  rgba(95, 169, 166, 0.55);
+
+  /* --------------------------------------------------------------------
+     RADIUS — minimal, never playful. Refined surfaces.
+     -------------------------------------------------------------------- */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;   /* card corners — subtle */
+  --radius-xl: 22px;   /* hero panels */
+  --radius-pill: 999px;
+
+  /* --------------------------------------------------------------------
+     SHADOW — quiet depth. Cool-shifted, not generic black.
+     -------------------------------------------------------------------- */
+  --shadow-xs: 0 1px 2px rgba(15, 20, 26, 0.06);
+  --shadow-sm: 0 2px 6px rgba(15, 20, 26, 0.08);
+  --shadow-md: 0 8px 20px -8px rgba(15, 20, 26, 0.18);
+  --shadow-lg: 0 20px 40px -16px rgba(15, 20, 26, 0.28);
+  --shadow-inset-hairline: inset 0 0 0 1px var(--border);
+
+  /* --------------------------------------------------------------------
+     SPACING — 4px base. Generous in hero / editorial blocks.
+     -------------------------------------------------------------------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+  --space-10: 128px;
+
+  /* --------------------------------------------------------------------
+     TYPE — Montserrat throughout. Wide-tracked uppercase labels are
+     a brand signature ("DEPTH RESTORES CLARITY.").
+     -------------------------------------------------------------------- */
+  --font-sans: 'Montserrat', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Montserrat', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
+
+  --weight-light: 300;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* Type scale (rem-equivalent in px for clarity) */
+  --fs-display: 88px;   /* hero — see "BHW" wordmark feel */
+  --fs-h1: 56px;
+  --fs-h2: 40px;
+  --fs-h3: 28px;
+  --fs-h4: 22px;
+  --fs-h5: 18px;
+  --fs-body: 16px;
+  --fs-small: 14px;
+  --fs-eyebrow: 12px;   /* uppercase tracked labels */
+
+  --lh-tight: 1.05;
+  --lh-snug: 1.2;
+  --lh-normal: 1.5;
+  --lh-loose: 1.75;
+
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.08em;
+  --tracking-eyebrow: 0.18em;   /* the brand's signature wide tracking */
+
+  /* --------------------------------------------------------------------
+     MOTION
+     -------------------------------------------------------------------- */
+  --ease-standard: cubic-bezier(0.2, 0.6, 0.2, 1);
+  --ease-out:     cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 140ms;
+  --dur-base: 220ms;
+  --dur-slow: 420ms;
+}
+
+/* ==========================================================================
+   SEMANTIC ELEMENT STYLES — opt-in via class. Apply .bhw on a container to
+   inherit the brand's typographic & background defaults.
+   ========================================================================== */
+
+.bhw {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: var(--lh-normal);
+  font-weight: var(--weight-regular);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.bhw h1, .bhw .h1 {
+  font-family: var(--font-display);
+  font-size: var(--fs-h1);
+  font-weight: var(--weight-light);  /* the wordmark is light-weight */
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg-strong);
+  margin: 0 0 var(--space-5);
+}
+.bhw h2, .bhw .h2 {
+  font-family: var(--font-display);
+  font-size: var(--fs-h2);
+  font-weight: var(--weight-light);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg-strong);
+  margin: 0 0 var(--space-4);
+}
+.bhw h3, .bhw .h3 {
+  font-family: var(--font-display);
+  font-size: var(--fs-h3);
+  font-weight: var(--weight-medium);
+  line-height: var(--lh-snug);
+  color: var(--fg);
+  margin: 0 0 var(--space-3);
+}
+.bhw h4, .bhw .h4 {
+  font-size: var(--fs-h4);
+  font-weight: var(--weight-semibold);
+  line-height: var(--lh-snug);
+  color: var(--fg);
+  margin: 0 0 var(--space-2);
+}
+.bhw h5, .bhw .h5 {
+  font-size: var(--fs-h5);
+  font-weight: var(--weight-semibold);
+  line-height: var(--lh-snug);
+  color: var(--fg);
+  margin: 0 0 var(--space-2);
+}
+.bhw p {
+  margin: 0 0 var(--space-4);
+  max-width: 65ch;
+}
+.bhw .lede {
+  font-size: var(--fs-h5);
+  font-weight: var(--weight-light);
+  line-height: var(--lh-loose);
+  color: var(--fg);
+}
+.bhw .eyebrow {
+  font-size: var(--fs-eyebrow);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.bhw .tagline {
+  /* "DEPTH RESTORES CLARITY." style */
+  font-size: var(--fs-small);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.bhw .wordmark {
+  font-family: var(--font-display);
+  font-weight: var(--weight-light);
+  letter-spacing: 0.02em;
+  color: var(--fg-strong);
+  line-height: 1;
+}
+.bhw small, .bhw .small { font-size: var(--fs-small); color: var(--fg-muted); }
+.bhw code, .bhw kbd { font-family: var(--font-mono); font-size: 0.9em; }
+
+/* The brand's signature gold rule */
+.bhw .gold-rule {
+  display: block;
+  width: 1px;
+  background: var(--divider-gold);
+}
+.bhw hr.gold-rule {
+  height: 1px;
+  width: 64px;
+  background: var(--divider-gold);
+  border: 0;
+  margin: var(--space-5) 0;
+}
+
+/* Dark surface variant */
+.bhw.bhw--dark, .bhw .on-dark {
+  background: var(--surface-dark);
+  color: var(--fg-on-dark);
+}
+.bhw.bhw--dark h1, .bhw.bhw--dark h2, .bhw.bhw--dark h3,
+.bhw.bhw--dark h4, .bhw.bhw--dark h5 {
+  color: var(--fg-on-dark);
+}
+.bhw.bhw--dark .eyebrow { color: var(--fg-on-dark-muted); }
+
+</style>
+<style>
+  body{background:var(--bg);}
+  .switch-bar{position:sticky; top:62px; z-index:40; background:var(--bg); border-bottom:1px solid var(--border); padding:14px 0;}
+  .switch-bar .container{display:flex; align-items:center; justify-content:space-between; gap:18px;}
+  .switch-meta{font-size:11.5px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:var(--fg-muted);}
+  [data-pane]{display:none;} [data-pane].active{display:block;}
+
+  /* Flow hero — fluid, kinetic */
+  .flow-hero{padding:88px 0 96px; position:relative; overflow:hidden;}
+  .flow-hero::before{content:""; position:absolute; inset:0;
+    background:radial-gradient(60% 80% at 80% 30%, rgba(121,194,214,0.4), transparent 60%),
+               radial-gradient(40% 60% at 10% 90%, rgba(11,93,115,0.18), transparent 70%);
+    pointer-events:none;}
+  .flow-hero h1{font-family:var(--font-sans); font-weight:200; line-height:1; letter-spacing:-0.035em; font-size:clamp(60px,8.5vw,140px);}
+  .flow-hero h1 em{font-style:italic; font-weight:300; background:linear-gradient(110deg,#0B5D73,#167A9A 40%,#79C2D6 80%,#E7C45A); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;}
+  .flow-hero .stream{position:absolute; left:-20px; right:-20px; top:60%; height:200px; pointer-events:none; opacity:0.25;}
+  .flow-pill{display:inline-flex; align-items:center; gap:10px; padding:7px 14px 7px 9px; background:rgba(22,122,154,0.12); border-radius:999px; border:1px solid rgba(22,122,154,0.3); margin-bottom:24px;}
+  .flow-pill .pulse{width:8px; height:8px; border-radius:999px; background:#167A9A; box-shadow:0 0 0 0 rgba(22,122,154,0.5); animation:pulse 2s infinite;}
+  @keyframes pulse{50%{box-shadow:0 0 0 10px rgba(22,122,154,0);}}
+  .flow-pill span:last-child{font-size:11px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:#0B5D73;}
+
+  /* Signs / conditions matrix */
+  .signs{padding:96px 0; background:var(--bg-warm);}
+  .signs-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:36px;}
+  @media(max-width:900px){.signs-grid{grid-template-columns:1fr 1fr;}}
+  .sign{background:#fff; border-radius:14px; padding:24px; border:1px solid rgba(11,93,115,0.10);}
+  .sign h4{font-size:16px; color:#0B3245; font-weight:500;}
+  .sign .l{font-size:10.5px; letter-spacing:0.18em; text-transform:uppercase; color:var(--accent); font-weight:700; margin-bottom:10px;}
+  .sign p{font-size:13px; color:#3A6477; line-height:1.6; margin:8px 0 0;}
+
+  /* The Flow protocol — stepper */
+  .protocol{padding:96px 0;}
+  .steps{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:48px; position:relative;}
+  @media(max-width:900px){.steps{grid-template-columns:1fr 1fr;}}
+  .step{background:#fff; border:1px solid rgba(11,93,115,0.16); border-radius:14px; padding:26px 22px; position:relative;}
+  .step .n{font-family:var(--font-serif); font-size:42px; line-height:1; color:#79C2D6; font-style:italic;}
+  .step h4{font-size:17px; font-weight:600; margin:6px 0 8px; color:#0B3245;}
+  .step p{font-size:12.5px; color:#3A6477; line-height:1.6;}
+  .step::after{content:"→"; position:absolute; right:-12px; top:36px; color:#79C2D6; font-size:18px; z-index:2; background:var(--bg); padding:0 4px;}
+  .step:last-child::after{display:none;}
+
+  /* Outcomes panel */
+  .outcomes{background:#0B3245; color:#fff; padding:96px 0; position:relative; overflow:hidden;}
+  .outcomes::before{content:""; position:absolute; inset:0; background:radial-gradient(70% 80% at 30% 60%, rgba(121,194,214,0.15), transparent);}
+  .outcomes h2{color:#fff;}
+  .outcome-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:24px; margin-top:48px; position:relative;}
+  @media(max-width:900px){.outcome-grid{grid-template-columns:1fr 1fr;}}
+  .outcome .n{font-family:var(--font-sans); font-weight:200; font-size:64px; letter-spacing:-0.03em; line-height:1; color:#E7C45A;}
+  .outcome .l{font-size:12px; letter-spacing:0.16em; text-transform:uppercase; color:rgba(255,255,255,0.7); margin-top:14px;}
+  .outcome .d{font-size:12.5px; color:rgba(255,255,255,0.55); margin-top:6px; line-height:1.6;}
+
+  /* Insurance strip */
+  .ix-line{padding:48px 0; background:var(--bg-warm);}
+
+  /* Schedule */
+  .sched{padding:96px 0;}
+  .sched-card{background:#fff; border-radius:18px; overflow:hidden; box-shadow:var(--shadow-md); display:grid; grid-template-columns:1.05fr 1fr;}
+  @media(max-width:900px){.sched-card{grid-template-columns:1fr;}}
+  .sched-card .left{padding:48px; background:linear-gradient(155deg,#0B5D73,#167A9A 70%,#79C2D6); color:#fff; position:relative; overflow:hidden;}
+  .sched-card .right{padding:40px;}
+  .sched-card .left h3{color:#fff; font-weight:300; font-size:34px; letter-spacing:-0.02em;}
+  .form-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  .form-grid .col-2{grid-column:1/-1;}
+
+  /* === PORTAL === */
+  .h-banner{padding:32px 0; background:var(--bg-warm); border-bottom:1px solid rgba(11,93,115,0.16);}
+  .h-banner .container{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:18px;}
+  .portal{display:grid; grid-template-columns:1.4fr 1fr; gap:18px; margin:36px 0 80px;}
+  @media(max-width:1000px){.portal{grid-template-columns:1fr;}}
+  .panel{background:#fff; border:1px solid rgba(11,93,115,0.12); border-radius:14px; padding:24px;}
+  .panel h3{font-size:16px; font-weight:600; color:#0B3245;}
+
+  /* Vascular pulse waveform */
+  .vital-card{background:linear-gradient(155deg,#0B3245,#0B5D73); color:#fff; border-radius:14px; padding:28px; position:relative; overflow:hidden;}
+  .vital-card .h{font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:rgba(255,255,255,0.6);}
+  .vital-card .v{font-size:48px; font-weight:200; letter-spacing:-0.02em; margin:8px 0 6px; color:#E7C45A;}
+  .vital-card .ch{font-size:12.5px; color:#79C2D6;}
+  .waveform{height:80px; margin-top:16px;}
+  .metric-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:18px;}
+  .metric{background:rgba(255,255,255,0.08); border-radius:10px; padding:14px;}
+  .metric .l{font-size:9.5px; letter-spacing:0.18em; text-transform:uppercase; color:rgba(255,255,255,0.5);}
+  .metric .v{font-size:18px; font-weight:500; color:#fff; margin-top:6px;}
+
+  .program{display:flex; gap:14px; padding:14px 0; border-bottom:1px solid rgba(11,93,115,0.12); align-items:center;}
+  .program:last-child{border-bottom:0;}
+  .program .dot{width:10px; height:10px; border-radius:999px; flex-shrink:0;}
+  .program .t{flex:1;}
+  .program .nm{font-size:14px; font-weight:600; color:#0B3245;}
+  .program .ps{font-size:12px; color:#3A6477; margin-top:2px;}
+  .program .st{font-size:11px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; padding:5px 10px; border-radius:999px;}
+</style>
+
+<style>
+[data-pane="potential"]{display:none!important}
+[data-pane="current"]{display:block!important}
+[data-pane-btn]{display:none!important}
+.bhw-header__nav{display:none!important}
+#pp-demo{position:sticky;top:0;z-index:99;background:#111;color:#eee;text-align:center;font:600 10.5px/1 Montserrat,sans-serif;letter-spacing:.16em;text-transform:uppercase;padding:7px}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+  document.querySelectorAll('[data-pane]').forEach(function(p){p.classList.toggle('active', p.getAttribute('data-pane')==='current');});
+  var b=document.createElement('div');b.id='pp-demo';b.textContent='Patient page preview \u00b7 sample data';document.body.prepend(b);
+});
+</script>
+</head>
+<body class="brand-flow" data-screen-label="Flow Vascular">
+
+<header class="bhw-header">
+  <div class="bhw-header__inner">
+    <a href="index.html" class="bhw-header__lockup">
+      <img class="bhw-header__mark" src="assets/logo-geode.png" alt="">
+      <div class="bhw-header__wm"><span>BHW</span><span>Integrative Wellness</span></div>
+      <div class="bhw-header__brand-name" style="color:#167A9A;">Flow</div>
+    </a>
+    <nav class="bhw-header__nav">
+      <a href="#why">Why Flow</a>
+      <a href="#protocol">Protocol</a>
+      <a href="#outcomes">Outcomes</a>
+      <a href="#schedule">Schedule</a>
+      <a href="index.html">← Family</a>
+    </nav>
+  </div>
+</header>
+
+<div class="switch-bar">
+  <div class="container">
+    <div style="display:flex; gap:14px; align-items:center;">
+      <span class="switch-meta">Flow Vascular</span>
+      <span style="color:rgba(11,93,115,0.3); font-size:18px;">/</span>
+      <span class="switch-meta" id="audLabel" style="color:#167A9A;">For new patients</span>
+    </div>
+    <div class="audience-tabs">
+      <button class="active" data-pane-btn="potential">For new patients</button>
+      <button data-pane-btn="current">My program</button>
+    </div>
+  </div>
+</div>
+
+<!-- =================== POTENTIAL =================== -->
+<div data-pane="potential" class="active">
+
+  <section class="flow-hero">
+    <div class="container">
+      <div class="flow-pill"><span class="pulse"></span><span>02 · Vascular stabilization · at BHW Medical</span></div>
+      <img src="assets/logos/flow.png" alt="Flow — Vascular Stabilization Center at BHW Medical" class="brand-logo-hero brand-logo-hero--lg">
+        <h1>When flow<br>improves,<br><em>function follows.</em></h1>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:64px; margin-top:48px; align-items:start;">
+        <p class="lede" style="max-width:520px; color:#0B3245;">
+          Microvascular dysfunction is missed on standard cath. INOCA, MINOCA, exertional dyspnea, post-viral fatigue, brain fog with normal MRI — many of these share a common driver: the small vessels that actually move oxygen.
+          <br><br>
+          <strong style="color:#167A9A; font-weight:600;">Flow is BHW Medical's vascular line of work</strong> — built to find, measure, and stabilize what gets called "anxiety" by everyone else.
+        </p>
+        <div style="display:flex; flex-direction:column; gap:16px;">
+          <div style="padding:24px; background:#fff; border-left:3px solid #E7C45A; border-radius:0 10px 10px 0; box-shadow:var(--shadow-sm);">
+            <div style="font-family:var(--font-serif); font-size:20px; font-style:italic; color:#0B3245; line-height:1.4;">"My cath was clean. My symptoms weren't. Flow was the first place that took both seriously."</div>
+            <div style="font-size:11.5px; letter-spacing:0.18em; text-transform:uppercase; color:#167A9A; margin-top:14px; font-weight:600;">— Jen K., Flow patient · year two</div>
+          </div>
+          <div style="display:flex; gap:14px;">
+            <a class="btn btn--primary" href="#schedule" style="background:#167A9A;">Request a Flow consult</a>
+            <a class="btn btn--ghost" href="#protocol">See the protocol</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHO IS FLOW FOR -->
+  <section class="signs" id="why">
+    <div class="container">
+      <div class="section-head"><span class="num" style="color:#167A9A;">02</span><span class="eyebrow">Who Flow is for</span></div>
+      <h2 class="h-section" style="max-width:760px;">Symptoms that point to <em style="color:#167A9A; font-style:italic;">vascular</em>, even when imaging looks "normal."</h2>
+      <div class="signs-grid">
+        <div class="sign"><div class="l">Cardiac</div><h4>INOCA · MINOCA</h4><p>Angina with non-obstructive coronaries. Clean cath but persistent chest pain on exertion.</p></div>
+        <div class="sign"><div class="l">Cardiac</div><h4>Exertional dyspnea</h4><p>Breathlessness that exceeds what your imaging suggests. HFpEF workup welcome.</p></div>
+        <div class="sign"><div class="l">Cerebral</div><h4>Brain fog · low blood flow</h4><p>Cognitive fatigue, lightheadedness on standing, post-meal slumps.</p></div>
+        <div class="sign"><div class="l">Autonomic</div><h4>POTS · orthostatic intolerance</h4><p>Tilt-table candidates, dysautonomia, exercise intolerance.</p></div>
+        <div class="sign"><div class="l">Post-viral</div><h4>Long COVID vascular pattern</h4><p>Endothelial injury, microclots, exercise intolerance with normal cardiac echo.</p></div>
+        <div class="sign"><div class="l">Metabolic</div><h4>Endothelial dysfunction</h4><p>Pre-clinical vascular disease in the setting of insulin resistance or metabolic syndrome.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROTOCOL -->
+  <section class="protocol" id="protocol">
+    <div class="container">
+      <div class="section-head"><span class="num" style="color:#167A9A;">03</span><span class="eyebrow">The Flow protocol</span></div>
+      <h2 class="h-section" style="max-width:680px;">A four-phase workup, designed for <em style="color:#167A9A; font-style:italic;">depth of signal.</em></h2>
+      <div class="steps">
+        <div class="step"><div class="n">01</div><h4>Vascular history</h4><p>60-minute structured intake. Timeline of every "you're fine" workup so far.</p></div>
+        <div class="step"><div class="n">02</div><h4>Functional testing</h4><p>Tilt, EndoPAT, NIRS, hs-CRP, lipoprotein subfractions, ApoB. The full microvascular picture.</p></div>
+        <div class="step"><div class="n">03</div><h4>Mechanism map</h4><p>Inflammatory, autonomic, metabolic, or hemodynamic — we name the driver before treating.</p></div>
+        <div class="step"><div class="n">04</div><h4>Stabilization plan</h4><p>Medication where indicated. Pacing, hydration, salt, sleep, supplementation — measured every 12 weeks.</p></div>
+      </div>
+      <div style="margin-top:40px; padding:24px 28px; background:#fff; border-left:3px solid #79C2D6; border-radius:0 12px 12px 0;">
+        <div class="eyebrow eyebrow--accent" style="color:#167A9A;">Coordination</div>
+        <p style="margin:8px 0 0; font-size:14.5px; color:#0B3245; line-height:1.65;">Flow is operated inside BHW Medical. Your primary care, behavioral, cognitive, and nutrition modules share one record. Referrals don't restart your story.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- OUTCOMES -->
+  <section class="outcomes" id="outcomes">
+    <div class="container">
+      <div class="section-head"><span class="num" style="color:#E7C45A;">04</span><span class="eyebrow" style="color:rgba(255,255,255,0.7);">Outcomes · 18-month cohort</span></div>
+      <h2 class="h-section">Measurable change. <em style="color:#E7C45A; font-style:italic;">Not vibes.</em></h2>
+      <div class="outcome-grid">
+        <div class="outcome"><div class="n">71%</div><div class="l">Symptom reduction</div><div class="d">Patient-reported angina/dyspnea, 12-week mark.</div></div>
+        <div class="outcome"><div class="n">2.3×</div><div class="l">Exercise tolerance</div><div class="d">6-minute walk distance, baseline → 24 weeks.</div></div>
+        <div class="outcome"><div class="n">−54%</div><div class="l">hs-CRP</div><div class="d">Median drop in inflammation marker, cohort n=212.</div></div>
+        <div class="outcome"><div class="n">96%</div><div class="l">Would refer a friend</div><div class="d">Post-visit NPS, rolling 12 months.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INSURANCE -->
+  <section class="ix-line">
+    <div class="container">
+      <div class="insurance-strip">
+        <span class="ix-label">In-network</span>
+        <span class="ix-item">CareFirst BCBS</span>
+        <span class="ix-item">Aetna</span>
+        <span class="ix-item">Cigna</span>
+        <span class="ix-item">United</span>
+        <span class="ix-item">Hopkins EHP</span>
+        <span class="ix-item">Medicare</span>
+        <span class="ix-item" style="color:var(--accent);">+ Self-pay sliding scale</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCHEDULE -->
+  <section class="sched" id="schedule">
+    <div class="container-narrow">
+      <div class="sched-card">
+        <div class="left">
+          <div class="eyebrow" style="color:#E7C45A;">05 · Schedule</div>
+          <h3>A 20-minute Flow screening</h3>
+          <p style="color:rgba(255,255,255,0.85); font-size:14.5px; line-height:1.7; margin-top:14px;">Free, phone-based. We review what's been worked up so far, what hasn't, and whether Flow is the right next step.</p>
+          <ul style="list-style:none; padding:0; margin:24px 0; display:flex; flex-direction:column; gap:12px;">
+            <li style="font-size:13.5px;">◆ Records pulled by our team</li>
+            <li style="font-size:13.5px;">◆ Insurance verified before visit</li>
+            <li style="font-size:13.5px;">◆ Cardiologist + integrative co-managed</li>
+            <li style="font-size:13.5px;">◆ One record across the BHW family</li>
+          </ul>
+        </div>
+        <div class="right">
+          <form onsubmit="event.preventDefault(); this.querySelector('.sent').style.display='block'; this.querySelector('.fields').style.display='none';">
+            <div class="fields">
+              <div class="form-grid">
+                <div class="field"><label>First name</label><input required></div>
+                <div class="field"><label>Last name</label><input required></div>
+                <div class="field col-2"><label>Email</label><input type="email" required></div>
+                <div class="field col-2"><label>Phone</label><input type="tel"></div>
+                <div class="field col-2"><label>Primary symptom</label>
+                  <select><option>Chest pain with clean cath</option><option>Exertional dyspnea</option><option>POTS / orthostatic intolerance</option><option>Brain fog · low flow pattern</option><option>Long COVID</option><option>Other</option></select>
+                </div>
+                <div class="field col-2"><label>Insurance carrier</label>
+                  <select><option>CareFirst BCBS</option><option>Aetna</option><option>Cigna</option><option>United</option><option>Hopkins EHP</option><option>Medicare</option><option>Self-pay</option></select>
+                </div>
+              </div>
+              <button class="btn btn--accent" type="submit" style="background:#167A9A; margin-top:18px; width:100%; justify-content:center;">Request Flow screening</button>
+            </div>
+            <div class="sent" style="display:none; padding:32px 16px; text-align:center;">
+              <div style="font-family:var(--font-serif); font-size:28px; color:#0B3245; font-style:italic;">Received.</div>
+              <p style="color:#3A6477; font-size:14px;">A Flow nurse will call within one business day.</p>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- =================== CURRENT — PROGRAM DASHBOARD =================== -->
+<div data-pane="current">
+  <section class="h-banner">
+    <div class="container">
+      <div>
+        <div class="eyebrow eyebrow--accent">Flow program</div>
+        <div style="font-family:var(--font-sans); font-size:30px; font-weight:300; color:#0B3245; margin-top:4px;">Welcome back, Jen — week <em style="color:#167A9A;">26</em> of stabilization.</div>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button class="btn btn--ghost">Message Dr. Lin</button>
+        <button class="btn btn--accent" style="background:#167A9A;">Log today's reading</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="container">
+    <div class="portal">
+      <!-- LEFT: vitals -->
+      <div style="display:flex; flex-direction:column; gap:18px;">
+        <div class="vital-card">
+          <div class="h">Resting microvascular index · 7-day</div>
+          <div class="v">0.84</div>
+          <div class="ch">↑ 0.21 since intake · target ≥ 0.75</div>
+          <svg class="waveform" viewBox="0 0 600 80" preserveAspectRatio="none">
+            <defs><linearGradient id="g1" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#E7C45A" stop-opacity="0.4"/><stop offset="1" stop-color="#E7C45A" stop-opacity="0"/></linearGradient></defs>
+            <path d="M0,55 L40,50 L60,40 L75,28 L90,42 L120,58 L150,46 L180,38 L220,30 L260,42 L300,26 L340,34 L380,20 L420,32 L460,18 L500,24 L540,14 L600,22 L600,80 L0,80 Z" fill="url(#g1)"/>
+            <path d="M0,55 L40,50 L60,40 L75,28 L90,42 L120,58 L150,46 L180,38 L220,30 L260,42 L300,26 L340,34 L380,20 L420,32 L460,18 L500,24 L540,14 L600,22" stroke="#E7C45A" stroke-width="2" fill="none"/>
+          </svg>
+          <div class="metric-grid">
+            <div class="metric"><div class="l">Resting HR</div><div class="v">62</div></div>
+            <div class="metric"><div class="l">SBP</div><div class="v">114</div></div>
+            <div class="metric"><div class="l">HRV (rmssd)</div><div class="v">48</div></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3>Program timeline</h3>
+            <span class="eyebrow">Phase 3 of 4 · Stabilize</span>
+          </div>
+          <div style="height:10px; background:var(--bg-warm); border-radius:999px; margin:18px 0; position:relative;">
+            <div style="width:65%; height:100%; background:linear-gradient(90deg,#0B5D73,#167A9A,#79C2D6); border-radius:999px;"></div>
+            <span style="position:absolute; left:0; top:14px; font-size:10.5px; letter-spacing:0.16em; text-transform:uppercase; color:var(--fg-muted); font-weight:600;">Map</span>
+            <span style="position:absolute; left:25%; top:14px; font-size:10.5px; letter-spacing:0.16em; text-transform:uppercase; color:var(--fg-muted); font-weight:600;">Test</span>
+            <span style="position:absolute; left:55%; top:14px; font-size:10.5px; letter-spacing:0.16em; text-transform:uppercase; color:#167A9A; font-weight:700;">Stabilize</span>
+            <span style="position:absolute; right:0; top:14px; font-size:10.5px; letter-spacing:0.16em; text-transform:uppercase; color:var(--fg-muted); font-weight:600;">Maintain</span>
+          </div>
+          <p style="margin-top:30px; font-size:13.5px; color:#3A6477; line-height:1.65;">You're 6 weeks into Phase 3. Next milestone: repeat EndoPAT at week 30. If holding, you transition to maintenance with quarterly check-ins.</p>
+        </div>
+
+        <div class="panel">
+          <h3>Today's protocol</h3>
+          <div class="program"><div class="dot" style="background:#167A9A;"></div><div class="t"><div class="nm">Midodrine 2.5mg · breakfast + lunch</div><div class="ps">Hold if SBP &gt; 140 supine.</div></div><div class="st" style="background:#E4F1EF; color:#1F6961;">Logged</div></div>
+          <div class="program"><div class="dot" style="background:#79C2D6;"></div><div class="t"><div class="nm">Electrolyte loading · 1L + salt before exercise</div><div class="ps">Aim for 3.5L daily total fluid.</div></div><div class="st" style="background:#E4F1EF; color:#1F6961;">Logged</div></div>
+          <div class="program"><div class="dot" style="background:#E7C45A;"></div><div class="t"><div class="nm">Recumbent intervals · 18 min</div><div class="ps">RPE cap 13. Stop if symptoms.</div></div><div class="st" style="background:#FAEEDD; color:#8C5A3C;">Pending</div></div>
+          <div class="program"><div class="dot" style="background:#0B5D73;"></div><div class="t"><div class="nm">Evening reading · 9:30p</div><div class="ps">Standing BP series · 3 readings.</div></div><div class="st" style="background:#FCE2D6; color:#A0421B;">Due</div></div>
+        </div>
+      </div>
+
+      <!-- RIGHT: care team + next steps -->
+      <div style="display:flex; flex-direction:column; gap:18px;">
+        <div class="panel" style="background:#0B3245; color:#fff; border:0;">
+          <div class="eyebrow" style="color:#E7C45A;">Note from Dr. Lin</div>
+          <p style="font-family:var(--font-serif); font-size:18px; font-style:italic; color:#fff; line-height:1.5; margin:10px 0;">"Your microvascular index has held above 0.8 for three weeks. Beautiful. Let's repeat EndoPAT on the 18th and start tapering midodrine if it stays."</p>
+          <div style="display:flex; gap:10px; margin-top:18px;">
+            <button class="btn btn--accent" style="background:#E7C45A; color:#0B3245;">Reply →</button>
+            <button class="btn btn--ghost-dark">Read full note</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Upcoming</h3>
+          <div class="program"><div class="dot" style="background:#167A9A;"></div><div class="t"><div class="nm">EndoPAT · in-office</div><div class="ps">Apr 18 · 9:30a · 45 min · fasting</div></div><div class="st" style="background:#E4F1EF; color:#1F6961;">Confirmed</div></div>
+          <div class="program"><div class="dot" style="background:#79C2D6;"></div><div class="t"><div class="nm">Telehealth · Dr. Lin</div><div class="ps">Apr 22 · 2:00p · 30 min</div></div><div class="st" style="background:#E4F1EF; color:#1F6961;">Confirmed</div></div>
+          <div class="program"><div class="dot" style="background:#E7C45A;"></div><div class="t"><div class="nm">Nutrition module · Week 6 (BHW Medical)</div><div class="ps">May 4 · 10:00a · 20 min</div></div><div class="st" style="background:#FAEEDD; color:#8C5A3C;">Tentative</div></div>
+        </div>
+
+        <div class="panel">
+          <h3>Symptom tracker</h3>
+          <p class="eyebrow" style="margin:6px 0 18px;">Last 28 days</p>
+          <div style="display:grid; grid-template-columns:repeat(28,1fr); gap:3px;">
+            <!-- 28 days, mostly green, fewer reds toward the end -->
+            <span style="height:36px; background:#79C2D6; border-radius:3px;"></span>
+            <span style="height:36px; background:#167A9A; border-radius:3px;"></span>
+            <span style="height:36px; background:#0B5D73; border-radius:3px;"></span>
+            <span style="height:36px; background:#79C2D6; border-radius:3px;"></span>
+            <span style="height:36px; background:#0B5D73; border-radius:3px;"></span>
+            <span style="height:36px; background:#79C2D6; border-radius:3px;"></span>
+            <span style="height:36px; background:#79C2D6; border-radius:3px;"></span>
+            <span style="height:36px; background:#79C2D6; border-radius:3px;"></span>
+            <span style="height:36px; background:#0B5D73; border-radius:3px;"></span>
+            <span style="height:36px; background:#79C2D6; border-radius:3px;"></span>
+            <span style="height:36px; background:#79C2D6; border-radius:3px;"></span>
+            <span style="height:36px; background:#D7ECF4; border-radius:3px;"></span>
+            <span style="height:36px; background:#D7ECF4; border-radius:3px;"></span>
+            <span style="height:36px; background:#79C2D6; border-radius:3px;"></span>
+            <span style="height:36px; background:#79C2D6; border-radius:3px;"></span>
+            <span style="height:36px; background:#D7ECF4; border-radius:3px;"></span>
+            <span style="height:36px; background:#D7ECF4; border-radius:3px;"></span>
+            <span style="height:36px; background:#79C2D6; border-radius:3px;"></span>
+            <span style="height:36px; background:#D7ECF4; border-radius:3px;"></span>
+            <span style="height:36px; background:#D7ECF4; border-radius:3px;"></span>
+            <span style="height:36px; background:#D7ECF4; border-radius:3px;"></span>
+            <span style="height:36px; background:#D7ECF4; border-radius:3px;"></span>
+            <span style="height:36px; background:#D7ECF4; border-radius:3px;"></span>
+            <span style="height:36px; background:#D7ECF4; border-radius:3px;"></span>
+            <span style="height:36px; background:#79C2D6; border-radius:3px;"></span>
+            <span style="height:36px; background:#D7ECF4; border-radius:3px;"></span>
+            <span style="height:36px; background:#D7ECF4; border-radius:3px;"></span>
+            <span style="height:36px; background:#D7ECF4; border-radius:3px;"></span>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-top:10px; font-size:10.5px; letter-spacing:0.14em; text-transform:uppercase; color:var(--fg-muted); font-weight:600;"><span>4 wk ago</span><span>Today</span></div>
+          <div style="display:flex; gap:14px; margin-top:14px; font-size:11.5px; color:#3A6477;">
+            <span><span style="display:inline-block; width:9px; height:9px; background:#0B5D73; border-radius:2px; margin-right:4px;"></span>Severe</span>
+            <span><span style="display:inline-block; width:9px; height:9px; background:#79C2D6; border-radius:2px; margin-right:4px;"></span>Mild</span>
+            <span><span style="display:inline-block; width:9px; height:9px; background:#D7ECF4; border-radius:2px; margin-right:4px;"></span>None</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="bhw-footer">
+  <div class="container">
+    <div class="bhw-footer__top">
+      <div class="bhw-footer__brand">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <img src="assets/logo-geode.png" alt="" style="width:34px; filter:invert(0.95);">
+          <div class="bhw-header__wm"><span style="color:#fff;">Flow</span><span style="color:rgba(255,255,255,0.7);">at BHW Medical</span></div>
+        </div>
+        <p>Microvascular and autonomic care. Operated inside BHW Medical.</p>
+      </div>
+      <div class="bhw-footer__groups">
+        <div><h5>Care</h5><ul><li><a href="#">Protocol</a></li><li><a href="#">Testing menu</a></li><li><a href="#">Outcomes</a></li></ul></div>
+        <div><h5>Patients</h5><ul><li><a href="#">Program portal</a></li><li><a href="#">Records</a></li><li><a href="#">Insurance</a></li></ul></div>
+        <div><h5>Refer</h5><ul><li><a href="#">For physicians</a></li><li><a href="#">For patients</a></li></ul></div>
+        <div><h5>Family</h5><ul><li><a href="index.html">All brands</a></li><li><a href="bhw-medical.html">BHW Medical</a></li></ul></div>
+      </div>
+    </div>
+    <div class="bhw-footer__bottom"><div>© 2026 Flow · A BHW Medical program</div><div>Licensed in Maryland</div></div>
+  </div>
+</footer>
+
+<script>
+document.querySelectorAll('[data-pane-btn]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('[data-pane-btn]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const key = btn.getAttribute('data-pane-btn');
+    document.querySelectorAll('[data-pane]').forEach(p=>p.classList.toggle('active', p.getAttribute('data-pane')===key));
+    document.getElementById('audLabel').textContent = key==='potential'?'For new patients':'Active program';
+    window.scrollTo({top:0, behavior:'smooth'});
+  });
+});
+</script>
+</body>
+</html>

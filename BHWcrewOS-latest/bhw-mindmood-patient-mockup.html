@@ -1,0 +1,1069 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mind & Mood Recovery — Your Pathway (Patient Page)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+/* ============================================================
+   BHW family — shared tokens + cross-brand patterns
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Lora:ital,wght@0,400;0,500;1,400&family=Caveat:wght@500;600&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  /* ---- BHW parent (mineral / geode) ---- */
+  --bhw-deep-obsidian:#0F141A; --bhw-ink-navy:#162433; --bhw-charcoal:#2A3038;
+  --bhw-mineral-taupe:#6B665E; --bhw-sea-glass:#B1C7BD; --bhw-deep-teal-vein:#266D7A;
+  --bhw-opal-mist:#DCE3EA; --bhw-lavender-opal:#92889B; --bhw-rose-opal:#C9A0A0;
+  --bhw-pale-gold-light:#E8C98A; --bhw-bronze-clay:#8C5A3C; --bhw-pyrite-gold:#C4A038;
+  --bhw-limestone:#EDE5D8; --bhw-warm-ivory:#F7F3EA;
+
+  /* default semantic */
+  --bg:var(--bhw-warm-ivory); --bg-warm:var(--bhw-limestone); --bg-muted:var(--bhw-opal-mist);
+  --surface-dark:var(--bhw-ink-navy); --surface-deepest:var(--bhw-deep-obsidian);
+  --fg:var(--bhw-ink-navy); --fg-strong:var(--bhw-deep-obsidian); --fg-muted:var(--bhw-mineral-taupe);
+  --fg-on-dark:var(--bhw-warm-ivory); --fg-on-dark-muted:rgba(247,243,234,0.65);
+  --accent:var(--bhw-bronze-clay); --accent-gold:var(--bhw-pyrite-gold);
+  --accent-soft:var(--bhw-sea-glass); --accent-deep:var(--bhw-deep-teal-vein);
+  --border:rgba(22,36,51,0.12); --border-on-dark:rgba(247,243,234,0.16);
+
+  --font-sans:'Montserrat',ui-sans-serif,system-ui,sans-serif;
+  --font-serif:'Playfair Display',Georgia,serif;
+  --font-lora:'Lora',Georgia,serif;
+  --font-script:'Caveat',cursive;
+
+  --radius-md:8px; --radius-lg:14px; --radius-xl:22px; --radius-pill:999px;
+  --shadow-sm:0 2px 6px rgba(15,20,26,0.08);
+  --shadow-md:0 8px 20px -8px rgba(15,20,26,0.18);
+  --shadow-lg:0 20px 40px -16px rgba(15,20,26,0.28);
+  --ease-out:cubic-bezier(0.16,1,0.3,1);
+}
+
+/* ---- Per-brand palette overrides (apply via .brand-flow etc on <body>) ---- */
+.brand-flow{
+  --brand-deep:#083547; --brand-mid:#0B5D73; --brand-blue:#167A9A; --brand-light:#79C2D6;
+  --brand-pale:#D7ECF4; --brand-gold:#E7C45A; --brand-cream:#FAF2DF;
+  --bg:#FAF2DF; --bg-warm:#D7ECF4; --fg:#083547; --fg-strong:#083547;
+  --accent:#0B5D73; --accent-soft:#79C2D6; --accent-gold:#E7C45A;
+}
+.brand-charmed{
+  --brand-deep:#0B1228; --brand-reef:#114766; --brand-teal:#2CA7A6; --brand-gold:#F2B134;
+  --brand-lavender:#B7A4F7; --brand-sand:#E9E2D6;
+  --bg:#FAF7F2; --bg-warm:#E9E2D6; --fg:#0B1228; --fg-strong:#0B1228;
+  --accent:#2CA7A6; --accent-soft:#B7A4F7; --accent-gold:#F2B134;
+}
+.brand-mindmood{
+  --brand-plum:#C3755D; --brand-mauve:#A98AA9; --brand-lavender:#C9B3CF;
+  --brand-peach:#E8B39D; --brand-apricot:#F3C291; --brand-gold:#E7C95B; --brand-blue:#8CA3B3;
+  --bg:#F7F1E8; --bg-warm:#EFE3D8; --fg:#C3755D; --fg-strong:#4F443C;
+  --accent:#C3755D; --accent-soft:#C9B3CF; --accent-gold:#E7C95B;
+  --font-display:var(--font-serif);
+}
+.brand-foundation{
+  --brand-opal:#C9D9DC; --brand-seaglass:#B1C7BD; --brand-ocean:#266D7A;
+  --brand-opal:#9FE3C1; --brand-seaglass:#5BC3B4; --brand-ocean:#2B6F7B;
+  --brand-sky:#7DA8D6; --brand-violet:#8A80C7; --brand-gold:#D7B56D;
+  --brand-ink:#1F1F1F; --brand-stone:#E8E3D7; --brand-cream:#F6F2EA; --brand-sagemist:#D9E6DF;
+  --bg:#F6F2EA; --bg-warm:#E8E3D7; --fg:#1F1F1F; --fg-strong:#1F1F1F;
+  --accent:#2B6F7B; --accent-soft:#5BC3B4; --accent-gold:#D7B56D;
+  --font-display:var(--font-serif);
+}
+.brand-healthirl{
+  --brand-slate:#3D5061; --brand-blue:#5E7B8E; --brand-sage:#7F9B8A;
+  --brand-fresh:#9DBDA6; --brand-softsage:#D4E1D8; --brand-sand:#F2EDE4;
+  --bg:#F2EDE4; --bg-warm:#D4E1D8; --fg:#3D5061; --fg-strong:#2A3845;
+  --accent:#3D5061; --accent-soft:#9DBDA6; --accent-gold:#7F9B8A;
+  --font-display:var(--font-serif); --font-script:'Caveat',cursive;
+}
+.brand-beyondnormal{
+  --brand-slate:#60748A; --brand-teal:#8FB5AE; --brand-sage:#A8B89F;
+  --brand-slate:#60748A; --brand-mistyteal:#8FB5AE; --brand-mutedsage:#A8B89F;
+  --brand-lavender:#B9B4C7; --brand-sand:#D9CFAB; --brand-stone:#E6E4DF; --brand-ivory:#FAF8F4;
+  --bg:#FAF8F4; --bg-warm:#E6E4DF; --fg:#2A3847; --fg-strong:#1B2530;
+  --accent:#60748A; --accent-soft:#8FB5AE; --accent-gold:#D9CFAB;
+  --font-display:var(--font-serif);
+}
+.brand-bhwmedical{
+  --brand-labradorite:#2F3F4F; --brand-teal:#6FA7A6; --brand-sage:#A9BBA7;
+  --brand-ivory:#F7F4EE; --brand-limestone:#E6E0D5; --brand-bronze:#A66E49; --brand-gold:#D4B06A;
+  --bg:#F7F4EE; --bg-warm:#E6E0D5; --fg:#2F3F4F; --fg-strong:#1F2B38;
+  --accent:#A66E49; --accent-soft:#6FA7A6; --accent-gold:#D4B06A;
+}
+
+/* ---- Brand logo lockup (hero) ---- */
+.brand-logo-hero{display:block; max-width:340px; width:100%; height:auto; margin-bottom:22px;}
+.brand-logo-hero--sm{max-width:240px;}
+.brand-logo-hero--lg{max-width:420px;}
+
+/* ---- Base ---- */
+*,*::before,*::after{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:var(--font-sans); background:var(--bg); color:var(--fg);
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  font-size:16px; line-height:1.55;
+}
+a{color:inherit;}
+img{max-width:100%; display:block;}
+button{font-family:inherit;}
+.font-display{font-family:var(--font-display,var(--font-sans));}
+.font-serif{font-family:var(--font-serif);}
+.font-script{font-family:var(--font-script);}
+
+/* ---- Typography helpers ---- */
+.eyebrow{
+  font-size:11px; font-weight:600; letter-spacing:0.2em; text-transform:uppercase;
+  color:var(--fg-muted); margin:0;
+}
+.eyebrow--accent{color:var(--accent);}
+.tagline{
+  font-size:12px; font-weight:500; letter-spacing:0.22em; text-transform:uppercase;
+  color:var(--accent);
+}
+.gold-rule{display:inline-block; width:48px; height:1px; background:var(--accent-gold,var(--accent)); vertical-align:middle;}
+.gold-rule--v{display:inline-block; width:1px; height:100%; background:var(--accent-gold,var(--accent));}
+
+h1,h2,h3,h4,h5{margin:0; color:var(--fg-strong); text-wrap:balance;}
+.h-display{font-family:var(--font-display,var(--font-sans)); font-weight:300; letter-spacing:-0.025em; line-height:1.04; font-size:clamp(48px,6vw,84px);}
+.h-section{font-family:var(--font-display,var(--font-sans)); font-weight:300; letter-spacing:-0.02em; line-height:1.1; font-size:clamp(32px,4vw,52px);}
+.h-card{font-weight:500; font-size:22px; line-height:1.25; letter-spacing:-0.01em;}
+.lede{font-size:19px; font-weight:300; line-height:1.7; color:var(--fg);}
+
+/* ---- Layout helpers ---- */
+.container{max-width:1280px; margin:0 auto; padding:0 48px;}
+.container-narrow{max-width:960px; margin:0 auto; padding:0 48px;}
+.section{padding:96px 0;}
+.section-tight{padding:64px 0;}
+.grid{display:grid; gap:24px;}
+
+/* ---- Buttons ---- */
+.btn{
+  display:inline-flex; align-items:center; gap:10px;
+  font-family:var(--font-sans); font-weight:500; font-size:13px;
+  letter-spacing:0.05em; padding:14px 26px; border-radius:999px;
+  border:1px solid transparent; cursor:pointer; text-decoration:none;
+  transition:all 220ms var(--ease-out); white-space:nowrap;
+}
+.btn--primary{background:var(--fg-strong); color:var(--bg);}
+.btn--primary:hover{background:#000; transform:translateY(-1px);}
+.btn--accent{background:var(--accent); color:#fff;}
+.btn--accent:hover{filter:brightness(0.92);}
+.btn--ghost{background:transparent; color:var(--fg); border-color:rgba(22,36,51,0.24);}
+.btn--ghost:hover{border-color:var(--accent); color:var(--accent);}
+.btn--ghost-dark{background:transparent; color:var(--fg-on-dark); border-color:rgba(247,243,234,0.32);}
+.btn--ghost-dark:hover{border-color:var(--fg-on-dark); }
+.btn--text{padding:6px 0; border-radius:0; border-bottom:1px solid var(--accent); background:transparent; color:var(--fg);}
+
+/* ---- Cards ---- */
+.card{
+  background:#F4EFE5; border:1px solid var(--border); border-radius:var(--radius-lg);
+  padding:32px; box-shadow:var(--shadow-sm);
+  transition:all 220ms var(--ease-out);
+}
+.card:hover{border-color:rgba(140,90,60,0.5); box-shadow:var(--shadow-md);}
+.card-ivory{background:var(--bg);}
+.card-dark{background:var(--surface-dark); color:var(--fg-on-dark); border:1px solid var(--border-on-dark);}
+
+/* ---- Form controls ---- */
+.field{display:flex; flex-direction:column; gap:6px;}
+.field label{font-size:10px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:var(--fg-muted);}
+.field input,.field select,.field textarea{
+  font-family:var(--font-sans); font-size:14px; padding:12px 14px;
+  background:var(--bg); border:1px solid var(--border); border-radius:8px;
+  color:var(--fg); outline:none; width:100%;
+}
+.field input:focus,.field select:focus,.field textarea:focus{
+  border-color:var(--accent); box-shadow:0 0 0 3px rgba(140,90,60,0.15);
+}
+
+/* ---- Pills / badges ---- */
+.pill{display:inline-flex; align-items:center; gap:8px; padding:6px 12px;
+  border-radius:999px; font-size:11px; font-weight:600; letter-spacing:0.16em;
+  text-transform:uppercase;}
+.pill-dot{width:6px; height:6px; border-radius:999px; background:var(--accent-soft);}
+
+/* ---- Shared header / footer ---- */
+.bhw-header{
+  position:sticky; top:0; z-index:50; background:var(--bg-warm);
+  border-bottom:1px solid var(--border);
+}
+.bhw-header__inner{
+  max-width:1280px; margin:0 auto; padding:14px 48px;
+  display:flex; align-items:center; justify-content:space-between; gap:24px;
+}
+.bhw-header__lockup{display:flex; align-items:center; gap:12px; text-decoration:none; color:var(--fg);}
+.bhw-header__mark{width:32px; height:auto;}
+.bhw-header__wm{display:flex; flex-direction:column; gap:2px; line-height:1;}
+.bhw-header__wm span:first-child{font-size:18px; font-weight:300; letter-spacing:0.04em; color:var(--fg-strong);}
+.bhw-header__wm span:last-child{font-size:8.5px; font-weight:600; letter-spacing:0.22em; text-transform:uppercase; color:var(--fg-muted);}
+.bhw-header__brand-name{display:inline-flex; align-items:center; gap:10px; font-size:12px; font-weight:500; letter-spacing:0.18em; text-transform:uppercase; padding-left:18px; margin-left:18px; border-left:1px solid var(--border); color:var(--accent);}
+.bhw-header__brand-name::before{content:""; display:inline-block; width:22px; height:26px; background:url(assets/logo-geode.png) center/contain no-repeat; flex-shrink:0;}
+.hero-mark{display:inline-block; width:64px; height:auto; margin-bottom:18px;}
+.hero-brand-lockup{display:flex; align-items:center; gap:14px; margin-bottom:18px;}
+.hero-brand-lockup img{width:48px; height:auto;}
+.hero-brand-lockup .name{font-family:var(--font-serif); font-style:italic; font-weight:500; font-size:22px; color:var(--fg-strong); letter-spacing:-0.01em;}
+.bhw-header__nav{display:flex; gap:28px; align-items:center;}
+.bhw-header__nav a{font-size:12px; font-weight:500; letter-spacing:0.06em; text-decoration:none; color:var(--fg); padding:6px 0; border-bottom:1px solid transparent; transition:all 200ms;}
+.bhw-header__nav a:hover,.bhw-header__nav a.active{color:var(--accent); border-color:var(--accent);}
+
+.bhw-footer{background:var(--bhw-deep-obsidian); color:var(--bhw-warm-ivory); padding:72px 0 28px;}
+.bhw-footer .container{max-width:1280px;}
+.bhw-footer__top{display:grid; grid-template-columns:1.3fr 3fr; gap:64px; padding-bottom:48px; border-bottom:1px solid rgba(230,223,210,0.10);}
+.bhw-footer__brand{display:flex; flex-direction:column; gap:16px;}
+.bhw-footer__brand .tagline{color:var(--bhw-pale-gold-light);}
+.bhw-footer__brand p{font-size:13px; color:rgba(230,223,210,0.7); margin:8px 0 0; max-width:340px; line-height:1.7;}
+.bhw-footer__groups{display:grid; grid-template-columns:repeat(4,1fr); gap:24px;}
+.bhw-footer__groups h5{font-size:10px; font-weight:600; letter-spacing:0.2em; text-transform:uppercase; color:rgba(230,223,210,0.55); margin:0 0 16px; color:#fff;}
+.bhw-footer__groups ul{list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:9px;}
+.bhw-footer__groups a{font-size:12.5px; color:var(--bhw-warm-ivory); opacity:0.82; text-decoration:none;}
+.bhw-footer__groups a:hover{color:var(--bhw-bronze-clay); opacity:1;}
+.bhw-footer__bottom{display:flex; justify-content:space-between; align-items:center; gap:24px; margin-top:24px; font-size:11px; color:rgba(230,223,210,0.45); letter-spacing:0.06em;}
+
+/* ---- Geode network — the cross-brand connective motif ---- */
+.geode-network{position:absolute; inset:0; pointer-events:none; opacity:0.5;}
+.geode-network circle{fill:var(--accent-soft);}
+.geode-network line{stroke:var(--accent-soft); stroke-width:0.6; opacity:0.5;}
+
+/* ---- Common section header ---- */
+.section-head{display:flex; gap:14px; align-items:center; margin-bottom:28px;}
+.section-head .num{font-size:11px; font-weight:600; letter-spacing:0.2em; color:var(--accent);}
+
+/* ---- Tab switcher (audience pages) ---- */
+.audience-tabs{
+  display:inline-flex; padding:5px; background:rgba(22,36,51,0.05);
+  border-radius:999px; border:1px solid var(--border); gap:4px;
+}
+.audience-tabs button{
+  background:transparent; border:0; padding:9px 22px; border-radius:999px;
+  font-family:var(--font-sans); font-size:12px; font-weight:600; letter-spacing:0.12em;
+  text-transform:uppercase; color:var(--fg-muted); cursor:pointer;
+  transition:all 200ms; white-space:nowrap;
+}
+.audience-tabs button.active{background:var(--fg-strong); color:var(--bg);}
+
+/* ---- Insurance strip ---- */
+.insurance-strip{
+  display:flex; flex-wrap:wrap; align-items:center; gap:20px 36px;
+  padding:18px 24px; background:var(--bg-warm); border:1px solid var(--border);
+  border-radius:12px;
+}
+.insurance-strip .ix-label{font-size:10px; font-weight:600; letter-spacing:0.2em; text-transform:uppercase; color:var(--fg-muted);}
+.insurance-strip .ix-item{font-size:13px; font-weight:500; color:var(--fg);}
+
+/* ---- Audience hero split ---- */
+.audience-hero{display:grid; grid-template-columns:1.1fr 1fr; gap:64px; align-items:center;}
+@media (max-width:900px){
+  .audience-hero{grid-template-columns:1fr;}
+  .bhw-footer__top{grid-template-columns:1fr;}
+  .bhw-footer__groups{grid-template-columns:repeat(2,1fr);}
+  .container,.container-narrow{padding:0 24px;}
+  .bhw-header__nav{display:none;}
+}
+
+/* ==========================================================================
+   BHW Integrative Wellness — Design Tokens
+   "Depth Restores Clarity."
+   ========================================================================== */
+
+/* Webfont — Montserrat (the brand's primary). Loaded from Google Fonts. */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  /* --------------------------------------------------------------------
+     COLOR — Mineral Palette
+     Dark, grounded, geode-inspired. Warm bronze + cool sea-glass accents
+     against neutral limestone & opal mist surfaces.
+     -------------------------------------------------------------------- */
+
+  /* Core palette — Opal mineral.
+     The geode has FIVE colors of light inside the dark stone: sea-glass,
+     deep teal vein, lavender, rose, and pale gold. Plus two metals
+     (bronze, pyrite) and two warm backgrounds (limestone, ivory). */
+
+  /* Darks */
+  --bhw-deep-obsidian:  #0F141A;  /* Near-black, the deepest tone in the geode    */
+  --bhw-ink-navy:       #162433;  /* Primary brand blue — logos / headlines       */
+  --bhw-charcoal:       #2A3038;  /* Secondary dark surface                       */
+  --bhw-mineral-taupe:  #6B665E;  /* Warm grey — quiet text, dividers            */
+
+  /* Opal lights (the "fire" inside the stone) */
+  --bhw-sea-glass:        #B1C7BD;  /* Highlights, icons, buttons, "clarity" moments */
+  --bhw-deep-teal-vein:   #266D7A;  /* Supporting brand accent, hover, section markers */
+  --bhw-opal-mist:        #DCE3EA;  /* Light opal background, cards, subtle contrast */
+  --bhw-lavender-opal:    #92889B;  /* Iridescent accents, gradients, secondary detail (sparingly) */
+  --bhw-rose-opal:        #C9A0A0;  /* Warmth inside gradients (very sparingly)       */
+  --bhw-pale-gold-light:  #E8C98A;  /* "Light inside the opal" — small dividers, premium accent lines */
+
+  /* Metallic / grounding accents */
+  --bhw-bronze-clay:    #8C5A3C;  /* Warmth, CTAs, print, bridge to mineral palette */
+  --bhw-pyrite-gold:    #C4A038;  /* Logo outline, fine lines, dividers, premium emphasis */
+
+  /* Backgrounds */
+  --bhw-limestone:      #EDE5D8;  /* Main warm background                          */
+  --bhw-warm-ivory:     #F7F3EA;  /* Website body background, forms, cards, patient-facing */
+
+  /* Tonal extensions (derived for UI states) */
+  --bhw-limestone-50:   #F7F3EA;  /* alias of warm-ivory */
+  --bhw-limestone-200:  #DBD0BA;  /* hover / borders on warm surfaces */
+  --bhw-ink-navy-80:    #2C3D50;
+  --bhw-ink-navy-60:    #5C6E80;
+  --bhw-bronze-clay-12: rgba(140, 90, 60, 0.12);
+  --bhw-sea-glass-12:   rgba(95, 169, 166, 0.12);
+  --bhw-deep-teal-12:   rgba(38, 109, 122, 0.12);
+
+  /* Semantic — Light theme.
+     Default body uses Warm Ivory (patient-facing); marketing surfaces
+     and section breaks use Limestone for the warmer, more editorial feel. */
+  --bg:           var(--bhw-warm-ivory);     /* website body, forms, cards */
+  --bg-warm:      var(--bhw-limestone);      /* marketing / section breaks */
+  --bg-elev:      var(--bhw-warm-ivory);     /* cards, raised surfaces */
+  --bg-muted:     var(--bhw-opal-mist);      /* opal alt sections, side panels */
+  --surface-dark: var(--bhw-ink-navy);       /* inverse hero panels */
+
+  --fg:          var(--bhw-ink-navy);      /* primary text on light  */
+  --fg-strong:   var(--bhw-deep-obsidian); /* display headlines      */
+  --fg-muted:    var(--bhw-mineral-taupe); /* secondary text         */
+  --fg-on-dark:  var(--bhw-warm-ivory);    /* primary text on dark   */
+  --fg-on-dark-muted: rgba(247, 243, 234, 0.65);
+
+  --accent:           var(--bhw-bronze-clay);     /* CTAs, warmth, print */
+  --accent-gold:      var(--bhw-pyrite-gold);     /* logo outline, dividers, premium emphasis */
+  --accent-soft:      var(--bhw-sea-glass);       /* icons, highlights, "clarity" moments */
+  --accent-deep:      var(--bhw-deep-teal-vein);  /* hover, section markers, program connections */
+  --accent-iridescent: var(--bhw-lavender-opal);  /* iridescent accents — sparingly */
+  --accent-warm:      var(--bhw-rose-opal);       /* warmth inside gradients — very sparingly */
+  --accent-gold-light: var(--bhw-pale-gold-light); /* small premium dividers */
+
+  --border:      rgba(22, 36, 51, 0.12);   /* subtle hairline on light */
+  --border-strong: rgba(22, 36, 51, 0.24);
+  --border-on-dark: rgba(247, 243, 234, 0.16);
+  --divider-gold: var(--bhw-pyrite-gold);  /* the brand's signature gold rule (logo-grade) */
+  --divider-bronze: var(--bhw-bronze-clay);
+
+  --focus-ring:  rgba(95, 169, 166, 0.55);
+
+  /* --------------------------------------------------------------------
+     RADIUS — minimal, never playful. Refined surfaces.
+     -------------------------------------------------------------------- */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;   /* card corners — subtle */
+  --radius-xl: 22px;   /* hero panels */
+  --radius-pill: 999px;
+
+  /* --------------------------------------------------------------------
+     SHADOW — quiet depth. Cool-shifted, not generic black.
+     -------------------------------------------------------------------- */
+  --shadow-xs: 0 1px 2px rgba(15, 20, 26, 0.06);
+  --shadow-sm: 0 2px 6px rgba(15, 20, 26, 0.08);
+  --shadow-md: 0 8px 20px -8px rgba(15, 20, 26, 0.18);
+  --shadow-lg: 0 20px 40px -16px rgba(15, 20, 26, 0.28);
+  --shadow-inset-hairline: inset 0 0 0 1px var(--border);
+
+  /* --------------------------------------------------------------------
+     SPACING — 4px base. Generous in hero / editorial blocks.
+     -------------------------------------------------------------------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+  --space-10: 128px;
+
+  /* --------------------------------------------------------------------
+     TYPE — Montserrat throughout. Wide-tracked uppercase labels are
+     a brand signature ("DEPTH RESTORES CLARITY.").
+     -------------------------------------------------------------------- */
+  --font-sans: 'Montserrat', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Montserrat', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
+
+  --weight-light: 300;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* Type scale (rem-equivalent in px for clarity) */
+  --fs-display: 88px;   /* hero — see "BHW" wordmark feel */
+  --fs-h1: 56px;
+  --fs-h2: 40px;
+  --fs-h3: 28px;
+  --fs-h4: 22px;
+  --fs-h5: 18px;
+  --fs-body: 16px;
+  --fs-small: 14px;
+  --fs-eyebrow: 12px;   /* uppercase tracked labels */
+
+  --lh-tight: 1.05;
+  --lh-snug: 1.2;
+  --lh-normal: 1.5;
+  --lh-loose: 1.75;
+
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.08em;
+  --tracking-eyebrow: 0.18em;   /* the brand's signature wide tracking */
+
+  /* --------------------------------------------------------------------
+     MOTION
+     -------------------------------------------------------------------- */
+  --ease-standard: cubic-bezier(0.2, 0.6, 0.2, 1);
+  --ease-out:     cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 140ms;
+  --dur-base: 220ms;
+  --dur-slow: 420ms;
+}
+
+/* ==========================================================================
+   SEMANTIC ELEMENT STYLES — opt-in via class. Apply .bhw on a container to
+   inherit the brand's typographic & background defaults.
+   ========================================================================== */
+
+.bhw {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: var(--lh-normal);
+  font-weight: var(--weight-regular);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.bhw h1, .bhw .h1 {
+  font-family: var(--font-display);
+  font-size: var(--fs-h1);
+  font-weight: var(--weight-light);  /* the wordmark is light-weight */
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg-strong);
+  margin: 0 0 var(--space-5);
+}
+.bhw h2, .bhw .h2 {
+  font-family: var(--font-display);
+  font-size: var(--fs-h2);
+  font-weight: var(--weight-light);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg-strong);
+  margin: 0 0 var(--space-4);
+}
+.bhw h3, .bhw .h3 {
+  font-family: var(--font-display);
+  font-size: var(--fs-h3);
+  font-weight: var(--weight-medium);
+  line-height: var(--lh-snug);
+  color: var(--fg);
+  margin: 0 0 var(--space-3);
+}
+.bhw h4, .bhw .h4 {
+  font-size: var(--fs-h4);
+  font-weight: var(--weight-semibold);
+  line-height: var(--lh-snug);
+  color: var(--fg);
+  margin: 0 0 var(--space-2);
+}
+.bhw h5, .bhw .h5 {
+  font-size: var(--fs-h5);
+  font-weight: var(--weight-semibold);
+  line-height: var(--lh-snug);
+  color: var(--fg);
+  margin: 0 0 var(--space-2);
+}
+.bhw p {
+  margin: 0 0 var(--space-4);
+  max-width: 65ch;
+}
+.bhw .lede {
+  font-size: var(--fs-h5);
+  font-weight: var(--weight-light);
+  line-height: var(--lh-loose);
+  color: var(--fg);
+}
+.bhw .eyebrow {
+  font-size: var(--fs-eyebrow);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.bhw .tagline {
+  /* "DEPTH RESTORES CLARITY." style */
+  font-size: var(--fs-small);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.bhw .wordmark {
+  font-family: var(--font-display);
+  font-weight: var(--weight-light);
+  letter-spacing: 0.02em;
+  color: var(--fg-strong);
+  line-height: 1;
+}
+.bhw small, .bhw .small { font-size: var(--fs-small); color: var(--fg-muted); }
+.bhw code, .bhw kbd { font-family: var(--font-mono); font-size: 0.9em; }
+
+/* The brand's signature gold rule */
+.bhw .gold-rule {
+  display: block;
+  width: 1px;
+  background: var(--divider-gold);
+}
+.bhw hr.gold-rule {
+  height: 1px;
+  width: 64px;
+  background: var(--divider-gold);
+  border: 0;
+  margin: var(--space-5) 0;
+}
+
+/* Dark surface variant */
+.bhw.bhw--dark, .bhw .on-dark {
+  background: var(--surface-dark);
+  color: var(--fg-on-dark);
+}
+.bhw.bhw--dark h1, .bhw.bhw--dark h2, .bhw.bhw--dark h3,
+.bhw.bhw--dark h4, .bhw.bhw--dark h5 {
+  color: var(--fg-on-dark);
+}
+.bhw.bhw--dark .eyebrow { color: var(--fg-on-dark-muted); }
+
+</style>
+<style>
+  body{background:var(--bg);}
+  .switch-bar{position:sticky; top:62px; z-index:40; background:var(--bg); border-bottom:1px solid var(--border); padding:14px 0;}
+  .switch-bar .container{display:flex; align-items:center; justify-content:space-between; gap:18px;}
+  .switch-meta{font-size:11.5px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:var(--fg-muted);}
+  [data-pane]{display:none;} [data-pane].active{display:block;}
+
+  /* HERO — warm, editorial, soft */
+  .mm-hero{padding:96px 0 88px; position:relative; overflow:hidden;}
+  .mm-hero::before{content:""; position:absolute; right:-120px; top:-60px; width:560px; height:560px;
+    background:radial-gradient(circle,#EFBC75 0%, transparent 65%); opacity:0.45; pointer-events:none;}
+  .mm-hero::after{content:""; position:absolute; left:-80px; bottom:-120px; width:420px; height:420px;
+    background:radial-gradient(circle,#B1C7BD 0%, transparent 65%); opacity:0.32; pointer-events:none;}
+  .mm-hero h1{font-family:var(--font-serif); font-weight:400; letter-spacing:-0.02em; line-height:1.02; font-size:clamp(54px,7vw,108px); color:#4F443C;}
+  .mm-hero h1 em{font-style:italic; font-weight:400; color:#AF6763;}
+  .mm-pill{display:inline-flex; gap:10px; align-items:center; padding:7px 14px 7px 9px; background:rgba(160,106,130,0.14); border-radius:999px; border:1px solid rgba(160,106,130,0.32); margin-bottom:22px;}
+  .mm-pill span:first-child{width:7px; height:7px; border-radius:999px; background:#AF6763;}
+  .mm-pill span:last-child{font-size:11px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:#C3755D;}
+
+  /* The promise — pillars */
+  .pillars{padding:96px 0; background:var(--bg-warm);}
+  .pillar-row{display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-top:42px;}
+  @media(max-width:900px){.pillar-row{grid-template-columns:1fr;}}
+  .pillar{background:#fff; border-radius:16px; padding:32px; border:1px solid rgba(195,117,93,0.10);}
+  .pillar .n{font-family:var(--font-serif); font-style:italic; font-size:54px; color:#D69C60; line-height:1; font-weight:500;}
+  .pillar h3{font-family:var(--font-serif); font-size:24px; font-weight:500; color:#4F443C; margin:8px 0 12px;}
+  .pillar p{font-size:13.5px; line-height:1.65; color:var(--fg);}
+
+  /* What we treat */
+  .treat{padding:96px 0;}
+  .treat-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-top:36px;}
+  @media(max-width:900px){.treat-grid{grid-template-columns:1fr;}}
+  .treat-card{display:flex; gap:18px; padding:24px; background:#fff; border-radius:14px; border-left:3px solid #AF6763;}
+  .treat-card .ic{width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg,#AF6763,#EFBC75); display:grid; place-items:center; color:#fff; font-family:var(--font-serif); font-style:italic; font-weight:600; flex-shrink:0;}
+  .treat-card h4{font-size:16px; font-weight:600; color:#4F443C;}
+  .treat-card p{margin:6px 0 0; font-size:13px; line-height:1.6; color:var(--fg);}
+
+  /* Recovery Readiness Assessment */
+  .rra{padding:96px 0; background:linear-gradient(180deg,#C3755D,#4F443C); color:#fff; position:relative; overflow:hidden;}
+  .rra::before{content:""; position:absolute; right:-100px; top:50%; transform:translateY(-50%); width:600px; height:600px; background:radial-gradient(circle,#EFBC75 0%, transparent 60%); opacity:0.18;}
+  .rra h2{color:#fff;}
+  .rra-wrap{display:grid; grid-template-columns:1fr 1.15fr; gap:64px; margin-top:36px; align-items:start; position:relative;}
+  @media(max-width:900px){.rra-wrap{grid-template-columns:1fr;}}
+  .rra-q{background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:18px; padding:36px;}
+  .rra-q h3{color:#fff; font-family:var(--font-serif); font-style:italic; font-size:26px; font-weight:500; line-height:1.3;}
+  .rra-q .q{margin-top:24px;}
+  .rra-q .qlabel{font-size:11.5px; letter-spacing:0.18em; text-transform:uppercase; color:#D69C60; font-weight:700;}
+  .rra-q .qtext{font-family:var(--font-serif); font-size:20px; font-weight:500; margin-top:8px; line-height:1.4;}
+  .rra-q .choices{display:flex; flex-direction:column; gap:8px; margin-top:18px;}
+  .rra-q .choices label{display:flex; gap:12px; align-items:center; padding:14px 18px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); border-radius:10px; cursor:pointer; font-size:13.5px; transition:all 180ms;}
+  .rra-q .choices label:hover{background:rgba(255,255,255,0.09); border-color:#D69C60;}
+  .rra-q .choices input{accent-color:#D69C60;}
+  .rra-q .nav{display:flex; justify-content:space-between; align-items:center; margin-top:22px;}
+  .rra-q .nav .step{font-size:11.5px; letter-spacing:0.18em; text-transform:uppercase; color:rgba(255,255,255,0.6); font-weight:600;}
+  .rra-bar{height:4px; background:rgba(255,255,255,0.12); border-radius:999px; margin-top:24px; position:relative;}
+  .rra-bar .fill{height:100%; width:33%; background:linear-gradient(90deg,#EFBC75,#D69C60); border-radius:999px; transition:width 300ms;}
+
+  /* SCHEDULE */
+  .sched{padding:96px 0; background:var(--bg-warm);}
+  .sched-card{display:grid; grid-template-columns:1.05fr 1fr; background:#fff; border-radius:18px; overflow:hidden; box-shadow:var(--shadow-md);}
+  @media(max-width:900px){.sched-card{grid-template-columns:1fr;}}
+  .sched-card .left{padding:48px; background:linear-gradient(155deg,#C3755D,#AF6763); color:#fff;}
+  .sched-card .right{padding:40px;}
+  .form-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  .form-grid .col-2{grid-column:1/-1;}
+
+  /* PORTAL */
+  .h-banner{padding:32px 0; background:var(--bg-warm); border-bottom:1px solid var(--border);}
+  .h-banner .container{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:18px;}
+  .portal{display:grid; grid-template-columns:1.3fr 1fr; gap:18px; margin:36px 0 80px;}
+  @media(max-width:1000px){.portal{grid-template-columns:1fr;}}
+  .panel{background:#fff; border:1px solid var(--border); border-radius:14px; padding:24px;}
+  .panel h3{font-size:16px; font-weight:600; color:#4F443C;}
+
+  .streak{background:linear-gradient(175deg,
+  #E3DCE8 0%, #F7E7E2 20%, #FCF1DE 36%, #F6D9A8 50%,
+  #EBC0A4 62%, #E2B3AB 72%, #D6E3DC 84%, #CBE4E5 100%);
+  color:#5C4B3F; border-radius:16px; padding:28px;}
+  .streak .h{font-size:11.5px; letter-spacing:0.18em; text-transform:uppercase; color:#C3755D;}
+  .streak .n{font-family:var(--font-serif); font-style:italic; font-size:72px; font-weight:500; line-height:1; color:#AF6763; margin:6px 0;}
+  .streak .l{font-size:13px; color:#6E5B4D;}
+  .days-row{display:grid; grid-template-columns:repeat(14,1fr); gap:4px; margin-top:22px;}
+  .day{aspect-ratio:1/1; border-radius:6px; background:rgba(255,255,255,0.55); display:grid; place-items:center; font-size:10px; color:rgba(255,255,255,0.5);}
+  .day.ok{background:#D69C60; color:#4F443C;}
+  .day.miss{background:rgba(255,255,255,0.7); color:#C3755D;}
+
+  .mood-row{display:flex; gap:8px; padding:14px 0; align-items:center; border-bottom:1px solid var(--border);}
+  .mood-row:last-child{border-bottom:0;}
+  .mood-row .d{font-size:11.5px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:var(--fg-muted); width:90px;}
+  .mood-row .t{flex:1; font-size:13.5px; color:#4F443C;}
+  .mood-row .em{font-size:22px;}
+  .mood-row .sc{font-size:13px; font-weight:700; color:#AF6763; width:36px; text-align:right;}
+
+  .care-team{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .person{background:var(--bg-warm); padding:14px; border-radius:10px; display:flex; gap:10px; align-items:center;}
+  .person .av{width:36px; height:36px; border-radius:999px; background:linear-gradient(135deg,#AF6763,#EFBC75); color:#fff; display:grid; place-items:center; font-weight:600; font-size:13px;}
+  .person .nm{font-size:13px; font-weight:600; color:#4F443C;}
+  .person .rl{font-size:10.5px; letter-spacing:0.14em; text-transform:uppercase; color:var(--fg-muted); font-weight:600;}
+
+</style>
+
+<style>
+[data-pane="potential"]{display:none!important}
+[data-pane="current"]{display:block!important}
+[data-pane-btn]{display:none!important}
+.bhw-header__nav{display:none!important}
+#pp-demo{position:sticky;top:0;z-index:99;background:#111;color:#eee;text-align:center;font:600 10.5px/1 Montserrat,sans-serif;letter-spacing:.16em;text-transform:uppercase;padding:7px}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+  document.querySelectorAll('[data-pane]').forEach(function(p){p.classList.toggle('active', p.getAttribute('data-pane')==='current');});
+  var b=document.createElement('div');b.id='pp-demo';b.textContent='Patient page preview \u00b7 sample data';document.body.prepend(b);
+});
+</script>
+
+<style>
+/* ☀️ cheerful/bright pass — sunrise-forward overrides */
+body{background:
+  linear-gradient(180deg, rgba(240,217,210,.55) 0%, rgba(249,230,206,.45) 220px, rgba(255,253,249,0) 480px),
+  #FFFCF7 !important}
+h1,h2,h3,h4{color:#C3755D !important}           /* headings: warm terracotta */
+h1 em, h2 em{color:#D69C60 !important}          /* italic accents: amber sun */
+p, li, td{color:#5C4B3F}                        /* body: lighter warm brown */
+.panel, [class*="card"], [class*="strategy"]{background:#FFFEFB !important; border-color:rgba(214,156,96,.28) !important; box-shadow:0 8px 26px rgba(195,117,93,.10) !important}
+[class*="eyebrow"], [class*="pill"] span:last-child{color:#AF6763 !important}
+.bars span{background:linear-gradient(180deg,#EFBC75,#D69C60 55%,#C3755D) !important}
+button, .btn, [class*="btn"]{background:#D69C60 !important; color:#FFFDF8 !important; border-color:#D69C60 !important}
+a{color:#C3755D}
+table th{color:#AF6763 !important; border-bottom-color:rgba(214,156,96,.45) !important}
+td{border-bottom-color:rgba(214,156,96,.18) !important}
+input[type=checkbox]{accent-color:#D69C60 !important}
+#pp-demo{background:#C3755D !important;color:#FFF6EC !important}
+</style>
+</head>
+<body class="brand-mindmood" data-screen-label="Mind &amp; Mood Recovery">
+
+<header class="bhw-header">
+  <div class="bhw-header__inner">
+    <a href="index.html" class="bhw-header__lockup">
+      <img class="bhw-header__mark" src="assets/logo-geode.png" alt="">
+      <div class="bhw-header__wm"><span>BHW</span><span>Integrative Wellness</span></div>
+      <div class="bhw-header__brand-name" style="color:#AF6763;">Mind &amp; Mood Recovery</div>
+    </a>
+    <nav class="bhw-header__nav">
+      <a href="#promise">Our promise</a>
+      <a href="#what">What we treat</a>
+      <a href="#rra">Readiness check</a>
+      <a href="#schedule">Schedule</a>
+      <a href="index.html">← Family</a>
+    </nav>
+  </div>
+</header>
+
+<div class="switch-bar">
+  <div class="container">
+    <div style="display:flex; gap:14px; align-items:center;">
+      <span class="switch-meta">Mind &amp; Mood Recovery</span>
+      <span style="color:rgba(0,0,0,0.2); font-size:18px;">/</span>
+      <span class="switch-meta" id="audLabel" style="color:#AF6763;">For new patients</span>
+    </div>
+    <div class="audience-tabs">
+      <button class="active" data-pane-btn="potential">Considering care</button>
+      <button data-pane-btn="current">My recovery hub</button>
+    </div>
+  </div>
+</div>
+
+<!-- POTENTIAL -->
+<div data-pane="potential" class="active">
+
+  <section class="mm-hero">
+    <div class="container" style="position:relative;">
+      <div class="mm-pill"><span></span><span>04 · Behavioral · recovery · mood</span></div>
+      <img src="assets/logos/mind-mood.png" alt="Mind & Mood Recovery" class="brand-logo-hero brand-logo-hero--lg">
+        <h1>Whole-person<br>care for<br><em>lasting change.</em></h1>
+      <div style="display:grid; grid-template-columns:1.05fr 1fr; gap:64px; margin-top:36px; align-items:start;">
+        <p class="lede" style="max-width:520px; color:#4F443C;">
+          Mind &amp; Mood Recovery is the behavioral arm of BHW — for depression, anxiety, trauma, and substance use that doesn't respond to "try harder."
+          <br><br>
+          We work with the body, not against it. Sleep, nutrition, vascular, and cognitive findings are part of the case — never afterthoughts. <strong style="color:#AF6763;">Insurance accepted. Never punitive.</strong>
+        </p>
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <div style="background:#fff; padding:24px; border-radius:14px; box-shadow:var(--shadow-sm); border-left:3px solid #D69C60;">
+            <div style="font-family:var(--font-serif); font-size:19px; font-style:italic; color:#4F443C; line-height:1.45;">"They didn't ask me to choose between my labs and my story. Both mattered. Both got worked on."</div>
+            <div style="font-size:11px; letter-spacing:0.18em; text-transform:uppercase; color:#AF6763; margin-top:14px; font-weight:700;">— Recovery patient · 14 months</div>
+          </div>
+          <div style="display:flex; gap:12px; flex-wrap:wrap;">
+            <a class="btn btn--accent" href="#schedule" style="background:#AF6763;">Request a consult</a>
+            <a class="btn btn--ghost" href="#rra">Take readiness check</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- THREE PROMISES -->
+  <section class="pillars" id="promise">
+    <div class="container">
+      <div class="section-head"><span class="num" style="color:#AF6763;">02</span><span class="eyebrow">Our promise — three commitments</span></div>
+      <h2 class="h-section" style="max-width:760px;">A clinic where <em style="color:#AF6763; font-style:italic;">your physiology and your story</em> sit at the same table.</h2>
+      <div class="pillar-row">
+        <div class="pillar"><div class="n">i.</div><h3>Physiology aware</h3><p>Mood symptoms with normal MRI still have biology. We coordinate with primary care, Flow, and Nutrition findings — not in isolation from them.</p></div>
+        <div class="pillar"><div class="n">ii.</div><h3>Never punitive</h3><p>No "earning back" privileges, no shame protocols. Relapse is information, not failure. The frame is repair, not punishment.</p></div>
+        <div class="pillar"><div class="n">iii.</div><h3>Built to last</h3><p>Stabilize the acute thing, then build the structure: meaning, community, work, family — the things mood medication alone can't reach.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT WE TREAT -->
+  <section class="treat" id="what">
+    <div class="container">
+      <div class="section-head"><span class="num" style="color:#AF6763;">03</span><span class="eyebrow">What we treat</span></div>
+      <h2 class="h-section" style="max-width:680px;">For mood, trauma, and substance recovery — <em style="color:#AF6763; font-style:italic;">often all at once.</em></h2>
+      <div class="treat-grid">
+        <div class="treat-card"><div class="ic">d</div><div><h4>Treatment-resistant depression</h4><p>Patients who've cycled through SSRIs without traction. Workup includes thyroid, inflammation, methylation, sleep architecture.</p></div></div>
+        <div class="treat-card"><div class="ic">a</div><div><h4>Anxiety + autonomic dysregulation</h4><p>Co-managed with Flow when vascular and orthostatic findings show up. Body symptoms taken seriously.</p></div></div>
+        <div class="treat-card"><div class="ic">t</div><div><h4>Trauma + complex PTSD</h4><p>EMDR, somatic, IFS-informed. Pacing matters more than protocol — we don't rush stabilization.</p></div></div>
+        <div class="treat-card"><div class="ic">s</div><div><h4>Substance use · alcohol · stimulants</h4><p>Outpatient, medication-assisted when indicated, harm-reduction first. No abstinence-only gatekeeping.</p></div></div>
+        <div class="treat-card"><div class="ic">b</div><div><h4>Bipolar spectrum</h4><p>Bipolar II often miscoded as treatment-resistant depression. We screen carefully and coordinate psychiatry from day one.</p></div></div>
+        <div class="treat-card"><div class="ic">p</div><div><h4>Perinatal mood</h4><p>Postpartum depression, anxiety, intrusive thoughts. Family-system aware. Lactation-safe pharmacology.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RECOVERY READINESS -->
+  <section class="rra" id="rra">
+    <div class="container">
+      <div class="section-head"><span class="num" style="color:#D69C60;">04</span><span class="eyebrow" style="color:rgba(255,255,255,0.7);">A quiet question to start with</span></div>
+      <div class="rra-wrap">
+        <div>
+          <h2 class="h-section" style="color:#fff;">The Recovery Readiness <em style="font-style:italic; color:#D69C60;">Check.</em></h2>
+          <p style="font-size:15px; line-height:1.7; color:rgba(255,255,255,0.78); max-width:420px; margin-top:18px;">Twelve questions, evidence-informed, takes about four minutes. You get a personal reflection — not a label. Nothing is recorded unless you ask us to.</p>
+          <div style="display:flex; gap:14px; margin-top:24px;">
+            <span style="display:flex; gap:8px; align-items:center; font-size:12px; letter-spacing:0.16em; text-transform:uppercase; color:rgba(255,255,255,0.7); font-weight:600;"><span style="width:8px;height:8px;border-radius:999px;background:#D69C60;"></span>Anonymous</span>
+            <span style="display:flex; gap:8px; align-items:center; font-size:12px; letter-spacing:0.16em; text-transform:uppercase; color:rgba(255,255,255,0.7); font-weight:600;"><span style="width:8px;height:8px;border-radius:999px;background:#EFBC75;"></span>4 minutes</span>
+          </div>
+        </div>
+
+        <form class="rra-q" id="rraForm" onsubmit="event.preventDefault();">
+          <div class="step-pane" data-rra-step="1">
+            <h3>"Just a few honest questions. No labels at the end."</h3>
+            <div class="q">
+              <div class="qlabel">Question 1 of 3</div>
+              <div class="qtext">In the last two weeks, how often have you felt that things you usually enjoy don't land the way they used to?</div>
+              <div class="choices">
+                <label><input type="radio" name="q1">Not at all</label>
+                <label><input type="radio" name="q1">A few days</label>
+                <label><input type="radio" name="q1">More than half the days</label>
+                <label><input type="radio" name="q1">Nearly every day</label>
+              </div>
+            </div>
+            <div class="rra-bar"><div class="fill" style="width:33%;"></div></div>
+            <div class="nav"><span class="step">Step 1 of 3</span><button type="button" class="btn btn--accent" style="background:#D69C60; color:#4F443C;" onclick="rraStep(2)">Continue →</button></div>
+          </div>
+          <div class="step-pane" data-rra-step="2" style="display:none;">
+            <h3>"There's no wrong answer. We're listening."</h3>
+            <div class="q">
+              <div class="qlabel">Question 2 of 3</div>
+              <div class="qtext">When something feels overwhelming, do you have at least one person you'd actually reach out to?</div>
+              <div class="choices">
+                <label><input type="radio" name="q2">Yes, a few</label>
+                <label><input type="radio" name="q2">Yes, one</label>
+                <label><input type="radio" name="q2">Not really, but I'd like to</label>
+                <label><input type="radio" name="q2">No, and that feels heavy</label>
+              </div>
+            </div>
+            <div class="rra-bar"><div class="fill" style="width:66%;"></div></div>
+            <div class="nav"><button type="button" class="btn btn--ghost-dark" onclick="rraStep(1)">← Back</button><button type="button" class="btn btn--accent" style="background:#D69C60; color:#4F443C;" onclick="rraStep(3)">Continue →</button></div>
+          </div>
+          <div class="step-pane" data-rra-step="3" style="display:none;">
+            <h3>"Last one. Just where you are today."</h3>
+            <div class="q">
+              <div class="qlabel">Question 3 of 3</div>
+              <div class="qtext">If a small step toward feeling better were possible this week, what would feel most welcome?</div>
+              <div class="choices">
+                <label><input type="radio" name="q3">A conversation with a real person</label>
+                <label><input type="radio" name="q3">An evaluation, no commitment</label>
+                <label><input type="radio" name="q3">Information I can read at my own pace</label>
+                <label><input type="radio" name="q3">Just being asked is already enough today</label>
+              </div>
+            </div>
+            <div class="rra-bar"><div class="fill" style="width:100%;"></div></div>
+            <div class="nav"><button type="button" class="btn btn--ghost-dark" onclick="rraStep(2)">← Back</button><button type="button" class="btn btn--accent" style="background:#D69C60; color:#4F443C;" onclick="rraStep(4)">See reflection →</button></div>
+          </div>
+          <div class="step-pane" data-rra-step="4" style="display:none; text-align:center; padding:24px 8px;">
+            <div style="font-family:var(--font-serif); font-style:italic; font-size:32px; color:#fff; line-height:1.3; margin-bottom:14px;">Thank you for answering.</div>
+            <p style="color:rgba(255,255,255,0.78); font-size:14.5px; line-height:1.7; max-width:380px; margin:0 auto;">What you described is recognizable, common, and treatable. If you'd like, we can hold space for a 20-minute call this week — no insurance check, no commitment.</p>
+            <div style="display:flex; gap:10px; justify-content:center; margin-top:24px;">
+              <a href="#schedule" class="btn btn--accent" style="background:#D69C60; color:#4F443C;">Request a call</a>
+              <button class="btn btn--ghost-dark" type="button" onclick="rraStep(1)">Start over</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- INSURANCE -->
+  <section style="padding:48px 0;">
+    <div class="container">
+      <div class="insurance-strip">
+        <span class="ix-label">In-network</span>
+        <span class="ix-item">CareFirst BCBS</span>
+        <span class="ix-item">Aetna</span>
+        <span class="ix-item">Cigna</span>
+        <span class="ix-item">United</span>
+        <span class="ix-item">Hopkins EHP</span>
+        <span class="ix-item">Medicaid (MD)</span>
+        <span class="ix-item">Medicare</span>
+        <span class="ix-item" style="color:var(--accent);">+ Sliding scale</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCHEDULE -->
+  <section class="sched" id="schedule">
+    <div class="container-narrow">
+      <div class="sched-card">
+        <div class="left">
+          <div class="eyebrow" style="color:#D69C60;">05 · Schedule</div>
+          <h3 style="color:#fff; font-weight:300; font-size:32px; letter-spacing:-0.02em;">A confidential 20-minute call</h3>
+          <p style="color:rgba(255,255,255,0.85); font-size:14.5px; line-height:1.7; margin-top:14px;">A licensed care navigator listens, answers questions, and either books an intake or recommends another path. No pressure, no clinical recording.</p>
+          <ul style="list-style:none; padding:0; margin:24px 0; display:flex; flex-direction:column; gap:12px; font-size:13.5px;">
+            <li>◆ Confidential — call only, no chart created</li>
+            <li>◆ Insurance verified privately, before intake</li>
+            <li>◆ Same-week intake when needed</li>
+            <li>◆ 24/7 crisis resources sent regardless</li>
+          </ul>
+        </div>
+        <div class="right">
+          <form onsubmit="event.preventDefault(); this.querySelector('.sent').style.display='block'; this.querySelector('.fields').style.display='none';">
+            <div class="fields">
+              <div class="form-grid">
+                <div class="field"><label>Your name</label><input required></div>
+                <div class="field"><label>Pronouns</label><input placeholder="Optional"></div>
+                <div class="field col-2"><label>Email</label><input type="email" required></div>
+                <div class="field col-2"><label>Phone (optional)</label><input type="tel"></div>
+                <div class="field col-2"><label>What's bringing you here, in your words</label><textarea rows="4"></textarea></div>
+                <div class="field col-2"><label>Insurance</label>
+                  <select><option>CareFirst BCBS</option><option>Aetna</option><option>Cigna</option><option>United</option><option>Medicaid (MD)</option><option>Medicare</option><option>Self-pay</option><option>Prefer not to say</option></select>
+                </div>
+              </div>
+              <button class="btn btn--accent" type="submit" style="background:#AF6763; margin-top:18px; width:100%; justify-content:center;">Request a call</button>
+              <p style="font-size:11px; color:var(--fg-muted); margin-top:14px; line-height:1.6;">In crisis? Call or text 988 anytime. We'll still respond.</p>
+            </div>
+            <div class="sent" style="display:none; padding:32px 16px; text-align:center;">
+              <div style="font-family:var(--font-serif); font-size:28px; color:#4F443C; font-style:italic;">Thank you.</div>
+              <p style="color:var(--fg-muted); font-size:14px; line-height:1.7;">A care navigator will reach out within one business day. You did a brave thing today.</p>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- CURRENT — recovery hub -->
+<div data-pane="current">
+  <section class="h-banner">
+    <div class="container">
+      <div>
+        <div class="eyebrow eyebrow--accent" style="color:#AF6763;">Recovery hub</div>
+        <div style="font-family:var(--font-serif); font-style:italic; font-weight:500; font-size:30px; color:#4F443C; margin-top:4px;">Good to see you, Sam.</div>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button class="btn btn--ghost">Message Dr. Park</button>
+        <button class="btn btn--accent" style="background:#AF6763;">Today's check-in</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="container">
+    <div class="portal">
+      <!-- LEFT -->
+      <div style="display:flex; flex-direction:column; gap:18px;">
+        <div class="streak">
+          <div class="h">Steady days · this stretch</div>
+          <div class="n">86</div>
+          <div class="l">Showing up, however that looked.</div>
+          <div class="days-row">
+            <div class="day ok"></div><div class="day ok"></div><div class="day ok"></div><div class="day ok"></div>
+            <div class="day ok"></div><div class="day ok"></div><div class="day miss"></div>
+            <div class="day ok"></div><div class="day ok"></div><div class="day ok"></div>
+            <div class="day ok"></div><div class="day ok"></div><div class="day ok"></div>
+            <div class="day ok"></div>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:10.5px; letter-spacing:0.14em; text-transform:uppercase; color:#8A7565; font-weight:600;"><span>2 wks ago</span><span>Today</span></div>
+        </div>
+
+        <div class="panel">
+          <h3>Mood log · last 5 days</h3>
+          <p class="eyebrow" style="margin:6px 0 8px;">Just where you've been — no judgment.</p>
+          <div class="mood-row"><div class="d">Today</div><div class="em">🌤</div><div class="t">"Tired but okay. Walked. Made coffee."</div><div class="sc">6 / 10</div></div>
+          <div class="mood-row"><div class="d">Yesterday</div><div class="em">☁️</div><div class="t">"Hard morning. Called Mara. Better by 4p."</div><div class="sc">5 / 10</div></div>
+          <div class="mood-row"><div class="d">Sat</div><div class="em">☀️</div><div class="t">"Park with kids. Slept well."</div><div class="sc">8 / 10</div></div>
+          <div class="mood-row"><div class="d">Fri</div><div class="em">🌧</div><div class="t">"Skipped meeting. Felt small. Came back next day."</div><div class="sc">3 / 10</div></div>
+          <div class="mood-row"><div class="d">Thu</div><div class="em">🌤</div><div class="t">"Steady. Group helped."</div><div class="sc">6 / 10</div></div>
+        </div>
+
+        <div class="panel">
+          <h3>This week's structure</h3>
+          <div class="mood-row"><div class="d">Mon 7p</div><div class="em">🟣</div><div class="t">Individual · Dr. Park (telehealth)</div><div class="sc" style="color:#4F443C;">✓</div></div>
+          <div class="mood-row"><div class="d">Tue 6:30p</div><div class="em">🟠</div><div class="t">Recovery group · in-person</div><div class="sc" style="color:#4F443C;">✓</div></div>
+          <div class="mood-row"><div class="d">Wed</div><div class="em">⚪</div><div class="t">Open day · self-care priority</div><div class="sc" style="color:var(--fg-muted);">—</div></div>
+          <div class="mood-row"><div class="d">Thu 6:30p</div><div class="em">🟠</div><div class="t">Recovery group · in-person</div><div class="sc" style="color:#AF6763;">tonight</div></div>
+          <div class="mood-row"><div class="d">Fri 4p</div><div class="em">🟢</div><div class="t">EMDR · Renée, LCSW-C</div><div class="sc">→</div></div>
+          <div class="mood-row"><div class="d">Sun 10a</div><div class="em">🌿</div><div class="t">Foundation: community brunch</div><div class="sc">→</div></div>
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div style="display:flex; flex-direction:column; gap:18px;">
+        <div class="panel" style="background:linear-gradient(155deg,#F7E7E2,#FCF1DE) !important; border:1px solid rgba(195,117,93,.35) !important;">
+          <div class="eyebrow" style="color:#C3755D;">A note from your team</div>
+          <p style="font-family:var(--font-serif); font-style:italic; font-size:20px; color:#8A4A3E; line-height:1.55; margin:10px 0;">"Sam — Friday was hard, and you came back Saturday. That is what recovery is. We see you. Let's protect the 4–6p window this week."</p>
+          <div style="font-size:11.5px; letter-spacing:0.18em; text-transform:uppercase; color:#AF6763; font-weight:700;">— Dr. Park &amp; Renée</div>
+          <div style="display:flex; gap:10px; margin-top:18px;">
+            <button class="btn btn--accent" style="background:#D69C60; color:#4F443C;">Reply</button>
+            <button class="btn btn--ghost-dark">Voice note</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Your care team</h3>
+          <div class="care-team" style="margin-top:14px;">
+            <div class="person"><div class="av">JP</div><div><div class="nm">Dr. Jamie Park</div><div class="rl">Psychiatry</div></div></div>
+            <div class="person"><div class="av" style="background:linear-gradient(135deg,#D69C60,#EFBC75);">RN</div><div><div class="nm">Renée Nash, LCSW-C</div><div class="rl">Therapist · EMDR</div></div></div>
+            <div class="person"><div class="av" style="background:linear-gradient(135deg,#B1C7BD,#C7B4D4); color:#4F443C;">MS</div><div><div class="nm">Miguel Salas</div><div class="rl">Peer support</div></div></div>
+            <div class="person"><div class="av" style="background:linear-gradient(135deg,#266D7A,#B1C7BD);">LO</div><div><div class="nm">Dr. Lena Okafor</div><div class="rl">PCP · BHW Medical</div></div></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Medications</h3>
+          <p class="eyebrow" style="margin:6px 0 14px;">Confirmed by Dr. Park · Mar 18</p>
+          <div style="display:flex; flex-direction:column; gap:10px; font-size:13.5px;">
+            <div style="display:flex; justify-content:space-between; padding:10px 14px; background:var(--bg-warm); border-radius:10px;">
+              <div><strong style="color:#4F443C;">Sertraline 100mg</strong><div style="font-size:11.5px; color:var(--fg-muted);">AM with food</div><div style="font-size:11px; color:#AF6763; font-weight:600; margin-top:2px;">For: depression &amp; anxiety</div></div>
+              <div style="font-size:11px; font-weight:700; color:#4F443C; letter-spacing:0.14em;">STABLE · 14 wks</div>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:10px 14px; background:var(--bg-warm); border-radius:10px;">
+              <div><strong style="color:#4F443C;">Bupropion XL 150mg</strong><div style="font-size:11.5px; color:var(--fg-muted);">AM</div><div style="font-size:11px; color:#AF6763; font-weight:600; margin-top:2px;">For: depression — energy &amp; focus</div></div>
+              <div style="font-size:11px; font-weight:700; color:#4F443C; letter-spacing:0.14em;">STABLE · 6 wks</div>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:10px 14px; background:var(--bg-warm); border-radius:10px;">
+              <div><strong style="color:#4F443C;">Trazodone 50mg PRN</strong><div style="font-size:11.5px; color:var(--fg-muted);">Bedtime</div><div style="font-size:11px; color:#AF6763; font-weight:600; margin-top:2px;">For: insomnia</div></div>
+              <div style="font-size:11px; font-weight:700; color:#8C5A3C; letter-spacing:0.14em;">AS NEEDED</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>🥗 Food for Mood</h3>
+          <p class="eyebrow" style="margin:6px 0 14px;">What you eat talks to how you feel</p>
+          <div style="display:flex; flex-direction:column; gap:10px; font-size:13.5px;">
+            <div style="display:flex; gap:12px; padding:10px 14px; background:var(--bg-warm); border-radius:10px;">
+              <div style="font-size:20px;">🐟</div>
+              <div><strong style="color:#4F443C;">Omega-3s, twice this week</strong><div style="font-size:12px; color:var(--fg-muted);">Salmon, sardines, or walnuts — building blocks for mood chemistry.</div></div>
+            </div>
+            <div style="display:flex; gap:12px; padding:10px 14px; background:var(--bg-warm); border-radius:10px;">
+              <div style="font-size:20px;">🫙</div>
+              <div><strong style="color:#4F443C;">Something fermented, most days</strong><div style="font-size:12px; color:var(--fg-muted);">Yogurt, kefir, kimchi — your gut and your mood are on the same team.</div></div>
+            </div>
+            <div style="display:flex; gap:12px; padding:10px 14px; background:var(--bg-warm); border-radius:10px;">
+              <div style="font-size:20px;">🍳</div>
+              <div><strong style="color:#4F443C;">Protein at breakfast</strong><div style="font-size:12px; color:var(--fg-muted);">Steady blood sugar means steadier mood — especially through your 4–6p window.</div></div>
+            </div>
+            <div style="display:flex; gap:12px; padding:10px 14px; background:var(--bg-warm); border-radius:10px;">
+              <div style="font-size:20px;">☕</div>
+              <div><strong style="color:#4F443C;">Caffeine curfew · 12pm</strong><div style="font-size:12px; color:var(--fg-muted);">Protecting the sleep that's been improving. Afternoon swap: herbal tea, sparkling water.</div></div>
+            </div>
+          </div>
+          <p style="margin-top:12px; font-size:12px; color:var(--fg-muted);">Snap a photo of a meal you're proud of and send it with your check-in — no judgment, ever. 📸</p>
+        </div>
+
+        <div class="panel" style="background:var(--bg-warm); border-color:#AF6763;">
+          <div style="display:flex; gap:14px; align-items:flex-start;">
+            <div style="width:42px; height:42px; border-radius:10px; background:#AF6763; color:#fff; display:grid; place-items:center; font-family:var(--font-serif); font-style:italic; font-weight:600; flex-shrink:0;">!</div>
+            <div>
+              <h3 style="margin:0;">Crisis is always answered.</h3>
+              <p style="font-size:13px; color:var(--fg); line-height:1.6; margin:6px 0 0;">988 (call or text) · or page the on-call clinician from the menu. Your team will follow up the next morning.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="bhw-footer">
+  <div class="container">
+    <div class="bhw-footer__top">
+      <div class="bhw-footer__brand">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <img src="assets/logo-geode.png" alt="" style="width:34px; filter:invert(0.95);">
+          <div class="bhw-header__wm"><span style="color:#fff;">Mind &amp; Mood</span><span style="color:rgba(255,255,255,0.7);">Recovery</span></div>
+        </div>
+        <p>Behavioral, recovery, and mood care. Physiology-aware, never punitive. Insurance accepted.</p>
+      </div>
+      <div class="bhw-footer__groups">
+        <div><h5>Care</h5><ul><li><a href="#">Therapies</a></li><li><a href="#">Substance use</a></li><li><a href="#">Perinatal</a></li></ul></div>
+        <div><h5>Patients</h5><ul><li><a href="#">Recovery hub</a></li><li><a href="#">Crisis 988</a></li><li><a href="#">Insurance</a></li></ul></div>
+        <div><h5>Connect</h5><ul><li><a href="foundation.html">Foundation community</a></li><li><a href="bhw-medical.html">Primary care</a></li></ul></div>
+        <div><h5>Family</h5><ul><li><a href="index.html">All brands</a></li></ul></div>
+      </div>
+    </div>
+    <div class="bhw-footer__bottom"><div>© 2026 Mind &amp; Mood Recovery</div><div>Licensed in Maryland</div></div>
+  </div>
+</footer>
+
+<script>
+document.querySelectorAll('[data-pane-btn]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('[data-pane-btn]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const key = btn.getAttribute('data-pane-btn');
+    document.querySelectorAll('[data-pane]').forEach(p=>p.classList.toggle('active', p.getAttribute('data-pane')===key));
+    document.getElementById('audLabel').textContent = key==='potential'?'Considering care':'Recovery hub';
+    window.scrollTo({top:0, behavior:'smooth'});
+  });
+});
+function rraStep(n){
+  document.querySelectorAll('[data-rra-step]').forEach(p=>{
+    p.style.display = p.getAttribute('data-rra-step')==String(n) ? 'block' : 'none';
+  });
+}
+</script>
+</body>
+</html>
