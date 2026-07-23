@@ -352,20 +352,19 @@ function buildRail(){
   }
   html += `<div class="rail-label">Tools</div>`;
  html += `<button class="tab" data-view="myspace" style="--spine:var(--clay)">My Space</button>`;
-  html += `<button class="tab" data-view="front-desk" style="--spine:var(--blue)">📞 Front Desk</button>`;
+  html += `<button class="tab" data-view="front-desk" style="--spine:var(--blue)">Front Desk OS</button>`;
   html += `<div class="rail-label">Pages</div>`;
-  html += `<a class="tab" href="/bhw-front-desk.html" target="_blank" rel="noopener" style="--spine:var(--blue);text-decoration:none">📞 Front Desk OS ↗</a>`;
-  html += `<a class="tab" href="/BHW_Care_Management_Toolkit.html" target="_blank" rel="noopener" style="--spine:var(--ok, #1F6961);text-decoration:none">💵 Billing Toolkit</a>`;
-  html += `<a class="tab" href="/bhw-panel-performance.html" target="_blank" rel="noopener" style="--spine:var(--teal);text-decoration:none">📊 Panel & Discharges</a>`;
-  html += `<a class="tab" href="/bhw-hormone-analysis.html" target="_blank" rel="noopener" style="--spine:var(--sand);text-decoration:none">🧬 Hormone Analysis</a>`;
-  html += `<a class="tab" href="https://app.notion.com/p/3a1580758d3081c48b90fdab7b442fcb" target="_blank" rel="noopener" style="--spine:var(--sage);text-decoration:none">🌿 Patient Pages Hub</a>`;
-  html += `<a class="tab" href="https://app.notion.com/p/3a3580758d30812aa387d8a6ae463c12" target="_blank" rel="noopener" style="--spine:var(--clay-deep);text-decoration:none">🌅 Launch Punch List</a>`;
-  html += `<a class="tab" href="/bhw-crewcare-portal.html" target="_blank" rel="noopener" style="--spine:var(--clay-deep, #8C5A3C);text-decoration:none">🩺 BHWCrewCare Portal</a>`;
-  html += `<div class="rail-label">Design previews</div>`;
-  html += `<a class="tab" href="/bhw-care-console-mockup.html" target="_blank" rel="noopener" style="--spine:var(--clay);text-decoration:none">🩺 Care Console</a>`;
-  html += `<a class="tab" href="/bhw-patient-portal-mockup.html" target="_blank" rel="noopener" style="--spine:var(--sage);text-decoration:none">🌿 Patient Portal</a>`;
-  html += `<a class="tab" href="/bhw-mindmood-patient-mockup.html" target="_blank" rel="noopener" style="--spine:#A06A82;text-decoration:none">🌅 M&M Patient Page</a>`;
-  html += `<a class="tab" href="/bhw-flow-patient-mockup.html" target="_blank" rel="noopener" style="--spine:#167A9A;text-decoration:none">💧 Flow Patient Page</a>`;
+  html += `<button class="tab" data-view="pg-panel" style="--spine:var(--teal)">Panel &amp; Discharges</button>`;
+  html += `<button class="tab" data-view="pg-hormone" style="--spine:var(--sand)">Hormone Analysis</button>`;
+  html += `<button class="tab" data-view="pg-ana" style="--spine:var(--river-deep, #4f7f92)">ANA Analysis</button>`;
+  html += `<button class="tab" data-view="pg-aimgmt" style="--spine:var(--sage)">Autoimmune Management</button>`;
+  html += `<button class="tab" data-view="pg-billing" style="--spine:var(--ok, #1F6961)">Billing Toolkit</button>`;
+  html += `<button class="tab" data-view="pg-crewcare" style="--spine:var(--clay-deep)">BHWCrewCare Portal</button>`;
+  html += `<div class="rail-label">Patient page previews</div>`;
+  html += `<button class="tab" data-view="pg-portal" style="--spine:var(--sage)">Primary Care Portal</button>`;
+  html += `<button class="tab" data-view="pg-charmed" style="--spine:#7A5AA0">CharmEd Minds</button>`;
+  html += `<button class="tab" data-view="pg-mindmood" style="--spine:#AF6763">Mind &amp; Mood</button>`;
+  html += `<button class="tab" data-view="pg-flow" style="--spine:#167A9A">Flow</button>`;
   rail.innerHTML = html;
   rail.onclick = e => { const b=e.target.closest(".tab"); if(b && b.dataset.view) activate(b.dataset.view); }
 }
@@ -382,6 +381,7 @@ function buildViews(){
   if(D.user.access==="Admin") html += adminView();
   for(const div of D.visibleDivisions) html += divisionView(div);
   html += frontDeskView();
+  for(const e of PAGE_EMBEDS) html += embedView(e);
   html += mySpaceView();
   host.innerHTML = html;
 }
@@ -399,8 +399,8 @@ function divisionView(div){
 
   return `<section class="view" id="view-${id}" style="--pc:${DIV_COLORS[div]}">
     <div class="prog-head"><div class="bar"></div><div><h1>${esc(div)}</h1><p>${DIV_BLURBS[div]||""}</p></div>${div==="Primary Care"?`<img src="/assets/bhw-logo-full.png" alt="BHW" style="height:84px;width:auto;margin-left:auto" onerror="this.style.display='none'">`:""}</div>
-    ${div==="Primary Care"?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:-8px 0 18px"><a class="btn sm warn" style="text-decoration:none" href="/bhw-front-desk.html#rg" target="_blank" rel="noopener">📠 Generate a referral</a><button class="btn sm sec" onclick="activate('front-desk')">📞 Front desk &amp; lookup</button></div>`:""}
-    ${PATIENT_PAGES[div]?`<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:-4px 0 18px;padding:12px 14px;background:var(--card,#fff);border-radius:12px"><span style="font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;opacity:.65">🌿 Patient pages</span><a class="btn sm sec" style="text-decoration:none" href="${PATIENT_PAGES[div]}" target="_blank" rel="noopener">View patient page</a><a class="btn sm sec" style="text-decoration:none" href="https://app.notion.com/p/3a1580758d3081c48b90fdab7b442fcb" target="_blank" rel="noopener">Manage content ↗</a><a class="btn sm sec" style="text-decoration:none" href="https://app.notion.com/p/3a1580758d3081c48b90fdab7b442fcb" target="_blank" rel="noopener">Sign-up steps</a></div>`:""}
+    ${div==="Primary Care"?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:-8px 0 18px"><button class="btn sm warn" onclick="activate('front-desk')">Generate a referral</button><button class="btn sm sec" onclick="activate('front-desk')">Front desk &amp; lookup</button></div>`:""}
+    ${PATIENT_PAGES[div]?`<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:-4px 0 18px;padding:12px 14px;background:var(--card,#fff);border-radius:12px"><span style="font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;opacity:.65">Patient pages</span><a class="btn sm sec" style="text-decoration:none" href="${PATIENT_PAGES[div]}" target="_blank" rel="noopener">View patient page</a><a class="btn sm sec" style="text-decoration:none" href="https://app.notion.com/p/3a1580758d3081c48b90fdab7b442fcb" target="_blank" rel="noopener">Manage content ↗</a><a class="btn sm sec" style="text-decoration:none" href="https://app.notion.com/p/3a1580758d3081c48b90fdab7b442fcb" target="_blank" rel="noopener">Sign-up steps</a></div>`:""}
     ${div==="Primary Care"?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:-8px 0 18px"><a class="btn sm warn" style="text-decoration:none" href="/bhw-front-desk.html#rg" target="_blank" rel="noopener">📠 Generate a referral</a><a class="btn sm sec" style="text-decoration:none" href="/bhw-front-desk.html" target="_blank" rel="noopener">📞 Front desk & patient lookup</a></div>`:""}
     <div class="kpis">
       <div class="kpi" style="--kc:var(--alert)"><div class="n">${c.rIn}</div><div class="l">Incoming referrals open</div></div>
@@ -556,6 +556,28 @@ function frontDeskView(){
       <iframe src="/bhw-front-desk.html" title="Front Desk OS" style="width:100%;height:calc(100vh - 250px);min-height:640px;border:0;border-radius:12px;background:#fff"></iframe>
     </div>
     <p style="margin-top:10px;font-size:12.5px"><a href="/bhw-front-desk.html" target="_blank" rel="noopener" style="color:var(--clay-deep);font-weight:700">Open full-screen ↗</a> · referral generator is near the bottom of the page</p>
+  </section>`;
+}
+
+const PAGE_EMBEDS = [
+  {id:"pg-panel",    title:"Panel & Discharges",   src:"/bhw-panel-performance.html",        blurb:"Utilization, HEDIS scorecard, and hospital discharge tracking."},
+  {id:"pg-hormone",  title:"Hormone Analysis",     src:"/bhw-hormone-analysis.html",         blurb:"Lab-based hormone interpretation tool."},
+  {id:"pg-ana",      title:"ANA Analysis",         src:"/bhw-ana-analysis.html",             blurb:"Positive-ANA differential from the 100-condition autoimmune matrix."},
+  {id:"pg-aimgmt",   title:"Autoimmune Management",src:"/bhw-autoimmune-management.html",      blurb:"Traditional + integrative management for 100 conditions, with evidence grades."},
+  {id:"pg-billing",  title:"Billing Toolkit",      src:"/BHW_Care_Management_Toolkit.html",  blurb:"Care management and primary care billing codes."},
+  {id:"pg-crewcare", title:"BHWCrewCare Portal",   src:"/bhw-crewcare-portal.html",          blurb:"Provider side — inbox, care plan builder, results, panel."},
+  {id:"pg-portal",   title:"Primary Care Portal",  src:"/bhw-patient-portal-mockup.html",    blurb:"Patient-side design preview — sample data."},
+  {id:"pg-charmed",  title:"CharmEd Minds",        src:"/bhw-charmed-patient-mockup.html",   blurb:"My Strategy Hub — patient-side preview."},
+  {id:"pg-mindmood", title:"Mind & Mood",          src:"/bhw-mindmood-patient-mockup.html",  blurb:"Pathway patient page — preview."},
+  {id:"pg-flow",     title:"Flow",                 src:"/bhw-flow-patient-mockup.html",      blurb:"Vein recovery patient page — preview."},
+];
+function embedView(e){
+  return `<section class="view" id="view-${e.id}" style="--pc:var(--clay)">
+    <div class="prog-head"><div class="bar"></div><div><h1>${e.title}</h1><p>${e.blurb}</p></div></div>
+    <div class="card" style="padding:8px">
+      <iframe src="${e.src}" title="${e.title}" loading="lazy" style="width:100%;height:calc(100vh - 240px);min-height:620px;border:0;border-radius:12px;background:#fff"></iframe>
+    </div>
+    <p style="margin-top:10px;font-size:12.5px"><a href="${e.src}" target="_blank" rel="noopener" style="color:var(--clay-deep);font-weight:700">Open full-screen ↗</a></p>
   </section>`;
 }
 
