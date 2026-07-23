@@ -63,6 +63,18 @@
   .p-col+.p-col{border-left:1px solid var(--line)}
   .p-col h3{font-size:.66rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:8px}
   .kv{font-size:.85rem;margin-bottom:5px}
+  /* referral generator */
+  .gen-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:760px){.gen-grid{grid-template-columns:1fr}}
+  .gen-col h3{font-size:.72rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--clay);margin:0 0 8px;display:flex;align-items:center;gap:8px}
+  .gen-col input,.gen-col select,.gen-col textarea{width:100%;font-family:inherit;font-size:.85rem;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--linen);margin-bottom:7px;color:var(--ink)}
+  .gen-col textarea{resize:vertical}
+  .gen-2col{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+  .gen-checks{display:flex;flex-direction:column;gap:5px;background:var(--linen);border-radius:10px;padding:10px 12px}
+  .gen-checks label{font-size:.83rem;display:flex;gap:8px;align-items:center}
+  .gen-checks input[type=checkbox]{accent-color:var(--river);width:16px;height:16px}
+  .gen-checks .indent{margin-left:24px;width:calc(100% - 24px);background:var(--white)}
+  .mini{font-size:.66rem;letter-spacing:.04em;text-transform:none;padding:3px 10px;border-radius:14px;border:1px solid var(--line);background:var(--white);cursor:pointer;color:var(--river);font-weight:700}
   .kv b{font-weight:700}
   .kv.allergy{background:#fdf3f3;border:1px solid #ecd2d4;border-radius:8px;padding:6px 10px;color:var(--urgent);font-weight:600}
   .kv.allergy.nkda{background:var(--linen);border-color:var(--line);color:var(--ink-soft)}
@@ -108,10 +120,7 @@
 <div class="wrap">
 
   <header>
-    <div class="sun" aria-hidden="true">
-      <div class="disc"></div>
-      <i style="transform:translateX(-50%) rotate(-65deg)"></i><i style="transform:translateX(-50%) rotate(-35deg)"></i><i style="transform:translateX(-50%) rotate(0deg)"></i><i style="transform:translateX(-50%) rotate(35deg)"></i><i style="transform:translateX(-50%) rotate(65deg)"></i>
-    </div>
+    <img src="/assets/bhw-medical-logo.png" alt="BHW" style="height:46px;width:auto;flex-shrink:0" onerror="this.style.display='none'">
     <div>
       <h1>Front Desk</h1>
       <div class="sub">BHW Medical Group · crewOS</div>
@@ -197,6 +206,79 @@
     <div class="samplenote" id="samplenote"></div>
   </section>
 
+  <!-- REFERRAL GENERATOR -->
+  <section aria-labelledby="rg">
+    <h2 id="rg">Generate referral <span style="letter-spacing:0;text-transform:none;font-size:.66rem;background:var(--clay);color:#fff;padding:2px 10px;border-radius:20px">MD Uniform Form</span></h2>
+    <div class="gen-grid">
+      <div class="gen-col">
+        <h3>1 · Patient <button class="mini" id="g-usepatient" type="button">use last lookup</button></h3>
+        <input id="g-pname" placeholder="Name (Last, First MI)">
+        <div class="gen-2col">
+          <input id="g-pdob" placeholder="DOB (MM/DD/YYYY)" inputmode="numeric">
+          <input id="g-pphone" placeholder="Phone" inputmode="tel">
+        </div>
+        <input id="g-pmember" placeholder="Member #">
+        <h3 style="margin-top:14px">2 · Carrier</h3>
+        <input id="g-cname" placeholder="Carrier / plan name">
+        <input id="g-caddr" placeholder="Carrier referral address">
+        <div class="gen-2col">
+          <input id="g-cphone" placeholder="Carrier phone" inputmode="tel">
+          <input id="g-cfax" placeholder="Carrier fax" inputmode="tel">
+        </div>
+        <h3 style="margin-top:14px">3 · Specialist</h3>
+        <select id="g-spec"><option value="">Choose from directory…</option></select>
+        <input id="g-sname" placeholder="Consultant name (Last, First)">
+        <div class="gen-2col">
+          <input id="g-sspec" placeholder="Specialty">
+          <input id="g-sorg" placeholder="Practice / institution">
+        </div>
+        <input id="g-saddr" placeholder="Address">
+        <div class="gen-2col">
+          <input id="g-sphone" placeholder="Phone" inputmode="tel">
+          <input id="g-sfax" placeholder="Fax" inputmode="tel">
+        </div>
+      </div>
+      <div class="gen-col">
+        <h3>4 · Referral (provider section)</h3>
+        <select id="g-provider">
+          <option value="amaris">Provider: Murray, Amaris CRNP</option>
+          <option value="yahaira">Provider: Matias, Yahaira CRNP</option>
+        </select>
+        <input id="g-reason" placeholder="Reason for referral">
+        <textarea id="g-history" rows="3" placeholder="Brief history, diagnosis and test results"></textarea>
+        <div class="gen-checks">
+          <label><input type="checkbox" id="s-initial"> Initial consultation only</label>
+          <label><input type="checkbox" id="s-diagnostic"> Diagnostic test</label>
+          <input id="sx-diagnostic" placeholder="↳ specify test" class="indent">
+          <label><input type="checkbox" id="s-procedures"> Consultation w/ specific procedures</label>
+          <input id="sx-procedures" placeholder="↳ specify procedures" class="indent">
+          <label><input type="checkbox" id="s-treatment"> Specific treatment</label>
+          <input id="sx-treatment" placeholder="↳ specify treatment" class="indent">
+          <label><input type="checkbox" id="s-globalob"> Global OB care & delivery</label>
+          <label><input type="checkbox" id="s-other"> Other</label>
+          <input id="sx-other" placeholder="↳ explain" class="indent">
+        </div>
+        <div class="gen-checks" style="margin-top:10px">
+          <b style="font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)">Place of service</b>
+          <label><input type="checkbox" id="p-office" checked> Office</label>
+          <label><input type="checkbox" id="p-outpatient"> Outpatient med/surg center</label>
+          <label><input type="checkbox" id="p-radiology"> Radiology</label>
+          <label><input type="checkbox" id="p-laboratory"> Laboratory</label>
+          <label><input type="checkbox" id="p-inpatient"> Inpatient hospital</label>
+          <label><input type="checkbox" id="p-extended"> Extended care facility</label>
+          <input id="g-facility" placeholder="Specific facility (if required)">
+        </div>
+        <div class="gen-2col" style="margin-top:10px">
+          <input id="g-visits" placeholder="# visits (blank = 1)">
+          <input id="g-valid" placeholder="Valid until (MM/DD/YYYY)">
+        </div>
+        <input id="g-auth" placeholder="Authorization # (if required)">
+        <button class="btn" id="g-make" style="width:100%;margin-top:12px;background:var(--river)">📠 Generate referral PDF</button>
+        <div class="status" id="g-status"></div>
+      </div>
+    </div>
+  </section>
+
   <!-- QUICK LINKS -->
   <section aria-labelledby="ql">
     <h2 id="ql">Open in Notion</h2>
@@ -215,9 +297,9 @@
    When the Netlify function is deployed, set API to
    '/.netlify/functions/frontdesk-data' and lookups + cards go live.
    Until then the page runs on the embedded data below.       */
-const API = '/.netlify/functions/frontdesk-data'; //
-const DASH_KEY = '02142022';      // 
-const DEMO = true;        // set false when API is connected — shows sample inbox so you can preview the live experience
+const API = '/.netlify/functions/frontdesk-data';           // e.g. '/.netlify/functions/frontdesk-data'
+const DASH_KEY = '02142022';      // optional shared key, matches function env
+const DEMO = false;        // set false when API is connected — shows sample inbox so you can preview the live experience
 
 /* ============ SPECIALIST DIRECTORY (regenerated from Notion) ============ */
 const SAMPLE = true; // set false when real directory data is pasted in
@@ -250,13 +332,16 @@ specs.forEach(s=>$('f-spec').insertAdjacentHTML('beforeend',`<option>${s}</optio
 nets.forEach(n=>$('f-net').insertAdjacentHTML('beforeend',`<option>${n}</option>`));
 if(SAMPLE)$('samplenote').textContent='Showing sample rows — the live directory loads here once the payer imports are done.';
 
+let LAST_HITS=[];
 function findSpecialists(){
+  const pool=(typeof DIR!=='undefined'&&DIR.length)?DIR:SPECIALISTS;
   const sp=$('f-spec').value, nt=$('f-net').value;
-  const hits=SPECIALISTS.filter(s=>(!sp||s.specialty===sp)&&(!nt||s.networks.includes(nt)))
-    .sort((a,b)=>(b.preferred-a.preferred)||a.name.localeCompare(b.name));
+  const hits=pool.filter(s=>(!sp||s.specialty===sp)&&(!nt||(s.networks||[]).includes(nt)))
+    .sort((a,b)=>((b.preferred?1:0)-(a.preferred?1:0))||a.name.localeCompare(b.name));
+  LAST_HITS=hits;
   const r=$('results'); r.innerHTML='';
   if(!hits.length){r.innerHTML='<div class="empty">No in-network match on file yet. Check the Notion directory, or add the specialist after this referral so next time it\u2019s one tap.</div>';return;}
-  hits.forEach(s=>{
+  hits.forEach((s,i)=>{
     r.insertAdjacentHTML('beforeend',`
     <div class="spec ${s.preferred?'preferred':''}">
       <div class="who"><div class="n">${s.preferred?'<span class="star">⭐</span> ':''}${s.name}</div>
@@ -264,9 +349,18 @@ function findSpecialists(){
       <div class="contact"><b>Ph</b> ${s.phone}<br><b>Fax</b> ${s.fax}</div>
       <span class="wait">${s.wait||''}</span>
       <button class="copyfax" onclick="navigator.clipboard.writeText('${s.fax}').then(()=>{this.textContent='Copied ✓';setTimeout(()=>this.textContent='Copy fax',1400)})">Copy fax</button>
-      <div class="netlist">${s.networks.join(' · ')}${s.notes?' — '+s.notes:''}</div>
+      <button class="copyfax" style="background:var(--river);color:#fff;border-color:var(--river)" onclick="useInReferral(${i})">→ Use in referral</button>
+      <div class="netlist">${(s.networks||[]).join(' · ')}${s.notes?' — '+s.notes:''}</div>
     </div>`);
   });
+}
+function useInReferral(i){
+  const s=LAST_HITS[i]; if(!s)return;
+  $('g-sname').value=s.name||''; $('g-sspec').value=s.specialty||'';
+  $('g-sorg').value=s.org||''; $('g-saddr').value=s.address||'';
+  $('g-sphone').value=s.phone||''; $('g-sfax').value=s.fax||'';
+  document.getElementById('rg').scrollIntoView({behavior:'smooth'});
+  $('g-status').textContent=`Specialist loaded: ${s.name} — now tap "use last lookup" for the patient, or fill the fields.`;
 }
 $('f-go').addEventListener('click',findSpecialists);
 
@@ -384,7 +478,7 @@ async function lookup(){
   $('profile').classList.remove('show');
   if(!API){
     if(DEMO){
-      $('p-name').textContent='Allen, Peter';
+      window.lastPatient={name:'Allen, Peter',dob:'1958-03-14',phone:'(410) 555-0111',member:'MD1234821',payer:'Medicare',mco:'Priority Partners'}; $('p-name').textContent='Allen, Peter';
       $('p-meta').textContent='BHW0676 · DOB 12/24/1948';
       $('p-info').innerHTML=`
         <div class="kv allergy"><b>⚠️ Allergies:</b> Penicillin — hives · Sulfa — rash</div>
@@ -414,7 +508,7 @@ async function lookup(){
     const d=await res.json();
     if(!d.patient){$('lkstatus').textContent='No match found — could be a new patient. Check spelling or search the Master List directly.';return;}
     const p=d.patient;
-    $('p-name').textContent=p.name;
+    window.lastPatient=p; $('p-name').textContent=p.name;
     $('p-meta').textContent=[p.ctl,p.dob?`DOB ${p.dob}`:null].filter(Boolean).join(' · ');
     $('p-info').innerHTML=[
       p.allergies?`<div class="kv allergy"><b>⚠️ Allergies:</b> ${p.allergies}</div>`:'<div class="kv allergy nkda"><b>Allergies:</b> not on file — verify</div>',
@@ -438,6 +532,91 @@ async function lookup(){
 }
 $('go').addEventListener('click',lookup);
 $('q').addEventListener('keydown',e=>{if(e.key==='Enter')lookup();});
+/* ============ REFERRAL GENERATOR ============ */
+const REF_API = API ? API.replace('frontdesk-data','referral-pdf') : '';
+let DIR = [];
+async function loadDir(){
+  if(API){
+    try{
+      const r = await fetch(`${API}?dir=1&key=${encodeURIComponent(DASH_KEY)}`);
+      const d = await r.json();
+      if(d.specialists && d.specialists.length){ DIR = d.specialists; }
+    }catch(e){}
+  }
+  let liveDir = DIR.length>0;
+  if(!DIR.length) DIR = SPECIALISTS.map(s=>({...s, preferred:s.preferred||false}));
+  const sn=$('samplenote');
+  if(sn) sn.textContent = liveDir ? '' : 'Showing sample rows — add specialists to the Notion directory and they appear here automatically.';
+  const sel = $('g-spec');
+  DIR.sort((a,b)=> (b.preferred?1:0)-(a.preferred?1:0) || a.name.localeCompare(b.name));
+  DIR.forEach((s,i)=>{
+    const o=document.createElement('option'); o.value=i;
+    o.textContent=`${s.preferred?'⭐ ':''}${s.name} — ${s.specialty}${s.org?' · '+s.org:''}`;
+    sel.appendChild(o);
+  });
+  // refresh the finder dropdowns from the live directory too
+  const fs=$('f-spec'), fn=$('f-net');
+  fs.innerHTML='<option value="">Specialty — any</option>';
+  fn.innerHTML='<option value="">Patient\u2019s insurance — any</option>';
+  [...new Set(DIR.map(s=>s.specialty).filter(Boolean))].sort().forEach(s=>fs.insertAdjacentHTML('beforeend',`<option>${s}</option>`));
+  [...new Set(DIR.flatMap(s=>s.networks||[]))].sort().forEach(n=>fn.insertAdjacentHTML('beforeend',`<option>${n}</option>`));
+}
+loadDir();
+$('g-spec').addEventListener('change',e=>{
+  const s = DIR[e.target.value]; if(!s) return;
+  $('g-sname').value=s.name||''; $('g-sspec').value=s.specialty||'';
+  $('g-sorg').value=s.org||''; $('g-saddr').value=s.address||'';
+  $('g-sphone').value=s.phone||''; $('g-sfax').value=s.fax||'';
+});
+$('g-usepatient').addEventListener('click',()=>{
+  const p = window.lastPatient;
+  if(!p){ $('g-status').textContent='Look up a patient first — then tap this.'; return; }
+  $('g-pname').value=p.name||'';
+  $('g-pdob').value=p.dob?fmtDate(p.dob):'';
+  $('g-pphone').value=p.phone||'';
+  $('g-pmember').value=(p.member||'').includes('●')?'':(p.member||'');
+  $('g-cname').value=[p.payer,p.mco].filter(Boolean).join(' — ');
+  $('g-status').textContent='Patient loaded from lookup ✓ — verify member # against the card.';
+});
+function fmtDate(d){ const m=String(d).match(/(\d{4})-(\d{2})-(\d{2})/); return m?`${m[2]}/${m[3]}/${m[1]}`:String(d); }
+$('g-make').addEventListener('click', async ()=>{
+  const st=$('g-status');
+  if(!REF_API){ st.textContent='Connect the API first (set the API constant).'; return; }
+  if(!$('g-pname').value.trim()){ st.textContent='Patient name is required.'; return; }
+  const svc=[], sx={};
+  [['initial'],['diagnostic'],['procedures'],['treatment'],['globalob'],['other']].forEach(([k])=>{
+    if($('s-'+k)?.checked) svc.push(k);
+    const x=$('sx-'+k); if(x&&x.value.trim()) sx[k]=x.value.trim();
+  });
+  const place=['office','outpatient','radiology','laboratory','inpatient','extended']
+    .filter(k=>$('p-'+k)?.checked);
+  st.textContent='Generating…';
+  try{
+    const res = await fetch(REF_API,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        key: DASH_KEY,
+        provider: $('g-provider').value,
+        date: new Date().toLocaleDateString('en-US'),
+        patient:{ name:$('g-pname').value, dob:$('g-pdob').value, phone:$('g-pphone').value, member:$('g-pmember').value },
+        carrier:{ name:$('g-cname').value, address:$('g-caddr').value, phone:$('g-cphone').value, fax:$('g-cfax').value },
+        consultant:{ name:$('g-sname').value, specialty:$('g-sspec').value, org:$('g-sorg').value,
+          address:$('g-saddr').value, phone:$('g-sphone').value, fax:$('g-sfax').value },
+        referral:{ reason:$('g-reason').value, history:$('g-history').value,
+          services:svc, specify:sx, place, facility:$('g-facility').value,
+          visits:$('g-visits').value, auth:$('g-auth').value, validUntil:$('g-valid').value },
+      })});
+    if(!res.ok){ st.textContent='Error generating — '+(await res.text()).slice(0,120); return; }
+    const { pdf } = await res.json();
+    const bytes = Uint8Array.from(atob(pdf), c=>c.charCodeAt(0));
+    const blob = new Blob([bytes],{type:'application/pdf'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href=url; a.download=`Referral - ${$('g-pname').value.split(',')[0]||'patient'} - ${$('g-sspec').value||'specialist'}.pdf`;
+    a.click();
+    window.open(url,'_blank');
+    st.textContent='✓ Referral generated — downloaded and opened for printing. Fax to '+($('g-sfax').value||'the specialist')+'.';
+  }catch(e){ st.textContent='Error: '+e; }
+});
 </script>
 </body>
 </html>
