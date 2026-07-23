@@ -384,6 +384,7 @@ function buildViews(){
   for(const e of PAGE_EMBEDS) html += embedView(e);
   html += mySpaceView();
   host.innerHTML = html;
+  setTimeout(checkEmbeds, 100);
 }
 
 /* ---------- division page ---------- */
@@ -553,7 +554,12 @@ function frontDeskView(){
   return `<section class="view" id="view-front-desk" style="--pc:var(--blue)">
     <div class="prog-head"><div class="bar"></div><div><h1>Front Desk OS</h1><p>Live inbox, patient lookup, referral finder &amp; generator — SLA colors show what's next.</p></div></div>
     <div class="card" style="padding:8px">
-      <iframe src="/bhw-front-desk.html" title="Front Desk OS" style="width:100%;height:calc(100vh - 250px);min-height:640px;border:0;border-radius:12px;background:#fff"></iframe>
+      <div id="fb-front-desk" style="display:none;padding:44px 26px;text-align:center">
+        <div style="font-size:14.5px;font-weight:600;margin-bottom:8px">The front desk can't display inside the app yet.</div>
+        <div style="font-size:13px;color:var(--ink-soft);max-width:520px;margin:0 auto 16px">Frame protection is set to <b>DENY</b> in netlify.toml — change it to <b>SAMEORIGIN</b> and redeploy.</div>
+        <a class="btn" href="/bhw-front-desk.html" target="_blank" rel="noopener" style="text-decoration:none">Open Front Desk in a new tab ↗</a>
+      </div>
+      <iframe id="if-front-desk" data-fb="fb-front-desk" src="/bhw-front-desk.html" title="Front Desk OS" style="width:100%;height:calc(100vh - 250px);min-height:640px;border:0;border-radius:12px;background:#fff"></iframe>
     </div>
     <p style="margin-top:10px;font-size:12.5px"><a href="/bhw-front-desk.html" target="_blank" rel="noopener" style="color:var(--clay-deep);font-weight:700">Open full-screen ↗</a> · referral generator is near the bottom of the page</p>
   </section>`;
@@ -571,11 +577,31 @@ const PAGE_EMBEDS = [
   {id:"pg-mindmood", title:"Mind & Mood",          src:"/bhw-mindmood-patient-mockup.html",  blurb:"Pathway patient page — preview."},
   {id:"pg-flow",     title:"Flow",                 src:"/bhw-flow-patient-mockup.html",      blurb:"Vein recovery patient page — preview."},
 ];
+function checkEmbeds(){
+  document.querySelectorAll("iframe[data-fb]").forEach(function(f){
+    var fb=document.getElementById(f.dataset.fb);
+    if(!fb) return;
+    var verdict=function(){
+      var ok=false;
+      try{ ok = !!(f.contentDocument && f.contentDocument.body && f.contentDocument.body.children.length); }catch(err){ ok=false; }
+      if(!ok){ fb.style.display="block"; f.style.display="none"; }
+      else { fb.style.display="none"; f.style.display="block"; }
+    };
+    f.addEventListener("load", function(){ setTimeout(verdict, 250); });
+    setTimeout(verdict, 3500);
+  });
+}
+
 function embedView(e){
   return `<section class="view" id="view-${e.id}" style="--pc:var(--clay)">
     <div class="prog-head"><div class="bar"></div><div><h1>${e.title}</h1><p>${e.blurb}</p></div></div>
     <div class="card" style="padding:8px">
-      <iframe src="${e.src}" title="${e.title}" loading="lazy" style="width:100%;height:calc(100vh - 240px);min-height:620px;border:0;border-radius:12px;background:#fff"></iframe>
+      <div id="fb-${e.id}" style="display:none;padding:44px 26px;text-align:center">
+        <div style="font-size:14.5px;font-weight:600;margin-bottom:8px">This page can't display inside the app yet.</div>
+        <div style="font-size:13px;color:var(--ink-soft);max-width:520px;margin:0 auto 16px">The site's frame protection is still set to <b>DENY</b>. Fix it in <b>netlify.toml</b> — change <code>X-Frame-Options = "DENY"</code> to <code>"SAMEORIGIN"</code> — then redeploy. Until then, use the button below.</div>
+        <a class="btn" href="${e.src}" target="_blank" rel="noopener" style="text-decoration:none">Open ${e.title} in a new tab ↗</a>
+      </div>
+      <iframe id="if-${e.id}" data-fb="fb-${e.id}" src="${e.src}" title="${e.title}" style="width:100%;height:calc(100vh - 240px);min-height:620px;border:0;border-radius:12px;background:#fff"></iframe>
     </div>
     <p style="margin-top:10px;font-size:12.5px"><a href="${e.src}" target="_blank" rel="noopener" style="color:var(--clay-deep);font-weight:700">Open full-screen ↗</a></p>
   </section>`;
