@@ -199,7 +199,7 @@ a.res .star{color:var(--clay);margin-right:6px}
 <circle cx="30" cy="70" r="20" stroke="#80abbd" stroke-width="3.2" stroke-dasharray="114 12" transform="rotate(150 30 70)"/>
 </g></svg>
   <div class="wordmark">BHW<b>crew</b><span class="os">OS</span></div>
-  <div class="whoami" id="whoami"></div><button class="btn sm sec" style="margin-left:10px" onclick="openNewPatient()">＋ Patient</button>
+  <div class="whoami" id="whoami"></div><button class="btn sm" style="margin-left:10px;background:rgba(244,247,247,.12);color:#f4f7f7;border:1.5px solid var(--sand)" onclick="openNewPatient()">＋ Patient</button>
   <div class="top-right">
     <button class="btn-ghost" onclick="refresh()">Refresh</button>
     <button class="btn-ghost" onclick="logout()">Sign out</button>
@@ -356,8 +356,7 @@ function buildRail(){
   html += `<div class="rail-label">Pages</div>`;
   html += `<button class="tab" data-view="pg-panel" style="--spine:var(--teal)">Panel &amp; Discharges</button>`;
   html += `<button class="tab" data-view="pg-hormone" style="--spine:var(--sand)">Hormone Analysis</button>`;
-  html += `<button class="tab" data-view="pg-ana" style="--spine:var(--river-deep, #4f7f92)">ANA Analysis</button>`;
-  html += `<button class="tab" data-view="pg-aimgmt" style="--spine:var(--sage)">Autoimmune Management</button>`;
+  html += `<button class="tab" data-view="pg-ana" style="--spine:var(--river-deep, #4f7f92)">Positive ANA?</button>`;
   html += `<button class="tab" data-view="pg-billing" style="--spine:var(--ok, #1F6961)">Billing Toolkit</button>`;
   html += `<button class="tab" data-view="pg-crewcare" style="--spine:var(--clay-deep)">BHWCrewCare Portal</button>`;
   html += `<div class="rail-label">Patient page previews</div>`;
@@ -400,9 +399,8 @@ function divisionView(div){
 
   return `<section class="view" id="view-${id}" style="--pc:${DIV_COLORS[div]}">
     <div class="prog-head"><div class="bar"></div><div><h1>${esc(div)}</h1><p>${DIV_BLURBS[div]||""}</p></div>${div==="Primary Care"?`<img src="/assets/bhw-logo-full.png" alt="BHW" style="height:84px;width:auto;margin-left:auto" onerror="this.style.display='none'">`:""}</div>
-    ${div==="Primary Care"?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:-8px 0 18px"><button class="btn sm warn" onclick="activate('front-desk')">Generate a referral</button><button class="btn sm sec" onclick="activate('front-desk')">Front desk &amp; lookup</button></div>`:""}
+    ${div==="Primary Care"?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:-8px 0 18px"><button class="btn sm warn" onclick="activate('front-desk')">Front Desk OS — lookup &amp; referrals</button></div>`:""}
     ${PATIENT_PAGES[div]?`<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:-4px 0 18px;padding:12px 14px;background:var(--card,#fff);border-radius:12px"><span style="font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;opacity:.65">Patient pages</span><a class="btn sm sec" style="text-decoration:none" href="${PATIENT_PAGES[div]}" target="_blank" rel="noopener">View patient page</a><a class="btn sm sec" style="text-decoration:none" href="https://app.notion.com/p/3a1580758d3081c48b90fdab7b442fcb" target="_blank" rel="noopener">Manage content ↗</a><a class="btn sm sec" style="text-decoration:none" href="https://app.notion.com/p/3a1580758d3081c48b90fdab7b442fcb" target="_blank" rel="noopener">Sign-up steps</a></div>`:""}
-    ${div==="Primary Care"?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:-8px 0 18px"><a class="btn sm warn" style="text-decoration:none" href="/bhw-front-desk.html#rg" target="_blank" rel="noopener">📠 Generate a referral</a><a class="btn sm sec" style="text-decoration:none" href="/bhw-front-desk.html" target="_blank" rel="noopener">📞 Front desk & patient lookup</a></div>`:""}
     <div class="kpis">
       <div class="kpi" style="--kc:var(--alert)"><div class="n">${c.rIn}</div><div class="l">Incoming referrals open</div></div>
       <div class="kpi" style="--kc:var(--warn)"><div class="n">${c.hIn}</div><div class="l">Warm handoffs in inbox</div></div>
@@ -437,6 +435,8 @@ function divisionView(div){
 
     ${div==="Mind & Mood Recovery" ? `<div style="display:flex;align-items:center;gap:14px;margin:2px 0 14px"><img src="assets/mind-mood-logo.png" alt="BHW Mind and Mood Recovery" style="width:64px;height:64px;object-fit:cover;object-position:top;border-radius:50%"><div><div style="font-family:Montserrat,sans-serif;font-weight:800;letter-spacing:.5px;color:#2f4551">BHW MIND & MOOD RECOVERY</div><div style="font-style:italic;font-size:12.5px;color:#b07a55">Depth restores clarity.</div></div></div>` : ""}
 
+    ${div==="Chronic Care" ? ccNeedsCard() : ""}
+
     ${(div==="Chronic Care"||div==="Mind & Mood Recovery") ? todayCard(div) : ""}
 
     ${isPorter && D.phPlans ? phGrowthCard() : ""}
@@ -464,6 +464,38 @@ function divisionView(div){
       </tbody></table></div>
     </div>
   </section>`;
+}
+
+const CC_NEEDS = [
+  ["SDH","SDOH resources","Housing, food, transportation, utilities, benefits — name what's needed and any deadline."],
+  ["Acute follow-up","Acute follow-up","Which acute issue, what was already done, and the window it must happen in."],
+  ["Chronic follow-up","Chronic follow-up","Which chronic condition, how controlled it is now, and the interval needed."],
+  ["Specialist coordination","Managing multiple specialists","Which specialists are involved, what's falling through, and what needs pulling together."],
+  ["Care plan support","Care plan hard to manage","Which part of the plan is hard to follow and the barrier the patient named."],
+  ["Visit spacing / more time","Needs more time between visits","What the patient is asking for and why the current interval isn't working."],
+  ["Monitoring equipment","Monitoring equipment","Which device (BP cuff, pulse ox, glucometer, scale) and the clinical reason."],
+];
+function ccNeedsCard(){
+  return `<div class="card" style="border-left:4px solid var(--pc-chronic)">
+    <h2>Request care coordination <span class="grow"></span></h2>
+    <p class="lede">Tap the reason — it opens a referral addressed to Chronic Care with the type already set, so the coordinator gets a specific ask instead of "please help."</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      ${CC_NEEDS.map((n,i)=>`<button class="btn sm sec" onclick="ccRequest(${i})">${esc(n[1])}</button>`).join("")}
+    </div>
+  </div>`;
+}
+function ccRequest(i){
+  const n = CC_NEEDS[i]; if(!n) return;
+  openReferralForm("");
+  setTimeout(function(){
+    const to=document.getElementById("f-to"); if(to) to.value="Chronic Care";
+    const t=document.getElementById("f-type");
+    if(t){
+      if(![...t.options].some(o=>o.text===n[0])){ const o=document.createElement("option"); o.textContent=n[0]; t.appendChild(o); }
+      t.value=n[0];
+    }
+    const d=document.getElementById("f-det"); if(d){ d.placeholder=n[2]; d.focus(); }
+  },60);
 }
 
 function roomName(id){ const r=(D.rooms||[]).find(r=>r.id===id); return r?r.name:"—"; }
@@ -568,8 +600,7 @@ function frontDeskView(){
 const PAGE_EMBEDS = [
   {id:"pg-panel",    title:"Panel & Discharges",   src:"/bhw-panel-performance.html",        blurb:"Utilization, HEDIS scorecard, and hospital discharge tracking."},
   {id:"pg-hormone",  title:"Hormone Analysis",     src:"/bhw-hormone-analysis.html",         blurb:"Lab-based hormone interpretation tool."},
-  {id:"pg-ana",      title:"ANA Analysis",         src:"/bhw-ana-analysis.html",             blurb:"Positive-ANA differential from the 100-condition autoimmune matrix."},
-  {id:"pg-aimgmt",   title:"Autoimmune Management",src:"/bhw-autoimmune-management.html",      blurb:"Traditional + integrative management for 100 conditions, with evidence grades."},
+  {id:"pg-ana",      title:"Positive ANA?",        src:"/bhw-positive-ana.html",             blurb:"Analyze a result, then immune patterns, cells, antibody mechanisms, 100 conditions, management protocols and integrative levers."},
   {id:"pg-billing",  title:"Billing Toolkit",      src:"/BHW_Care_Management_Toolkit.html",  blurb:"Care management and primary care billing codes."},
   {id:"pg-crewcare", title:"BHWCrewCare Portal",   src:"/bhw-crewcare-portal.html",          blurb:"Provider side — inbox, care plan builder, results, panel."},
   {id:"pg-portal",   title:"Primary Care Portal",  src:"/bhw-patient-portal-mockup.html",    blurb:"Patient-side design preview — sample data."},
@@ -2087,10 +2118,11 @@ function openReferralForm(from){
     <label>Patient</label><select id="f-pat"><option value="">Select patient…</option>${patientOptions()}</select>
     <div class="row"><div><label>From</label><select id="f-from">${divisionOptions(froms)}</select></div>
     <div><label>To</label><select id="f-to">${divisionOptions(["Primary Care","CharmEd Minds","Mind & Mood Recovery","The Porter House","Chronic Care","Flow"])}</select></div></div>
-    <div class="row"><div><label>Type</label><select id="f-type"><option>Division Referral</option><option>SDH</option><option>Device Order</option><option>Flow Pathway</option><option>Lab/Imaging Follow-up</option><option>Other</option></select></div>
+    <div class="row"><div><label>Type</label><select id="f-type"><option>Division Referral</option><option>SDH</option><option>Acute follow-up</option><option>Chronic follow-up</option><option>Specialist coordination</option><option>Care plan support</option><option>Visit spacing / more time</option><option>Monitoring equipment</option><option>Device Order</option><option>Flow Pathway</option><option>Lab/Imaging Follow-up</option><option>Other</option></select></div>
     <div><label>Device (if device order)</label><select id="f-dev"><option value="">—</option>${DEVICES.map(d=>`<option>${d}</option>`).join("")}</select></div></div>
     <label>Details — what's needed</label><textarea id="f-det"></textarea>
-    <label>Priority</label><select id="f-pri"><option>Routine</option><option>Urgent</option></select>
+    <div class="row"><div><label>Priority</label><select id="f-pri"><option>Routine</option><option>Urgent</option></select></div>
+    <div><label>Needed by</label><select id="f-when"><option value="">—</option><option>24–48 hours</option><option>Within 1 week</option><option>Within 2 weeks</option><option>Within 30 days</option></select></div></div>
     <div class="ferr" id="f-err"></div>
     <div class="macts"><button class="btn sec" onclick="closeModal()">Cancel</button><button class="btn" onclick="submitReferral()">Send referral</button></div>
   </div>`);
@@ -2098,7 +2130,8 @@ function openReferralForm(from){
 }
 async function submitReferral(){
   try{
-    await act({action:"referral-create", patientId:val("f-pat"), from:val("f-from"), to:val("f-to"), type:val("f-type"), device:val("f-dev"), details:val("f-det"), priority:val("f-pri")}, "Referral sent", true);
+    const _when=val("f-when");
+    await act({action:"referral-create", patientId:val("f-pat"), from:val("f-from"), to:val("f-to"), type:val("f-type"), device:val("f-dev"), details:(_when?`[Needed by: ${_when}] `:"")+val("f-det"), priority:val("f-pri")}, "Referral sent", true);
     closeModal();
   }catch(e){ document.getElementById("f-err").textContent = e.message; }
 }
