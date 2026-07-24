@@ -1884,5 +1884,111 @@ document.addEventListener('input', function(e){
 <tr><td>11200</td><td>Skin tag removal (up to 15)</td><td>In-office procedure</td><td>~$80</td></tr>
 </tbody></table></div>
 
+
+<h2 class="section-header">Preventive &amp; Wellness — Superbill Code Pairs (CPT/HCPCS + ICD-10)</h2>
+<p style="font-size:0.85rem; margin-bottom:12px;">The diagnosis code is what tells the payer the preventive service was <b>completed and covered</b>. Pair every wellness service with its Z-code (or the risk-specific code) on the superbill — a preventive CPT submitted with only a chronic-disease diagnosis is the most common reason these deny. Medicare frequency limits noted; commercial plans follow USPSTF/ACA schedules with no cost-share when coded preventive.</p>
+
+<div class="sub-header">Annual wellness &amp; the visit itself</div>
+<div class="table-wrap"><table class="bhw-table">
+<thead><tr><th>Service</th><th>CPT / HCPCS</th><th>ICD-10 to pair</th><th>Frequency / notes</th></tr></thead>
+<tbody>
+<tr><td>Welcome to Medicare (IPPE)</td><td>G0402</td><td>Z00.00</td><td>Once, first 12 months of Part B</td></tr>
+<tr><td>Initial AWV</td><td>G0438</td><td>Z00.00</td><td>Once per lifetime</td></tr>
+<tr><td>Subsequent AWV</td><td>G0439</td><td>Z00.00</td><td>Every 12 months (11 full months must elapse)</td></tr>
+<tr><td>Annual preventive exam, established (commercial)</td><td>99395–99397</td><td>Z00.00 (Z00.01 if abnormal finding)</td><td>Age-banded: 18–39 / 40–64 / 65+</td></tr>
+<tr><td>Annual preventive exam, new (commercial)</td><td>99385–99387</td><td>Z00.00 / Z00.01</td><td>Age-banded</td></tr>
+<tr><td>Significant separate E/M same day</td><td>99213–99215 + <b>modifier 25</b></td><td>The problem's own code</td><td>Modifier 25 is mandatory or both lines deny</td></tr>
+<tr><td>Longitudinal care complexity add-on</td><td>G2211</td><td>Matches the E/M</td><td>Not with modifier 25 on the same E/M</td></tr>
+<tr><td>Advance care planning, first 30 min</td><td>99497</td><td>Z71.89 (or Z66 if DNR discussed)</td><td>No cost-share when furnished with an AWV — append <b>modifier 33</b></td></tr>
+<tr><td>ACP, each additional 30 min</td><td>99498</td><td>Z71.89</td><td>Add-on to 99497</td></tr>
+<tr><td>Cognitive assessment &amp; care plan</td><td>99483</td><td>G30.9, F03.90, or G31.84</td><td>~50 min; separate from AWV cognitive screen</td></tr>
+</tbody></table></div>
+
+<div class="sub-header">Cardiovascular &amp; metabolic screening</div>
+<div class="table-wrap"><table class="bhw-table">
+<thead><tr><th>Service</th><th>CPT / HCPCS</th><th>ICD-10 to pair</th><th>Frequency / notes</th></tr></thead>
+<tbody>
+<tr><td>Lipid panel — screening</td><td>80061</td><td>Z13.220</td><td>Medicare every 5 years; annually with risk factors (use E78.- if monitoring known disease)</td></tr>
+<tr><td>Intensive behavioral therapy, CVD</td><td>G0446</td><td>Z13.6</td><td>Annual, 15 min, face-to-face</td></tr>
+<tr><td>Diabetes screening</td><td>82947 / 82950 / 83036</td><td>Z13.1</td><td>Z13.1 = screening; E11.- only once diagnosed</td></tr>
+<tr><td>Diabetes self-management training</td><td>G0108 / G0109</td><td>E11.- (+ Z71.3)</td><td>10 hrs initial year, 2 hrs annually after</td></tr>
+<tr><td>Medical nutrition therapy</td><td>97802 / 97803 / 97804</td><td>E11.-, N18.- </td><td>Medicare: diabetes and CKD only</td></tr>
+<tr><td>AAA ultrasound screening</td><td>76706</td><td>Z13.6 (+ Z87.891 if smoking hx)</td><td>Once per lifetime, qualifying risk</td></tr>
+<tr><td>Obesity behavioral counseling</td><td>G0447 (G0473 group)</td><td>Z68.30–Z68.45 <b>plus</b> E66.-</td><td>BMI ≥30; the Z68 BMI code is required</td></tr>
+</tbody></table></div>
+
+<div class="sub-header">Cancer screening</div>
+<div class="table-wrap"><table class="bhw-table">
+<thead><tr><th>Service</th><th>CPT / HCPCS</th><th>ICD-10 to pair</th><th>Frequency / notes</th></tr></thead>
+<tbody>
+<tr><td>Colorectal — FIT / FOBT</td><td>82270 / G0328</td><td>Z12.11</td><td>Annual</td></tr>
+<tr><td>Colorectal — Cologuard</td><td>81528</td><td>Z12.11</td><td>Every 3 years</td></tr>
+<tr><td>Screening colonoscopy referral</td><td>G0121 (avg risk) / G0105 (high risk)</td><td>Z12.11 (+ Z80.0 family hx)</td><td>10 yrs avg risk / 2 yrs high risk</td></tr>
+<tr><td>Screening mammogram</td><td>77067</td><td>Z12.31</td><td>Annual 40+ (Z80.3 if family hx)</td></tr>
+<tr><td>Cervical — Pap collection</td><td>Q0091 (Medicare) / 99000</td><td>Z12.4</td><td>Pair with pelvic/breast exam G0101</td></tr>
+<tr><td>Pelvic &amp; clinical breast exam</td><td>G0101</td><td>Z01.419</td><td>Every 24 months, or annually if high risk</td></tr>
+<tr><td>HPV screening</td><td>87624 / G0476</td><td>Z11.51</td><td>Co-testing every 5 years, ages 30–65</td></tr>
+<tr><td>Prostate — PSA / DRE</td><td>G0103 / G0102</td><td>Z12.5</td><td>Annual, men 50+</td></tr>
+<tr><td>Lung cancer screening counseling</td><td>G0296</td><td>Z87.891 + Z12.2</td><td>Shared decision-making before first LDCT</td></tr>
+<tr><td>Low-dose CT chest</td><td>71271</td><td>Z12.2 + Z87.891 (or F17.210)</td><td>Annual, qualifying pack-year history</td></tr>
+<tr><td>Bone density (DEXA)</td><td>77080</td><td>Z13.820 (+ M81.0 if known osteoporosis)</td><td>Every 24 months</td></tr>
+</tbody></table></div>
+
+<div class="sub-header">Behavioral health &amp; substance screening</div>
+<div class="table-wrap"><table class="bhw-table">
+<thead><tr><th>Service</th><th>CPT / HCPCS</th><th>ICD-10 to pair</th><th>Frequency / notes</th></tr></thead>
+<tbody>
+<tr><td>Annual depression screening</td><td>G0444</td><td>Z13.31</td><td>15 min, yearly; not billable with the AWV's own screen</td></tr>
+<tr><td>Brief emotional/behavioral assessment</td><td>96127</td><td>Z13.31 / Z13.39</td><td>Per instrument (PHQ-9, GAD-7, Vanderbilt); up to 4</td></tr>
+<tr><td>Alcohol misuse screening</td><td>G0442</td><td>Z13.39</td><td>Annual, 15 min</td></tr>
+<tr><td>Alcohol counseling</td><td>G0443</td><td>Z71.41 (or F10.-)</td><td>Up to 4 sessions/year when screen positive</td></tr>
+<tr><td>Tobacco cessation, 3–10 min</td><td>99406</td><td>Z71.6 + F17.2-</td><td>2 attempts/year, 4 sessions each</td></tr>
+<tr><td>Tobacco cessation, &gt;10 min</td><td>99407</td><td>Z71.6 + F17.2-</td><td>Same limits</td></tr>
+<tr><td>SDOH risk assessment</td><td>G0136</td><td>Z55–Z65 as applicable</td><td>5–15 min, up to every 6 months</td></tr>
+<tr><td>Alcohol/substance SBIRT</td><td>99408 / 99409</td><td>Z13.39, F10.-, F11.-</td><td>15–30 min / &gt;30 min</td></tr>
+</tbody></table></div>
+
+<div class="sub-header">Immunizations — administration + product + diagnosis</div>
+<div class="table-wrap"><table class="bhw-table">
+<thead><tr><th>Vaccine</th><th>Administration</th><th>Product CPT</th><th>ICD-10</th></tr></thead>
+<tbody>
+<tr><td>Influenza</td><td>G0008 (Medicare) / 90471</td><td>90686, 90688, 90662 (65+)</td><td>Z23</td></tr>
+<tr><td>Pneumococcal</td><td>G0009 / 90471</td><td>90670 (PCV13), 90671 (PCV15), 90677 (PCV20), 90732 (PPSV23)</td><td>Z23</td></tr>
+<tr><td>Hepatitis B</td><td>G0010 / 90471</td><td>90746, 90739</td><td>Z23</td></tr>
+<tr><td>COVID-19</td><td>Per current CMS admin code</td><td>Per formulation</td><td>Z23</td></tr>
+<tr><td>Tdap / Td</td><td>90471</td><td>90715 / 90714</td><td>Z23</td></tr>
+<tr><td>Shingles (RZV)</td><td>90471</td><td>90750</td><td>Z23</td></tr>
+<tr><td>RSV</td><td>90471</td><td>90678, 90679</td><td>Z23</td></tr>
+<tr><td>Each additional vaccine same visit</td><td>90472</td><td>—</td><td>Z23</td></tr>
+</tbody></table></div>
+
+<div class="sub-header">Infectious disease &amp; other preventive</div>
+<div class="table-wrap"><table class="bhw-table">
+<thead><tr><th>Service</th><th>CPT / HCPCS</th><th>ICD-10 to pair</th><th>Frequency / notes</th></tr></thead>
+<tbody>
+<tr><td>Hepatitis C screening</td><td>G0472 / 86803</td><td>Z11.59 (+ Z72.89 if risk)</td><td>Once for adults 18–79; annually with ongoing risk</td></tr>
+<tr><td>HIV screening</td><td>G0475 / 87389</td><td>Z11.4</td><td>Annual for at-risk; once 15–65</td></tr>
+<tr><td>STI screening</td><td>87491, 87591</td><td>Z11.3</td><td>Risk-based</td></tr>
+<tr><td>STI behavioral counseling</td><td>G0445</td><td>Z71.7 / Z11.3</td><td>Up to 2 per year, 20–30 min</td></tr>
+<tr><td>Hepatitis B screening</td><td>G0499</td><td>Z11.59</td><td>High-risk annually</td></tr>
+<tr><td>Vision screening</td><td>99173</td><td>Z01.00</td><td>Not separately payable with some E/M</td></tr>
+<tr><td>Hearing screening</td><td>92551</td><td>Z01.10</td><td>Screening only</td></tr>
+<tr><td>ECG with IPPE</td><td>G0403–G0405</td><td>Z00.00</td><td>Once, only with the IPPE</td></tr>
+</tbody></table></div>
+
+<div class="infobox tip">
+  <div class="infobox-head">Superbill rules that prevent most preventive denials</div>
+  <div class="infobox-body">
+    <ul class="bhw-bullets">
+      <li><b>Lead with the Z-code.</b> The screening diagnosis must be primary on a preventive line; a chronic-disease code first converts it to a diagnostic (cost-shared) service.</li>
+      <li><b>Modifier 25</b> on the problem-focused E/M whenever it shares a date with a preventive visit — and the note must document two distinct services.</li>
+      <li><b>Modifier 33</b> marks a service as preventive so cost-sharing is waived (commercial); use on ACP with AWV and on screening labs.</li>
+      <li><b>Screening becomes diagnostic</b> the moment a finding drives it — switch to Z00.01 and add the abnormal finding's code.</li>
+      <li><b>BMI Z68 codes</b> are required alongside E66.- for obesity counseling to pay.</li>
+      <li><b>Check the frequency clock</b> — Medicare counts 11 full months for the AWV, not a calendar year.</li>
+    </ul>
+  </div>
+</div>
+
 </body>
 </html>

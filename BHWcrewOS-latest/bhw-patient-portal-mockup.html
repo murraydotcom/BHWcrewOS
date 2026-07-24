@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>BHW Patient Portal — Design Prototype</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&family=Montserrat:wght@300;400;500;600;700&family=Lora:ital@0;1&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   BHW family — shared tokens (inherited from BHW Integrative)
+   ============================================================ */
+:root{
+  --bhw-deep-obsidian:#0F141A; --bhw-ink-navy:#162433; --bhw-charcoal:#2A3038;
+  --bhw-mineral-taupe:#6B665E; --bhw-sea-glass:#5FA9A6; --bhw-deep-teal-vein:#266D7A;
+  --bhw-opal-mist:#DCE3EA; --bhw-lavender-opal:#92889B; --bhw-rose-opal:#C9A0A0;
+  --bhw-pale-gold-light:#E8C98A; --bhw-bronze-clay:#8C5A3C; --bhw-pyrite-gold:#C4A038;
+  --bhw-limestone:#EDE5D8; --bhw-warm-ivory:#F7F3EA;
+  --opal-glow:#5FE3D6;
+
+  --bg:var(--bhw-warm-ivory); --bg-warm:var(--bhw-limestone); --bg-muted:var(--bhw-opal-mist);
+  --fg:var(--bhw-ink-navy); --fg-strong:var(--bhw-deep-obsidian); --fg-muted:var(--bhw-mineral-taupe);
+  --fg-on-dark:var(--bhw-warm-ivory);
+  --accent:var(--bhw-bronze-clay); --accent-gold:var(--bhw-pyrite-gold);
+  --accent-soft:var(--bhw-sea-glass); --accent-deep:var(--bhw-deep-teal-vein);
+  --border:rgba(22,36,51,0.12); --border-on-dark:rgba(247,243,234,0.16);
+
+  --font-sans:'Montserrat',ui-sans-serif,system-ui,sans-serif;
+  --font-serif:'Playfair Display',Georgia,serif;
+  --font-lora:'Lora',Georgia,serif;
+  --font-script:'Caveat',cursive;
+  --ease-out:cubic-bezier(0.16,1,0.3,1);
+  --shadow-sm:0 2px 6px rgba(15,20,26,0.08);
+  --shadow-md:0 8px 20px -8px rgba(15,20,26,0.18);
+  --shadow-lg:0 20px 40px -16px rgba(15,20,26,0.28);
+}
+*,*::before,*::after{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{font-family:var(--font-sans); background:var(--bg); color:var(--fg);
+  -webkit-font-smoothing:antialiased; font-size:16px; line-height:1.55;}
+a{color:inherit;}
+button{font-family:inherit;}
+:focus-visible{outline:2px solid var(--accent-deep); outline-offset:2px;}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important; transition:none!important;}
+}
+
+.eyebrow{font-size:10.5px; font-weight:600; letter-spacing:0.2em; text-transform:uppercase; color:var(--fg-muted); margin:0;}
+.eyebrow--gold{color:var(--accent-gold);}
+h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
+
+/* ============================================================
+   PROTOTYPE BANNER
+   ============================================================ */
+.proto-banner{background:var(--bhw-ink-navy); color:rgba(247,243,234,0.85);
+  font-size:10.5px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase;
+  text-align:center; padding:7px 16px;}
+.proto-banner b{color:var(--bhw-pale-gold-light); font-weight:600;}
+
+/* ============================================================
+   LOGIN VIEW — dark mineral, opal glow
+   ============================================================ */
+#view-login{min-height:calc(100vh - 30px); background:#0B1418; position:relative;
+  display:flex; align-items:center; justify-content:center; padding:48px 20px; overflow:hidden;}
+#view-login::before{content:""; position:absolute; inset:0; pointer-events:none;
+  background:radial-gradient(70% 80% at 75% 30%, rgba(44,167,166,0.22), transparent 55%),
+             radial-gradient(50% 70% at 20% 90%, rgba(232,162,74,0.10), transparent 60%),
+             linear-gradient(180deg,#0E1B22 0%, #0A1316 100%);}
+.login-card{position:relative; z-index:2; width:100%; max-width:440px;}
+.login-lockup{display:flex; align-items:center; gap:12px; margin-bottom:34px;}
+.login-mark{width:38px; height:38px; border-radius:50%; flex-shrink:0;
+  background:radial-gradient(circle at 38% 35%, var(--opal-glow) 0%, var(--bhw-sea-glass) 38%, #C8A6E0 66%, #E8A24A 100%);
+  box-shadow:0 0 24px rgba(95,227,214,0.5);}
+.login-wm{display:flex; flex-direction:column; gap:3px; line-height:1;}
+.login-wm span:first-child{font-size:19px; font-weight:300; letter-spacing:0.04em; color:var(--bhw-warm-ivory);}
+.login-wm span:last-child{font-size:8.5px; font-weight:600; letter-spacing:0.24em; text-transform:uppercase; color:rgba(247,243,234,0.6);}
+.login-card h1{font-family:var(--font-serif); font-weight:300; font-size:clamp(38px,7vw,52px);
+  line-height:1.02; letter-spacing:-0.02em; color:var(--bhw-warm-ivory);}
+.login-card h1 em{font-style:italic; font-weight:300;
+  background:linear-gradient(105deg,#2CA7A6 0%,#5FE3D6 40%,#C8A6E0 65%,#E8A24A 92%);
+  -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;}
+.login-sub{font-size:14px; line-height:1.7; color:rgba(247,243,234,0.72); margin:20px 0 34px; max-width:360px;}
+.login-field{display:flex; flex-direction:column; gap:7px; margin-bottom:18px;}
+.login-field label{font-size:10px; font-weight:600; letter-spacing:0.2em; text-transform:uppercase; color:rgba(247,243,234,0.55);}
+.login-field input{font-family:var(--font-sans); font-size:15px; padding:14px 16px;
+  background:rgba(247,243,234,0.06); border:1px solid rgba(247,243,234,0.18);
+  border-radius:9px; color:var(--bhw-warm-ivory); outline:none; width:100%;}
+.login-field input::placeholder{color:rgba(247,243,234,0.35);}
+.login-field input:focus{border-color:var(--opal-glow); box-shadow:0 0 0 3px rgba(95,227,214,0.14);}
+.login-btn{display:flex; width:100%; justify-content:center; align-items:center; gap:10px;
+  background:var(--bhw-pyrite-gold); color:var(--bhw-deep-obsidian);
+  padding:15px 24px; border-radius:8px; border:0; cursor:pointer;
+  font-size:11px; font-weight:700; letter-spacing:0.22em; text-transform:uppercase;
+  transition:all 220ms var(--ease-out); margin-top:8px;}
+.login-btn:hover{background:var(--bhw-warm-ivory); transform:translateY(-1px);}
+.login-fine{font-size:11.5px; color:rgba(247,243,234,0.45); margin-top:22px; line-height:1.65;}
+.login-fine a{color:rgba(247,243,234,0.7); text-decoration:underline;}
+
+/* ============================================================
+   APP SHELL
+   ============================================================ */
+#view-app{display:none;}
+.bhw-header{position:sticky; top:0; z-index:50; background:var(--bg-warm); border-bottom:1px solid var(--border);}
+.bhw-header__inner{max-width:1080px; margin:0 auto; padding:13px 20px;
+  display:flex; align-items:center; justify-content:space-between; gap:16px;}
+.bhw-header__lockup{display:flex; align-items:center; gap:10px; text-decoration:none;}
+.header-mark{width:28px; height:28px; border-radius:50%;
+  background:radial-gradient(circle at 38% 35%, var(--opal-glow) 0%, var(--bhw-sea-glass) 38%, #C8A6E0 66%, #E8A24A 100%);}
+.bhw-header__wm{display:flex; flex-direction:column; gap:2px; line-height:1;}
+.bhw-header__wm span:first-child{font-size:16px; font-weight:300; letter-spacing:0.04em; color:var(--fg-strong);}
+.bhw-header__wm span:last-child{font-size:7.5px; font-weight:600; letter-spacing:0.22em; text-transform:uppercase; color:var(--fg-muted);}
+.header-portal-tag{font-size:10.5px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase;
+  color:var(--accent); padding-left:14px; margin-left:4px; border-left:1px solid var(--border);}
+.patient-chip{display:flex; align-items:center; gap:9px;}
+.patient-chip .avatar{width:32px; height:32px; border-radius:50%; background:var(--accent-deep);
+  color:#fff; display:flex; align-items:center; justify-content:center;
+  font-size:12px; font-weight:600; letter-spacing:0.04em;}
+.patient-chip .pname{font-size:12.5px; font-weight:600; color:var(--fg-strong);}
+.patient-chip .pid{font-size:10px; color:var(--fg-muted); letter-spacing:0.06em;}
+@media (max-width:560px){ .patient-chip .pmeta{display:none;} .header-portal-tag{display:none;} }
+
+/* tabs */
+.portal-tabs{position:sticky; top:55px; z-index:40; background:var(--bg);
+  border-bottom:1px solid var(--border);}
+.portal-tabs__inner{max-width:1080px; margin:0 auto; padding:10px 20px;
+  display:flex; gap:6px; overflow-x:auto; scrollbar-width:none;}
+.portal-tabs__inner::-webkit-scrollbar{display:none;}
+.ptab{background:transparent; border:1px solid transparent; padding:9px 18px; border-radius:999px;
+  font-size:11.5px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase;
+  color:var(--fg-muted); cursor:pointer; white-space:nowrap; transition:all 200ms;}
+.ptab:hover{color:var(--fg-strong);}
+.ptab.active{background:var(--fg-strong); color:var(--bg); border-color:var(--fg-strong);}
+
+.wrap{max-width:1080px; margin:0 auto; padding:34px 20px 90px;}
+.pane{display:none;}
+.pane.active{display:block; animation:fadein 320ms var(--ease-out);}
+@keyframes fadein{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
+
+/* ============================================================
+   CARDS + SHARED
+   ============================================================ */
+.card{background:#F4EFE5; border:1px solid var(--border); border-radius:14px;
+  padding:26px; box-shadow:var(--shadow-sm);}
+.card-dark{background:var(--bhw-ink-navy); color:var(--fg-on-dark); border:1px solid var(--border-on-dark);}
+.btn{display:inline-flex; align-items:center; gap:9px; font-weight:600; font-size:11px;
+  letter-spacing:0.14em; text-transform:uppercase; padding:12px 20px; border-radius:999px;
+  border:1px solid transparent; cursor:pointer; text-decoration:none; transition:all 220ms var(--ease-out); white-space:nowrap;}
+.btn--gold{background:var(--bhw-pyrite-gold); color:var(--bhw-deep-obsidian);}
+.btn--gold:hover{filter:brightness(1.06); transform:translateY(-1px);}
+.btn--ghost{background:transparent; color:var(--fg); border-color:rgba(22,36,51,0.24);}
+.btn--ghost:hover{border-color:var(--accent); color:var(--accent);}
+.btn--ghost-dark{background:transparent; color:var(--fg-on-dark); border-color:rgba(247,243,234,0.32);}
+.btn--ghost-dark:hover{border-color:var(--fg-on-dark);}
+
+/* ============================================================
+   HOME PANE
+   ============================================================ */
+.home-greet h2{font-family:var(--font-serif); font-weight:300; letter-spacing:-0.02em;
+  font-size:clamp(32px,6vw,46px); line-height:1.06;}
+.home-greet h2 em{font-style:italic; color:var(--accent-deep);}
+.home-greet p{font-size:14.5px; color:var(--fg-muted); margin:12px 0 0; max-width:520px; line-height:1.7;}
+
+/* the vein — signature progress element */
+.vein-card{margin-top:28px; position:relative; overflow:hidden;}
+.vein-card::before{content:""; position:absolute; inset:0; pointer-events:none;
+  background:radial-gradient(60% 90% at 85% 20%, rgba(95,227,214,0.10), transparent 60%);}
+.vein-head{display:flex; justify-content:space-between; align-items:baseline; gap:16px; flex-wrap:wrap; margin-bottom:22px;}
+.vein-head .big{font-family:var(--font-serif); font-weight:300; font-size:26px; color:var(--fg-on-dark); letter-spacing:-0.01em;}
+.vein-head .big em{font-style:italic; color:var(--bhw-pale-gold-light);}
+.vein-track{position:relative; height:10px; border-radius:999px; background:rgba(247,243,234,0.10);}
+.vein-fill{position:absolute; inset:0 auto 0 0; width:0%; border-radius:999px;
+  background:linear-gradient(90deg,var(--bhw-deep-teal-vein) 0%, var(--opal-glow) 55%, var(--bhw-pale-gold-light) 100%);
+  box-shadow:0 0 14px rgba(95,227,214,0.55); transition:width 900ms var(--ease-out);}
+.vein-marks{display:flex; justify-content:space-between; margin-top:10px;}
+.vein-marks span{font-size:9.5px; font-weight:600; letter-spacing:0.14em; color:rgba(247,243,234,0.5); text-transform:uppercase;}
+.vein-note{font-family:var(--font-lora); font-style:italic; font-size:13.5px;
+  color:rgba(247,243,234,0.75); margin:20px 0 0;}
+
+.home-grid{display:grid; grid-template-columns:1.35fr 1fr; gap:18px; margin-top:18px;}
+@media (max-width:820px){ .home-grid{grid-template-columns:1fr;} }
+.week-card .task{display:flex; gap:13px; align-items:flex-start; padding:13px 0; border-bottom:1px solid var(--border);}
+.week-card .task:last-child{border-bottom:0;}
+.task input[type=checkbox]{width:19px; height:19px; margin-top:1px; accent-color:var(--bhw-deep-teal-vein); cursor:pointer; flex-shrink:0;}
+.task .t-name{font-size:14px; font-weight:500; color:var(--fg-strong);}
+.task .t-sub{font-size:12.5px; color:var(--fg-muted); margin-top:2px; line-height:1.5;}
+.quick{display:flex; flex-direction:column; gap:12px;}
+.quick a{display:flex; align-items:center; justify-content:space-between; gap:14px;
+  background:var(--bg); border:1px solid var(--border); border-radius:12px;
+  padding:16px 18px; text-decoration:none; transition:all 200ms var(--ease-out);}
+.quick a:hover{border-color:var(--accent); box-shadow:var(--shadow-md); transform:translateY(-1px);}
+.quick .q-name{font-size:13.5px; font-weight:600; color:var(--fg-strong);}
+.quick .q-sub{font-size:11.5px; color:var(--fg-muted); margin-top:2px;}
+.quick .q-arrow{color:var(--accent); font-size:15px;}
+
+/* ============================================================
+   CARE PLAN PANE — 12-week vein
+   ============================================================ */
+.plan-head{margin-bottom:26px;}
+.plan-head h2{font-family:var(--font-serif); font-weight:300; font-size:clamp(28px,5vw,40px); letter-spacing:-0.02em;}
+.plan-head h2 em{font-style:italic; color:var(--accent-deep);}
+.plan-head p{font-size:13.5px; color:var(--fg-muted); max-width:560px; line-height:1.7; margin:10px 0 0;}
+.weeks{display:flex; flex-direction:column; gap:10px;}
+.week{background:#F4EFE5; border:1px solid var(--border); border-radius:13px; overflow:hidden;}
+.week-btn{display:flex; width:100%; align-items:center; gap:16px; padding:17px 20px;
+  background:transparent; border:0; cursor:pointer; text-align:left;}
+.week-dot{width:34px; height:34px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:12px; font-weight:600; border:1px solid var(--border); color:var(--fg-muted); background:var(--bg);}
+.week.done .week-dot{background:var(--bhw-deep-teal-vein); border-color:var(--bhw-deep-teal-vein); color:#fff;}
+.week.current .week-dot{background:var(--bhw-pyrite-gold); border-color:var(--bhw-pyrite-gold); color:var(--bhw-deep-obsidian); box-shadow:0 0 0 4px rgba(196,160,56,0.18);}
+.week .w-title{font-size:14.5px; font-weight:600; color:var(--fg-strong);}
+.week .w-sub{font-size:11.5px; color:var(--fg-muted); margin-top:2px; letter-spacing:0.04em;}
+.week .w-state{margin-left:auto; font-size:10px; font-weight:600; letter-spacing:0.16em; text-transform:uppercase; color:var(--fg-muted); flex-shrink:0;}
+.week.done .w-state{color:var(--bhw-deep-teal-vein);}
+.week.current .w-state{color:var(--bhw-bronze-clay);}
+.week.locked{opacity:0.62;}
+.week.locked .week-btn{cursor:default;}
+.week-body{display:none; padding:2px 22px 24px 70px; border-top:1px dashed var(--border);}
+@media (max-width:560px){ .week-body{padding-left:22px;} }
+.week.open .week-body{display:block;}
+.week-body .goal{font-family:var(--font-lora); font-style:italic; font-size:14.5px; color:var(--fg); margin:16px 0 14px; line-height:1.6;}
+.provider-note{display:flex; gap:12px; margin-top:18px; padding:15px 17px; background:var(--bg);
+  border-left:3px solid var(--bhw-pale-gold-light); border-radius:0 10px 10px 0;}
+.provider-note .pn-label{font-size:9.5px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:var(--accent); margin-bottom:5px;}
+.provider-note p{font-size:13px; line-height:1.65; margin:0; color:var(--fg);}
+.provider-note .sig{font-family:var(--font-script); font-size:19px; color:var(--accent); margin-top:6px;}
+
+/* ============================================================
+   NUTRITION PANE
+   ============================================================ */
+.nutri-grid{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:22px;}
+@media (max-width:820px){ .nutri-grid{grid-template-columns:1fr;} }
+.rhythm{display:flex; flex-direction:column; gap:0;}
+.rhythm .r-item{display:flex; gap:15px; padding:14px 0; border-bottom:1px solid var(--border);}
+.rhythm .r-item:last-child{border-bottom:0;}
+.rhythm .r-time{font-size:10px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent-deep); width:74px; flex-shrink:0; padding-top:3px;}
+.rhythm .r-name{font-size:14px; font-weight:500; color:var(--fg-strong);}
+.rhythm .r-sub{font-size:12.5px; color:var(--fg-muted); line-height:1.55; margin-top:2px;}
+.focus-pills{display:flex; flex-wrap:wrap; gap:8px; margin-top:14px;}
+.fpill{font-size:11.5px; font-weight:600; letter-spacing:0.08em; padding:7px 14px;
+  border-radius:999px; background:var(--bg); border:1px solid var(--border); color:var(--fg);}
+.section-label{display:flex; gap:12px; align-items:center; margin:0 0 16px;}
+.section-label .dot{width:8px; height:8px; border-radius:999px; background:var(--accent-soft); box-shadow:0 0 8px rgba(95,169,166,0.6);}
+.section-label .txt{font-size:10.5px; font-weight:600; letter-spacing:0.2em; text-transform:uppercase; color:var(--fg-muted);}
+.section-label .line{flex:1; height:1px; background:linear-gradient(90deg,rgba(196,160,56,0.5),transparent);}
+
+/* ============================================================
+   MESSAGES PANE
+   ============================================================ */
+.msg{display:flex; margin:14px 0;}
+.msg--me{justify-content:flex-end;}
+.msg-bubble{max-width:78%; padding:14px 17px; border-radius:14px; box-shadow:var(--shadow-sm);}
+.msg--team .msg-bubble{background:var(--bg); border:1px solid var(--border); border-top-left-radius:4px;}
+.msg--me .msg-bubble{background:var(--bhw-ink-navy); color:var(--fg-on-dark); border-top-right-radius:4px;}
+.msg-who{font-size:9.5px; font-weight:600; letter-spacing:0.16em; text-transform:uppercase; color:var(--fg-muted); margin-bottom:6px;}
+.msg--me .msg-who{color:rgba(247,243,234,0.55);}
+.msg-bubble p{font-size:13.5px; line-height:1.65; margin:0;}
+.msg-compose{display:flex; gap:10px; align-items:flex-end; margin-top:22px; padding-top:20px; border-top:1px dashed var(--border);}
+.msg-compose textarea{flex:1; font-family:var(--font-sans); font-size:14px; padding:13px 15px;
+  background:var(--bg); border:1px solid var(--border); border-radius:11px; color:var(--fg);
+  outline:none; resize:none;}
+.msg-compose textarea:focus{border-color:var(--accent-deep); box-shadow:0 0 0 3px rgba(38,109,122,0.14);}
+.msg-fine{font-size:11px; color:var(--fg-muted); margin:14px 0 0; letter-spacing:0.03em;}
+
+/* ---- Care plan depth blocks ---- */
+.cp-block{margin:22px 0; padding:18px 20px; background:var(--bg); border:1px solid var(--border); border-radius:12px;}
+.cp-label{font-size:9.5px; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:var(--accent-deep); margin-bottom:10px;}
+.cp-block p{font-size:13.5px; line-height:1.7; color:var(--fg); margin:8px 0;}
+.lab-row{display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-top:10px;}
+.lab-name{font-size:13.5px; font-weight:600; color:var(--fg-strong);}
+.lab-val{font-size:12px; font-weight:600; letter-spacing:0.06em; padding:3px 10px; border-radius:999px;}
+.lab-val--low{background:rgba(201,160,160,0.25); color:#8C4A3C;}
+.supp{padding:13px 0; border-bottom:1px dashed var(--border);}
+.supp:last-child{border-bottom:0; padding-bottom:0;}
+.supp-name{font-size:14px; font-weight:600; color:var(--fg-strong);}
+.supp-how{font-size:12.5px; color:var(--fg); margin-top:3px; line-height:1.55;}
+.supp-why{font-size:12px; color:var(--fg-muted); margin-top:3px; font-style:italic; line-height:1.55;}
+
+/* ---- Program brand overrides (demo) ---- */
+.brand-mindmood{
+  --bg:#F7F1E8; --bg-warm:#EFE3D8; --fg:#4B3558; --fg-strong:#3A2944; --fg-muted:#7E6B84;
+  --accent:#4B3558; --accent-deep:#4B3558; --accent-soft:#C9B3CF; --accent-gold:#E7C95B;
+  --border:rgba(75,53,88,0.14);
+}
+.brand-charmed{
+  --bg:#FAF7F2; --bg-warm:#E9E2D6; --fg:#0B1228; --fg-strong:#0B1228; --fg-muted:#5A6070;
+  --accent:#114766; --accent-deep:#2CA7A6; --accent-soft:#B7A4F7; --accent-gold:#F2B134;
+  --border:rgba(11,18,40,0.12);
+}
+.demo-bar{background:var(--bhw-limestone); border-bottom:1px solid rgba(22,36,51,0.1);
+  display:flex; align-items:center; justify-content:center; gap:8px; padding:7px 14px; flex-wrap:wrap;}
+.demo-bar .d-label{font-size:9.5px; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; color:var(--bhw-mineral-taupe);}
+.demo-bar button{font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase;
+  padding:5px 12px; border-radius:999px; border:1px solid rgba(22,36,51,0.2); background:transparent;
+  color:var(--bhw-ink-navy); cursor:pointer;}
+.demo-bar button.active{background:var(--bhw-ink-navy); color:var(--bhw-warm-ivory); border-color:var(--bhw-ink-navy);}
+
+.portal-foot{border-top:1px solid var(--border); margin-top:70px; padding-top:22px;
+  display:flex; justify-content:space-between; gap:18px; flex-wrap:wrap;
+  font-size:11px; color:var(--fg-muted); letter-spacing:0.05em;}
+</style>
+</head>
+<body>
+
+<div class="proto-banner"><b>Design prototype</b> · demo data only · no real patient information</div>
+<div class="demo-bar" id="demoBar" style="display:none;">
+  <span class="d-label">Demo — view as program:</span>
+  <button class="active" onclick="setProgram('bhw',this)">BHW Medical</button>
+  <button onclick="setProgram('mindmood',this)">Mind &amp; Mood</button>
+  <button onclick="setProgram('charmed',this)">CharmEd Minds</button>
+</div>
+
+<!-- ================= LOGIN ================= -->
+<section id="view-login" aria-label="Sign in">
+  <div class="login-card">
+    <div class="login-lockup">
+      <div class="login-mark" aria-hidden="true"></div>
+      <div class="login-wm"><span>BHW</span><span>Integrative Wellness</span></div>
+    </div>
+    <h1>Your care,<br><em>in one place.</em></h1>
+    <p class="login-sub">Sign in to see your care plan, this week's focus, and your nutrition plan — built for you by your BHW care team.</p>
+    <div class="login-field">
+      <label for="f-email">Email</label>
+      <input id="f-email" type="email" placeholder="you@email.com" autocomplete="off">
+    </div>
+    <div class="login-field">
+      <label for="f-code">One-time code</label>
+      <input id="f-code" inputmode="numeric" placeholder="6-digit code sent to your phone" autocomplete="off">
+    </div>
+    <button class="login-btn" onclick="enterApp()">Enter your space →</button>
+    <p class="login-fine">Prototype only — the button opens a demo. In the real portal this is a secure login with a code sent to your phone. Need help? Call the office at 443.762.5343.</p>
+  </div>
+</section>
+
+<!-- ================= APP ================= -->
+<div id="view-app">
+
+  <header class="bhw-header">
+    <div class="bhw-header__inner">
+      <a href="#" class="bhw-header__lockup" onclick="return false;">
+        <div class="header-mark" aria-hidden="true"></div>
+        <div class="bhw-header__wm"><span>BHW</span><span>Integrative Wellness</span></div>
+        <span class="header-portal-tag">Patient Portal</span>
+      </a>
+      <div class="patient-chip">
+        <div class="pmeta" style="text-align:right;">
+          <div class="pname">Jordan T.</div>
+          <div class="pid">Demo patient</div>
+        </div>
+        <div class="avatar">JT</div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="portal-tabs" aria-label="Portal sections">
+    <div class="portal-tabs__inner">
+      <button class="ptab active" data-pane="home" onclick="go('home',this)">Home</button>
+      <button class="ptab" data-pane="plan" onclick="go('plan',this)">Care plan</button>
+      <button class="ptab" data-pane="nutrition" onclick="go('nutrition',this)">Nutrition</button>
+      <button class="ptab" data-pane="messages" onclick="go('messages',this)">Messages</button>
+    </div>
+  </nav>
+
+  <main class="wrap">
+
+    <!-- ========== HOME ========== -->
+    <section class="pane active" id="pane-home">
+      <div class="home-greet">
+        <h2>Good morning, <em>Jordan.</em></h2>
+        <p>You're in week 3 of your 12-week care plan. Here's where you are and what this week asks of you.</p>
+      </div>
+
+      <div class="card card-dark vein-card">
+        <div class="vein-head">
+          <div class="big">Week 3 <em>of 12</em></div>
+          <div style="font-size:11px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:rgba(247,243,234,0.6);" id="programLabel">Care plan · Restore &amp; Rebuild</div>
+        </div>
+        <div class="vein-track"><div class="vein-fill" id="veinFill"></div></div>
+        <div class="vein-marks"><span>Start</span><span>Week 6</span><span>Week 12</span></div>
+        <p class="vein-note">"Light moves through stone where the veins meet." — two weeks complete, and the pattern is already forming.</p>
+      </div>
+
+      <div class="home-grid">
+        <div class="card week-card">
+          <div class="section-label"><span class="dot"></span><span class="txt">This week's focus</span><span class="line"></span></div>
+          <div class="task">
+            <input type="checkbox" id="t1" checked><label for="t1">
+              <div class="t-name">Morning protein anchor</div>
+              <div class="t-sub">25–30g of protein within an hour of waking, before caffeine.</div>
+            </label>
+          </div>
+          <div class="task">
+            <input type="checkbox" id="t2"><label for="t2">
+              <div class="t-name">Two 20-minute walks</div>
+              <div class="t-sub">Outside if you can — after your largest meals works best.</div>
+            </label>
+          </div>
+          <div class="task">
+            <input type="checkbox" id="t3"><label for="t3">
+              <div class="t-name">Sleep window: 10:30pm</div>
+              <div class="t-sub">Screens down 30 minutes before. Note how you feel Thursday.</div>
+            </label>
+          </div>
+        </div>
+
+        <div class="quick">
+          <a href="#" onclick="document.querySelector('[data-pane=messages]').click(); return false;">
+            <div><div class="q-name">Message your care team</div><div class="q-sub">Secure messaging, right here in your portal</div></div>
+            <span class="q-arrow">→</span>
+          </a>
+          <a href="#" onclick="return false;">
+            <div><div class="q-name">Your results &amp; summaries</div><div class="q-sub">Posted here by your care team after review</div></div>
+            <span class="q-arrow">→</span>
+          </a>
+          <a href="#" onclick="return false;">
+            <div><div class="q-name">Schedule a visit</div><div class="q-sub">Follow-up, lab draw, or check-in</div></div>
+            <span class="q-arrow">→</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== CARE PLAN ========== -->
+    <section class="pane" id="pane-plan">
+      <div class="plan-head">
+        <h2>Your care plan, <em>week by week.</em></h2>
+        <p>Each week opens on Monday. Finished weeks stay open so you can look back at how far you've come.</p>
+      </div>
+      <div class="weeks">
+
+        <div class="week done open">
+          <button class="week-btn" onclick="toggleWeek(this)">
+            <span class="week-dot">✓</span>
+            <span><span class="w-title">Week 1 — Foundation</span><br><span class="w-sub">Completed June 29</span></span>
+            <span class="w-state">Complete</span>
+          </button>
+          <div class="week-body">
+            <p class="goal">"We start by watching, not changing — a full week of noticing your energy, meals, and sleep."</p>
+          </div>
+        </div>
+
+        <div class="week done">
+          <button class="week-btn" onclick="toggleWeek(this)">
+            <span class="week-dot">✓</span>
+            <span><span class="w-title">Week 2 — Rhythm</span><br><span class="w-sub">Completed July 6</span></span>
+            <span class="w-state">Complete</span>
+          </button>
+          <div class="week-body">
+            <p class="goal">"Anchoring wake time, first meal, and a consistent sleep window."</p>
+          </div>
+        </div>
+
+        <div class="week current open">
+          <button class="week-btn" onclick="toggleWeek(this)">
+            <span class="week-dot">3</span>
+            <span><span class="w-title">Week 3 — Restore &amp; Rebuild</span><br><span class="w-sub">July 13 – July 19</span></span>
+            <span class="w-state">This week</span>
+          </button>
+          <div class="week-body">
+            <p class="goal">"This week is about giving your body the raw material it's been asking for — protein early, movement after meals, and a protected sleep window."</p>
+
+            <div class="cp-block">
+              <div class="cp-label">Your labs, explained</div>
+              <div class="lab-row"><span class="lab-name">Ferritin</span><span class="lab-val lab-val--low">18 ng/mL · low</span></div>
+              <p>Ferritin is your body's iron storage. Yours is running low — which matters because iron is how your blood carries oxygen to every tissue, including your brain. Low storage often shows up exactly the way you described it: afternoon fatigue, foggy focus, feeling winded on stairs.</p>
+              <div class="lab-row"><span class="lab-name">Vitamin D</span><span class="lab-val lab-val--low">24 ng/mL · insufficient</span></div>
+              <p>Vitamin D acts more like a hormone than a vitamin — it's involved in mood, immune function, and how your muscles recover.</p>
+            </div>
+
+            <div class="cp-block">
+              <div class="cp-label">The physiology</div>
+              <p>When iron storage is low, your cells make energy less efficiently — think of it as your engine running on fewer cylinders. Your body compensates by borrowing from stress hormones, which is why the crash comes in the afternoon when that borrowed energy runs out. This week's plan is built to stop the borrowing and start the rebuilding.</p>
+            </div>
+
+            <div class="cp-block">
+              <div class="cp-label">How your lifestyle connects</div>
+              <p>Coffee before food blocks iron absorption — that's why the protein anchor comes first. The post-meal walks blunt the glucose spike that deepens the 3pm dip. And the sleep window is when the actual rebuilding happens; iron repletion without sleep is pouring water into a cracked cup.</p>
+            </div>
+
+            <div class="cp-block">
+              <div class="cp-label">Your supplements</div>
+              <div class="supp">
+                <div class="supp-name">Iron bisglycinate · 25 mg</div>
+                <div class="supp-how">Every other morning, with vitamin C (or orange slices), away from coffee by 1 hour.</div>
+                <div class="supp-why">Why: gentler on your stomach than iron sulfate; every-other-day dosing actually absorbs better.</div>
+              </div>
+              <div class="supp">
+                <div class="supp-name">Vitamin D3 · 2,000 IU</div>
+                <div class="supp-how">Daily, with your largest meal — it needs fat to absorb.</div>
+                <div class="supp-why">Why: rebuilding to the 40–60 range where energy and mood support live.</div>
+              </div>
+            </div>
+
+            <div class="cp-block">
+              <div class="cp-label">This week's actions</div>
+            <div class="task">
+              <input type="checkbox" id="w3a" checked><label for="w3a">
+                <div class="t-name">Morning protein anchor</div>
+                <div class="t-sub">25–30g within an hour of waking.</div>
+              </label>
+            </div>
+            <div class="task">
+              <input type="checkbox" id="w3b"><label for="w3b">
+                <div class="t-name">Two 20-minute walks</div>
+                <div class="t-sub">After your largest meals.</div>
+              </label>
+            </div>
+            <div class="task">
+              <input type="checkbox" id="w3c"><label for="w3c">
+                <div class="t-name">Sleep window: 10:30pm</div>
+                <div class="t-sub">Screens down 30 minutes before.</div>
+              </label>
+            </div>
+            </div>
+            <div class="provider-note">
+              <div>
+                <div class="pn-label">From your care team</div>
+                <p>Your week 2 notes showed your energy dipping around 3pm — this week's walk timing is aimed right at that. Don't aim for perfect; aim for four days out of seven.</p>
+                <div class="sig">— your BHW care team</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="week locked">
+          <button class="week-btn" tabindex="-1">
+            <span class="week-dot">4</span>
+            <span><span class="w-title">Week 4 — Nourish</span><br><span class="w-sub">Opens Monday, July 20</span></span>
+            <span class="w-state">Locked</span>
+          </button>
+        </div>
+        <div class="week locked">
+          <button class="week-btn" tabindex="-1">
+            <span class="week-dot">5</span>
+            <span><span class="w-title">Week 5 — Move</span><br><span class="w-sub">Opens July 27</span></span>
+            <span class="w-state">Locked</span>
+          </button>
+        </div>
+        <div class="week locked">
+          <button class="week-btn" tabindex="-1">
+            <span class="week-dot">6</span>
+            <span><span class="w-title">Week 6 — Midpoint review</span><br><span class="w-sub">Opens August 3 · includes a visit with your provider</span></span>
+            <span class="w-state">Locked</span>
+          </button>
+        </div>
+        <div class="week locked">
+          <button class="week-btn" tabindex="-1">
+            <span class="week-dot">7–12</span>
+            <span><span class="w-title">Weeks 7 through 12</span><br><span class="w-sub">Deepen, sustain, and graduate — unlocked as you go</span></span>
+            <span class="w-state">Locked</span>
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========== NUTRITION ========== -->
+    <section class="pane" id="pane-nutrition">
+      <div class="plan-head">
+        <h2>Your nutrition plan — <em>phase two.</em></h2>
+        <p>Built around your labs and your week 2 check-in. This phase runs alongside weeks 3–6 of your care plan.</p>
+      </div>
+      <div class="nutri-grid">
+        <div class="card">
+          <div class="section-label"><span class="dot"></span><span class="txt">Your daily rhythm</span><span class="line"></span></div>
+          <div class="rhythm">
+            <div class="r-item"><span class="r-time">Morning</span><span><span class="r-name">Protein-first breakfast</span><br><span class="r-sub">Eggs, Greek yogurt, or a smoothie with protein — before coffee.</span></span></div>
+            <div class="r-item"><span class="r-time">Midday</span><span><span class="r-name">Build-a-plate lunch</span><br><span class="r-sub">Half vegetables, a palm of protein, a fist of slow carbs.</span></span></div>
+            <div class="r-item"><span class="r-time">Evening</span><span><span class="r-name">Earlier, lighter dinner</span><br><span class="r-sub">Aim to finish 3 hours before your sleep window.</span></span></div>
+            <div class="r-item"><span class="r-time">All day</span><span><span class="r-name">Water anchor</span><br><span class="r-sub">A full glass before each meal — thirst often reads as fatigue.</span></span></div>
+          </div>
+        </div>
+        <div>
+          <div class="card" style="margin-bottom:18px;">
+            <div class="section-label"><span class="dot"></span><span class="txt">This week's focus foods</span><span class="line"></span></div>
+            <div class="focus-pills">
+              <span class="fpill">Leafy greens</span><span class="fpill">Salmon &amp; sardines</span>
+              <span class="fpill">Lentils</span><span class="fpill">Berries</span>
+              <span class="fpill">Pumpkin seeds</span><span class="fpill">Olive oil</span>
+            </div>
+            <p style="font-size:12.5px; color:var(--fg-muted); line-height:1.65; margin:16px 0 0;">These target the patterns your care team saw in your labs. Swap freely within the list — the pattern matters more than any single food.</p>
+          </div>
+          <div class="card card-dark">
+            <p style="font-family:var(--font-lora); font-style:italic; font-size:14.5px; line-height:1.7; margin:0; color:rgba(247,243,234,0.88);">"Nothing here is a rule. It's a direction. A week where you hit most of it, most days, is a very good week."</p>
+            <div style="font-family:var(--font-script); font-size:20px; color:var(--bhw-pale-gold-light); margin-top:12px;">— your BHW care team</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== MESSAGES ========== -->
+    <section class="pane" id="pane-messages">
+      <div class="plan-head">
+        <h2>Messages, <em>right here.</em></h2>
+        <p>Write to your care team without leaving your portal. Replies usually come within one business day — we'll text you when there's something new, and the message itself stays safely behind your login.</p>
+      </div>
+
+      <div class="msg-thread card">
+        <div class="section-label"><span class="dot"></span><span class="txt">Conversation with your care team</span><span class="line"></span></div>
+
+        <div class="msg msg--team">
+          <div class="msg-bubble">
+            <div class="msg-who">BHW Care Team · Tue 9:14 AM</div>
+            <p>Good morning Jordan — saw your week 2 check-in. Nice consistency on the sleep window. How are the afternoon walks feeling so far?</p>
+          </div>
+        </div>
+
+        <div class="msg msg--me">
+          <div class="msg-bubble">
+            <div class="msg-who">You · Tue 12:40 PM</div>
+            <p>Honestly better than I expected. The 3pm slump is smaller on walk days. Question — does the protein anchor have to be before coffee?</p>
+          </div>
+        </div>
+
+        <div class="msg msg--team">
+          <div class="msg-bubble">
+            <div class="msg-who">BHW Care Team · Tue 2:05 PM</div>
+            <p>That's exactly what we hoped you'd notice. And yes — before is the goal, but "with" beats "without." Don't let perfect get in the way of done.</p>
+          </div>
+        </div>
+
+        <div class="msg-compose">
+          <textarea rows="2" placeholder="Write a message to your care team…" aria-label="Write a message"></textarea>
+          <button class="btn btn--gold" onclick="return false;">Send</button>
+        </div>
+        <p class="msg-fine">Not for emergencies. If this is urgent, call 911, or reach the after-hours line at 443.438.6437.</p>
+      </div>
+    </section>
+
+    <footer class="portal-foot">
+      <div>© 2026 BHW Integrative Wellness · Baltimore, MD</div>
+      <div>Design prototype · demo data only</div>
+    </footer>
+  </main>
+</div>
+
+<script>
+var PROGRAMS = {
+  bhw:      {cls:'', label:'Care plan · Restore &amp; Rebuild', title:'Your care plan, <em>week by week.</em>'},
+  mindmood: {cls:'brand-mindmood', label:'The 12-Week Pathway to the Sunrise', title:'Your Pathway, <em>week by week.</em>'},
+  charmed:  {cls:'brand-charmed', label:'CharmEd Minds · Executive Function Program', title:'Your program, <em>week by week.</em>'}
+};
+function setProgram(key, btn){
+  document.body.classList.remove('brand-mindmood','brand-charmed');
+  if(PROGRAMS[key].cls) document.body.classList.add(PROGRAMS[key].cls);
+  document.getElementById('programLabel').innerHTML = PROGRAMS[key].label;
+  document.querySelector('#pane-plan .plan-head h2').innerHTML = PROGRAMS[key].title;
+  document.querySelectorAll('.demo-bar button').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+function enterApp(){
+  document.getElementById('view-login').style.display='none';
+  document.getElementById('view-app').style.display='block';
+  document.getElementById('demoBar').style.display='flex';
+  window.scrollTo(0,0);
+  requestAnimationFrame(function(){
+    setTimeout(function(){ document.getElementById('veinFill').style.width='21%'; }, 150);
+  });
+}
+function go(pane, btn){
+  document.querySelectorAll('.ptab').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  document.querySelectorAll('.pane').forEach(function(p){ p.classList.remove('active'); });
+  document.getElementById('pane-'+pane).classList.add('active');
+  window.scrollTo({top:0});
+  if(pane==='home'){ setTimeout(function(){ document.getElementById('veinFill').style.width='21%'; },100); }
+}
+function toggleWeek(btn){
+  var wk = btn.closest('.week');
+  if(wk.classList.contains('locked')) return;
+  wk.classList.toggle('open');
+}
+</script>
+</body>
+</html>
