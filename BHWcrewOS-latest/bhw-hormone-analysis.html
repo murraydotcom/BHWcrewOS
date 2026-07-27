@@ -1,1202 +1,246 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BHW Hormone Analysis — Clinical Decision Support</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BHW · Hormone Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --teal:#80abbd; --teal-deep:#4f8598;
-    --paper:#f7f5f2; --clay:#b07a55; --sage:#a8b59a; --sand:#dcc8b1;
-    --ink:#22303a; --ink-soft:#4a5964; --line:#e2ddd6;
-    --ok:#5c8a6f; --ok-bg:#eaf1ec;
-    --warn:#b8863b; --warn-bg:#f6efe1;
-    --bad:#b5544a; --bad-bg:#f6e7e4;
-    --shadow:0 1px 2px rgba(34,48,58,.04), 0 8px 28px rgba(34,48,58,.06);
-    --radius:14px;
-  }
-  *{box-sizing:border-box;margin:0;padding:0}
-  html{-webkit-text-size-adjust:100%}
-  body{
-    font-family:'Montserrat',system-ui,sans-serif;
-    background:var(--paper); color:var(--ink);
-    line-height:1.5; font-size:15px; letter-spacing:.005em;
-    padding-bottom:120px;
-  }
-  h1,h2,h3{letter-spacing:-.01em; line-height:1.2}
-  .wrap{max-width:1080px; margin:0 auto; padding:0 20px}
-
-  /* ---------- Header ---------- */
-  header{
-    background:linear-gradient(180deg,#fbfaf8,var(--paper));
-    border-bottom:1px solid var(--line);
-    padding:26px 0 22px;
-  }
-  .brandline{display:flex; align-items:center; gap:14px; flex-wrap:wrap}
-  .mark{
-    width:42px; height:42px; border-radius:11px; flex:none;
-    background:conic-gradient(from 210deg, var(--clay), var(--teal), var(--sage), var(--clay));
-    display:grid; place-items:center; box-shadow:var(--shadow);
-  }
-  .mark span{width:16px;height:16px;border-radius:50%;background:var(--paper)}
-  .brandtext h1{font-size:20px;font-weight:700}
-  .brandtext p{font-size:12.5px;color:var(--ink-soft);font-weight:500;letter-spacing:.02em}
-  .disclaimer{
-    margin-top:16px; font-size:12.5px; color:var(--ink-soft);
-    background:#fff; border:1px solid var(--line); border-left:3px solid var(--clay);
-    padding:10px 14px; border-radius:8px; font-weight:500;
-  }
-
-  /* ---------- Section shell ---------- */
-  section{margin-top:26px}
-  .card{
-    background:#fff; border:1px solid var(--line);
-    border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden;
-  }
-  .card-head{
-    display:flex; align-items:baseline; gap:12px;
-    padding:18px 20px 14px; border-bottom:1px solid var(--line);
-  }
-  .step{
-    font-size:11px; font-weight:700; letter-spacing:.12em;
-    color:var(--teal-deep); text-transform:uppercase;
-    background:#eef4f6; padding:4px 9px; border-radius:6px; flex:none;
-  }
-  .card-head h2{font-size:17px;font-weight:700}
-  .card-head p{font-size:12.5px;color:var(--ink-soft);font-weight:500;margin-top:2px}
-  .card-body{padding:20px}
-
-  /* ---------- Paste ---------- */
-  textarea{
-    width:100%; min-height:120px; resize:vertical;
-    font-family:'Montserrat',sans-serif; font-size:14px; color:var(--ink);
-    background:var(--paper); border:1.5px solid var(--line); border-radius:10px;
-    padding:14px; line-height:1.55;
-  }
-  textarea:focus{outline:none; border-color:var(--teal); background:#fff}
-  .paste-row{display:flex; gap:10px; margin-top:12px; flex-wrap:wrap}
-  .btn{
-    font-family:inherit; font-weight:600; font-size:14px; cursor:pointer;
-    border:none; border-radius:10px; padding:12px 20px; transition:.15s;
-    -webkit-tap-highlight-color:transparent;
-  }
-  .btn-primary{background:var(--teal-deep); color:#fff}
-  .btn-primary:hover{filter:brightness(1.06)}
-  .btn-ghost{background:#fff; color:var(--ink); border:1.5px solid var(--line)}
-  .btn-ghost:hover{border-color:var(--teal)}
-  .btn:focus-visible{outline:3px solid rgba(128,171,189,.5); outline-offset:2px}
-  .parse-note{font-size:12.5px;color:var(--ink-soft);margin-top:10px;font-weight:500}
-  .parse-note b{color:var(--ok)}
-
-  /* ---------- Lab grid ---------- */
-  .grid-group{margin-top:20px}
-  .grid-group:first-child{margin-top:0}
-  .group-label{
-    font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
-    color:var(--clay); margin-bottom:10px; display:flex; align-items:center; gap:8px;
-  }
-  .group-label::after{content:"";flex:1;height:1px;background:var(--line)}
-  .lab-grid{
-    display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:12px;
-  }
-  .lab-field label{
-    display:block; font-size:12px; font-weight:600; color:var(--ink-soft); margin-bottom:4px;
-  }
-  .lab-inwrap{position:relative; display:flex; align-items:center}
-  .lab-inwrap input{
-    width:100%; font-family:inherit; font-size:15px; font-weight:600; color:var(--ink);
-    border:1.5px solid var(--line); border-radius:9px; padding:10px 52px 10px 12px;
-    background:var(--paper);
-  }
-  .lab-inwrap input:focus{outline:none; border-color:var(--teal); background:#fff}
-  .lab-inwrap input.filled{border-color:var(--teal); background:#fff}
-  .unit{
-    position:absolute; right:11px; font-size:11px; font-weight:600; color:var(--ink-soft);
-    pointer-events:none;
-  }
-
-  /* ---------- Cycle context ---------- */
-  .toggle-row{display:flex; flex-wrap:wrap; gap:9px; margin-bottom:6px}
-  .pill{
-    font-family:inherit; font-size:13.5px; font-weight:600; cursor:pointer;
-    background:#fff; color:var(--ink); border:1.5px solid var(--line);
-    border-radius:999px; padding:10px 16px; transition:.15s;
-    -webkit-tap-highlight-color:transparent;
-  }
-  .pill:hover{border-color:var(--teal)}
-  .pill[aria-pressed="true"]{background:var(--teal-deep); color:#fff; border-color:var(--teal-deep)}
-  .pill:focus-visible{outline:3px solid rgba(128,171,189,.5); outline-offset:2px}
-  .ctx-sub{margin-top:16px; padding-top:16px; border-top:1px dashed var(--line)}
-  .ctx-sub[hidden]{display:none}
-  .ctx-label{font-size:13px;font-weight:600;color:var(--ink-soft);margin-bottom:10px}
-  .inline-num{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-  .inline-num input{
-    width:90px;font-family:inherit;font-size:15px;font-weight:600;
-    border:1.5px solid var(--line);border-radius:9px;padding:9px 12px;background:var(--paper);
-  }
-  .inline-num input:focus{outline:none;border-color:var(--teal);background:#fff}
-  .inline-num .unitlabel{font-size:13px;font-weight:600;color:var(--ink-soft)}
-  .inline-num input[type="date"]{width:auto;min-width:170px}
-  .contra-note{
-    margin-top:14px; font-size:12.5px; font-weight:500; line-height:1.55;
-    color:var(--ink-soft); background:var(--paper); border:1px solid var(--line);
-    border-left:3px solid var(--teal); border-radius:8px; padding:11px 14px;
-  }
-  .contra-note[hidden]{display:none}
-  .contra-note b{color:var(--ink)}
-
-  /* ---------- Phase band (signature) ---------- */
-  .phaseband{
-    margin-top:18px; border-radius:12px; overflow:hidden; border:1px solid var(--line);
-  }
-  .phaseband-track{display:flex; height:46px; position:relative}
-  .phaseseg{
-    flex:1; display:grid; place-items:center; font-size:10.5px; font-weight:700;
-    letter-spacing:.06em; text-transform:uppercase; color:rgba(255,255,255,.92);
-    position:relative; transition:.2s;
-  }
-  .phaseseg.s1{background:#c9b9d6}
-  .phaseseg.s2{background:#8fb8c4}
-  .phaseseg.s3{background:#e0b45f}
-  .phaseseg.s4{background:#c98f70}
-  .phaseseg.dim{filter:grayscale(.6) brightness(1.15); color:rgba(255,255,255,.6)}
-  .phaseseg.active::after{
-    content:"";position:absolute;inset:0;border:3px solid #fff;
-    box-shadow:inset 0 0 0 2px rgba(34,48,58,.25);
-  }
-  .phase-caption{
-    background:#fff;padding:9px 14px;font-size:12.5px;font-weight:600;color:var(--ink-soft);
-    border-top:1px solid var(--line);
-  }
-  .phase-caption b{color:var(--ink)}
-
-  /* ---------- Analyze button ---------- */
-  .analyze-bar{
-    position:fixed; left:0; right:0; bottom:0; z-index:50;
-    background:rgba(247,245,242,.92); backdrop-filter:blur(8px);
-    border-top:1px solid var(--line); padding:14px 20px;
-  }
-  .analyze-inner{max-width:1080px;margin:0 auto;display:flex;gap:12px;align-items:center}
-  .analyze-inner .btn-primary{flex:1; padding:15px; font-size:15.5px; font-weight:700}
-  .analyze-inner .btn-ghost{padding:15px 18px}
-
-  /* ---------- Results ---------- */
-  #results[hidden]{display:none}
-  .res-head{
-    display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;
-    margin:34px 0 4px; padding-top:8px;
-  }
-  .res-head h2{font-size:22px;font-weight:800}
-  .res-head .ctxtag{
-    font-size:12px;font-weight:600;color:var(--teal-deep);background:#eef4f6;
-    padding:5px 11px;border-radius:7px;
-  }
-
-  .ratio-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;margin-top:14px}
-  .ratio-card{
-    background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;
-    border-left-width:4px; box-shadow:var(--shadow);
-  }
-  .ratio-card.ok{border-left-color:var(--ok)}
-  .ratio-card.warn{border-left-color:var(--warn)}
-  .ratio-card.bad{border-left-color:var(--bad)}
-  .ratio-card.na{border-left-color:var(--line);opacity:.7}
-  .ratio-name{font-size:12.5px;font-weight:700;color:var(--ink-soft);letter-spacing:.02em}
-  .ratio-val{font-size:28px;font-weight:800;margin:6px 0 2px;font-variant-numeric:tabular-nums}
-  .ratio-val small{font-size:14px;font-weight:600;color:var(--ink-soft)}
-  .ratio-flag{
-    display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
-    padding:3px 8px;border-radius:5px;margin-bottom:6px;
-  }
-  .ratio-flag.ok{background:var(--ok-bg);color:var(--ok)}
-  .ratio-flag.warn{background:var(--warn-bg);color:var(--warn)}
-  .ratio-flag.bad{background:var(--bad-bg);color:var(--bad)}
-  .ratio-flag.na{background:#eee;color:var(--ink-soft)}
-  .ratio-range{font-size:12px;color:var(--ink-soft);font-weight:500;margin-top:4px}
-  .ratio-range b{color:var(--ink)}
-
-  /* value table */
-  .valtable{width:100%;border-collapse:collapse;margin-top:10px;font-size:13.5px}
-  .valtable th{
-    text-align:left;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
-    color:var(--ink-soft);padding:8px 10px;border-bottom:1.5px solid var(--line);
-  }
-  .valtable td{padding:9px 10px;border-bottom:1px solid var(--line);font-weight:500}
-  .valtable td.num{font-variant-numeric:tabular-nums;font-weight:700;text-align:right;white-space:nowrap}
-  .valtable tr td:last-child{width:120px}
-  .status-dot{
-    display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:12px;
-  }
-  .status-dot::before{content:"";width:8px;height:8px;border-radius:50%}
-  .status-dot.ok{color:var(--ok)} .status-dot.ok::before{background:var(--ok)}
-  .status-dot.hi{color:var(--bad)} .status-dot.hi::before{background:var(--bad)}
-  .status-dot.lo{color:var(--warn)} .status-dot.lo::before{background:var(--warn)}
-  .status-dot.na{color:var(--ink-soft)} .status-dot.na::before{background:var(--line)}
-
-  /* condition flags */
-  .cond{
-    background:#fff;border:1px solid var(--line);border-radius:12px;
-    box-shadow:var(--shadow);margin-top:14px;overflow:hidden;
-  }
-  .cond-top{display:flex;align-items:flex-start;gap:12px;padding:16px 18px}
-  .cond-sev{
-    flex:none;width:9px;align-self:stretch;border-radius:5px;margin:2px 0;
-  }
-  .cond.high .cond-sev{background:var(--bad)}
-  .cond.mod .cond-sev{background:var(--warn)}
-  .cond.watch .cond-sev{background:var(--sage)}
-  .cond-main{flex:1}
-  .cond-title{font-size:16px;font-weight:700;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-  .sev-tag{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:5px}
-  .cond.high .sev-tag{background:var(--bad-bg);color:var(--bad)}
-  .cond.mod .sev-tag{background:var(--warn-bg);color:var(--warn)}
-  .cond.watch .sev-tag{background:var(--ok-bg);color:var(--ok)}
-  .cond-desc{font-size:13.5px;color:var(--ink-soft);margin-top:5px;font-weight:500;line-height:1.55}
-  .cond-detail{padding:0 18px 16px 39px}
-  .cond-detail h4{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);margin:12px 0 6px}
-  .trigger-list{list-style:none;display:flex;flex-wrap:wrap;gap:7px}
-  .trigger-list li{
-    font-size:12.5px;font-weight:600;background:var(--paper);border:1px solid var(--line);
-    border-radius:7px;padding:5px 10px;color:var(--ink);
-  }
-  .next-list{list-style:none}
-  .next-list li{
-    font-size:13.5px;font-weight:500;padding:5px 0 5px 20px;position:relative;color:var(--ink);
-  }
-  .next-list li::before{content:"→";position:absolute;left:0;color:var(--teal-deep);font-weight:700}
-  .sx-list{list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:2px 16px}
-  .sx-list li{
-    font-size:13px;font-weight:500;padding:4px 0 4px 18px;position:relative;color:var(--ink);line-height:1.4;
-  }
-  .sx-list li::before{content:"";position:absolute;left:2px;top:11px;width:6px;height:6px;border-radius:50%;background:var(--clay)}
-
-  .empty-note{
-    text-align:center;padding:34px 20px;color:var(--ink-soft);font-weight:500;font-size:14px;
-  }
-  .footer-note{
-    margin:30px 0 10px;font-size:12px;color:var(--ink-soft);font-weight:500;
-    text-align:center;line-height:1.6;
-  }
-  @media (max-width:560px){
-    .card-head{flex-wrap:wrap}
-    .ratio-val{font-size:24px}
-    .analyze-inner .btn-ghost{padding:15px 14px}
-  }
-  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
-</style>
-</head>
-<body>
-
+:root{--river:#80abbd;--river-deep:#4f7f92;--linen:#f7f5f2;--clay:#b07a55;--clay-deep:#8C5A3C;--sage:#a8b59a;--sand:#dcc8b1;--ink:#2b2b33;--soft:#6f6f7a;--ok:#1F6961;--urgent:#B4544B;--line:#e5e0d8;
+--serif:'Playfair Display',Georgia,serif;--sans:'Montserrat',system-ui,sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--sans);background:var(--linen);color:var(--ink);font-size:14px;line-height:1.55}
+.wrap{max-width:1080px;margin:0 auto;padding:22px 18px 70px}
+header{display:flex;align-items:center;gap:13px;padding:6px 0 16px;border-bottom:1px solid var(--line);margin-bottom:16px}
+header img{height:46px;width:auto}
+header h1{font-family:var(--serif);font-weight:500;font-size:24px}
+header .sub{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--clay-deep);font-weight:700}
+.disc{background:#fdf6ec;border:1px solid var(--sand);border-radius:10px;padding:11px 14px;font-size:12px;color:var(--clay-deep);margin-bottom:16px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
+.tabs button{font-family:inherit;font-size:12.5px;font-weight:600;padding:9px 16px;border-radius:99px;border:1px solid var(--line);background:#fff;color:var(--soft);cursor:pointer}
+.tabs button.on{background:var(--river-deep);border-color:var(--river-deep);color:#fff}
+.tp{display:none}.tp.on{display:block}
+.grid{display:grid;grid-template-columns:360px 1fr;gap:22px}
+@media(max-width:880px){.grid{grid-template-columns:1fr}}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:15px}
+h2{font-family:var(--serif);font-weight:500;font-size:19px;margin-bottom:3px}
+.eyebrow{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--clay-deep);font-weight:700}
+label{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--soft);margin:13px 0 5px}
+input,select,textarea{width:100%;font-family:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--linen)}
+.sympgroup{margin-top:12px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;background:var(--linen);border:1px solid var(--line);border-radius:99px;padding:6px 11px;margin:0 5px 6px 0;cursor:pointer;user-select:none}
+.chip input{width:auto;margin:0}
+.chip.on{background:#eef4f1;border-color:var(--sage);color:var(--ok);font-weight:600}
+.labrow{display:grid;grid-template-columns:1.4fr 1fr auto;gap:8px;align-items:center;margin-bottom:7px}
+.labrow .nm{font-size:12.5px;font-weight:600}
+.labrow select,.labrow input{padding:7px 9px;font-size:12.5px}
+.dirsel{display:flex;gap:3px}
+.dirsel button{flex:1;font-size:11px;font-weight:700;padding:6px 4px;border:1px solid var(--line);background:#fff;border-radius:7px;cursor:pointer;color:var(--soft)}
+.dirsel button.on{background:var(--river-deep);color:#fff;border-color:var(--river-deep)}
+.btn{background:var(--river);color:#12242c;border:0;border-radius:99px;padding:12px 26px;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;width:100%;margin-top:14px}
+.result{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:11px}
+.result h3{font-family:var(--serif);font-weight:500;font-size:17px;margin-bottom:4px}
+.result .reading{font-size:13.5px;color:var(--ink)}
+.result .row{font-size:12.5px;margin-top:6px}
+.result .row b{color:var(--clay-deep);text-transform:uppercase;font-size:10px;letter-spacing:.08em;display:block}
+.rf{background:#fdf0ef;border-left:3px solid var(--urgent);border-radius:8px;padding:10px 13px;margin-bottom:9px;font-size:12.5px}
+.rf b{color:var(--urgent)}
+.redbanner{background:#fdf0ef;border:1px solid #e6c0bc;border-radius:12px;padding:14px 16px;margin-bottom:14px;display:none}
+.redbanner.show{display:block}
+.empty{color:var(--soft);font-style:italic;text-align:center;padding:30px 20px}
+.acard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px}
+.acard h3{font-size:15px;font-weight:700;margin-bottom:3px}
+.atlas-search{width:100%;font-size:14px;padding:11px 13px;border:1px solid var(--line);border-radius:9px;background:#fff;margin-bottom:14px}
+.copybtn{background:var(--clay);color:#fff;border:0;border-radius:99px;padding:9px 18px;font-weight:600;font-size:12.5px;cursor:pointer;margin-top:8px;font-family:inherit}
+.summary{font-size:12.5px;color:var(--soft);margin-bottom:12px}
+</style></head>
+<body><div class="wrap">
 <header>
-  <div class="wrap">
-    <div class="brandline">
-      <div class="mark"><span></span></div>
-      <div class="brandtext">
-        <h1>Hormone Analysis</h1>
-        <p>BHW Medical Group · Clinical Decision Support</p>
-      </div>
-    </div>
-    <div class="disclaimer">
-      Decision support only — computes ratios and flags patterns from entered values against <b>functional/optimal ranges</b> (narrower interpretive targets, not diagnostic cutoffs). Not a diagnosis. Interpret alongside history, symptoms, exam, and clinical judgment.
-    </div>
-  </div>
+  <img src="/assets/bhw-medical-logo.png" alt="BHW Medical" onerror="this.style.display='none'">
+  <div><h1>Hormone Analysis</h1><div class="sub">BHW Medical Group · symptoms → workup → interpretation</div></div>
 </header>
 
-<div class="wrap">
+<div class="disc">⚕️ Clinical decision <b>support</b>, not a diagnosis. Built on the BHW Hormone Systems Reference. Hormone values are exquisitely sensitive to timing, cycle phase, binding proteins, and specimen handling — always interpret with those in mind. The chart and your judgment decide.</div>
 
-  <!-- STEP 1: LABS -->
-  <section>
-    <div class="card">
-      <div class="card-head">
-        <span class="step">Step 1</span>
-        <div><h2>Labs</h2><p>Paste lab text to auto-fill, or enter values directly. Blank fields are skipped.</p></div>
-      </div>
-      <div class="card-body">
-        <textarea id="pasteArea" placeholder="Paste lab report text here — e.g.&#10;Estradiol 48 pg/mL&#10;Progesterone 0.6 ng/mL&#10;FSH 6.2   LH 14.8&#10;Testosterone, Total 72 ng/dL   SHBG 24 nmol/L&#10;TSH 3.9   Free T4 1.1   Free T3 2.8&#10;Fasting Insulin 18   Glucose 96&#10;Vitamin D 22   Prolactin 31"></textarea>
-        <div class="paste-row">
-          <button class="btn btn-primary" id="parseBtn">Parse pasted labs</button>
-          <button class="btn btn-ghost" id="clearBtn">Clear all fields</button>
-        </div>
-        <div class="parse-note" id="parseNote"></div>
-
-        <div id="labGrid"></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- STEP 2: CYCLE CONTEXT -->
-  <section>
-    <div class="card">
-      <div class="card-head">
-        <span class="step">Step 2</span>
-        <div><h2>Cycle context</h2><p>Sets which reference ranges apply. Tap the status that fits.</p></div>
-      </div>
-      <div class="card-body">
-        <div class="ctx-label">Patient age</div>
-        <div class="inline-num" style="margin-bottom:18px">
-          <input type="number" id="patientAge" min="8" max="100" placeholder="e.g. 34" inputmode="numeric" aria-label="Patient age in years">
-          <span class="unitlabel" id="ageNote">years — refines how age-dependent patterns are read</span>
-        </div>
-        <div class="ctx-label">Cycle / menstrual status</div>
-        <div class="toggle-row" id="statusRow">
-          <button class="pill" data-status="cycling" aria-pressed="false">Cycling — by day</button>
-          <button class="pill" data-status="bleeding" aria-pressed="false">Currently bleeding</button>
-          <button class="pill" data-status="amenorrhea" aria-pressed="false">No period</button>
-          <button class="pill" data-status="perimeno" aria-pressed="false">Perimenopausal</button>
-          <button class="pill" data-status="postmeno" aria-pressed="false">Postmenopausal</button>
-          <button class="pill" data-status="contraception" aria-pressed="false">On hormonal contraception</button>
-        </div>
-
-        <!-- cycling by day -->
-        <div class="ctx-sub" id="sub-cycling" hidden>
-          <div class="ctx-label">First day of most recent full flow (LMP)</div>
-          <div class="inline-num">
-            <input type="date" id="lmpDate" aria-label="First day of last menstrual period">
-            <span class="unitlabel" id="lmpDerived">— sets cycle day from today's date</span>
-          </div>
-          <div class="ctx-label" style="margin-top:14px">Cycle day <span style="font-weight:500;color:var(--ink-soft)">(auto-filled from LMP — edit to override)</span></div>
-          <div class="inline-num">
-            <input type="number" id="cycleDay" min="1" max="60" placeholder="e.g. 21" inputmode="numeric">
-            <span class="unitlabel" id="dayPhaseLabel">— enter a day to assign phase</span>
-          </div>
-        </div>
-
-        <!-- currently bleeding -->
-        <div class="ctx-sub" id="sub-bleeding" hidden>
-          <div class="ctx-label">How long has this bleeding episode lasted?</div>
-          <div class="toggle-row" id="bleedDurRow">
-            <button class="pill" data-bleed="normal" aria-pressed="false">≤ 7 days (normal menses)</button>
-            <button class="pill" data-bleed="prolonged" aria-pressed="false">8–14 days</button>
-            <button class="pill" data-bleed="weeks" aria-pressed="false">Several weeks</button>
-            <button class="pill" data-bleed="months" aria-pressed="false">A month or more</button>
-          </div>
-        </div>
-
-        <!-- amenorrhea -->
-        <div class="ctx-sub" id="sub-amenorrhea" hidden>
-          <div class="ctx-label">How long without a period?</div>
-          <div class="inline-num">
-            <input type="number" id="amenMonths" min="0" max="120" placeholder="e.g. 5" inputmode="numeric">
-            <span class="unitlabel">months</span>
-          </div>
-          <div class="ctx-label" style="margin-top:16px">On a hormonal method that can stop periods?</div>
-          <div class="toggle-row" id="amenMethodRow">
-            <button class="pill" data-amenmethod="none" aria-pressed="false">No / not on one</button>
-            <button class="pill" data-amenmethod="hiud" aria-pressed="false">Hormonal IUD (LNG)</button>
-            <button class="pill" data-amenmethod="implant" aria-pressed="false">Implant</button>
-            <button class="pill" data-amenmethod="dmpa" aria-pressed="false">Injection (DMPA)</button>
-          </div>
-          <div class="contra-note" id="amenMethodNote" hidden></div>
-        </div>
-
-        <!-- hormonal contraception -->
-        <div class="ctx-sub" id="sub-contraception" hidden>
-          <div class="ctx-label">Which method? (affects how endogenous hormones are interpreted)</div>
-          <div class="toggle-row" id="contraRow">
-            <button class="pill" data-contra="coc" aria-pressed="false">Combined pill (COC)</button>
-            <button class="pill" data-contra="pop" aria-pressed="false">Progestin-only pill</button>
-            <button class="pill" data-contra="patch" aria-pressed="false">Patch</button>
-            <button class="pill" data-contra="ring" aria-pressed="false">Vaginal ring</button>
-            <button class="pill" data-contra="hiud" aria-pressed="false">Hormonal IUD (LNG)</button>
-            <button class="pill" data-contra="implant" aria-pressed="false">Implant (etonogestrel)</button>
-            <button class="pill" data-contra="dmpa" aria-pressed="false">Injection (DMPA / Depo)</button>
-            <button class="pill" data-contra="other" aria-pressed="false">Other / unsure</button>
-          </div>
-          <div class="contra-note" id="contraNote" hidden></div>
-        </div>
-
-        <!-- cycle reference band (always visible) -->
-        <div class="phaseband" id="phaseBand">
-          <div class="phaseband-track">
-            <div class="phaseseg s1" data-phase="follicular">Follicular</div>
-            <div class="phaseseg s2" data-phase="ovulatory">Ovulatory</div>
-            <div class="phaseseg s3" data-phase="luteal">Luteal</div>
-          </div>
-          <div class="phase-caption" id="phaseCaption">Enter a cycle day or LMP under “Cycling” to highlight the active phase.</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ANALYZE BAR -->
-  <div class="analyze-bar">
-    <div class="analyze-inner">
-      <button class="btn btn-primary" id="analyzeBtn">Calculate ratios &amp; flag patterns</button>
-      <button class="btn btn-ghost" id="copyBtn" hidden>Copy summary</button>
-    </div>
-  </div>
-
-  <!-- RESULTS -->
-  <div id="results" hidden>
-    <div class="res-head">
-      <h2>Analysis</h2>
-      <span class="ctxtag" id="resCtx"></span>
-    </div>
-
-    <section style="margin-top:14px">
-      <div class="card">
-        <div class="card-head"><span class="step">Ratios</span><div><h2>Calculated ratios</h2><p>Color reflects the phase-appropriate interpretation.</p></div></div>
-        <div class="card-body"><div class="ratio-grid" id="ratioGrid"></div></div>
-      </div>
-    </section>
-
-    <section>
-      <div class="card">
-        <div class="card-head"><span class="step">Values</span><div><h2>Entered values vs. optimal</h2><p>Optimal = functional target range, narrower than standard lab reference.</p></div></div>
-        <div class="card-body"><table class="valtable"><thead><tr><th>Analyte</th><th style="text-align:right">Value</th><th>Optimal range (this context)</th><th>Status</th></tr></thead><tbody id="valBody"></tbody></table></div>
-      </div>
-    </section>
-
-    <section>
-      <div class="card">
-        <div class="card-head"><span class="step">Patterns</span><div><h2>Related hormonal conditions</h2><p>Patterns matched from entered data. Each shows the specific findings that triggered it.</p></div></div>
-        <div class="card-body"><div id="condList"></div></div>
-      </div>
-    </section>
-
-    <p class="footer-note">
-      Ratios and pattern flags use functional/optimal targets and depend on lab timing, assay method, and phase accuracy. Associated symptoms are typical, not confirmatory — presence or absence does not rule a pattern in or out.<br>
-      Confirm with repeat/confirmatory testing and correlate clinically. — BHW Medical Group internal tool.
-    </p>
-  </div>
-
+<div class="tabs">
+  <button class="on" data-t="analyze">Symptoms &amp; workup</button>
+  <button data-t="interpret">Lab interpretation</button>
+  <button data-t="patterns">Pattern library</button>
+  <button data-t="systems">Systems reference</button>
+  <button data-t="redflags">Red flags</button>
 </div>
 
+<div class="tp on" id="tp-analyze">
+  <div class="grid">
+    <div>
+      <div class="card">
+        <span class="eyebrow">Step 1 · What brought them in</span><h2>Presenting symptoms</h2>
+        <p style="font-size:12px;color:var(--soft);margin-top:4px">Tap what's present — the tool suggests which axes to work up and the first-line panel.</p>
+        <div id="symptoms"></div>
+      </div>
+      <div class="card">
+        <span class="eyebrow">Step 2 · Context</span><h2>Subjective &amp; objective</h2>
+        <label>Sex</label><select id="sex"><option value="">—</option><option>Female</option><option>Male</option></select>
+        <label>If female — cycle status</label>
+        <select id="cycle"><option value="">—</option><option>Regular cycles</option><option>Irregular cycles</option><option>Perimenopausal</option><option>Postmenopausal</option><option>Pregnant / possibly pregnant</option><option>On hormonal contraception</option></select>
+        <label>Relevant context (tap any)</label>
+        <div id="context"></div>
+      </div>
+      <button class="btn" onclick="workup()">Suggest workup →</button>
+    </div>
+    <div>
+      <div class="redbanner" id="redbanner"></div>
+      <div class="summary" id="summary"></div>
+      <div id="workout"><div class="card empty">Choose symptoms and context, then tap Suggest workup — you'll get the axes to consider and the first-line panel.</div></div>
+      <button class="copybtn" id="copyw" style="display:none" onclick="copyWork()">📋 Copy workup for the chart</button>
+    </div>
+  </div>
+</div>
+
+<div class="tp" id="tp-interpret">
+  <div class="grid">
+    <div>
+      <div class="card">
+        <span class="eyebrow">Enter results</span><h2>Lab values</h2>
+        <p style="font-size:12px;color:var(--soft);margin-top:4px">Enter values, or just mark high/low/normal. The tool matches your results against the pattern library.</p>
+        <div id="labinputs"></div>
+      </div>
+      <button class="btn" onclick="interpret()">Interpret →</button>
+    </div>
+    <div>
+      <div id="interpout"><div class="card empty">Mark the abnormal labs, then tap Interpret — matching patterns from the reference appear here.</div></div>
+      <button class="copybtn" id="copyi" style="display:none" onclick="copyInterp()">📋 Copy interpretation</button>
+    </div>
+  </div>
+</div>
+
+<div class="tp" id="tp-patterns">
+  <input class="atlas-search" id="q-pat" placeholder="Search the pattern library…" oninput="renderPats()">
+  <div id="out-pat"></div>
+</div>
+<div class="tp" id="tp-systems">
+  <input class="atlas-search" id="q-sys" placeholder="Search the 10 endocrine systems…" oninput="renderSys()">
+  <div id="out-sys"></div>
+</div>
+<div class="tp" id="tp-redflags"><div id="out-rf"></div></div>
+
+</div>
 <script>
-/* =========================================================
-   BHW Hormone Analysis — clinical decision support
-   Single-file. No external calls. All logic client-side.
-   ========================================================= */
+const D={"symptoms":[{"symptom":"Fatigue","consider":"Thyroid, adrenal, iron, vitamin D, glucose, testosterone","panel":"TSH + free T4, ferritin/CRP, 25-OH D, CBC, AM cortisol if indicated"},{"symptom":"Weight gain / difficulty losing","consider":"Thyroid, insulin resistance, cortisol excess","panel":"TSH + free T4, fasting glucose/insulin (HOMA-IR), cortisol screen if features"},{"symptom":"Unintentional weight loss","consider":"Hyperthyroidism, diabetes, adrenal insufficiency","panel":"TSH + free T4, glucose, AM cortisol"},{"symptom":"Hair loss / thinning","consider":"Thyroid, iron, androgens, PCOS","panel":"TSH, ferritin, testosterone/free T/DHEA-S"},{"symptom":"Low libido","consider":"Testosterone, thyroid, prolactin, estrogen","panel":"Total + free testosterone, TSH, prolactin, estradiol"},{"symptom":"Menstrual irregularity / amenorrhea","consider":"Follow 6.2b workup","panel":"hCG, FSH/LH/estradiol, prolactin, TSH, androgens, AMH"},{"symptom":"Hirsutism / acne (female)","consider":"PCOS, CAH, androgen excess","panel":"Testosterone/free T, DHEA-S, 17-OH-progesterone, LH:FSH"},{"symptom":"Mood / anxiety / irritability","consider":"Thyroid, cortisol rhythm, perimenopause","panel":"TSH + free T4, cortisol pattern, cycle-appropriate sex steroids"},{"symptom":"Bone loss / fracture","consider":"Vitamin D/PTH, thyroid, hypogonadism, cortisol","panel":"25-OH D, calcium/PTH, TSH, sex steroids, cortisol screen"},{"symptom":"Galactorrhea","consider":"Prolactin (with hook-effect caution), thyroid","panel":"Prolactin (+ dilution if adenoma suspected), TSH"},{"symptom":"Polyuria / polydipsia","consider":"Diabetes mellitus, diabetes insipidus, hypercalcemia","panel":"Glucose, calcium, osmolality studies"},{"symptom":"Heat/cold intolerance, palpitations","consider":"Thyroid","panel":"TSH + free T4 (+ free T3, TRAb if hyper)"},{"symptom":"Cold intolerance / dry skin / constipation","consider":"Hypothyroidism","panel":"TSH + free T4, TPO Ab"},{"symptom":"Palpitations / heat intolerance / tremor","consider":"Hyperthyroidism","panel":"TSH + free T4, free T3, TRAb"},{"symptom":"Hot flashes / night sweats","consider":"Perimenopause / menopause","panel":"FSH, estradiol (cycle-timed), TSH"},{"symptom":"Erectile dysfunction","consider":"Testosterone, prolactin, thyroid, vascular","panel":"AM total + free testosterone, LH, prolactin, TSH, A1c/lipids"},{"symptom":"Excessive thirst / frequent urination","consider":"Diabetes, hypercalcemia, DI","panel":"Fasting glucose/A1c, calcium, osmolality"},{"symptom":"Muscle weakness / high BP / easy bruising","consider":"Cortisol excess (Cushing)","panel":"Late-night salivary cortisol or 1mg DST, ACTH"},{"symptom":"Salt craving / dizziness / darkening skin","consider":"Adrenal insufficiency","panel":"AM cortisol, ACTH, electrolytes"}],"patterns":[{"pattern":"\u2191 TSH, \u2193 free T4, \u2191 TPO Ab","reading":"Primary hypothyroidism, autoimmune (Hashimoto)"},{"pattern":"\u2193 TSH, \u2191 free T4/T3, \u2191 TRAb","reading":"Graves hyperthyroidism"},{"pattern":"\u2193 TSH, \u2191 free T4/T3, \u2193 or absent TRAb, low uptake","reading":"Thyroiditis (release, not overproduction)"},{"pattern":"Normal/\u2193 TSH, \u2193 free T4","reading":"Central hypothyroidism \u2014 pursue pituitary"},{"pattern":"\u2193 total T4, **normal free T4**, normal TSH","reading":"TBG variant \u2014 euthyroid, do not treat"},{"pattern":"\u2193 T3, \u2191 rT3, normal/\u2193 TSH, ill patient","reading":"Non-thyroidal illness"},{"pattern":"\u2191 androgens, LH:FSH > 2, irregular cycles, \u2191 AMH","reading":"PCOS picture"},{"pattern":"\u2191 17-OH-progesterone with androgen excess","reading":"Non-classic CAH \u2014 differentiate from PCOS"},{"pattern":"\u2191 FSH/LH, \u2193 estradiol, amenorrhea","reading":"Primary ovarian insufficiency / menopause"},{"pattern":"\u2193/normal FSH/LH, \u2193 estradiol, amenorrhea","reading":"Central (hypothalamic/pituitary) \u2014 incl. FHA, hyperprolactinemia"},{"pattern":"\u2191 prolactin, \u2193 testosterone/estradiol","reading":"Hyperprolactinemia suppressing the gonadal axis"},{"pattern":"\u2191 cortisol, fails dexamethasone suppression","reading":"Cushing \u2014 then ACTH localizes"},{"pattern":"\u2193 AM cortisol, \u2191 ACTH, \u2191 K\u207a, \u2193 Na\u207a","reading":"Primary adrenal insufficiency (Addison)"},{"pattern":"\u2193 AM cortisol, \u2193/normal ACTH","reading":"Central adrenal insufficiency"},{"pattern":"\u2191 aldosterone, \u2193 renin (\u2191 ARR), \u2193 K\u207a, hypertension","reading":"Primary aldosteronism"},{"pattern":"\u2191 calcium, \u2191 PTH","reading":"Primary hyperparathyroidism"},{"pattern":"\u2193 calcium, \u2191 PTH, \u2193 25-OH D","reading":"Secondary hyperparathyroidism (vitamin D deficiency) \u2014 check magnesium if refractory"}],"redflags":[{"sig":"Adrenal crisis","action":"Hypotension, hyponatremia, hyperkalemia with known/suspected adrenal insufficiency, especially during illness \u2014 treat empirically, don't wait for confirmatory cortisol","kind":"emergency"},{"sig":"Severe hypercalcemia","action":"Calcium markedly elevated with confusion, arrhythmia, dehydration","kind":"emergency"},{"sig":"Severe hyponatremia","action":"Rapidly developing or symptomatic (seizure, obtundation)","kind":"emergency"},{"sig":"Thyroid storm","action":"Hyperthyroid with fever, tachyarrhythmia, agitation/delirium","kind":"emergency"},{"sig":"Myxedema coma","action":"Severe hypothyroid with hypothermia, altered mental status","kind":"emergency"},{"sig":"DKA / HHS","action":"Hyperglycemia with acidosis or profound hyperosmolarity","kind":"emergency"},{"sig":"Pituitary apoplexy","action":"Sudden severe headache, vision change, ophthalmoplegia","kind":"emergency"},{"sig":"Prolactin markedly elevated (or galactorrhea with a suspicious picture despite modest prolactin)","action":"Pituitary MRI; **request dilution study** to exclude hook effect before reassurance","kind":"referral"},{"sig":"Suppressed TSH with a thyroid nodule","action":"Uptake scan / ultrasound; endocrine referral","kind":"referral"},{"sig":"Confirmed Cushing, acromegaly, primary aldosteronism, or pheochromocytoma pattern","action":"Endocrine referral with appropriate imaging","kind":"referral"},{"sig":"Confirmed adrenal insufficiency","action":"Endocrine referral; ensure sick-day steroid education","kind":"referral"},{"sig":"Virilization with rapid onset or very high androgens","action":"Exclude androgen-secreting tumor \u2014 imaging and referral","kind":"referral"},{"sig":"Central pattern (any axis) \u2014 low target hormone with low/normal tropic hormone","action":"Pituitary evaluation, including the other pituitary axes","kind":"referral"},{"sig":"Pediatric/pubertal abnormality","action":"Pediatric endocrinology \u2014 adult ranges do not apply","kind":"referral"}],"systems":[{"name":"Hypothalamic\u2013pituitary master control","blurb":"**Hypothalamic factors** (portal circulation only \u2014 not clinically measurable in serum) > **Note on TRH:** the TRH stimulation test is largely obsolete since third-generation TSH assays. Its conceptual value remains \u2014 it defines the tertiary (hypothalamic) tier of hypothyroidism."},{"name":"Thyroid","blurb":"**Axis:** TRH \u2192 TSH \u2192 T4 and T3 **Deiodinase enzymes**"},{"name":"Adrenal","blurb":"**Cortex \u2014 zonal organization** **Medulla** \u2014 epinephrine, norepinephrine, dopamine. Sympathetic neural control, not pituitary. Assessed via plasma free metanephrines or 24-hour fractionated urinary metanephrines."},{"name":"Gonadal","blurb":"**Axis:** GnRH (pulsatile) \u2192 LH and FSH \u2192 gonadal steroids and peptides **Pulse frequency determines output:** rapid GnRH pulses favor LH; slow pulses favor FSH. Continuous (non-pulsatile) GnRH exposure *downregulates* the receptor and suppresses both \u2014 the pharmacologic basis of GnRH agonist therapy."},{"name":"Somatotropic (growth)","blurb":"**Axis:** GHRH (+) / somatostatin (\u2212) \u2192 GH \u2192 hepatic IGF-1 - **Excess (acromegaly):** elevated age-adjusted IGF-1, confirmed by failure of GH suppression on oral glucose tolerance test.\n- **Deficiency:** low IGF-1, but IGF-1 is also lowered by malnutrition, hepatic disease, uncontrolled diabetes, and hypothyroidism. Confirmation requires provocative testing.\n- IGF-1 falls physiologically with age \u2014 an un-normalized value invites overcalling deficiency."},{"name":"Pancreatic and metabolic","blurb":"**Insulin resistance is the most consequential cross-axis modifier in this reference.** It lowers SHBG (raising free androgens), disrupts GnRH pulsatility, drives ovarian theca androgen production, and alters thyroid conversion. When a hormone panel looks disordered across multiple axes at once, check the metabolic layer before adding axis-specific explanations. ---"},{"name":"Calcium, phosphate, and bone","blurb":"**Sequence to read the panel:** calcium (ideally ionized, or albumin-corrected) \u2192 PTH \u2192 25-OH D \u2192 phosphate \u2192 magnesium \u2192 renal function. Reading PTH without same-draw calcium tells you nothing. **Magnesium is a hard prerequisite.** Both PTH secretion and PTH end-organ responsiveness fail in magnesium depletion. Refractory hypocalcemia that will not correct with calcium and vitamin D is magnesium deficiency until proven otherwise."},{"name":"Energy balance \u2014 adipose and gut","blurb":"**Adipose (adipokines)** Leptin's permissive role explains functional hypothalamic amenorrhea: low energy availability lowers leptin, which suppresses GnRH pulsatility. The gonadal axis is downstream of energy status."},{"name":"Volume, pressure, and hematopoiesis","blurb":"**Aldosterone:renin ratio** is the screening test for primary aldosteronism. Interfering medications (MRAs, and to a lesser extent ACE-I/ARB, diuretics, beta blockers) must be accounted for, and potassium repleted, before interpretation. ---"},{"name":"Pineal and circadian","blurb":"Melatonin is the upstream timing signal that gates cortisol's diurnal rise, GH's sleep-associated pulses, and reproductive rhythmicity. Circadian disruption is therefore a plausible contributor to multi-axis dysregulation \u2014 worth capturing as history rather than as a lab. ---"}],"labs":[{"k":"tsh","label":"TSH","unit":"mIU/L","dir":true},{"k":"ft4","label":"Free T4","unit":"ng/dL","dir":true},{"k":"ft3","label":"Free T3","unit":"pg/mL","dir":true},{"k":"tpo","label":"TPO antibodies","unit":"","pos":true},{"k":"trab","label":"TRAb / TSI","unit":"","pos":true},{"k":"amcort","label":"AM cortisol","unit":"\u00b5g/dL","dir":true},{"k":"acth","label":"ACTH","unit":"pg/mL","dir":true},{"k":"testT","label":"Total testosterone","unit":"ng/dL","dir":true},{"k":"testF","label":"Free testosterone","unit":"pg/mL","dir":true},{"k":"lh","label":"LH","unit":"mIU/mL","dir":true},{"k":"fsh","label":"FSH","unit":"mIU/mL","dir":true},{"k":"e2","label":"Estradiol","unit":"pg/mL","dir":true},{"k":"prog","label":"Progesterone","unit":"ng/mL","dir":true},{"k":"prl","label":"Prolactin","unit":"ng/mL","dir":true},{"k":"dheas","label":"DHEA-S","unit":"\u00b5g/dL","dir":true},{"k":"amh","label":"AMH","unit":"ng/mL","dir":true},{"k":"17ohp","label":"17-OH progesterone","unit":"ng/mL","dir":true},{"k":" ca","label":"Calcium","unit":"mg/dL","dir":true},{"k":"pth","label":"PTH","unit":"pg/mL","dir":true},{"k":"vitd","label":"25-OH vitamin D","unit":"ng/mL","dir":true},{"k":"a1c","label":"HbA1c","unit":"%","dir":true},{"k":"gluc","label":"Fasting glucose","unit":"mg/dL","dir":true},{"k":"insulin","label":"Fasting insulin","unit":"\u00b5IU/mL","dir":true},{"k":"aldo","label":"Aldosterone","unit":"ng/dL","dir":true},{"k":"renin","label":"Renin","unit":"","dir":true},{"k":"igf1","label":"IGF-1","unit":"ng/mL","dir":true}]};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 
-/* ---- Analyte catalog: key, label, unit, group, parse aliases ---- */
-const ANALYTES = [
-  // Sex hormones
-  {k:'e2',   label:'Estradiol (E2)',        unit:'pg/mL',  group:'Sex hormones', aliases:['estradiol','e2']},
-  {k:'prog', label:'Progesterone',           unit:'ng/mL',  group:'Sex hormones', aliases:['progesterone']},
-  {k:'fsh',  label:'FSH',                    unit:'mIU/mL', group:'Sex hormones', aliases:['fsh','follicle stimulating']},
-  {k:'lh',   label:'LH',                     unit:'mIU/mL', group:'Sex hormones', aliases:['lh','luteinizing']},
-  {k:'tt',   label:'Testosterone, Total',    unit:'ng/dL',  group:'Sex hormones', aliases:['testosterone total','total testosterone','testosterone,total','testosterone']},
-  {k:'ft',   label:'Testosterone, Free',     unit:'pg/mL',  group:'Sex hormones', aliases:['free testosterone','testosterone free','testosterone,free']},
-  {k:'shbg', label:'SHBG',                   unit:'nmol/L', group:'Sex hormones', aliases:['shbg','sex hormone binding']},
-  {k:'dheas',label:'DHEA-S',                 unit:'µg/dL',  group:'Sex hormones', aliases:['dhea-s','dhea sulfate','dheas','dhea sulphate']},
-  {k:'prl',  label:'Prolactin',              unit:'ng/mL',  group:'Sex hormones', aliases:['prolactin','prl']},
-  {k:'amh',  label:'AMH',                    unit:'ng/mL',  group:'Sex hormones', aliases:['amh','anti-mullerian','anti mullerian']},
-  // Thyroid
-  {k:'tsh',  label:'TSH',                    unit:'µIU/mL', group:'Thyroid', aliases:['tsh','thyroid stimulating']},
-  {k:'ft4',  label:'Free T4',                unit:'ng/dL',  group:'Thyroid', aliases:['free t4','ft4','free thyroxine','t4 free']},
-  {k:'ft3',  label:'Free T3',                unit:'pg/mL',  group:'Thyroid', aliases:['free t3','ft3','free triiodo','t3 free']},
-  // Metabolic / adrenal
-  {k:'ins',  label:'Fasting Insulin',        unit:'µIU/mL', group:'Metabolic & adrenal', aliases:['fasting insulin','insulin']},
-  {k:'glu',  label:'Fasting Glucose',        unit:'mg/dL',  group:'Metabolic & adrenal', aliases:['fasting glucose','glucose']},
-  {k:'cort', label:'AM Cortisol',            unit:'µg/dL',  group:'Metabolic & adrenal', aliases:['cortisol','am cortisol','morning cortisol']},
-  // Vitamins / nutrients
-  {k:'vitd', label:'Vitamin D (25-OH)',      unit:'ng/mL',  group:'Vitamins & nutrients', aliases:['vitamin d','25-oh','25 hydroxy','vit d','25(oh)d']},
-  {k:'b12',  label:'Vitamin B12',            unit:'pg/mL',  group:'Vitamins & nutrients', aliases:['b12','cobalamin']},
-  {k:'fol',  label:'Folate',                 unit:'ng/mL',  group:'Vitamins & nutrients', aliases:['folate','folic']},
-  {k:'ferr', label:'Ferritin',              unit:'ng/mL',  group:'Vitamins & nutrients', aliases:['ferritin']},
-  {k:'iron', label:'Iron',                   unit:'µg/dL',  group:'Vitamins & nutrients', aliases:['iron']},
-];
+const CONTEXT=["On thyroid medication","On hormonal contraception / HRT","Recent significant weight change","High stress / poor sleep","Known PCOS","Family history of thyroid disease","On steroids (any form)","Acutely ill right now","New medication started"];
 
-const GROUPS = ['Sex hormones','Thyroid','Metabolic & adrenal','Vitamins & nutrients'];
-
-/* ---- state ---- */
-const state = {
-  status:null,      // cycling|bleeding|amenorrhea|perimeno|postmeno|contraception
-  age:null,         // patient age in years
-  cycleDay:null,
-  lmpDate:null,     // ISO string, first day of last full flow
-  phase:null,       // follicular|ovulatory|luteal
-  bleed:null,       // normal|prolonged|weeks|months
-  amenMonths:null,
-  amenMethod:null,  // none|hiud|implant|dmpa — hormonal method behind absent bleeding
-  contra:null,      // coc|pop|patch|ring|hiud|implant|dmpa|other
-};
-
-/* =========================================================
-   Build lab grid
-   ========================================================= */
-const labGrid = document.getElementById('labGrid');
-GROUPS.forEach(g=>{
-  const wrap=document.createElement('div'); wrap.className='grid-group';
-  wrap.innerHTML=`<div class="group-label">${g}</div>`;
-  const grid=document.createElement('div'); grid.className='lab-grid';
-  ANALYTES.filter(a=>a.group===g).forEach(a=>{
-    const f=document.createElement('div'); f.className='lab-field';
-    f.innerHTML=`<label for="in-${a.k}">${a.label}</label>
-      <div class="lab-inwrap">
-        <input id="in-${a.k}" data-k="${a.k}" type="number" step="any" inputmode="decimal" placeholder="—">
-        <span class="unit">${a.unit}</span>
-      </div>`;
-    grid.appendChild(f);
-  });
-  wrap.appendChild(grid); labGrid.appendChild(wrap);
-});
-labGrid.addEventListener('input',e=>{
-  if(e.target.matches('input[data-k]')){
-    e.target.classList.toggle('filled', e.target.value.trim()!=='');
-  }
-});
-function getVal(k){const el=document.getElementById('in-'+k); const v=parseFloat(el.value); return isNaN(v)?null:v;}
-function setVal(k,v){const el=document.getElementById('in-'+k); el.value=v; el.classList.add('filled');}
-
-/* =========================================================
-   Paste parser
-   ========================================================= */
-document.getElementById('parseBtn').addEventListener('click',()=>{
-  const raw=document.getElementById('pasteArea').value;
-  const note=document.getElementById('parseNote');
-  if(!raw.trim()){note.innerHTML='Nothing to parse — paste lab text above first.';return;}
-  const text=raw.replace(/\r/g,'');
-  let found=0; const hits=[];
-  // Build alias lookup sorted by length desc so longer names win
-  const lookup=[];
-  ANALYTES.forEach(a=>a.aliases.forEach(al=>lookup.push({k:a.k,al:al.toLowerCase(),label:a.label})));
-  lookup.sort((x,y)=>y.al.length-x.al.length);
-  const usedKeys=new Set();
-  lookup.forEach(({k,al,label})=>{
-    if(usedKeys.has(k)) return;
-    // match alias then first number after it on same-ish span
-    const esc=al.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-    const re=new RegExp(esc+'[^\\d\\-\\n]{0,25}?(-?\\d+\\.?\\d*)','i');
-    const m=text.match(re);
-    if(m){
-      const num=parseFloat(m[1]);
-      if(!isNaN(num)){ setVal(k,num); usedKeys.add(k); found++; hits.push(label); }
-    }
-  });
-  if(found){
-    note.innerHTML=`<b>Matched ${found} value${found>1?'s':''}:</b> ${hits.join(', ')}. Review before calculating — unrecognized lines are ignored.`;
-  }else{
-    note.innerHTML='No values recognized. Check the format, or enter values directly in the grid below.';
-  }
-});
-document.getElementById('clearBtn').addEventListener('click',()=>{
-  ANALYTES.forEach(a=>{const el=document.getElementById('in-'+a.k); el.value=''; el.classList.remove('filled');});
-  document.getElementById('parseNote').innerHTML='';
-  document.getElementById('pasteArea').value='';
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.tp').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); $('tp-'+b.dataset.t).classList.add('on');
+  window.scrollTo({top:0,behavior:'smooth'});
 });
 
-/* =========================================================
-   Cycle context toggles
-   ========================================================= */
-const statusRow=document.getElementById('statusRow');
-statusRow.addEventListener('click',e=>{
-  const b=e.target.closest('.pill'); if(!b)return;
-  const val=b.dataset.status;
-  const already=b.getAttribute('aria-pressed')==='true';
-  [...statusRow.children].forEach(p=>p.setAttribute('aria-pressed','false'));
-  ['cycling','bleeding','amenorrhea','contraception'].forEach(id=>document.getElementById('sub-'+id).hidden=true);
-  if(already){state.status=null;renderPhase();return;}
-  b.setAttribute('aria-pressed','true'); state.status=val;
-  if(val==='cycling') document.getElementById('sub-cycling').hidden=false;
-  if(val==='bleeding') document.getElementById('sub-bleeding').hidden=false;
-  if(val==='amenorrhea') document.getElementById('sub-amenorrhea').hidden=false;
-  if(val==='contraception') document.getElementById('sub-contraception').hidden=false;
-  renderPhase();
-});
+// symptom chips
+$('symptoms').innerHTML=D.symptoms.map((s,i)=>`<label class="chip"><input type="checkbox" class="sy" value="${i}" onchange="this.closest('.chip').classList.toggle('on',this.checked)"> ${esc(s.symptom)}</label>`).join('');
+$('context').innerHTML=CONTEXT.map(c=>`<label class="chip"><input type="checkbox" class="cx" value="${esc(c)}" onchange="this.closest('.chip').classList.toggle('on',this.checked)"> ${esc(c)}</label>`).join('');
 
-// patient age
-document.getElementById('patientAge').addEventListener('input',e=>{
-  const v=parseInt(e.target.value,10);
-  state.age=isNaN(v)?null:v;
-  const note=document.getElementById('ageNote');
-  if(state.age==null){ note.textContent='years — refines how age-dependent patterns are read'; return; }
-  if(state.age<40) note.textContent='years — elevated FSH here reads as POI, not menopause';
-  else if(state.age<=45) note.textContent='years — perimenopausal transition is plausible in this range';
-  else note.textContent='years — menopause transition is expected in this range';
-});
+// lab inputs
+$('labinputs').innerHTML=D.labs.map(l=>`
+  <div class="labrow">
+    <div class="nm">${esc(l.label)}${l.unit?` <span style="color:var(--soft);font-weight:400">${esc(l.unit)}</span>`:''}</div>
+    <input id="lv-${l.k.trim()}" placeholder="value" />
+    <div class="dirsel" data-k="${l.k.trim()}">
+      ${l.pos?`<button onclick="setDir(this,'pos')">Pos</button><button onclick="setDir(this,'neg')">Neg</button>`
+             :`<button onclick="setDir(this,'low')">↓</button><button onclick="setDir(this,'nl')">nl</button><button onclick="setDir(this,'high')">↑</button>`}
+    </div>
+  </div>`).join('');
+const DIRS={};
+function setDir(btn,v){ const k=btn.parentNode.dataset.k; DIRS[k]=v; [...btn.parentNode.children].forEach(b=>b.classList.remove('on')); btn.classList.add('on'); }
 
-// cycle day -> phase
-const dayInput=document.getElementById('cycleDay');
-const lmpInput=document.getElementById('lmpDate');
-function phaseFromDay(d){
-  if(d==null||isNaN(d)) return null;
-  if(d<=13) return 'follicular';
-  if(d<=16) return 'ovulatory';
-  return 'luteal';
+function workup(){
+  const syms=[...document.querySelectorAll('.sy:checked')].map(c=>D.symptoms[+c.value]);
+  const cx=[...document.querySelectorAll('.cx:checked')].map(c=>c.value);
+  const sex=$('sex').value, cyc=$('cycle').value;
+  if(!syms.length){ $('workout').innerHTML='<div class="card empty">Pick at least one symptom.</div>'; return; }
+
+  // red-flag scan on symptoms text
+  const sympText=syms.map(s=>s.symptom+' '+s.consider).join(' ').toLowerCase();
+  const flags=D.redflags.filter(r=>{ const w=r.sig.toLowerCase().split(/[ ,/]+/).filter(x=>x.length>4); return w.some(x=>sympText.includes(x)); });
+  const rb=$('redbanner');
+  if(/salt craving|darkening|dizz/.test(sympText)){ rb.className='redbanner show'; rb.innerHTML='<b>⚠ Possible adrenal insufficiency</b> — if hypotension, hyponatremia or hyperkalemia, treat empirically and do not wait on cortisol.'; }
+  else rb.className='redbanner';
+
+  // merge panels
+  const axes=[...new Set(syms.flatMap(s=>s.consider.split(/[,/]/).map(x=>x.trim())))].filter(Boolean);
+  const panels=[...new Set(syms.flatMap(s=>s.panel.split(/[,;]/).map(x=>x.trim())))].filter(Boolean);
+  let cycleNote='';
+  if(sex==='Female' && (cyc==='Regular cycles'||cyc==='Irregular cycles')) cycleNote='Time sex-steroid draws to cycle phase (FSH/LH/estradiol early follicular; progesterone ~day 21 or mid-luteal).';
+  if(cyc==='Pregnant / possibly pregnant') cycleNote='⚠ Pregnancy changes nearly every reference range — check hCG first and use pregnancy-specific ranges.';
+  if(cyc==='Postmenopausal') cycleNote='Postmenopausal: elevated FSH/LH with low estradiol is expected, not pathologic.';
+  if(cx.includes('On hormonal contraception / HRT')) cycleNote+=' Exogenous hormones suppress the axis and raise binding proteins — total sex steroids will mislead.';
+
+  $('summary').innerHTML=`<b>${syms.length}</b> symptom(s) → <b>${axes.length}</b> axes to consider.`;
+  $('workout').innerHTML=`
+    ${flags.length?`<div class="card" style="border-left:4px solid var(--urgent)"><span class="eyebrow" style="color:var(--urgent)">Escalation signals in this picture</span>${flags.map(f=>`<div class="rf"><b>${esc(f.sig)}</b> — ${esc(f.action)}</div>`).join('')}</div>`:''}
+    <div class="card"><span class="eyebrow">Axes to consider</span><h2>Work these up</h2>
+      <div style="margin-top:8px">${axes.map(a=>`<span class="chip on" style="cursor:default">${esc(a)}</span>`).join('')}</div>
+    </div>
+    <div class="card" style="border-left:4px solid var(--clay)"><span class="eyebrow">First-line panel — deduplicated</span>
+      <div style="margin-top:8px">${panels.map(p=>`<span class="chip" style="cursor:default">${esc(p)}</span>`).join('')}</div>
+      ${cycleNote?`<div class="rf" style="border-left-color:var(--clay);background:#fdf6ec;margin-top:11px"><b style="color:var(--clay-deep)">Timing</b> ${esc(cycleNote)}</div>`:''}
+    </div>
+    <div class="card"><span class="eyebrow">By symptom</span>
+      ${syms.map(s=>`<div class="row" style="margin-top:9px"><b>${esc(s.symptom)}</b>Consider: ${esc(s.consider)}<br><span style="color:var(--soft)">Panel: ${esc(s.panel)}</span></div>`).join('')}
+    </div>`;
+  window._wk={syms:syms.map(s=>s.symptom),axes,panels,cycleNote};
+  $('copyw').style.display='inline-block';
 }
-// shared renderer: updates state.phase + band from the current cycleDay
-function renderPhase(){
-  const d=state.cycleDay;
-  const ph=phaseFromDay(d);
-  state.phase=ph;
-  const segs=document.querySelectorAll('#phaseBand .phaseseg');
-  segs.forEach(s=>{s.classList.remove('active');s.classList.add('dim');});
-  const lbl=document.getElementById('dayPhaseLabel');
-  const cap=document.getElementById('phaseCaption');
-  // only highlight a phase when the patient is being read as cycling
-  if(ph && state.status==='cycling'){
-    segs.forEach(s=>{if(s.dataset.phase===ph){s.classList.add('active');s.classList.remove('dim');}});
-    const names={follicular:'Follicular phase',ovulatory:'Ovulatory window',luteal:'Luteal phase'};
-    lbl.textContent='→ '+names[ph];
-    cap.innerHTML=`Applying <b>${names[ph]}</b> reference ranges${ph==='luteal'?' — progesterone & Pg:E2 are most informative here.':'.'}`;
-  }else{
-    segs.forEach(s=>s.classList.remove('dim'));
-    lbl.textContent='— enter a day to assign phase';
-    cap.innerHTML='Enter a cycle day or LMP under \u201CCycling\u201D to highlight the active phase.';
-  }
-}
-// manual cycle-day entry (overrides LMP-derived value)
-dayInput.addEventListener('input',()=>{
-  const d=parseInt(dayInput.value,10);
-  state.cycleDay=isNaN(d)?null:d;
-  renderPhase();
-});
-// LMP date -> cycle day = (today - LMP) + 1
-lmpInput.addEventListener('change',()=>{
-  const derived=document.getElementById('lmpDerived');
-  if(!lmpInput.value){ state.lmpDate=null; derived.textContent='— sets cycle day from today\u2019s date'; return; }
-  state.lmpDate=lmpInput.value;
-  const lmp=new Date(lmpInput.value+'T00:00:00');
-  const today=new Date(); today.setHours(0,0,0,0);
-  const diffDays=Math.floor((today-lmp)/86400000);
-  if(diffDays<0){
-    derived.textContent='— date is in the future; check it';
-    state.cycleDay=null; dayInput.value=''; renderPhase(); return;
-  }
-  const cd=diffDays+1;             // day 1 = first day of flow
-  state.cycleDay=cd;
-  dayInput.value=cd;               // auto-fill, still editable
-  const fmt=lmp.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-  derived.textContent=`→ cycle day ${cd} as of today (LMP ${fmt})`;
-  renderPhase();
-});
-
-// bleeding duration
-document.getElementById('bleedDurRow').addEventListener('click',e=>{
-  const b=e.target.closest('.pill'); if(!b)return;
-  const row=b.parentElement;
-  const already=b.getAttribute('aria-pressed')==='true';
-  [...row.children].forEach(p=>p.setAttribute('aria-pressed','false'));
-  if(already){state.bleed=null;return;}
-  b.setAttribute('aria-pressed','true'); state.bleed=b.dataset.bleed;
-});
-document.getElementById('amenMonths').addEventListener('input',e=>{
-  const v=parseInt(e.target.value,10); state.amenMonths=isNaN(v)?null:v;
-});
-
-// amenorrhea: is absent bleeding method-driven?
-const AMEN_METHOD_NOTES={
-  hiud:'<b>Hormonal IUD:</b> up to ~1 in 5 users stop bleeding within a year — absent periods here are an expected local effect, not ovarian failure. Ovulation often continues, so cyclic hormones may still be meaningful.',
-  implant:'<b>Implant:</b> amenorrhea is a common, expected effect of ovulation suppression. Low progesterone and a blunted LH surge are anticipated, not signs of POI or central suppression.',
-  dmpa:'<b>Injection (DMPA):</b> amenorrhea is expected and increases with duration of use. Low estradiol and gonadotropins reflect the method; return of cycles can lag months after the last dose.'
-};
-document.getElementById('amenMethodRow').addEventListener('click',e=>{
-  const b=e.target.closest('.pill'); if(!b)return;
-  const row=b.parentElement;
-  const already=b.getAttribute('aria-pressed')==='true';
-  [...row.children].forEach(p=>p.setAttribute('aria-pressed','false'));
-  const note=document.getElementById('amenMethodNote');
-  if(already){ state.amenMethod=null; note.hidden=true; return; }
-  b.setAttribute('aria-pressed','true'); state.amenMethod=b.dataset.amenmethod;
-  if(state.amenMethod==='none'){ note.hidden=true; }
-  else { note.innerHTML=AMEN_METHOD_NOTES[state.amenMethod]||''; note.hidden=false; }
-});
-
-// hormonal contraception method -> interpretation note
-const CONTRA_NOTES={
-  coc:'<b>Combined pill:</b> suppresses the HPO axis — expect low FSH, LH, estradiol, and progesterone. Sex-hormone ratios are <b>not interpretable</b> on active pills; the ethinyl estradiol also raises SHBG, lowering the Free Androgen Index. Assess androgens off the pill if PCOS is in question.',
-  pop:'<b>Progestin-only pill:</b> variable ovulation suppression. Progesterone assays do not detect synthetic progestins, so a low progesterone here does not mean anovulation. Interpret sex hormones with caution.',
-  patch:'<b>Patch:</b> combined-hormone effect like COC — endogenous FSH/LH/estradiol suppressed and SHBG raised. Ratios are not interpretable while active.',
-  ring:'<b>Vaginal ring:</b> combined-hormone effect like COC — endogenous gonadotropins and estradiol suppressed, SHBG raised. Ratios are not interpretable while active.',
-  hiud:'<b>Hormonal IUD (levonorgestrel):</b> mainly local; ovulation often continues, so cyclic sex-hormone values may still be meaningful. Bleeding is frequently light or absent by design — treat absent bleeding as expected, not amenorrhea.',
-  implant:'<b>Implant (etonogestrel):</b> suppresses ovulation — expect low progesterone and blunted LH surge. Irregular bleeding is common and expected. Interpret cyclic hormones with caution.',
-  dmpa:'<b>Injection (DMPA/Depo):</b> strong, sustained ovulation suppression — low estradiol and gonadotropins are expected, and return to baseline can lag months after the last dose. Do not read low estradiol as ovarian failure.',
-  other:'<b>Method unspecified:</b> most hormonal contraception suppresses part of the HPO axis, so sex-hormone ratios may not be interpretable. Confirm the method before relying on cyclic values.'
-};
-document.getElementById('contraRow').addEventListener('click',e=>{
-  const b=e.target.closest('.pill'); if(!b)return;
-  const row=b.parentElement;
-  const already=b.getAttribute('aria-pressed')==='true';
-  [...row.children].forEach(p=>p.setAttribute('aria-pressed','false'));
-  const note=document.getElementById('contraNote');
-  if(already){ state.contra=null; note.hidden=true; return; }
-  b.setAttribute('aria-pressed','true'); state.contra=b.dataset.contra;
-  note.innerHTML=CONTRA_NOTES[state.contra]||''; note.hidden=false;
-});
-
-/* =========================================================
-   Reference ranges (adult female).
-   Functional / optimal ranges (adult female, reproductive age
-   unless noted). These are narrower interpretive targets used in
-   functional/integrative practice — NOT diagnostic cutoffs and
-   narrower than standard lab reference intervals. Provider
-   correlates clinically.
-   ========================================================= */
-const RANGES={
-  // phase-specific sex hormones (functional optimal)
-  e2:{follicular:[30,100],ovulatory:[130,350],luteal:[70,180],postmeno:[10,50],default:[30,180]},
-  prog:{follicular:[0.1,1.5],ovulatory:[1,8],luteal:[10,25],postmeno:[0,0.5],default:[1,25]},
-  fsh:{follicular:[4,8],ovulatory:[4,15],luteal:[2,7],postmeno:[25,135],default:[2,10]},
-  lh:{follicular:[3,10],ovulatory:[15,80],luteal:[2,10],postmeno:[10,55],default:[2,12]},
-  // non-phase (functional optimal)
-  tt:[25,50], ft:[1.0,3.0], shbg:[50,100], dheas:[100,250], prl:[4,18], amh:[1.5,4.0],
-  tsh:[1.0,2.0], ft4:[1.1,1.5], ft3:[3.2,4.2],
-  ins:[2,6], glu:[75,90], cort:[10,18],
-  vitd:[50,80], b12:[500,900], fol:[10,25], ferr:[50,150], iron:[60,150],
-};
-function rangeFor(k){
-  const r=RANGES[k];
-  if(!r) return null;
-  if(Array.isArray(r)) return r;
-  // phase-dependent
-  let ph=state.phase;
-  if(state.status==='postmeno') return r.postmeno||r.default;
-  if(ph && r[ph]) return r[ph];
-  return r.default;
-}
-function statusOf(k,v){
-  const r=rangeFor(k); if(!r||v==null) return 'na';
-  if(v<r[0]) return 'lo';
-  if(v>r[1]) return 'hi';
-  return 'ok';
+function copyWork(){ const w=window._wk; if(!w)return;
+  navigator.clipboard.writeText(`Hormone workup (BHW support):\nSymptoms: ${w.syms.join(', ')}\nAxes to consider: ${w.axes.join(', ')}\nFirst-line panel: ${w.panels.join(', ')}\n${w.cycleNote?'Timing: '+w.cycleNote:''}`).then(()=>{$('copyw').textContent='Copied ✓';setTimeout(()=>$('copyw').textContent='📋 Copy workup for the chart',1500);});
 }
 
-/* =========================================================
-   Ratio calculations
-   ========================================================= */
-function calcRatios(){
-  const out=[];
-  const e2=getVal('e2'), prog=getVal('prog'), fsh=getVal('fsh'), lh=getVal('lh'),
-        tt=getVal('tt'), shbg=getVal('shbg'), ins=getVal('ins'), glu=getVal('glu'),
-        ft4=getVal('ft4'), ft3=getVal('ft3');
+function interpret(){
+  const marks={}; let any=false;
+  D.labs.forEach(l=>{ const k=l.k.trim(); if(DIRS[k] && DIRS[k]!=='nl'){ marks[k]={dir:DIRS[k],val:$('lv-'+k).value,label:l.label}; any=true; } });
+  if(!any){ $('interpout').innerHTML='<div class="card empty">Mark at least one lab as high, low, or positive.</div>'; return; }
 
-  // LH:FSH
-  if(lh!=null && fsh!=null && fsh>0){
-    const v=lh/fsh; let cls='ok',flag='Normal';
-    if(v>=2){cls='bad';flag='Elevated';}
-    else if(v>=1.5){cls='warn';flag='Borderline';}
-    out.push({name:'LH : FSH',val:v.toFixed(2),unit:'ratio',cls,flag,
-      range:'Typical <b>&lt; 1.5</b> · ≥2 supports a PCOS pattern'});
-  } else out.push({name:'LH : FSH',val:'—',unit:'',cls:'na',flag:'Need LH + FSH',range:'Enter LH and FSH'});
-
-  // Progesterone : Estradiol (luteal adequacy) — Pg(ng/mL)*1000 / E2(pg/mL) not standard; use unit-consistent ratio Pg/E2 with E2 in ng/mL
-  if(prog!=null && e2!=null && e2>0){
-    const e2ng=e2/1000; // pg/mL -> ng/mL
-    const v=prog/e2ng;
-    let cls='ok',flag='Adequate';
-    // luteal-focused interpretation (functional targets)
-    if(state.phase==='luteal' || state.status==='bleeding' || state.status==='amenorrhea'){
-      if(prog<3){cls='bad';flag='Anovulatory (Pg <3)';}
-      else if(prog<10){cls='warn';flag='Suboptimal luteal Pg';}
-      else if(v<100){cls='warn';flag='Relative estrogen excess';}
-    }
-    out.push({name:'Progesterone : Estradiol',val:v.toFixed(0),unit:'(Pg ng : E2 ng)',cls,flag,
-      range:'Luteal functional optimal <b>Pg &gt;10 ng/mL</b>; &lt;3 = anovulatory; low ratio = relative estrogen excess'});
-  } else out.push({name:'Progesterone : Estradiol',val:'—',unit:'',cls:'na',flag:'Need Pg + E2',range:'Enter progesterone and estradiol'});
-
-  // Free Androgen Index = TT(nmol/L)/SHBG(nmol/L)*100 ; TT ng/dL -> nmol/L *0.0347
-  if(tt!=null && shbg!=null && shbg>0){
-    const ttNmol=tt*0.0347;
-    const v=(ttNmol/shbg)*100;
-    let cls='ok',flag='Normal';
-    if(v>5){cls='bad';flag='Elevated';}
-    else if(v>4){cls='warn';flag='Borderline';}
-    out.push({name:'Free Androgen Index',val:v.toFixed(1),unit:'FAI',cls,flag,
-      range:'Female typical <b>&lt; 5</b> · elevated = functional androgen excess'});
-  } else out.push({name:'Free Androgen Index',val:'—',unit:'',cls:'na',flag:'Need Total T + SHBG',range:'Enter total testosterone and SHBG'});
-
-  // HOMA-IR = ins(µIU/mL)*glu(mg/dL)/405
-  if(ins!=null && glu!=null){
-    const v=(ins*glu)/405;
-    let cls='ok',flag='Insulin sensitive';
-    if(v>=2.0){cls='bad';flag='Insulin resistant';}
-    else if(v>=1.4){cls='warn';flag='Early resistance';}
-    out.push({name:'HOMA-IR',val:v.toFixed(2),unit:'index',cls,flag,
-      range:'Functional optimal <b>&lt; 1.4</b> · ≥2.0 consistent with insulin resistance'});
-  } else out.push({name:'HOMA-IR',val:'—',unit:'',cls:'na',flag:'Need insulin + glucose',range:'Enter fasting insulin and glucose'});
-
-  // FT3:FT4 (units differ: FT3 pg/mL, FT4 ng/dL) — report as conversion index
-  if(ft3!=null && ft4!=null && ft4>0){
-    const v=ft3/ft4;
-    let cls='ok',flag='Adequate conversion';
-    if(v<2.4){cls='warn';flag='Low conversion';}
-    out.push({name:'Free T3 : Free T4',val:v.toFixed(2),unit:'index',cls,flag,
-      range:'Lower index may reflect reduced T4→T3 conversion — interpret with symptoms'});
-  } else out.push({name:'Free T3 : Free T4',val:'—',unit:'',cls:'na',flag:'Need FT3 + FT4',range:'Enter free T3 and free T4'});
-
-  return out;
-}
-
-/* =========================================================
-   Pattern / condition flagging
-   ========================================================= */
-function flagConditions(){
-  const conds=[];
-  const v=k=>getVal(k);
-  const st=k=>statusOf(k,getVal(k));
-  const has=k=>getVal(k)!=null;
-
-  const lh=v('lh'),fsh=v('fsh'),tt=v('tt'),shbg=v('shbg'),ins=v('ins'),glu=v('glu'),
-        e2=v('e2'),prog=v('prog'),prl=v('prl'),tsh=v('tsh'),ft4=v('ft4'),ft3=v('ft3'),
-        dheas=v('dheas'),amh=v('amh'),vitd=v('vitd'),cort=v('cort');
-  const lhfsh=(lh!=null&&fsh)?lh/fsh:null;
-  const fai=(tt!=null&&shbg)?(tt*0.0347/shbg)*100:null;
-  const homa=(ins!=null&&glu!=null)?(ins*glu)/405:null;
-
-  // absent bleeding explained by a hormonal method -> suppress ovarian-failure / central flags
-  const methodAmen = state.status==='amenorrhea' && ['hiud','implant','dmpa'].includes(state.amenMethod);
-
-  /* ---- METHOD-EXPECTED AMENORRHEA (replaces failure flags) ---- */
-  if(methodAmen){
-    const names={hiud:'Hormonal IUD (LNG)',implant:'Implant',dmpa:'Injection (DMPA)'};
-    conds.push({sev:'watch',title:'Amenorrhea expected on current method',
-      desc:'Absent bleeding is attributed to the hormonal method, so ovarian-insufficiency and hypothalamic-amenorrhea flags are held back to avoid a false alarm. Low estradiol/gonadotropins here are anticipated — not evidence of ovarian failure.',
-      triggers:['Method: '+names[state.amenMethod], state.amenMonths!=null?('Amenorrhea '+state.amenMonths+' months'):'Amenorrhea reported'],
-      next:['Only pursue a POI / central workup if there are symptoms beyond method-expected amenorrhea',
-            'If ovarian reserve is genuinely in question, assess after an appropriate method washout',
-            'Metabolic, thyroid, prolactin, and nutrient markers below remain interpretable']});
-  }
-
-  /* ---- CONTRACEPTION INTERPRETATION CAVEAT (leads results) ---- */
-  if(state.status==='contraception' && state.contra){
-    const contraNames={coc:'Combined pill',pop:'Progestin-only pill',patch:'Patch',ring:'Vaginal ring',hiud:'Hormonal IUD (LNG)',implant:'Implant',dmpa:'Injection (DMPA)',other:'Method unspecified'};
-    const suppresses=['coc','patch','ring','dmpa','implant'].includes(state.contra);
-    conds.push({sev:'watch',title:'On hormonal contraception — interpret sex hormones with caution',
-      desc: suppresses
-        ? 'This method suppresses the HPO axis, so low FSH, LH, estradiol, and progesterone are expected — sex-hormone ratios are generally not interpretable while it is active. Androgen and metabolic markers (SHBG, insulin, thyroid, vitamin D) below remain useful.'
-        : 'This method has limited or local axis effect, so cyclic sex hormones may still carry meaning — but confirm the pattern against method and timing before acting on it.',
-      triggers:['Method: '+contraNames[state.contra]],
-      next:['If androgen excess or PCOS is the question, reassess sex hormones after an appropriate washout off the method',
-            'Interpret bleeding changes as method-expected unless otherwise concerning',
-            'Metabolic, thyroid, prolactin, and nutrient markers can still be read normally']});
-  }
-
-  /* ---- ABNORMAL BLEEDING (own flag set) ---- */
-  if(state.status==='bleeding' && (state.bleed==='prolonged'||state.bleed==='weeks'||state.bleed==='months')){
-    const trig=[];
-    const dur={prolonged:'8–14 days',weeks:'several weeks',months:'≥1 month'}[state.bleed];
-    trig.push('Bleeding duration: '+dur);
-    if(prog!=null && prog<3) trig.push('Progesterone <3 ng/mL (anovulatory pattern)');
-    if(e2!=null && st('e2')==='hi') trig.push('Estradiol elevated (unopposed estrogen)');
-    if(st('tsh')!=='ok' && has('tsh')) trig.push('TSH out of range');
-    if(prl!=null && st('prl')==='hi') trig.push('Prolactin elevated');
-    if(st('ferr')==='lo') trig.push('Ferritin low (blood-loss anemia risk)');
-    const sev=(state.bleed==='months'||state.bleed==='weeks')?'high':'mod';
-    conds.push({
-      sev, title:'Abnormal uterine bleeding — prolonged episode',
-      desc:'Bleeding beyond a normal menses window. This is flagged independently of the hormone ranges and warrants a structural + endocrine bleeding workup, not ratio interpretation alone.',
-      symptoms:['Heavy or prolonged flow / flooding or clots','Fatigue and low energy','Lightheadedness or dizziness','Shortness of breath on exertion','Pale skin, brittle nails, hair shedding','Pelvic pressure or pain (if structural)'],
-      triggers:trig,
-      next:['Structural assessment: pelvic/transvaginal ultrasound (assess endometrial thickness, fibroids, polyps)',
-            'CBC + ferritin to quantify blood loss / anemia',
-            'Confirm ovulation status (mid-luteal progesterone) — anovulatory vs. ovulatory bleeding',
-            'Endometrial sampling if risk factors for hyperplasia (age, unopposed estrogen, persistent thickening)',
-            'Rule out pregnancy, thyroid, prolactin, and coagulopathy as contributors',
-            'PALM-COEIN framework to structure differential']
-    });
-  }
-
-  /* ---- PCOS phenotype ---- */
-  {
-    const trig=[];
-    if(lhfsh!=null && lhfsh>=2) trig.push('LH:FSH ≥ 2 ('+lhfsh.toFixed(1)+')');
-    if(fai!=null && fai>5) trig.push('Free Androgen Index >5 ('+fai.toFixed(1)+')');
-    if(tt!=null && st('tt')==='hi') trig.push('Total testosterone elevated');
-    if(homa!=null && homa>=1.4) trig.push('HOMA-IR '+homa.toFixed(1)+' (insulin resistance)');
-    if(shbg!=null && st('shbg')==='lo') trig.push('SHBG low');
-    if(dheas!=null && st('dheas')==='hi') trig.push('DHEA-S elevated');
-    if(amh!=null && amh>4.0) trig.push('AMH elevated ('+amh+')');
-    if(trig.length>=2){
-      conds.push({sev:trig.length>=3?'high':'mod',title:'PCOS phenotype',
-        desc:'Multiple features consistent with hyperandrogenic / anovulatory PCOS. Rotterdam requires 2 of 3: oligo/anovulation, hyperandrogenism (clinical or biochemical), polycystic morphology.',
-        symptoms:['Irregular or infrequent periods','Hirsutism — coarse hair on face, chest, abdomen','Acne, oily skin','Scalp hair thinning (androgenic pattern)','Weight gain / difficulty losing weight','Acanthosis nigricans (darkened skin folds)','Sugar or carb cravings','Difficulty conceiving'],
-        triggers:trig,
-        next:['Apply Rotterdam criteria with cycle history + ultrasound morphology',
-              'Exclude mimics: 17-OHP (NCAH), 24h cortisol/DST if Cushingoid, TSH, prolactin',
-              'Full metabolic panel: HbA1c, lipids, 2-hr OGTT if HOMA-IR elevated',
-              'Consider free testosterone if only total measured']});
-    }
-  }
-
-  /* ---- POI / diminished reserve / menopause transition (age-aware) ---- */
-  {
-    const trig=[];
-    if(fsh!=null && fsh>25 && state.status!=='postmeno') trig.push('FSH >25');
-    if(e2!=null && st('e2')==='lo') trig.push('Estradiol low');
-    if(amh!=null && amh<1.0) trig.push('AMH <1.0 (low reserve)');
-    if(state.status==='amenorrhea' && state.amenMonths!=null && state.amenMonths>=4) trig.push('Amenorrhea ≥4 months');
-    if(trig.length>=2 && state.status!=='postmeno' && !methodAmen){
-      const age=state.age;
-      if(age!=null && age>=46){
-        // age-expected menopause transition, not POI
-        trig.unshift('Age '+age);
-        conds.push({sev:'watch',title:'Menopause transition (age-consistent)',
-          desc:'Elevated gonadotropins with low estradiol at this age reflect the expected menopause transition rather than premature ovarian insufficiency. Diagnosis is clinical (12 months amenorrhea) — labs are supportive, not required.',
-          symptoms:['Hot flashes and night sweats','Irregular then absent periods','Vaginal dryness','Sleep disturbance','Mood changes','Low libido'],
-          triggers:trig,
-          next:['Diagnose menopause clinically (12 months without a period) — routine FSH not required',
-                'Manage symptoms; discuss bone and cardiovascular health',
-                'Screen thyroid and iron as symptom mimics']});
-      } else if(age!=null && age>=40){
-        // 40-45: POI vs early perimenopause overlap
-        trig.unshift('Age '+age);
-        conds.push({sev:'mod',title:'Early ovarian decline — POI vs. perimenopause',
-          desc:'Elevated gonadotropins with low estradiol in the early 40s sit at the overlap of early perimenopause and premature insufficiency. Under 45, confirm before labeling, since it affects counseling and fertility.',
-          symptoms:['Hot flashes and night sweats','Cycle shortening then skipping','Vaginal dryness','Low libido','Sleep disturbance','Mood changes'],
-          triggers:trig,
-          next:['Repeat FSH + estradiol in 4–6 weeks to confirm the trend',
-                'If under 45 with menopausal-range FSH, evaluate for POI drivers',
-                'Bone density + cardiovascular risk if hypoestrogenic']});
-      } else {
-        // <40 or unknown age: POI concern
-        if(age!=null) trig.unshift('Age '+age+' (under 40)');
-        conds.push({sev:'high',title:'Primary ovarian insufficiency / diminished reserve',
-          desc:'Elevated gonadotropins with low estradiol'+(age!=null?' under age 40':' in a non-postmenopausal patient')+' suggests premature ovarian insufficiency. Confirm with repeat FSH ≥4 weeks apart.',
-          symptoms:['Hot flashes and night sweats','Irregular or absent periods','Vaginal dryness','Low libido','Sleep disturbance','Mood changes or irritability','Difficulty conceiving'],
-          triggers:trig,
-          next:['Repeat FSH + estradiol in 4–6 weeks to confirm',
-                'Karyotype + Fragile X (FMR1) premutation if POI confirmed under 40',
-                'Adrenal (21-hydroxylase Ab) and thyroid autoimmune screen',
-                'Bone density + cardiovascular risk if hypoestrogenic']});
+  // score patterns by how many of their arrows are satisfied
+  const marked=Object.values(marks).map(m=>`${m.dir==='high'?'↑':m.dir==='low'?'↓':'+'} ${m.label}`);
+  const hits=D.patterns.map(p=>{
+    const pl=p.pattern.toLowerCase(); let sc=0;
+    Object.entries(marks).forEach(([k,m])=>{
+      const lab=(m.label||'').toLowerCase().split(' ')[0];
+      if(pl.includes(lab)){ 
+        const wantUp=new RegExp('↑[^↓]*'+lab).test(p.pattern.toLowerCase());
+        const wantDn=new RegExp('↓[^↑]*'+lab).test(p.pattern.toLowerCase());
+        if(m.dir==='high'&&pl.includes(lab)) sc+= wantUp?2:1;
+        else if(m.dir==='low'&&pl.includes(lab)) sc+= wantDn?2:1;
+        else sc+=1;
       }
-    }
-  }
-
-  /* ---- Hypothalamic amenorrhea ---- */
-  {
-    const trig=[];
-    if(state.status==='amenorrhea'){
-      if(lh!=null && st('lh')==='lo') trig.push('LH low');
-      if(fsh!=null && st('fsh')==='lo') trig.push('FSH low');
-      if(e2!=null && st('e2')==='lo') trig.push('Estradiol low');
-      if(state.amenMonths!=null && state.amenMonths>=3) trig.push('Amenorrhea '+state.amenMonths+' months');
-    }
-    if(trig.length>=2 && !methodAmen){
-      conds.push({sev:'mod',title:'Functional hypothalamic amenorrhea',
-        desc:'Low gonadotropins with low estradiol point to central suppression (energy deficit, stress, or excessive exercise) rather than ovarian failure.',
-        symptoms:['Absent or infrequent periods','History of restrictive eating or under-fueling','High training load / over-exercise','Significant stress','Low libido','Cold intolerance, fatigue','Poor sleep','Low bone density or stress fractures'],
-        triggers:trig,
-        next:['Assess energy availability, weight change, training load, psychosocial stress',
-              'Prolactin + TSH to exclude other central causes',
-              'Consider brain MRI if very low gonadotropins or other pituitary signs',
-              'Bone density if prolonged hypoestrogenism']});
-    }
-  }
-
-  /* ---- Luteal phase insufficiency / relative estrogen excess ---- */
-  {
-    const trig=[];
-    if(state.phase==='luteal'){
-      if(prog!=null && prog<3) trig.push('Luteal progesterone <3 ng/mL');
-      else if(prog!=null && prog<10) trig.push('Luteal progesterone <10 ng/mL (suboptimal)');
-      if(e2!=null && prog!=null){
-        const ratio=prog/(e2/1000);
-        if(ratio<100) trig.push('Low Pg:E2 (relative estrogen excess)');
-      }
-    }
-    if(trig.length>=1){
-      conds.push({sev:'watch',title:'Luteal phase insufficiency / relative estrogen excess',
-        desc:'Progesterone appears inadequate for the luteal phase, or is low relative to estradiol. Timing of the draw (should be ~7 days post-ovulation) strongly affects this.',
-        symptoms:['PMS — irritability, mood swings, anxiety','Breast tenderness or swelling','Premenstrual spotting','Short luteal phase / cycles under ~24 days','Bloating and fluid retention','Trouble conceiving or early pregnancy loss','Heavier periods'],
-        triggers:trig,
-        next:['Confirm draw timing was mid-luteal (~cycle day 21 in a 28-day cycle)',
-              'Repeat across a cycle or use serial progesterone if fertility-relevant',
-              'Correlate with cycle-length and symptom pattern']});
-    }
-  }
-
-  /* ---- Hyperprolactinemia ---- */
-  if(prl!=null && st('prl')==='hi'){
-    const trig=['Prolactin '+prl+' ng/mL (elevated)'];
-    if(lh!=null && st('lh')==='lo') trig.push('LH low (prolactin suppression of GnRH)');
-    if(state.status==='amenorrhea') trig.push('Associated amenorrhea');
-    conds.push({sev:prl>50?'high':'mod',title:'Hyperprolactinemia',
-      desc:'Elevated prolactin can suppress GnRH and disrupt cycles. Confirm with a fasting, non-stressed, repeat draw before imaging.',
-      symptoms:['Galactorrhea — milky nipple discharge','Irregular or absent periods','Low libido','Headaches','Visual changes (if large adenoma)','Vaginal dryness','Difficulty conceiving'],
-      triggers:trig,
-      next:['Repeat fasting prolactin (avoid recent breast exam, stress, exercise)',
-            'Review medications (antipsychotics, some antidepressants, metoclopramide)',
-            'TSH — hypothyroidism raises prolactin',
-            'Pituitary MRI if persistently elevated / >4x upper limit / visual symptoms']});
-  }
-
-  /* ---- Thyroid-driven cycle disruption ---- */
-  {
-    const trig=[];
-    const tstat=st('tsh');
-    if(tstat==='hi'){trig.push('TSH elevated (hypothyroid pattern)'); if(ft4!=null&&st('ft4')==='lo')trig.push('Free T4 low');}
-    if(tstat==='lo'){trig.push('TSH low (hyperthyroid pattern)'); if(ft4!=null&&st('ft4')==='hi')trig.push('Free T4 high');}
-    if((ft3!=null&&ft4!=null)&&(ft3/ft4<2.4)) trig.push('Low FT3:FT4 (reduced conversion)');
-    if(trig.length>=1){
-      conds.push({sev:tstat==='hi'||tstat==='lo'?'mod':'watch',title:'Thyroid-driven cycle disruption',
-        desc:'Thyroid dysfunction is a common, reversible contributor to menstrual irregularity, anovulation, and hyperprolactinemia. Worth resolving before attributing symptoms to sex hormones.',
-        symptoms:['Hypo pattern: fatigue, cold intolerance, weight gain','Hypo: constipation, dry skin, hair thinning','Hypo: heavy or irregular periods, low mood','Hyper pattern: palpitations, heat intolerance','Hyper: weight loss, anxiety, tremor','Hyper: light or absent periods'],
-        triggers:trig,
-        next:['Complete thyroid panel: TSH, free T4, free T3',
-              'TPO + thyroglobulin antibodies if autoimmune suspected',
-              'Recheck sex-hormone picture once euthyroid']});
-    }
-  }
-
-  /* ---- Insulin resistance overlay ---- */
-  if(homa!=null && homa>=1.4){
-    const trig=['HOMA-IR '+homa.toFixed(2)+' (functional optimal <1.4)'];
-    if(ins!=null&&st('ins')==='hi') trig.push('Fasting insulin above optimal');
-    if(shbg!=null&&st('shbg')==='lo') trig.push('SHBG low (hyperinsulinemia effect)');
-    if(fai!=null&&fai>5) trig.push('FAI elevated (insulin-driven androgens)');
-    conds.push({sev:homa>=2.0?'mod':'watch',title:'Insulin resistance overlay',
-      desc:'Hyperinsulinemia lowers SHBG and drives ovarian/adrenal androgen output — it can amplify a PCOS-type picture and is a high-yield modifiable target.',
-      symptoms:['Sugar and carbohydrate cravings','Energy crashes after meals','Difficulty losing weight, central weight gain','Skin tags','Acanthosis nigricans (darkened skin folds)','Fatigue, brain fog','Reactive hunger / shakiness between meals'],
-      triggers:trig,
-      next:['HbA1c and/or 2-hr OGTT to stage','Lipid panel','Address as a driver of any androgen-excess pattern above']});
-  }
-
-  /* ---- Perimenopause transition ---- */
-  if(state.status==='perimeno'){
-    const trig=['Clinical context: perimenopausal'];
-    if(state.age!=null) trig.push('Age '+state.age);
-    if(fsh!=null && fsh>10) trig.push('FSH rising ('+fsh+')');
-    if(e2!=null) trig.push('Estradiol '+e2+' — often fluctuates widely');
-    conds.push({sev:'watch',title:'Perimenopause transition',
-      desc:'Single hormone values are unreliable in perimenopause due to cycle-to-cycle variability. Trend and symptoms matter more than any one draw.',
-      symptoms:['Cycles getting shorter, longer, or skipping','Hot flashes and night sweats','Sleep disturbance','Mood swings, irritability, anxiety','Brain fog','Vaginal dryness, low libido','Heavier or lighter flow than usual'],
-      triggers:trig,
-      next:['Interpret by symptom pattern + cycle changes, not a single FSH',
-            'Repeat testing on a different cycle day if a value is being relied on',
-            'Screen thyroid and iron as symptom mimics']});
-  }
-
-  /* ---- Vitamin D insufficiency (contributor) ---- */
-  if(vitd!=null && st('vitd')==='lo'){
-    conds.push({sev:'watch',title:'Vitamin D insufficiency',
-      desc:'Low vitamin D is associated with insulin resistance and menstrual/ovulatory dysfunction — a low-cost modifiable contributor worth correcting alongside the primary workup.',
-      symptoms:['Fatigue, low energy','Low mood','Frequent infections','Bone or muscle aches','Hair shedding','Poor sleep'],
-      triggers:['25-OH vitamin D '+vitd+' ng/mL (below functional optimal 50)'],
-      next:['Repletion per deficiency severity, recheck in ~3 months','Consider as an adjunct in any PCOS/IR picture']});
-  }
-
-  return conds;
-}
-
-/* =========================================================
-   Render
-   ========================================================= */
-function ctxSummary(){
-  const ageTxt = state.age!=null ? ('Age '+state.age) : '';
-  if(!state.status) return ageTxt || 'No cycle context set';
-  let lmpTxt='';
-  if(state.lmpDate){
-    const d=new Date(state.lmpDate+'T00:00:00');
-    lmpTxt=' · LMP '+d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-  }
-  const contraNames={coc:'combined pill',pop:'progestin-only pill',patch:'patch',ring:'ring',hiud:'hormonal IUD',implant:'implant',dmpa:'injection (DMPA)',other:'method unspecified'};
-  const m={
-    cycling: (state.phase? ('Cycling · day '+(state.cycleDay||'?')+' · '+state.phase+' phase') : 'Cycling (day not set)')+lmpTxt,
-    bleeding: 'Currently bleeding'+(state.bleed?(' · '+({normal:'≤7d',prolonged:'8–14d',weeks:'weeks',months:'≥1 month'}[state.bleed])):''),
-    amenorrhea:'No period'+(state.amenMonths!=null?(' · '+state.amenMonths+' mo'):'')+(['hiud','implant','dmpa'].includes(state.amenMethod)?(' · '+({hiud:'hormonal IUD',implant:'implant',dmpa:'DMPA'}[state.amenMethod])+'-related'):''),
-    perimeno:'Perimenopausal', postmeno:'Postmenopausal',
-    contraception:'On hormonal contraception'+(state.contra?(' · '+contraNames[state.contra]):'')
-  };
-  return (ageTxt?ageTxt+' · ':'')+m[state.status];
-}
-
-document.getElementById('analyzeBtn').addEventListener('click',()=>{
-  const anyVal=ANALYTES.some(a=>getVal(a.k)!=null);
-  if(!anyVal){ alert('Enter or paste at least one lab value first.'); return; }
-
-  document.getElementById('resCtx').textContent=ctxSummary();
-
-  // ratios
-  const ratios=calcRatios();
-  const rg=document.getElementById('ratioGrid'); rg.innerHTML='';
-  ratios.forEach(r=>{
-    const el=document.createElement('div'); el.className='ratio-card '+r.cls;
-    el.innerHTML=`<div class="ratio-name">${r.name}</div>
-      <span class="ratio-flag ${r.cls}">${r.flag}</span>
-      <div class="ratio-val">${r.val}${r.unit?` <small>${r.unit}</small>`:''}</div>
-      <div class="ratio-range">${r.range}</div>`;
-    rg.appendChild(el);
-  });
-
-  // value table
-  const vb=document.getElementById('valBody'); vb.innerHTML='';
-  ANALYTES.forEach(a=>{
-    const val=getVal(a.k); if(val==null) return;
-    const r=rangeFor(a.k); const s=statusOf(a.k,val);
-    const smap={ok:['ok','Optimal'],hi:['hi','Above optimal'],lo:['lo','Below optimal'],na:['na','—']};
-    const rtxt=r?`${r[0]}–${r[1]} ${a.unit}`:'—';
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${a.label}</td>
-      <td class="num">${val} <span style="font-weight:500;color:var(--ink-soft);font-size:11px">${a.unit}</span></td>
-      <td>${rtxt}</td>
-      <td><span class="status-dot ${smap[s][0]}">${smap[s][1]}</span></td>`;
-    vb.appendChild(tr);
-  });
-
-  // conditions
-  const cl=document.getElementById('condList'); cl.innerHTML='';
-  const conds=flagConditions();
-  if(!conds.length){
-    cl.innerHTML='<div class="empty-note">No specific patterns flagged from the entered values. Add more analytes or set cycle context to increase detection.</div>';
-  } else {
-    const order={high:0,mod:1,watch:2};
-    conds.sort((a,b)=>order[a.sev]-order[b.sev]);
-    conds.forEach(c=>{
-      const sevLabel={high:'High priority',mod:'Review',watch:'Watch'}[c.sev];
-      const el=document.createElement('div'); el.className='cond '+c.sev;
-      el.innerHTML=`
-        <div class="cond-top">
-          <div class="cond-sev"></div>
-          <div class="cond-main">
-            <div class="cond-title">${c.title} <span class="sev-tag">${sevLabel}</span></div>
-            <div class="cond-desc">${c.desc}</div>
-          </div>
-        </div>
-        <div class="cond-detail">
-          <h4>Triggered by</h4>
-          <ul class="trigger-list">${c.triggers.map(t=>`<li>${t}</li>`).join('')}</ul>
-          ${c.symptoms&&c.symptoms.length?`<h4>Commonly associated symptoms</h4>
-          <ul class="sx-list">${c.symptoms.map(s=>`<li>${s}</li>`).join('')}</ul>`:''}
-          <h4>Suggested next steps</h4>
-          <ul class="next-list">${c.next.map(n=>`<li>${n}</li>`).join('')}</ul>
-        </div>`;
-      cl.appendChild(el);
     });
-  }
+    return {p,sc};
+  }).filter(x=>x.sc>0).sort((a,b)=>b.sc-a.sc);
 
-  document.getElementById('results').hidden=false;
-  document.getElementById('copyBtn').hidden=false;
-  document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
-
-  // store for copy
-  window.__lastSummary=buildTextSummary(ratios,conds);
-});
-
-/* ---- copy summary ---- */
-function buildTextSummary(ratios,conds){
-  let s='BHW HORMONE ANALYSIS — decision support (not a diagnosis)\n';
-  s+='Interpreted against functional/optimal ranges.\n';
-  s+='Context: '+ctxSummary()+'\n\n';
-  s+='VALUES (vs. optimal):\n';
-  ANALYTES.forEach(a=>{const v=getVal(a.k); if(v==null)return; const st=statusOf(a.k,v);
-    const smap={ok:'optimal',hi:'ABOVE optimal',lo:'BELOW optimal',na:'—'};
-    s+=`  ${a.label}: ${v} ${a.unit} [${smap[st]}]\n`;});
-  s+='\nRATIOS:\n';
-  ratios.forEach(r=>{ if(r.val!=='—') s+=`  ${r.name}: ${r.val} ${r.unit} — ${r.flag}\n`; });
-  s+='\nPATTERNS FLAGGED:\n';
-  if(!conds.length) s+='  none\n';
-  conds.forEach(c=>{
-    s+=`  • ${c.title} [${c.sev}]\n    triggers: ${c.triggers.join('; ')}\n`;
-    if(c.symptoms&&c.symptoms.length) s+=`    assoc. symptoms: ${c.symptoms.join('; ')}\n`;
-  });
-  s+='\nGenerated by BHW internal tool. Functional/optimal targets are interpretive, not diagnostic. Confirm and correlate clinically.';
-  return s;
+  $('interpout').innerHTML=`
+    <div class="card"><span class="eyebrow">You marked</span><div style="margin-top:8px">${marked.map(m=>`<span class="chip on" style="cursor:default">${esc(m)}</span>`).join('')}</div></div>
+    ${hits.length?hits.slice(0,6).map(h=>`<div class="result"><h3>${esc(h.p.reading)}</h3><div class="reading" style="color:var(--soft);font-size:12.5px">Pattern: ${esc(h.p.pattern)}</div></div>`).join('')
+      :'<div class="card empty">No named pattern matched this combination. Correlate with the systems reference and clinical picture — not every result set fits a classic pattern.</div>'}`;
+  window._int={marked,reads:hits.slice(0,4).map(h=>h.p.reading)};
+  $('copyi').style.display='inline-block';
 }
-document.getElementById('copyBtn').addEventListener('click',()=>{
-  const t=window.__lastSummary||''; if(!t)return;
-  navigator.clipboard.writeText(t).then(()=>{
-    const b=document.getElementById('copyBtn'); const o=b.textContent;
-    b.textContent='Copied ✓'; setTimeout(()=>b.textContent=o,1600);
-  }).catch(()=>{
-    const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta);
-    ta.select(); document.execCommand('copy'); ta.remove();
-    const b=document.getElementById('copyBtn'); b.textContent='Copied ✓'; setTimeout(()=>b.textContent='Copy summary',1600);
-  });
-});
+function copyInterp(){ const i=window._int; if(!i)return;
+  navigator.clipboard.writeText(`Hormone interpretation (BHW support):\nMarked: ${i.marked.join(', ')}\nMatching patterns: ${i.reads.join('; ')||'no classic pattern'}\nCorrelate clinically; confirm with timing/binding-protein context.`).then(()=>{$('copyi').textContent='Copied ✓';setTimeout(()=>$('copyi').textContent='📋 Copy interpretation',1500);});
+}
+
+function renderPats(){ const q=($('q-pat').value||'').toLowerCase();
+  $('out-pat').innerHTML=D.patterns.filter(p=>!q||(p.pattern+p.reading).toLowerCase().includes(q)).map(p=>`<div class="acard"><h3>${esc(p.reading)}</h3><div style="font-size:12.5px;color:var(--soft)">${esc(p.pattern)}</div></div>`).join(''); }
+function renderSys(){ const q=($('q-sys').value||'').toLowerCase();
+  $('out-sys').innerHTML=D.systems.filter(s=>!q||(s.name+s.blurb).toLowerCase().includes(q)).map(s=>`<div class="acard"><h3>${esc(s.name)}</h3><div style="font-size:12.5px">${esc(s.blurb)}</div></div>`).join(''); }
+function renderRF(){
+  const em=D.redflags.filter(r=>r.kind==='emergency'), rf=D.redflags.filter(r=>r.kind==='referral');
+  $('out-rf').innerHTML=
+    '<div class="card" style="border-left:4px solid var(--urgent)"><span class="eyebrow" style="color:var(--urgent)">Endocrine emergencies — act now</span>'+
+    em.map(r=>`<div class="rf"><b>${esc(r.sig)}</b> — ${esc(r.action)}</div>`).join('')+'</div>'+
+    '<div class="card" style="border-left:4px solid var(--clay)"><span class="eyebrow">Mandate imaging or referral</span>'+
+    rf.map(r=>`<div class="row" style="margin-top:9px"><b>${esc(r.sig)}</b>${esc(r.action)}</div>`).join('')+'</div>';
+}
+renderPats();renderSys();renderRF();
 </script>
-</body>
-</html>
+</body></html>
