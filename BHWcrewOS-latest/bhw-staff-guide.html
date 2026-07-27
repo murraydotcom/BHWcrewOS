@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BHW Staff Guide — Where Everything Is</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--river:#80abbd;--river-deep:#4f7f92;--linen:#f7f5f2;--clay:#b07a55;--clay-deep:#8C5A3C;--sage:#a8b59a;--sand:#dcc8b1;--ink:#2b2b33;--soft:#6f6f7a;--ok:#1F6961;--urgent:#B4544B;--line:#e5e0d8;
+--serif:'Playfair Display',Georgia,serif;--sans:'Montserrat',system-ui,sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--sans);background:var(--linen);color:var(--ink);font-size:14px;line-height:1.6}
+.wrap{max-width:980px;margin:0 auto;padding:22px 18px 80px}
+header{display:flex;align-items:center;gap:14px;padding:6px 0 16px;border-bottom:1px solid var(--line);margin-bottom:16px}
+header img{height:46px;width:auto}
+header h1{font-family:var(--serif);font-weight:500;font-size:25px}
+header .sub{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--clay-deep);font-weight:700}
+.search{width:100%;font-size:15px;padding:13px 15px;border:1px solid var(--line);border-radius:11px;background:#fff;font-family:inherit;margin-bottom:8px}
+.hint{font-size:12px;color:var(--soft);margin-bottom:18px}
+.quick{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:11px;margin-bottom:22px}
+.qc{background:#fff;border:1px solid var(--line);border-left:4px solid var(--river);border-radius:12px;padding:13px 15px}
+.qc b{display:block;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--clay-deep);margin-bottom:3px}
+.qc span{font-size:14px;font-weight:600}
+.qc small{display:block;font-size:11.5px;color:var(--soft);font-weight:400;margin-top:2px}
+h2{font-family:var(--serif);font-weight:500;font-size:22px;margin:30px 0 4px;padding-top:14px;border-top:2px solid var(--sand)}
+h2 .n{color:var(--clay);font-weight:400;margin-right:8px}
+.lede{font-size:13px;color:var(--soft);margin-bottom:14px}
+.sec{background:#fff;border:1px solid var(--line);border-radius:13px;padding:18px 20px;margin-bottom:13px}
+.sec h3{font-size:15px;font-weight:700;margin-bottom:4px}
+.sec h3 .who{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;background:var(--linen);border:1px solid var(--line);color:var(--soft);padding:3px 9px;border-radius:99px;margin-left:8px;vertical-align:middle}
+ol,ul{margin:9px 0 0 19px}
+li{margin-bottom:6px;font-size:13.5px}
+.path{display:inline-block;background:var(--linen);border:1px solid var(--line);border-radius:6px;padding:1px 7px;font-size:12.5px;font-weight:600;color:var(--river-deep)}
+.rule{background:#fdf0ef;border:1px solid #e6c0bc;border-radius:10px;padding:11px 14px;font-size:13px;margin-top:11px}
+.rule b{color:var(--urgent)}
+.tip{background:#f2f6f2;border:1px solid #d6e2d4;border-radius:10px;padding:11px 14px;font-size:13px;margin-top:11px}
+.tip b{color:var(--ok)}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+th{text-align:left;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--soft);padding:8px 9px;border-bottom:1px solid var(--sand)}
+td{padding:9px;border-bottom:1px solid #f2ede4;vertical-align:top}
+td b{font-weight:700}
+.sla{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px}
+.sla.r{background:#fdf0ef;color:var(--urgent)}.sla.o{background:#fdf6ec;color:var(--clay-deep)}
+.sla.y{background:#f7f2e4;color:#8a7331}.sla.g{background:#eef4f1;color:var(--ok)}
+footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-size:12px;color:var(--soft);text-align:center}
+.print{background:var(--clay);color:#fff;border:0;border-radius:99px;padding:10px 20px;font-family:inherit;font-weight:600;font-size:12.5px;cursor:pointer;margin-bottom:16px}
+@media print{.search,.hint,.print{display:none}body{background:#fff}.sec,.qc{break-inside:avoid}}
+</style></head>
+<body><div class="wrap">
+
+<header>
+  <img src="/assets/bhw-medical-logo.png" alt="BHW Medical" onerror="this.style.display='none'">
+  <div><h1>Staff Guide — Where Everything Is</h1><div class="sub">BHW Medical Group · BHWcrewOS</div></div>
+</header>
+
+<button class="print" onclick="window.print()">Print this guide</button>
+<input class="search" id="q" placeholder="Search — e.g. refill, referral, patient page, fax, allergy…" oninput="filter()">
+<div class="hint">Type what you're trying to do. Sections that don't match will hide.</div>
+
+<div class="quick">
+  <div class="qc"><b>Everything starts here</b><span>bhwcrewos.netlify.app</span><small>Sign in with your name + PIN</small></div>
+  <div class="qc" style="border-left-color:var(--clay)"><b>Main line — calls &amp; texts</b><span>(443) 762-5343</span><small>Every patient text and call</small></div>
+  <div class="qc" style="border-left-color:var(--sage)"><b>Fax — iFax</b><span>(833) 258-3941</span><small>Referrals, records, orders</small></div>
+  <div class="qc" style="border-left-color:var(--sand)"><b>Shared inbox</b><span>info@bhwmedical.org</span><small>Faxes, voicemails, portal alerts</small></div>
+</div>
+
+<h2><span class="n">01</span>Signing in &amp; your home page</h2>
+<div class="sec" data-k="login sign in pin password landing home page rail navigation">
+  <h3>How to get in</h3>
+  <ol>
+    <li>Go to <span class="path">bhwcrewos.netlify.app</span> on any phone, tablet, or computer.</li>
+    <li>Pick your name from the list, enter your PIN, tap <b>Sign in</b>.</li>
+    <li>You land on <b>your</b> home page — front desk for Shadé, Chronic Care for the care coordinator, Primary Care for Amaris and Yahaira, and so on.</li>
+  </ol>
+  <div class="tip"><b>Everything else is one tap away.</b> The list down the left side (or across the top on a phone) is the rail — every page you're allowed to see lives there. You always land on your own page; you're never locked out of the others.</div>
+  <div class="rule"><b>Never share your PIN.</b> Every action you take is stamped with your name. If you think someone else knows it, tell Amaris and it gets changed.</div>
+</div>
+
+<h2><span class="n">02</span>The rail — what each page is for</h2>
+<div class="sec" data-k="rail menu pages navigation what is where map directory">
+  <h3>Your pages</h3>
+  <table>
+    <tr><th>Page</th><th>What it's for</th><th>Who uses it most</th></tr>
+    <tr><td><b>Your division page</b><br>(Primary Care, Chronic Care, Mind &amp; Mood, CharmEd, Porter House, Flow)</td><td>Warm handoff inbox, referral queue, upcoming schedule, resources, and the tools built for that division</td><td>Everyone, on their own division</td></tr>
+    <tr><td><b>Admin Master</b></td><td>Every division at once — open referrals, aging, full schedule, minutes rollup</td><td>Amaris, Shadé</td></tr>
+    <tr><td><b>My Space</b></td><td>Your logged minutes, availability, CharmHealth sync list</td><td>Everyone</td></tr>
+    <tr><td><b>Front Desk OS</b></td><td>Live inbox of calls/texts/faxes, patient lookup, referral finder, referral generator</td><td>Shadé, front desk, anyone answering</td></tr>
+    <tr><td><b>Panel &amp; Discharges</b></td><td>Utilization, HEDIS scorecard, hospital discharge tracking</td><td>Amaris, care coordination</td></tr>
+    <tr><td><b>Positive ANA?</b></td><td>Analyze an ANA result, immune patterns, 100 conditions, management protocols</td><td>Providers</td></tr>
+    <tr><td><b>Hormone Analysis</b></td><td>Lab-based hormone interpretation with ratios and patterns</td><td>Providers</td></tr>
+    <tr><td><b>Billing Toolkit</b></td><td>Care management documentation, audit tool, and every preventive code with its ICD-10</td><td>Shadé, billing, providers</td></tr>
+    <tr><td><b>BHWCrewCare Portal</b></td><td>Provider side — clinical inbox, care plan builder, post results, patient roster</td><td>Providers</td></tr>
+    <tr><td><b>Patient page previews</b></td><td>What patients see for each program</td><td>Anyone, for reference</td></tr>
+  </table>
+</div>
+
+<h2><span class="n">03</span>The daily rhythm</h2>
+<div class="sec" data-k="daily sweep morning routine schedule inbox check triage">
+  <h3>Front desk day <span class="who">Shadé + coverage</span></h3>
+  <ol>
+    <li><b>9:00 — sweep the shared inbox.</b> Open <span class="path">info@bhwmedical.org</span> and work the labels top to bottom: 📞 voicemails, 📠 faxes, 💬 portal messages.</li>
+    <li><b>Log each one</b> into the Triage Queue — patient name, callback number, what they need, priority.</li>
+    <li><b>Work the Front Desk page by color.</b> Red first, then orange, then yellow. Green can wait.</li>
+    <li><b>Sweep again mid-afternoon</b> (about 3:00) so nothing sits overnight.</li>
+    <li><b>Before you leave:</b> every red and orange item is either done or has a first response logged.</li>
+  </ol>
+  <div class="tip"><b>Texts arrive by themselves.</b> Once the phone system is connected, patient texts create their own queue entries — you'll see them appear without logging anything.</div>
+</div>
+<div class="sec" data-k="priority sla urgent high routine color red orange yellow green timeframe">
+  <h3>What the colors mean</h3>
+  <table>
+    <tr><th>Color</th><th>Means</th><th>Do it by</th></tr>
+    <tr><td><span class="sla r">🔴 BREACH</span></td><td>Urgent item with no response yet, over 2 hours old</td><td>Right now — stop and handle it</td></tr>
+    <tr><td><span class="sla o">🟠 At risk</span></td><td>High-priority item approaching 48 hours</td><td>Today</td></tr>
+    <tr><td><span class="sla y">🟡 Aging</span></td><td>Routine item approaching a week</td><td>This week</td></tr>
+    <tr><td><span class="sla g">🟢 On track</span></td><td>Within its window</td><td>Normal flow</td></tr>
+  </table>
+  <div class="rule"><b>The clock stops when you tap Start</b> — not when you finish. If you've reached out and are waiting on the patient or a specialist, Start it so it stops screaming red while you wait.</div>
+</div>
+
+<h2><span class="n">04</span>Front Desk OS — the four things it does</h2>
+<div class="sec" data-k="inbox start done reply text message canned response sms">
+  <h3>1 · Today's inbox <span class="who">Front desk</span></h3>
+  <p>Three columns — calls &amp; voicemails, texts &amp; portal, faxes &amp; other. Each card has buttons:</p>
+  <ul>
+    <li><b>Start</b> — you're on it. Stops the SLA clock and stamps your first response.</li>
+    <li><b>✓ Done</b> — handled and closed.</li>
+    <li><b>💬 Reply</b> — text the patient back from the main line. Pick a canned response or type your own.</li>
+  </ul>
+  <div class="tip"><b>The canned responses</b> cover Rx sent, refill received, appointment confirmed, we'll call you, records sent, and running behind. Pick one, edit if needed, send.</div>
+</div>
+<div class="sec" data-k="patient lookup screen pop phone number search allergies medications last visit snapshot">
+  <h3>2 · Patient lookup <span class="who">Everyone</span></h3>
+  <p>Type a phone number or name → their profile appears before you answer the call.</p>
+  <ul>
+    <li><b>Left side:</b> allergies (red box at the top), phone, insurance, member #, last and next visit, medications.</li>
+    <li><b>Right side:</b> everything they've contacted us about, newest first — so you know if there's an open urgent item on their account.</li>
+  </ul>
+  <div class="rule"><b>The clinical snapshot is for context and routing only.</b> Use it to decide "she's on a blood thinner — flag this refill as high." <b>Never</b> read a medication list back to a patient as final, and never make a clinical decision from it. CharmHealth is the chart. Check the "as of" date at the bottom — if it's old, verify in Charm.</div>
+</div>
+<div class="sec" data-k="referral finder specialist insurance network fax preferred in-network">
+  <h3>3 · Referral finder <span class="who">Front desk, providers</span></h3>
+  <ol>
+    <li>Choose the specialty and the patient's insurance.</li>
+    <li>Tap <b>Find in-network</b> — preferred partners (⭐) come first.</li>
+    <li><b>Copy fax</b> grabs their fax number, or <b>→ Use in referral</b> loads them straight into the referral form.</li>
+  </ol>
+</div>
+<div class="sec" data-k="generate referral md uniform form pdf print fax consultation">
+  <h3>4 · Generate a referral <span class="who">Front desk, providers</span></h3>
+  <ol>
+    <li>Look the patient up first, then tap <b>use last lookup</b> — name, DOB, phone, member #, and insurance fill in.</li>
+    <li>Pick the specialist from the dropdown (or use the finder's button) — their whole block fills, including the fax.</li>
+    <li>Provider fills in reason, brief history, what's being requested, place of service, number of visits.</li>
+    <li>Tap <b>Generate referral PDF</b> — it downloads and opens ready to print or fax.</li>
+  </ol>
+  <div class="tip"><b>Always verify the member # against the card</b> before it goes out. A wrong member number is the #1 reason referrals bounce back.</div>
+</div>
+
+<h2><span class="n">05</span>Patient pages — setting a patient up</h2>
+<div class="sec" data-k="patient page portal invite access sign up notion share care plan welcome">
+  <h3>Giving a patient their page <span class="who">Providers, care coordination</span></h3>
+  <ol>
+    <li>Open the <b>Patient Pages Hub</b> in Notion and duplicate the 🌿 template.</li>
+    <li>Rename it to the patient's first name and fill in their sections at visit close.</li>
+    <li>Tap <b>Share → Invite</b>, enter the patient's personal email, set permission to <b>Can comment</b>, send.</li>
+    <li>The patient gets an email invitation, creates a free account with that same email, and sees only their page.</li>
+    <li><b>Paste the page link into their row</b> on the Patients Master List so everyone can find it.</li>
+    <li>Text or email them the welcome message (it's saved on the Hub page — copy and paste).</li>
+  </ol>
+  <div class="rule"><b>Never put a linked database view on a patient page.</b> It would expose other patients. Patient pages hold plain content only — text, tables, and their own updates.</div>
+  <div class="tip"><b>If they can't get in:</b> check spam for the Notion invite, and make sure they signed up with the exact email you invited. A different email means no access — re-invite the one they actually use.</div>
+</div>
+
+<h2><span class="n">06</span>BHWCrewCare Portal — the provider side</h2>
+<div class="sec" data-k="crewcare console care plan builder publish week results interpretation roster">
+  <h3>Publishing a week of the care plan <span class="who">Providers</span></h3>
+  <ol>
+    <li>Open <b>BHWCrewCare Portal</b> → <b>Care plan builder</b>.</li>
+    <li>Pick the patient, tap <b>Load their care plan</b> — their existing plan appears on the left.</li>
+    <li>Write that week: number, title, what they're focusing on, and a note in your own voice.</li>
+    <li>Choose your name in <b>Signed</b>, tap <b>Publish week to patient page</b>.</li>
+  </ol>
+  <h3 style="margin-top:16px">Posting a lab result</h3>
+  <ol>
+    <li><b>Post results</b> tab → pick the patient → enter the lab and value.</li>
+    <li>Write <b>what it means for them</b> in plain language.</li>
+    <li>Tap <b>Post to patient page</b>.</li>
+  </ol>
+  <div class="rule"><b>A patient never sees a raw number alone.</b> The system won't post without your interpretation — that's on purpose.</div>
+</div>
+
+<h2><span class="n">07</span>Care coordination requests</h2>
+<div class="sec" data-k="care coordination sdoh resources follow up specialists care plan monitoring equipment referral chronic">
+  <h3>Asking care coordination for help <span class="who">Any division</span></h3>
+  <p>On the <b>Chronic Care</b> page, the "Request care coordination" card has a button for each reason:</p>
+  <ul>
+    <li><b>SDOH resources</b> — housing, food, transportation, utilities, benefits</li>
+    <li><b>Acute follow-up</b> — what happened, what was done, and by when</li>
+    <li><b>Chronic follow-up</b> — which condition and the interval needed</li>
+    <li><b>Managing multiple specialists</b> — what's falling through the cracks</li>
+    <li><b>Care plan hard to manage</b> — which part, and the barrier the patient named</li>
+    <li><b>Needs more time between visits</b> — what they're asking for and why</li>
+    <li><b>Monitoring equipment</b> — which device and the clinical reason</li>
+  </ul>
+  <div class="tip">Each button opens a referral already addressed to Chronic Care with the type filled in. Add the <b>Needed by</b> timeframe so the coordinator knows the urgency.</div>
+</div>
+
+<h2><span class="n">08</span>Clinical tools</h2>
+<div class="sec" data-k="positive ana autoimmune antibody labcorp hormone panel hedis billing codes tools">
+  <h3>What each one does <span class="who">Providers</span></h3>
+  <table>
+    <tr><th>Tool</th><th>Use it when</th></tr>
+    <tr><td><b>Positive ANA?</b></td><td>An ANA comes back positive. Enter the titer, pattern, antibody results, medications, and symptoms — it ranks the differential, flags organ-threatening features, builds an order set, and links to the management protocol for each condition.</td></tr>
+    <tr><td><b>Hormone Analysis</b></td><td>Interpreting hormone labs — computes ratios and flags patterns against functional ranges, with cycle context.</td></tr>
+    <tr><td><b>Panel &amp; Discharges</b></td><td>Utilization and HEDIS review, hospital discharge follow-up tracking.</td></tr>
+    <tr><td><b>Billing Toolkit</b></td><td>Documenting care management months, auditing before you bill, and finding the right preventive code with its ICD-10 pair for the superbill.</td></tr>
+  </table>
+  <div class="rule"><b>Every clinical tool is decision support, not a diagnosis.</b> They organize thinking and surface what to check next. The chart, the exam, and your judgment decide.</div>
+</div>
+
+<h2><span class="n">09</span>Where everything lives</h2>
+<div class="sec" data-k="notion charm dialpad ifax gmail systems where tools accounts">
+  <h3>The systems and what belongs in each</h3>
+  <table>
+    <tr><th>System</th><th>What lives there</th></tr>
+    <tr><td><b>CharmHealth</b></td><td>The medical record. Always the source of truth for anything clinical.</td></tr>
+    <tr><td><b>BHWcrewOS</b></td><td>How we run the practice — inboxes, referrals, handoffs, tools, dashboards.</td></tr>
+    <tr><td><b>Notion</b></td><td>The data behind crewOS — patient master list, triage queue, specialist directory, care plans, patient pages, SOPs.</td></tr>
+    <tr><td><b>Dialpad</b></td><td>Calls and texts on the main line, (443) 762-5343.</td></tr>
+    <tr><td><b>iFax</b></td><td>Faxes in and out, (833) 258-3941. Arrives as email to info@.</td></tr>
+    <tr><td><b>info@bhwmedical.org</b></td><td>The shared front door — faxes, voicemail notifications, portal alerts.</td></tr>
+  </table>
+</div>
+
+<h2><span class="n">10</span>Rules that never bend</h2>
+<div class="sec" data-k="rules privacy phi crisis emergency safety escalation 988 911">
+  <h3>Safety and privacy</h3>
+  <ul>
+    <li><b>Crisis:</b> if a patient is in danger or talking about harming themselves — <b>988</b> (call or text) or <b>911</b>. Do not leave it in a queue. Tell a provider immediately.</li>
+    <li><b>Chest pain, trouble breathing, stroke symptoms, heavy bleeding:</b> 911 first, then tell a provider.</li>
+    <li><b>Never text or email PHI</b> to a personal phone or personal email — yours or anyone's.</li>
+    <li><b>Patient information stays in the systems.</b> No screenshots, no photos of screens, no forwarding to personal accounts.</li>
+    <li><b>Verify in Charm</b> before acting on anything clinical you read on a dashboard.</li>
+    <li><b>Log it, don't remember it.</b> If a patient asked for something, it goes in the queue — even if you're about to handle it.</li>
+  </ul>
+</div>
+<div class="sec" data-k="who to ask help stuck escalate question support">
+  <h3>When you're not sure</h3>
+  <table>
+    <tr><th>Situation</th><th>Go to</th></tr>
+    <tr><td>Clinical question about a patient</td><td>The patient's provider — Amaris or Yahaira in primary care, Tanya for psych</td></tr>
+    <tr><td>Billing, insurance, or a claim</td><td>Shadé</td></tr>
+    <tr><td>Care coordination, SDOH, chronic care programs</td><td>The care coordinator</td></tr>
+    <tr><td>Something in crewOS is broken or blank</td><td>Amaris — screenshot what you see</td></tr>
+    <tr><td>You're not sure how urgent something is</td><td>Treat it as urgent and ask. Nobody gets in trouble for over-escalating.</td></tr>
+  </table>
+</div>
+
+<footer>
+  BHW Medical Group · 2131 Maryland Ave, Baltimore, MD 21218 · (443) 762-5343<br>
+  This guide covers where things live and how to use them. Clinical protocols live in the chart and the SOPs.
+</footer>
+</div>
+<script>
+function filter(){
+  const q=(document.getElementById('q').value||'').toLowerCase().trim();
+  document.querySelectorAll('.sec').forEach(function(s){
+    const hay=((s.dataset.k||'')+' '+s.textContent).toLowerCase();
+    s.style.display=(!q||hay.includes(q))?'block':'none';
+  });
+  document.querySelectorAll('h2').forEach(function(h){
+    let n=h.nextElementSibling, any=false;
+    while(n&&n.tagName!=='H2'){ if(n.classList.contains('sec')&&n.style.display!=='none') any=true; n=n.nextElementSibling; }
+    h.style.display=(!q||any)?'block':'none';
+  });
+}
+</script>
+</body></html>
