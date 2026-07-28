@@ -354,9 +354,12 @@ function buildRail(){
  html += `<button class="tab" data-view="myspace" style="--spine:var(--clay)">My Space</button>`;
   html += `<button class="tab" data-view="front-desk" style="--spine:var(--blue)">Front Desk OS</button>`;
   html += `<div class="rail-label">Pages</div>`;
+  html += `<button class="tab" data-view="pg-guide" style="--spine:var(--clay)">Staff Guide</button>`;
   html += `<button class="tab" data-view="pg-panel" style="--spine:var(--teal)">Panel &amp; Discharges</button>`;
   html += `<button class="tab" data-view="pg-hormone" style="--spine:var(--sand)">Hormone Analysis</button>`;
   html += `<button class="tab" data-view="pg-ana" style="--spine:var(--river-deep, #4f7f92)">Positive ANA?</button>`;
+  html += `<button class="tab" data-view="pg-hormref" style="--spine:var(--sage)">Hormone Reference</button>`;
+  html += `<button class="tab" data-view="pg-hormpt" style="--spine:var(--clay)">Hormones Explained (patient)</button>`;
   html += `<button class="tab" data-view="pg-billing" style="--spine:var(--ok, #1F6961)">Billing Toolkit</button>`;
   html += `<button class="tab" data-view="pg-crewcare" style="--spine:var(--clay-deep)">BHWCrewCare Portal</button>`;
   html += `<div class="rail-label">Patient page previews</div>`;
@@ -598,9 +601,12 @@ function frontDeskView(){
 }
 
 const PAGE_EMBEDS = [
+  {id:"pg-guide",    title:"Staff Guide",         src:"/bhw-staff-guide.html",              blurb:"Where everything is and how to use it — searchable, printable."},
   {id:"pg-panel",    title:"Panel & Discharges",   src:"/bhw-panel-performance.html",        blurb:"Utilization, HEDIS scorecard, and hospital discharge tracking."},
   {id:"pg-hormone",  title:"Hormone Analysis",     src:"/bhw-hormone-analysis.html",         blurb:"Lab-based hormone interpretation tool."},
   {id:"pg-ana",      title:"Positive ANA?",        src:"/bhw-positive-ana.html",             blurb:"Analyze a result, then immune patterns, cells, antibody mechanisms, 100 conditions, management protocols and integrative levers."},
+  {id:"pg-hormref",  title:"Hormone Reference",    src:"/bhw-hormone-reference.html",        blurb:"Staff resource — hormone feedback systems explained."},
+  {id:"pg-hormpt",   title:"Hormones Explained",   src:"/bhw-hormones-explained.html",       blurb:"Patient-facing — open it with a patient to explain how hormones work."},
   {id:"pg-billing",  title:"Billing Toolkit",      src:"/BHW_Care_Management_Toolkit.html",  blurb:"Care management and primary care billing codes."},
   {id:"pg-crewcare", title:"BHWCrewCare Portal",   src:"/bhw-crewcare-portal.html",          blurb:"Provider side — inbox, care plan builder, results, panel."},
   {id:"pg-portal",   title:"Primary Care Portal",  src:"/bhw-patient-portal-mockup.html",    blurb:"Patient-side design preview — sample data."},
