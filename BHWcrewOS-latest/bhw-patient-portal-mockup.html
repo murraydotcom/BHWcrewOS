@@ -14,7 +14,7 @@
    (assets/bhw-tokens.css, linked above). This block bridges the
    portal's local token names onto the shared system, so every
    component below inherits the palette and goes theme-aware:
-   light opal by day, boulder opal by night (toggle top-right).
+   light opal by day, black opal by night (toggle top-right).
    ============================================================ */
 :root{
   /* Font-name bridge: the portal calls Playfair "--font-serif";
@@ -51,7 +51,7 @@
   --bhw-limestone:       var(--c-sand-300);
   --bhw-warm-ivory:      var(--c-cream-100);
 }
-/* Boulder opal: lift the dark feature surface so it reads on a dark page. */
+/* Black opal: lift the dark feature surface so it reads on a dark page. */
 :root[data-theme="dark"]{
   --surface-dark:   var(--c-boulder-900);
   --border-on-dark: rgba(233,227,214,0.14);
@@ -330,7 +330,7 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
   color:var(--fg); cursor:pointer;}
 .demo-bar button.active{background:var(--accent); color:var(--accent-fg); border-color:var(--accent);}
 
-/* Light-opal / boulder-opal theme toggle */
+/* Light-opal / black-opal theme toggle */
 .theme-toggle{display:inline-flex; gap:2px; padding:3px; border-radius:999px;
   background:var(--bg-sunken); border:1px solid var(--border);}
 .theme-toggle button{font-size:13px; line-height:1; width:32px; height:26px; border:0;
@@ -358,7 +358,7 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 <section id="view-login" aria-label="Sign in">
   <div class="theme-toggle login-toggle" role="group" aria-label="Color theme">
     <button type="button" data-theme-set="light" aria-pressed="true" title="Light opal" aria-label="Light opal">☀</button>
-    <button type="button" data-theme-set="dark" aria-pressed="false" title="Boulder opal" aria-label="Boulder opal">☾</button>
+    <button type="button" data-theme-set="dark" aria-pressed="false" title="Black opal" aria-label="Black opal">☾</button>
   </div>
   <div class="login-card">
     <div class="login-lockup">
@@ -393,7 +393,7 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
       <div style="display:flex; align-items:center; gap:14px;">
         <div class="theme-toggle" role="group" aria-label="Color theme">
           <button type="button" data-theme-set="light" aria-pressed="true" title="Light opal" aria-label="Light opal">☀</button>
-          <button type="button" data-theme-set="dark" aria-pressed="false" title="Boulder opal" aria-label="Boulder opal">☾</button>
+          <button type="button" data-theme-set="dark" aria-pressed="false" title="Black opal" aria-label="Black opal">☾</button>
         </div>
         <div class="patient-chip">
           <div class="pmeta" style="text-align:right;">
@@ -689,7 +689,7 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 </div>
 
 <script>
-/* ---- Theme: light opal / boulder opal ---- */
+/* ---- Theme: light opal / black opal ---- */
 (function(){
   var root = document.documentElement;
   function setTheme(t){

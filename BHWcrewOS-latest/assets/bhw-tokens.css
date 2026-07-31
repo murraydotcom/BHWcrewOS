@@ -13,7 +13,7 @@
    The feel:
      · Light mode  — light opal. Milky cream base, quiet sage & sky flashes,
                      warm sand and taupe. Calm, clean, unhurried.
-     · Dark mode   — boulder / black opal. Dark ironstone stone with opal fire
+     · Dark mode   — black opal. Deep peacock-blue stone with opal fire
                      glowing brighter and thin gold kintsugi veins.
 
    Layers:
@@ -232,7 +232,7 @@
 
 
 /* -----------------------------------------------------------------------------
-   2 · SEMANTIC — DARK MODE · "boulder / black opal"
+   2 · SEMANTIC — DARK MODE · "black opal"
    Applied for prefers-color-scheme:dark, or explicit data-theme="dark".
    -------------------------------------------------------------------------- */
 :root[data-theme="dark"] {

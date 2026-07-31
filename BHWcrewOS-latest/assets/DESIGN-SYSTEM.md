@@ -5,7 +5,7 @@ A quiet-luxury design token system for everything patient-facing: sage green,
 opal blue, and opal violet over pearl, cream, tan, and clay-brown — tuned to the
 BHW Medical logo. **Light mode is the light opal** — light on light: near-white
 cards on a soft pearl field with gentle blue/green/violet flashes. **Dark mode is
-the boulder / black opal** — dark stone, brighter fire, fine gold kintsugi veins.
+the black opal** — deep peacock-blue stone, brighter fire, fine gold kintsugi veins.
 
 ## Files
 

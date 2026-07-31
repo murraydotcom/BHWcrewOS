@@ -16,7 +16,7 @@ things the way a patient would. Active voice; a button says exactly what it does
 ## The feel
 - **Light mode = light opal.** Light-on-light: near-white cards floating on a soft pearl
   page, gentle flashes of sage/blue/violet. Airy, calm.
-- **Dark mode = boulder / black opal.** A deep peacock-**blue** stone (NOT black), the opal
+- **Dark mode = black opal.** A deep peacock-**blue** stone (not flat black), the opal
   fire glowing out of it and fine gold seams.
 - Theme follows the device (`prefers-color-scheme`) and can be pinned with
   `data-theme="light"|"dark"` on `<html>`.
