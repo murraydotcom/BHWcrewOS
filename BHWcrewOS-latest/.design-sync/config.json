@@ -1,0 +1,5 @@
+{
+  "projectId": "7625ed5e-ed37-401b-9476-e691bd70f741",
+  "shape": "static",
+  "note": "Static CSS/HTML token system (no compiled component library). Off-script layout: tokens + styles.css + guideline/component preview cards authored by hand from bhw-tokens.css and bhw-design-system.html."
+}
