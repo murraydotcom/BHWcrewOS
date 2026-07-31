@@ -2,6 +2,6 @@
   "name": "bhwcrewos",
   "private": true,
   "dependencies": {
-    "pdf-lib": "^1.17.1"
+    "pdf-lib": "^1.17.1",
+    "@netlify/blobs": "^10.7.11"
   }
-}
