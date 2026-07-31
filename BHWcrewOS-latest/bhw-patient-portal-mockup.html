@@ -190,20 +190,20 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 .home-greet p{font-size:14.5px; color:var(--fg-muted); margin:12px 0 0; max-width:520px; line-height:1.7;}
 
 /* the vein — signature progress element */
-.vein-card{margin-top:28px; position:relative; overflow:hidden;}
-.vein-card::before{content:""; position:absolute; inset:0; pointer-events:none;
-  background:radial-gradient(60% 90% at 85% 20%, rgba(95,227,214,0.10), transparent 60%);}
+/* Signature progress card — light opal, the airy "shimmer moment" of the page */
+.vein-card{margin-top:28px; position:relative; overflow:hidden;
+  background-color:var(--bg-elevated); background-image:var(--opal-veil); box-shadow:var(--shadow-md);}
 .vein-head{display:flex; justify-content:space-between; align-items:baseline; gap:16px; flex-wrap:wrap; margin-bottom:22px;}
-.vein-head .big{font-family:var(--font-serif); font-weight:300; font-size:26px; color:var(--fg-on-dark); letter-spacing:-0.01em;}
-.vein-head .big em{font-style:italic; color:var(--bhw-pale-gold-light);}
-.vein-track{position:relative; height:10px; border-radius:999px; background:rgba(247,243,234,0.10);}
+.vein-head .big{font-family:var(--font-serif); font-weight:300; font-size:26px; color:var(--fg-strong); letter-spacing:-0.01em;}
+.vein-head .big em{font-style:italic; color:var(--accent-2);}
+.vein-track{position:relative; height:10px; border-radius:999px; background:var(--bg-sunken); box-shadow:inset 0 0 0 1px var(--border);}
 .vein-fill{position:absolute; inset:0 auto 0 0; width:0%; border-radius:999px;
-  background:linear-gradient(90deg,var(--accent-2) 0%, var(--opal-glow) 55%, var(--c-gold-300) 100%);
-  box-shadow:0 0 14px rgba(143,212,192,0.5); transition:width 900ms var(--ease-out);}
+  background:linear-gradient(90deg,var(--accent-2) 0%, var(--accent-tint) 45%, var(--accent-3-tint) 78%, var(--c-gold-300) 100%);
+  box-shadow:0 0 12px rgba(130,105,154,0.35); transition:width 900ms var(--ease-out);}
 .vein-marks{display:flex; justify-content:space-between; margin-top:10px;}
-.vein-marks span{font-size:9.5px; font-weight:600; letter-spacing:0.14em; color:rgba(247,243,234,0.5); text-transform:uppercase;}
+.vein-marks span{font-size:9.5px; font-weight:600; letter-spacing:0.14em; color:var(--fg-muted); text-transform:uppercase;}
 .vein-note{font-family:var(--font-lora); font-style:italic; font-size:13.5px;
-  color:rgba(247,243,234,0.75); margin:20px 0 0;}
+  color:var(--fg-muted); margin:20px 0 0;}
 
 .home-grid{display:grid; grid-template-columns:1.35fr 1fr; gap:18px; margin-top:18px;}
 @media (max-width:820px){ .home-grid{grid-template-columns:1fr;} }
@@ -269,7 +269,9 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 .fpill{font-size:11.5px; font-weight:600; letter-spacing:0.08em; padding:7px 14px;
   border-radius:999px; background:var(--bg); border:1px solid var(--border); color:var(--fg);}
 .section-label{display:flex; gap:12px; align-items:center; margin:0 0 16px;}
-.section-label .dot{width:8px; height:8px; border-radius:999px; background:var(--accent-soft); box-shadow:0 0 8px rgba(95,169,166,0.6);}
+.section-label .dot{width:9px; height:9px; border-radius:999px;
+  background:conic-gradient(from 200deg, var(--accent-tint), var(--accent-2-tint), var(--accent-3-tint), var(--accent-tint));
+  box-shadow:0 0 8px rgba(130,105,154,0.30);}
 .section-label .txt{font-size:10.5px; font-weight:600; letter-spacing:0.2em; text-transform:uppercase; color:var(--fg-muted);}
 .section-label .line{flex:1; height:1px; background:linear-gradient(90deg,rgba(196,160,56,0.5),transparent);}
 
@@ -280,9 +282,9 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 .msg--me{justify-content:flex-end;}
 .msg-bubble{max-width:78%; padding:14px 17px; border-radius:14px; box-shadow:var(--shadow-sm);}
 .msg--team .msg-bubble{background:var(--bg); border:1px solid var(--border); border-top-left-radius:4px;}
-.msg--me .msg-bubble{background:var(--bhw-ink-navy); color:var(--fg-on-dark); border-top-right-radius:4px;}
+.msg--me .msg-bubble{background:var(--accent-3-quiet); color:var(--fg); border:1px solid var(--border); border-top-right-radius:4px;}
 .msg-who{font-size:9.5px; font-weight:600; letter-spacing:0.16em; text-transform:uppercase; color:var(--fg-muted); margin-bottom:6px;}
-.msg--me .msg-who{color:rgba(247,243,234,0.55);}
+.msg--me .msg-who{color:var(--accent-3-quiet-fg);}
 .msg-bubble p{font-size:13.5px; line-height:1.65; margin:0;}
 .msg-compose{display:flex; gap:10px; align-items:flex-end; margin-top:22px; padding-top:20px; border-top:1px dashed var(--border);}
 .msg-compose textarea{flex:1; font-family:var(--font-sans); font-size:14px; padding:13px 15px;
@@ -418,10 +420,10 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
         <p>You're in week 3 of your 12-week care plan. Here's where you are and what this week asks of you.</p>
       </div>
 
-      <div class="card card-dark vein-card">
+      <div class="card vein-card">
         <div class="vein-head">
           <div class="big">Week 3 <em>of 12</em></div>
-          <div style="font-size:11px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:rgba(247,243,234,0.6);" id="programLabel">Care plan · Restore &amp; Rebuild</div>
+          <div style="font-size:11px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:var(--accent);" id="programLabel">Care plan · Restore &amp; Rebuild</div>
         </div>
         <div class="vein-track"><div class="vein-fill" id="veinFill"></div></div>
         <div class="vein-marks"><span>Start</span><span>Week 6</span><span>Week 12</span></div>
@@ -628,9 +630,9 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
             </div>
             <p style="font-size:12.5px; color:var(--fg-muted); line-height:1.65; margin:16px 0 0;">These target the patterns your care team saw in your labs. Swap freely within the list — the pattern matters more than any single food.</p>
           </div>
-          <div class="card card-dark">
-            <p style="font-family:var(--font-lora); font-style:italic; font-size:14.5px; line-height:1.7; margin:0; color:rgba(247,243,234,0.88);">"Nothing here is a rule. It's a direction. A week where you hit most of it, most days, is a very good week."</p>
-            <div style="font-family:var(--font-script); font-size:20px; color:var(--bhw-pale-gold-light); margin-top:12px;">— your BHW care team</div>
+          <div class="card" style="background:var(--opal-wash); border-color:transparent;">
+            <p style="font-family:var(--font-lora); font-style:italic; font-size:14.5px; line-height:1.7; margin:0; color:var(--fg);">"Nothing here is a rule. It's a direction. A week where you hit most of it, most days, is a very good week."</p>
+            <div style="font-family:var(--font-script); font-size:20px; color:var(--accent-3); margin-top:12px;">— your BHW care team</div>
           </div>
         </div>
       </div>
