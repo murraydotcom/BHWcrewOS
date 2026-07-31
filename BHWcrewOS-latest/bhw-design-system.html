@@ -76,8 +76,11 @@
   /* ---- Hero ---- */
   .hero { position: relative; overflow: hidden; border-radius: var(--radius-2xl);
     margin-top: var(--space-12); padding: var(--space-16) var(--space-12);
-    background-color: var(--bg-elevated); background-image: var(--opal-veil);
-    border: 1px solid var(--border); box-shadow: var(--shadow-lg); }
+    background-color: var(--bg-elevated); background-image: var(--opal-stone);
+    border: 1px solid var(--border); box-shadow: var(--shadow-lg), var(--edge-gold); }
+  .hero::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: var(--opal-sheen); mix-blend-mode: soft-light; }
+  .hero > * { position: relative; z-index: 1; }
   .hero h1 { font-size: clamp(2.4rem, 6vw, var(--text-5xl)); margin-bottom: var(--space-5);
     font-weight: var(--weight-medium); }
   .hero .lead { max-width: 54ch; }
@@ -104,7 +107,7 @@
   /* ---- Cards ---- */
   .card { background: var(--bg-elevated); border: 1px solid var(--border);
     border-radius: var(--radius-lg); padding: var(--space-6); box-shadow: var(--shadow-sm); }
-  .card.feature { background-image: var(--opal-veil); box-shadow: var(--shadow-md); }
+  .card.feature { background-image: var(--opal-stone); box-shadow: var(--shadow-md), var(--edge-gold); border-color: transparent; }
 
   /* ---- Buttons ---- */
   .btn { font: inherit; font-family: var(--font-sans); font-weight: var(--weight-semibold);
@@ -313,13 +316,17 @@
       <div class="swatch"><div class="chip" style="background:var(--danger)"></div><div class="meta"><div class="name">Danger · rust</div><div class="val mono">--danger</div></div></div>
     </div>
 
-    <h3 style="margin-top:var(--space-8)">The opal wash</h3>
-    <p class="muted">One quiet moment of shimmer per screen — a hero, a header, a feature card. Never a whole page.</p>
-    <div class="grid g-2">
-      <div class="card" style="background:var(--opal-wash); border:none; min-height:150px; display:flex; align-items:flex-end;">
+    <h3 style="margin-top:var(--space-8)">Opal, three ways</h3>
+    <p class="muted">The real opal moment — a milky stone with pools of blue, violet, sage
+      and a gold core — plus two lighter washes. One shimmer per screen; never a whole page.</p>
+    <div class="grid g-3">
+      <div class="card" style="background-image:var(--opal-stone); box-shadow:var(--shadow-md), var(--edge-gold); border:none; min-height:170px; display:flex; align-items:flex-end;">
+        <span class="badge neutral" style="background:color-mix(in srgb, var(--bg) 78%, transparent)"><span class="mono">--opal-stone</span></span>
+      </div>
+      <div class="card" style="background:var(--opal-wash); border:none; min-height:170px; display:flex; align-items:flex-end;">
         <span class="badge neutral" style="background:color-mix(in srgb, var(--bg) 70%, transparent)"><span class="mono">--opal-wash</span></span>
       </div>
-      <div class="card feature" style="min-height:150px; display:flex; align-items:flex-end;">
+      <div class="card feature" style="min-height:170px; display:flex; align-items:flex-end;">
         <span class="badge neutral"><span class="mono">--opal-veil</span> over a card</span>
       </div>
     </div>

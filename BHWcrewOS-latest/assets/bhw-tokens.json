@@ -69,12 +69,12 @@
         "900": { "$value": "#261D30" }
       },
       "dark": {
-        "obsidian-950": { "$value": "#0B0F0E", "$description": "page — near-black opal-green whisper" },
-        "stone-900":    { "$value": "#12181A" },
-        "stone-850":    { "$value": "#171F20" },
-        "stone-800":    { "$value": "#1E2728" },
-        "boulder-900":  { "$value": "#1A140E", "$description": "warm ironstone feature surface" },
-        "boulder-800":  { "$value": "#241B12" }
+        "obsidian-950": { "$value": "#0A1822", "$description": "page — deep blue-teal black-opal stone" },
+        "stone-900":    { "$value": "#0F2230", "$description": "elevated" },
+        "stone-850":    { "$value": "#15293A", "$description": "card" },
+        "stone-800":    { "$value": "#1D3648", "$description": "raised / hover" },
+        "boulder-900":  { "$value": "#102232", "$description": "deep teal-blue feature surface" },
+        "boulder-800":  { "$value": "#172E42" }
       },
       "signal": {
         "terracotta-300": { "$value": "#E0A896" },

@@ -101,15 +101,15 @@
   --c-rose-300:      #D4AEAE;
   --c-rose-400:      #C39696;
 
-  /* — Boulder / black-opal darks ————————————————————————————————————————————
-     The stone itself. A faintly green-warm near-black so it never reads as
-     flat grey; surfaces lift toward ironstone. */
-  --c-obsidian-950:  #0B0F0E;   /* page — near-black with an opal-green whisper */
-  --c-stone-900:     #12181A;   /* elevated                                    */
-  --c-stone-850:     #171F20;   /* card                                        */
-  --c-stone-800:     #1E2728;   /* raised card / hover                         */
-  --c-boulder-900:   #1A140E;   /* warm ironstone — feature surfaces           */
-  --c-boulder-800:   #241B12;
+  /* — Black-opal darks · deep blue stone ————————————————————————————————————
+     Not black — the dark peacock blue of a black opal, so the stone itself
+     reads as opal, and the sage/blue/violet fire glows out of it. */
+  --c-obsidian-950:  #0A1822;   /* page — deep blue-teal opal stone            */
+  --c-stone-900:     #0F2230;   /* elevated                                    */
+  --c-stone-850:     #15293A;   /* card                                        */
+  --c-stone-800:     #1D3648;   /* raised card / hover                         */
+  --c-boulder-900:   #102232;   /* deep teal-blue — feature surfaces           */
+  --c-boulder-800:   #172E42;
 
   /* — Signal hues (tuned to the palette, not off-the-shelf) ————————————————— */
   --c-terracotta-300: #E0A896;  /* danger, light-mode text/icon on dark        */
@@ -213,6 +213,21 @@
       rgba(185,166,201,0.22), transparent 55%),
     radial-gradient(130% 150% at 100% 100%,
       rgba(156,181,162,0.26), transparent 55%);
+
+  /* Opal stone — the real thing. A milky cream body with visible pools of
+     blue, violet, sage, rose and a gold core, the way light plays inside an
+     opal. Richer than the veil; for hero and feature moments. */
+  --opal-stone:
+    radial-gradient(58% 78% at 18% 22%, rgba(110,158,179,0.44), transparent 60%),
+    radial-gradient(54% 74% at 82% 18%, rgba(156,134,178,0.40), transparent 60%),
+    radial-gradient(64% 82% at 74% 82%, rgba(125,155,134,0.44), transparent 62%),
+    radial-gradient(48% 66% at 30% 88%, rgba(212,174,174,0.32), transparent 60%),
+    radial-gradient(42% 58% at 52% 46%, rgba(230,201,138,0.30), transparent 66%),
+    linear-gradient(135deg, var(--c-porcelain-50) 0%, #F0ECF3 50%, #E9F1EE 100%);
+  /* A hair-thin play-of-colour sheen for glassy card edges (overlay use) */
+  --opal-sheen: linear-gradient(125deg,
+      rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 34%,
+      rgba(185,166,201,0.10) 62%, rgba(110,158,179,0.12) 100%);
 }
 
 
@@ -225,7 +240,7 @@
 
   --bg:            var(--c-obsidian-950);
   --bg-elevated:   var(--c-stone-900);
-  --bg-sunken:     #090C0B;
+  --bg-sunken:     #071019;
   --bg-muted:      var(--c-stone-800);
   --bg-inverse:    var(--c-cream-100);
 
@@ -296,6 +311,17 @@
       rgba(97,137,111,0.28), transparent 55%),
     radial-gradient(90% 120% at 60% 40%,
       rgba(214,178,92,0.10), transparent 60%);
+
+  /* Opal stone on deep blue — fire glowing out of black-opal stone */
+  --opal-stone:
+    radial-gradient(58% 78% at 20% 24%, rgba(96,158,180,0.42), transparent 62%),
+    radial-gradient(54% 74% at 82% 20%, rgba(142,114,168,0.36), transparent 62%),
+    radial-gradient(64% 82% at 74% 82%, rgba(104,150,120,0.36), transparent 62%),
+    radial-gradient(46% 62% at 46% 50%, rgba(214,178,92,0.16), transparent 66%),
+    linear-gradient(135deg, #0A1822 0%, #11253A 52%, #0C1E2E 100%);
+  --opal-sheen: linear-gradient(125deg,
+      rgba(180,210,223,0.18) 0%, rgba(255,255,255,0) 32%,
+      rgba(142,114,168,0.12) 64%, rgba(96,158,180,0.14) 100%);
 }
 
 /* Same dark values when the OS asks for dark and no theme is pinned. */
@@ -305,7 +331,7 @@
 
     --bg:            var(--c-obsidian-950);
     --bg-elevated:   var(--c-stone-900);
-    --bg-sunken:     #090C0B;
+    --bg-sunken:     #071019;
     --bg-muted:      var(--c-stone-800);
     --bg-inverse:    var(--c-cream-100);
 
@@ -372,6 +398,16 @@
         rgba(97,137,111,0.28), transparent 55%),
       radial-gradient(90% 120% at 60% 40%,
         rgba(214,178,92,0.10), transparent 60%);
+
+    --opal-stone:
+      radial-gradient(58% 78% at 20% 24%, rgba(96,158,180,0.42), transparent 62%),
+      radial-gradient(54% 74% at 82% 20%, rgba(142,114,168,0.36), transparent 62%),
+      radial-gradient(64% 82% at 74% 82%, rgba(104,150,120,0.36), transparent 62%),
+      radial-gradient(46% 62% at 46% 50%, rgba(214,178,92,0.16), transparent 66%),
+      linear-gradient(135deg, #0A1822 0%, #11253A 52%, #0C1E2E 100%);
+    --opal-sheen: linear-gradient(125deg,
+        rgba(180,210,223,0.18) 0%, rgba(255,255,255,0) 32%,
+        rgba(142,114,168,0.12) 64%, rgba(96,158,180,0.14) 100%);
   }
 }
 
@@ -473,6 +509,9 @@
 
   /* A whisper of gold on lifted / focused feature cards */
   --shadow-gold: 0 12px 32px -16px rgba(192, 160, 70, 0.35);
+  /* Fine gold hairline (inset ring) — the quiet-lux edge on feature surfaces.
+     Uses the theme-aware --gold, so it works in light and dark alike. */
+  --edge-gold: inset 0 0 0 1px color-mix(in srgb, var(--gold) 42%, transparent);
 }
 :root[data-theme="dark"] {
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.40);

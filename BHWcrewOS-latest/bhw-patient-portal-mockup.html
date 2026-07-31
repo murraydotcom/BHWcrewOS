@@ -30,9 +30,9 @@
   --accent-deep:    var(--accent-2-hover);      /* deeper opal blue   */
   --border-on-dark: rgba(247,243,234,0.16);
 
-  /* Dark "feature" surface — vein card, dark cards, login */
-  --surface-dark:   #12201E;                    /* deep opal ink (light mode) */
-  --opal-glow:      #8FD4C0;                     /* luminous opal highlight    */
+  /* Dark "feature" surface — proto-banner, login */
+  --surface-dark:   #0F2233;                     /* deep blue opal (light mode) */
+  --opal-glow:      #8FD4C0;                      /* luminous opal highlight     */
 
   /* Raw-palette bridge: the portal's --bhw-* names keep working,
      now pointing at the shared primitives. */
@@ -190,9 +190,13 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 .home-greet p{font-size:14.5px; color:var(--fg-muted); margin:12px 0 0; max-width:520px; line-height:1.7;}
 
 /* the vein — signature progress element */
-/* Signature progress card — light opal, the airy "shimmer moment" of the page */
+/* Signature progress card — real opal stone, the "shimmer moment" of the page */
 .vein-card{margin-top:28px; position:relative; overflow:hidden;
-  background-color:var(--bg-elevated); background-image:var(--opal-veil); box-shadow:var(--shadow-md);}
+  background-color:var(--bg-elevated); background-image:var(--opal-stone);
+  border-color:transparent; box-shadow:var(--shadow-md), var(--edge-gold);}
+.vein-card::after{content:""; position:absolute; inset:0; pointer-events:none;
+  background:var(--opal-sheen); mix-blend-mode:soft-light;}
+.vein-card > *{position:relative; z-index:1;}
 .vein-head{display:flex; justify-content:space-between; align-items:baseline; gap:16px; flex-wrap:wrap; margin-bottom:22px;}
 .vein-head .big{font-family:var(--font-serif); font-weight:300; font-size:26px; color:var(--fg-strong); letter-spacing:-0.01em;}
 .vein-head .big em{font-style:italic; color:var(--accent-2);}
