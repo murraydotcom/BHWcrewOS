@@ -5,8 +5,10 @@
     "$type": "color",
     "primitive": {
       "neutral": {
-        "porcelain-50":  { "$value": "#FBF9F4", "$description": "off-white, lightest" },
-        "cream-100":     { "$value": "#F7F3EA", "$description": "warm ivory — signature page tone" },
+        "pearl-0":       { "$value": "#FEFDFB", "$description": "near-white — airy cards" },
+        "pearl-50":      { "$value": "#F8F6F1", "$description": "pearl — light-on-light page (from the logo bg)" },
+        "porcelain-50":  { "$value": "#FBF9F4", "$description": "off-white" },
+        "cream-100":     { "$value": "#F7F3EA", "$description": "warm ivory" },
         "linen-200":     { "$value": "#F0EADD" },
         "sand-300":      { "$value": "#E5DAC6", "$description": "light tan" },
         "tan-400":       { "$value": "#D3BF9F" },
@@ -14,7 +16,8 @@
         "taupe-600":     { "$value": "#8A7E6C", "$description": "warm grey" },
         "clay-700":      { "$value": "#6A5C4A" },
         "ironstone-800": { "$value": "#493A2C", "$description": "boulder-opal matrix brown" },
-        "umber-900":     { "$value": "#2C231B" }
+        "umber-900":     { "$value": "#2C231B" },
+        "clay-brand":    { "$value": "#905B35", "$description": "the BHW Medical wordmark clay-brown" }
       },
       "sage": {
         "50":  { "$value": "#EEF3EE" },
@@ -53,9 +56,17 @@
         "400": { "$value": "#C39696" }
       },
       "lavender": {
-        "200": { "$value": "#D6CEDD" },
-        "300": { "$value": "#B4A9BE" },
-        "400": { "$value": "#948AA0" }
+        "$description": "Opal violet — the third fire (lavender → orchid → plum).",
+        "50":  { "$value": "#F2EEF5" },
+        "100": { "$value": "#E6DDEC" },
+        "200": { "$value": "#D3C4DD" },
+        "300": { "$value": "#B9A6C9", "$description": "soft lavender" },
+        "400": { "$value": "#9C86B2" },
+        "500": { "$value": "#82699A", "$description": "orchid" },
+        "600": { "$value": "#6A5480", "$description": "solid fill · AA on white" },
+        "700": { "$value": "#533F66" },
+        "800": { "$value": "#3B2C49" },
+        "900": { "$value": "#261D30" }
       },
       "dark": {
         "obsidian-950": { "$value": "#0B0F0E", "$description": "page — near-black opal-green whisper" },
@@ -73,15 +84,15 @@
     },
     "semantic": {
       "light": {
-        "$description": "Light opal — the default theme.",
-        "bg":            { "$value": "{color.primitive.neutral.cream-100}" },
-        "bg-elevated":   { "$value": "{color.primitive.neutral.porcelain-50}" },
-        "bg-sunken":     { "$value": "{color.primitive.neutral.linen-200}" },
-        "bg-muted":      { "$value": "{color.primitive.neutral.sand-300}" },
+        "$description": "Light opal — the default theme. Light-on-light: near-white cards on a soft pearl page.",
+        "bg":            { "$value": "{color.primitive.neutral.pearl-50}" },
+        "bg-elevated":   { "$value": "{color.primitive.neutral.pearl-0}" },
+        "bg-sunken":     { "$value": "{color.primitive.neutral.cream-100}" },
+        "bg-muted":      { "$value": "{color.primitive.neutral.linen-200}" },
         "bg-inverse":    { "$value": "{color.primitive.neutral.umber-900}" },
-        "fg":            { "$value": "#24312F", "$description": "body · 12.2:1 on cream" },
-        "fg-strong":     { "$value": "#14201F" },
-        "fg-muted":      { "$value": "#766A5A", "$description": "captions · 4.8:1 AA on cream" },
+        "fg":            { "$value": "#2A3A40", "$description": "body · soft slate · 10.9:1 on pearl" },
+        "fg-strong":     { "$value": "#1B2A30" },
+        "fg-muted":      { "$value": "#6E6B62", "$description": "captions · 4.9:1 AA on pearl" },
         "fg-subtle":     { "$value": "{color.primitive.neutral.wheat-500}" },
         "fg-on-accent":  { "$value": "{color.primitive.neutral.porcelain-50}" },
         "accent":        { "$value": "{color.primitive.sage.600}", "$description": "solid fill · AA (5.2:1) on white" },
@@ -91,9 +102,13 @@
         "accent-2":      { "$value": "{color.primitive.blue.600}", "$description": "solid fill · AA on white" },
         "accent-2-quiet":{ "$value": "{color.primitive.blue.100}" },
         "accent-2-tint": { "$value": "{color.primitive.blue.400}" },
+        "accent-3":      { "$value": "{color.primitive.lavender.600}", "$description": "opal violet · solid fill · AA on white" },
+        "accent-3-quiet":{ "$value": "{color.primitive.lavender.100}" },
+        "accent-3-tint": { "$value": "{color.primitive.lavender.300}" },
+        "brand-clay":    { "$value": "{color.primitive.neutral.clay-brand}" },
         "gold":          { "$value": "{color.primitive.gold.500}" },
-        "border":        { "$value": "rgba(44, 35, 27, 0.12)" },
-        "border-strong": { "$value": "rgba(44, 35, 27, 0.20)" },
+        "border":        { "$value": "rgba(43, 58, 64, 0.10)" },
+        "border-strong": { "$value": "rgba(43, 58, 64, 0.18)" },
         "ring":          { "$value": "{color.primitive.gold.500}" },
         "link":          { "$value": "{color.primitive.blue.600}" },
         "success":       { "$value": "{color.primitive.sage.600}" },
@@ -120,6 +135,9 @@
         "accent-2":      { "$value": "{color.primitive.blue.300}" },
         "accent-2-quiet":{ "$value": "{color.primitive.blue.800}" },
         "accent-2-tint": { "$value": "{color.primitive.blue.400}" },
+        "accent-3":      { "$value": "{color.primitive.lavender.300}", "$description": "opal violet, glowing on dark stone" },
+        "accent-3-quiet":{ "$value": "{color.primitive.lavender.800}" },
+        "accent-3-tint": { "$value": "{color.primitive.lavender.400}" },
         "gold":          { "$value": "{color.primitive.gold.400}" },
         "border":        { "$value": "rgba(233, 227, 214, 0.12)" },
         "border-strong": { "$value": "rgba(233, 227, 214, 0.22)" },

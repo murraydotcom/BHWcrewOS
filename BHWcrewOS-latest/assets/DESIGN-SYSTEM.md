@@ -1,10 +1,11 @@
 # BHW Medical Group — Patient Design System
 ### “Opal & Ironstone”
 
-A quiet-luxury design token system for everything patient-facing: sage green
-and opal blue over cream, tan, and ironstone brown. **Light mode is the light
-opal** (milky cream, soft flashes); **dark mode is the boulder / black opal**
-(dark stone, brighter fire, fine gold kintsugi veins).
+A quiet-luxury design token system for everything patient-facing: sage green,
+opal blue, and opal violet over pearl, cream, tan, and clay-brown — tuned to the
+BHW Medical logo. **Light mode is the light opal** — light on light: near-white
+cards on a soft pearl field with gentle blue/green/violet flashes. **Dark mode is
+the boulder / black opal** — dark stone, brighter fire, fine gold kintsugi veins.
 
 ## Files
 
@@ -52,7 +53,7 @@ Follows the patient’s device automatically. To pin one, set it on `<html>`:
 
 - **Surfaces** `--bg` · `--bg-elevated` · `--bg-sunken` · `--bg-muted` · `--bg-inverse`
 - **Text** `--fg` · `--fg-strong` · `--fg-muted` · `--fg-subtle` · `--fg-on-accent`
-- **Accents** `--accent` (sage) · `--accent-2` (opal blue) · `--gold` (kintsugi) · `*-hover` · `*-quiet` · `*-tint`
+- **Accents** `--accent` (sage) · `--accent-2` (opal blue) · `--accent-3` (opal violet) · `--gold` (kintsugi) · `--brand-clay` · `*-hover` · `*-quiet` · `*-tint`
 - **State** `--success` · `--info` · `--warning` · `--danger` (+ matching `*-bg`)
 - **Lines** `--border` · `--border-strong` · `--border-accent` · `--divider` · `--ring`
 - **Shimmer** `--opal-wash` · `--opal-veil` — one quiet moment per screen, never a whole page

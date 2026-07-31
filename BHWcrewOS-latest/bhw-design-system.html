@@ -53,9 +53,12 @@
   header.site .wrap { display: flex; align-items: center; justify-content: space-between;
     padding-top: var(--space-4); padding-bottom: var(--space-4); }
   .brandmark { display: flex; align-items: center; gap: var(--space-3); }
-  .brandmark .dot { width: 30px; height: 30px; border-radius: var(--radius-pill);
-    background: var(--opal-wash); box-shadow: inset 0 0 0 1px var(--border-strong), var(--shadow-sm); }
-  .brandmark b { font-family: var(--font-display); font-weight: var(--weight-500, 500);
+  .brandmark .logo { height: 44px; width: auto; border-radius: var(--radius-sm);
+    mix-blend-mode: multiply; }
+  :root[data-theme="dark"] .brandmark .logo { mix-blend-mode: normal; background: var(--c-pearl-50);
+    padding: 4px 8px; }
+  .brandmark__txt { padding-left: var(--space-3); border-left: 1px solid var(--border); }
+  .brandmark b { font-family: var(--font-display); font-weight: 500;
     color: var(--fg-strong); font-size: var(--text-md); letter-spacing: 0; }
   .brandmark small { display: block; font-family: var(--font-sans); font-size: var(--text-2xs);
     letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; color: var(--fg-muted); }
@@ -120,6 +123,8 @@
   .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
   .btn-ghost { background: var(--accent-quiet); color: var(--accent-quiet-fg); }
   .btn-ghost:hover { background: color-mix(in srgb, var(--accent-quiet) 70%, var(--accent) 30%); }
+  .btn-violet { background: var(--accent-3); color: var(--accent-fg); }
+  .btn-violet:hover { background: var(--accent-3-hover); }
   .btn-gold { background: transparent; color: var(--fg-strong); border-color: var(--gold); }
   .btn-gold:hover { box-shadow: var(--shadow-gold); }
 
@@ -130,9 +135,23 @@
   .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.9; }
   .badge.sage { background: var(--success-bg); color: var(--success); }
   .badge.blue { background: var(--info-bg); color: var(--info); }
+  .badge.violet { background: var(--accent-3-quiet); color: var(--accent-3-quiet-fg); }
   .badge.gold { background: var(--warning-bg); color: var(--warning); }
   .badge.rust { background: var(--danger-bg); color: var(--danger); }
   .badge.neutral { background: var(--bg-muted); color: var(--fg-muted); }
+
+  /* Brand logo tiles */
+  .logo-tile { border-radius: var(--radius-lg); border: 1px solid var(--border);
+    padding: var(--space-8); display: flex; flex-direction: column; align-items: center;
+    gap: var(--space-4); box-shadow: var(--shadow-sm); }
+  .logo-tile img { width: 100%; max-width: 260px; height: auto; }
+  .logo-tile--light { background: var(--bg-elevated); }
+  .logo-tile--light img { mix-blend-mode: multiply; }
+  .logo-tile--dark { background: var(--c-obsidian-950); }
+  .logo-tile--dark img { background: var(--c-pearl-50); border-radius: var(--radius-md);
+    padding: var(--space-4); }
+  .logo-cap { font-size: var(--text-xs); color: var(--fg-muted); letter-spacing: 0.02em; }
+  .logo-tile--dark .logo-cap { color: #9AA39B; }
 
   /* ---- Alerts ---- */
   .alert { display: flex; gap: var(--space-3); padding: var(--space-4) var(--space-5);
@@ -199,10 +218,10 @@
 <header class="site">
   <div class="wrap">
     <div class="brandmark">
-      <div class="dot" aria-hidden="true"></div>
-      <div>
-        <b>BHW Medical Group</b>
-        <small>Patient Design System</small>
+      <img class="logo" src="/assets/bhw-medical-logo.png" alt="BHW Medical" width="132" height="85">
+      <div class="brandmark__txt">
+        <b>Patient Design System</b>
+        <small>Opal &amp; Ironstone</small>
       </div>
     </div>
     <div class="toggle" role="group" aria-label="Color theme">
@@ -224,20 +243,42 @@
     <div class="pills">
       <span class="badge sage">Sage green</span>
       <span class="badge blue">Opal blue</span>
+      <span class="badge violet">Opal violet</span>
       <span class="badge gold">Kintsugi gold</span>
-      <span class="badge neutral">Cream · tan · ironstone</span>
+      <span class="badge neutral">Pearl · cream · tan · clay</span>
     </div>
   </div>
+
+  <!-- BRAND ------------------------------------------------------------------>
+  <section id="brand">
+    <span class="eyebrow">Brand</span>
+    <h2>The mark</h2>
+    <p class="muted">The BHW Medical logo — three scribbled rings in tan, sage, and dusty
+      blue with the clay-brown wordmark — is where this whole palette comes from. It sits
+      on the pale surfaces by day and on a light card by night, never recolored.</p>
+    <div class="grid g-2" style="margin-top:var(--space-6)">
+      <div class="logo-tile logo-tile--light">
+        <img src="/assets/bhw-medical-logo.png" alt="BHW Medical logo on a light surface" loading="lazy">
+        <span class="logo-cap">On light — pearl &amp; cream surfaces</span>
+      </div>
+      <div class="logo-tile logo-tile--dark">
+        <img src="/assets/bhw-medical-logo.png" alt="BHW Medical logo on a dark surface" loading="lazy">
+        <span class="logo-cap">On dark — a light card keeps it legible</span>
+      </div>
+    </div>
+    <p class="script" style="color:var(--brand-clay); font-size:var(--text-2xl); margin-top:var(--space-6)">Healthcare Excellence, together</p>
+    <p class="muted" style="margin-top:0">The tagline sets in <strong>Caveat</strong>, in the wordmark's clay-brown (<code>--brand-clay</code>).</p>
+  </section>
 
   <!-- FOUNDATIONS ------------------------------------------------------------>
   <section id="story">
     <span class="eyebrow">The idea</span>
     <h2>Light opal by day, boulder opal by night</h2>
     <p class="lead">An opal is a quiet stone that holds a whole sky of color inside it.
-      Our light mode is the <em>light opal</em> — a milky, cream-white field with soft
-      flashes of sage and blue. Our dark mode is the <em>boulder opal</em> — that same
-      fire glowing inside dark ironstone, seamed with fine gold. Same stone, two lights.
-      Flip the switch up top to feel it.</p>
+      Our light mode is the <em>light opal</em> — light on light: near-white cards floating
+      on a soft pearl field, with gentle flashes of sage green, opal blue, and lavender.
+      Our dark mode is the <em>boulder opal</em> — that same fire glowing inside dark
+      ironstone, seamed with fine gold. Same stone, two lights. Flip the switch up top to feel it.</p>
   </section>
 
   <!-- SEMANTIC COLOR --------------------------------------------------------->
@@ -263,6 +304,7 @@
     <div class="grid g-4">
       <div class="swatch"><div class="chip" style="background:var(--accent)"></div><div class="meta"><div class="name">Accent · sage</div><div class="val mono">--accent</div><div class="note">Primary actions, brand</div></div></div>
       <div class="swatch"><div class="chip" style="background:var(--accent-2)"></div><div class="meta"><div class="name">Accent · opal blue</div><div class="val mono">--accent-2</div><div class="note">Links, secondary</div></div></div>
+      <div class="swatch"><div class="chip" style="background:var(--accent-3)"></div><div class="meta"><div class="name">Accent · opal violet</div><div class="val mono">--accent-3</div><div class="note">Tertiary, highlights</div></div></div>
       <div class="swatch"><div class="chip" style="background:var(--gold)"></div><div class="meta"><div class="name">Gold · kintsugi</div><div class="val mono">--gold</div><div class="note">Focus, fine lines — sparingly</div></div></div>
       <div class="swatch"><div class="chip" style="background:var(--accent-quiet)"></div><div class="meta"><div class="name">Accent · quiet</div><div class="val mono">--accent-quiet</div><div class="note">Tinted backgrounds</div></div></div>
       <div class="swatch"><div class="chip" style="background:var(--success)"></div><div class="meta"><div class="name">Success</div><div class="val mono">--success</div></div></div>
@@ -293,9 +335,11 @@
     <div class="grid g-4" style="grid-template-columns:repeat(5,1fr)" id="ramp-sage"></div>
     <h3 style="margin-top:var(--space-6)">Opal blue</h3>
     <div class="grid g-4" style="grid-template-columns:repeat(5,1fr)" id="ramp-blue"></div>
-    <h3 style="margin-top:var(--space-6)">Cream → ironstone brown</h3>
+    <h3 style="margin-top:var(--space-6)">Opal violet</h3>
+    <div class="grid g-4" style="grid-template-columns:repeat(5,1fr)" id="ramp-violet"></div>
+    <h3 style="margin-top:var(--space-6)">Pearl → cream → tan → ironstone brown</h3>
     <div class="grid g-4" style="grid-template-columns:repeat(5,1fr)" id="ramp-neutral"></div>
-    <h3 style="margin-top:var(--space-6)">Gold &amp; opal sparkle</h3>
+    <h3 style="margin-top:var(--space-6)">Gold, clay &amp; rose</h3>
     <div class="grid g-4" style="grid-template-columns:repeat(5,1fr)" id="ramp-accent"></div>
   </section>
 
@@ -332,6 +376,7 @@
       <button class="btn btn-secondary">View results</button>
       <button class="btn btn-outline">Not now</button>
       <button class="btn btn-ghost">Message us</button>
+      <button class="btn btn-violet">Mind &amp; Mood</button>
       <button class="btn btn-gold">Upgrade care ✦</button>
     </div>
 
@@ -482,8 +527,9 @@
   const ramps = {
     'ramp-sage':    ['--c-sage-100','--c-sage-300','--c-sage-500','--c-sage-700','--c-sage-900'],
     'ramp-blue':    ['--c-blue-100','--c-blue-300','--c-blue-500','--c-blue-700','--c-blue-900'],
-    'ramp-neutral': ['--c-cream-100','--c-sand-300','--c-wheat-500','--c-ironstone-800','--c-umber-900'],
-    'ramp-accent':  ['--c-gold-300','--c-gold-500','--c-rose-300','--c-lavender-300','--c-lavender-400'],
+    'ramp-violet':  ['--c-lavender-100','--c-lavender-300','--c-lavender-500','--c-lavender-700','--c-lavender-900'],
+    'ramp-neutral': ['--c-pearl-50','--c-cream-100','--c-tan-400','--c-ironstone-800','--c-umber-900'],
+    'ramp-accent':  ['--c-gold-300','--c-gold-500','--c-clay-brand','--c-rose-300','--c-lavender-400'],
   };
   const cs = getComputedStyle(root);
   for (const [id, vars] of Object.entries(ramps)) {
