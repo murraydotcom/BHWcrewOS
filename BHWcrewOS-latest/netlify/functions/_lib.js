@@ -1,7 +1,7 @@
 // netlify/functions/_lib.js — shared helpers for BHWcrewOS
 const crypto = require("crypto");
 const https = require("https");
-
+ 
 // Works on every Node runtime (no fetch dependency)
 function httpJson(method, url, body) {
   return new Promise((resolve, reject) => {
@@ -31,11 +31,11 @@ function httpJson(method, url, body) {
     req.end();
   });
 }
-
-
-
+ 
+ 
+ 
 const NOTION = "https://api.notion.com/v1";
-
+ 
 // Notion database IDs (created 7/4/2026 under "BHW Operations Hub — Data Layer")
 const DB = {
   staff: "23241ce30cba4b01adb858afbe95d11f",
@@ -57,9 +57,9 @@ const DB = {
   screenerLinks: "279d0105ebe24629a2d0c1c82cc8b5e6",
   crewProjects: "386e620a9df545209a02207c4554c75b",
 };
-
+ 
 const DIVISIONS = ["Primary Care", "CharmEd Minds", "Mind & Mood Recovery", "The Porter House", "Chronic Care", "Flow"];
-
+ 
 // ---------- Notion ----------
 async function queryDb(dbId, filter, sorts) {
   const results = [];
@@ -73,19 +73,19 @@ async function queryDb(dbId, filter, sorts) {
   } while (cursor);
   return results;
 }
-
+ 
 async function createPage(dbId, properties) {
   const res = await httpJson("POST", `${NOTION}/pages`, { parent: { database_id: dbId }, properties });
   if (!res.ok) throw new Error(`Notion create ${res.status}: ${JSON.stringify(res.data).slice(0, 300)}`);
   return res.data;
 }
-
+ 
 async function updatePage(pageId, properties) {
   const res = await httpJson("PATCH", `${NOTION}/pages/${pageId}`, { properties });
   if (!res.ok) throw new Error(`Notion update ${res.status}: ${JSON.stringify(res.data).slice(0, 300)}`);
   return res.data;
 }
-
+ 
 // ---------- Property readers ----------
 const P = {
   title: (p) => p?.title?.map((t) => t.plain_text).join("") || "",
@@ -98,7 +98,7 @@ const P = {
   rel: (p) => (p?.relation || []).map((r) => r.id),
   uid: (p) => (p?.unique_id ? `${p.unique_id.prefix}-${p.unique_id.number}` : ""),
 };
-
+ 
 // ---------- Property writers ----------
 const W = {
   title: (v) => ({ title: [{ text: { content: String(v).slice(0, 200) } }] }),
@@ -109,7 +109,7 @@ const W = {
   rel: (ids) => ({ relation: (ids || []).filter(Boolean).map((id) => ({ id })) }),
   check: (v) => ({ checkbox: !!v }),
 };
-
+ 
 // ---------- Sessions (HMAC-signed, no server-side store needed) ----------
 function sign(payload) {
   const secret = process.env.SESSION_SECRET;
@@ -118,7 +118,7 @@ function sign(payload) {
   const sig = crypto.createHmac("sha256", secret).update(body).digest("base64url");
   return `${body}.${sig}`;
 }
-
+ 
 function verify(token) {
   try {
     const secret = process.env.SESSION_SECRET;
@@ -132,18 +132,19 @@ function verify(token) {
     return null;
   }
 }
-
+ 
 function getSession(event) {
   const auth = event.headers?.authorization || event.headers?.Authorization || "";
   return verify(auth.replace(/^Bearer\s+/i, ""));
 }
-
-// Server-side division wall: which divisions can this session see?
+ 
+// Division wall removed by request: every signed-in staff member sees and can act on
+// every division, regardless of their assigned position. Kept as a function (rather than
+// inlining DIVISIONS everywhere) so this is the one place to revert if that ever changes.
 function visibleDivisions(session) {
-  if (session.access === "Admin" || (session.divisions || []).includes("All")) return DIVISIONS;
-  return session.divisions || [];
+  return DIVISIONS;
 }
-
+ 
 function json(statusCode, body) {
   return {
     statusCode,
@@ -151,5 +152,6 @@ function json(statusCode, body) {
     body: JSON.stringify(body),
   };
 }
-
+ 
 module.exports = { DB, DIVISIONS, httpJson, queryDb, createPage, updatePage, P, W, sign, verify, getSession, visibleDivisions, json };
+ 
