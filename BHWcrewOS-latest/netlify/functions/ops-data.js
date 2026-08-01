@@ -1,8 +1,8 @@
 // netlify/functions/ops-data.js — dashboard payload, division walls enforced HERE.
 // Returns only what the signed-in person's divisions permit. Admins see all.
-
+ 
 const { DB, queryDb, P, getSession, visibleDivisions, json } = require("./_lib");
-
+ 
 function shapeReferral(pg) {
   const p = pg.properties;
   return {
@@ -22,7 +22,7 @@ function shapeReferral(pg) {
     priority: P.sel(p["Priority"]),
   };
 }
-
+ 
 function shapeHandoff(pg) {
   const p = pg.properties;
   return {
@@ -38,7 +38,7 @@ function shapeHandoff(pg) {
     status: P.sel(p["Status"]),
   };
 }
-
+ 
 function shapeBooking(pg) {
   const p = pg.properties;
   return {
@@ -55,15 +55,15 @@ function shapeBooking(pg) {
     notes: P.text(p["Notes"]),
   };
 }
-
+ 
 exports.handler = async (event) => {
   const session = getSession(event);
   if (!session) return json(401, { error: "Sign in again" });
-
+ 
   const vis = visibleDivisions(session);
   const isAdmin = session.access === "Admin";
   const inVis = (d) => vis.includes(d);
-
+ 
   try {
     const [staffPages, patientPages, roomPages, referralPages, handoffPages, schedulePages, minutePages, resourcePages] =
       await Promise.all([
@@ -76,7 +76,7 @@ exports.handler = async (event) => {
         queryDb(DB.minutes), // still queried: admin minutes rollup (care-management billing) below still needs it
         queryDb(DB.resources),
       ]);
-
+ 
     const staff = staffPages.map((pg) => ({
       id: pg.id,
       name: P.title(pg.properties["Name"]),
@@ -85,7 +85,7 @@ exports.handler = async (event) => {
       active: P.check(pg.properties["Active"]),
     }));
     const staffName = Object.fromEntries(staff.map((s) => [s.id, s.name]));
-
+ 
     // Patient directory: id + name + BHW ID, for pickers and display.
     const patients = patientPages.map((pg) => ({
       id: pg.id,
@@ -99,7 +99,7 @@ exports.handler = async (event) => {
       guardianEmail: pg.properties["Guardian Email"]?.email || "",
     }));
     const patientLabel = Object.fromEntries(patients.map((p) => [p.id, `${p.name} (${p.bhwId})`]));
-
+ 
     const rooms = roomPages.map((pg) => ({
       id: pg.id,
       name: P.title(pg.properties["Room"]),
@@ -107,21 +107,21 @@ exports.handler = async (event) => {
       capacity: P.num(pg.properties["Capacity"]),
       active: P.check(pg.properties["Active"]),
     }));
-
+ 
     // Division walls: a referral/handoff is visible if either end is in your divisions.
     const referrals = referralPages.map(shapeReferral).filter((r) => inVis(r.from) || inVis(r.to));
     const handoffs = handoffPages.map(shapeHandoff).filter((h) => inVis(h.from) || inVis(h.to));
-
+ 
     // Schedule: your divisions' bookings + Shared; admins see everything.
     const schedule = schedulePages
       .map(shapeBooking)
       .filter((b) => isAdmin || inVis(b.division) || b.division === "Shared")
       .sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start));
-
+ 
     // Care-management minutes: no longer surfaced as personal time tracking (removed from My Space).
     // Kept server-side only for the admin program rollup below (billing/care-management reporting).
     const monthKey = new Date().toISOString().slice(0, 7);
-
+ 
     // Crew Projects: posted by team leads in Notion, shown to assigned staff in My Space.
     let crewProjects = [];
     if (DB.crewProjects) {
@@ -138,7 +138,7 @@ exports.handler = async (event) => {
         };
       });
     }
-
+ 
     let awv = null;
     if (isAdmin || vis.includes("Chronic Care") || vis.includes("Primary Care")) {
       const awvPages = await queryDb(DB.awv);
@@ -159,7 +159,7 @@ exports.handler = async (event) => {
         };
       }).sort((a,b) => (b.date||"").localeCompare(a.date||""));
     }
-
+ 
     let charmed = null;
     if (isAdmin || vis.includes("CharmEd Minds")) {
       const cmPages = await queryDb(DB.charmed);
@@ -178,7 +178,7 @@ exports.handler = async (event) => {
         };
       }).sort((a,b) => (b.date||"").localeCompare(a.date||""));
     }
-
+ 
     let charmedAdult = null;
     if (isAdmin || vis.includes("CharmEd Minds")) {
       const cmaPages = await queryDb(DB.charmedAdult);
@@ -196,7 +196,7 @@ exports.handler = async (event) => {
         };
       }).sort((a,b) => (b.date||"").localeCompare(a.date||""));
     }
-
+ 
     let charmedProgram = null;
     if (isAdmin || vis.includes("CharmEd Minds")) {
       const cpPages = await queryDb(DB.charmedProgram);
@@ -214,7 +214,7 @@ exports.handler = async (event) => {
         };
       }).sort((a,b) => (a.startDate||"").localeCompare(b.startDate||""));
     }
-
+ 
     let phPlans = null;
     if (isAdmin || vis.includes("The Porter House")) {
       const phPages = await queryDb(DB.phplans);
@@ -240,7 +240,7 @@ exports.handler = async (event) => {
         };
       }).sort((a,b) => (a.moveIn||"").localeCompare(b.moveIn||""));
     }
-
+ 
     let prevention = null;
     if (isAdmin || vis.includes("Primary Care") || vis.includes("Chronic Care")) {
       const prevPages = await queryDb("14204ec7428d4813b158966356cbec51");
@@ -259,7 +259,9 @@ exports.handler = async (event) => {
         };
       });
     }
-
+ 
+    // Admin Master stays admin-only. Porter House census opens to everyone naturally,
+    // via the "vis" division wall above (now unrestricted) — no special case needed here.
     let adminRollup = null;
     let porterhouse = null;
     if (isAdmin || vis.includes("The Porter House")) {
@@ -283,7 +285,7 @@ exports.handler = async (event) => {
         adminRollup[prog] = (adminRollup[prog] || 0) + (P.num(pg.properties["Minutes"]) || 0);
       }
     }
-
+ 
     const resources = resourcePages
       .map((pg) => ({
         title: P.title(pg.properties["Resource"]),
@@ -295,7 +297,7 @@ exports.handler = async (event) => {
       }))
       .filter((r) => r.link && (r.division === "All Divisions" || inVis(r.division)))
       .sort((a, b) => (b.pinned - a.pinned) || a.title.localeCompare(b.title));
-
+ 
     return json(200, {
       user: { name: session.name, divisions: session.divisions, access: session.access, landing: session.landing, canSchedule: session.canSchedule, staffId: session.staffId },
       visibleDivisions: vis,
@@ -322,3 +324,4 @@ exports.handler = async (event) => {
     return json(500, { error: err.message });
   }
 };
+ 
