@@ -1,38 +1,66 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8">
 <title>BHW Patient Portal — Design Prototype</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&family=Montserrat:wght@300;400;500;600;700&family=Lora:ital@0;1&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
+<!-- Opal & Ironstone design tokens — the shared source of truth -->
+<link rel="stylesheet" href="/assets/bhw-tokens.css">
 <style>
 /* ============================================================
-   BHW family — shared tokens (inherited from BHW Integrative)
+   BHW Patient Portal — now dressed in "Opal & Ironstone"
+   (assets/bhw-tokens.css, linked above). This block bridges the
+   portal's local token names onto the shared system, so every
+   component below inherits the palette and goes theme-aware:
+   light opal by day, black opal by night (toggle top-right).
    ============================================================ */
 :root{
-  --bhw-deep-obsidian:#0F141A; --bhw-ink-navy:#162433; --bhw-charcoal:#2A3038;
-  --bhw-mineral-taupe:#6B665E; --bhw-sea-glass:#5FA9A6; --bhw-deep-teal-vein:#266D7A;
-  --bhw-opal-mist:#DCE3EA; --bhw-lavender-opal:#92889B; --bhw-rose-opal:#C9A0A0;
-  --bhw-pale-gold-light:#E8C98A; --bhw-bronze-clay:#8C5A3C; --bhw-pyrite-gold:#C4A038;
-  --bhw-limestone:#EDE5D8; --bhw-warm-ivory:#F7F3EA;
-  --opal-glow:#5FE3D6;
+  /* Font-name bridge: the portal calls Playfair "--font-serif";
+     the shared system calls it "--font-display". */
+  --font-serif: var(--font-display);            /* Playfair Display */
+  --font-lora:  'Lora', Georgia, serif;
 
-  --bg:var(--bhw-warm-ivory); --bg-warm:var(--bhw-limestone); --bg-muted:var(--bhw-opal-mist);
-  --fg:var(--bhw-ink-navy); --fg-strong:var(--bhw-deep-obsidian); --fg-muted:var(--bhw-mineral-taupe);
-  --fg-on-dark:var(--bhw-warm-ivory);
-  --accent:var(--bhw-bronze-clay); --accent-gold:var(--bhw-pyrite-gold);
-  --accent-soft:var(--bhw-sea-glass); --accent-deep:var(--bhw-deep-teal-vein);
-  --border:rgba(22,36,51,0.12); --border-on-dark:rgba(247,243,234,0.16);
+  /* Legacy semantic aliases → shared system */
+  --bg-warm:        var(--bg-elevated);
+  --fg-on-dark:     var(--c-cream-100);
+  --accent-gold:    var(--gold);
+  --accent-soft:    var(--accent-2);            /* opal blue          */
+  --accent-deep:    var(--accent-2-hover);      /* deeper opal blue   */
+  --border-on-dark: rgba(247,243,234,0.16);
 
-  --font-sans:'Montserrat',ui-sans-serif,system-ui,sans-serif;
-  --font-serif:'Playfair Display',Georgia,serif;
-  --font-lora:'Lora',Georgia,serif;
-  --font-script:'Caveat',cursive;
-  --ease-out:cubic-bezier(0.16,1,0.3,1);
-  --shadow-sm:0 2px 6px rgba(15,20,26,0.08);
-  --shadow-md:0 8px 20px -8px rgba(15,20,26,0.18);
-  --shadow-lg:0 20px 40px -16px rgba(15,20,26,0.28);
+  /* Dark "feature" surface — proto-banner, login */
+  --surface-dark:   #0F2233;                     /* deep blue opal (light mode) */
+  --opal-glow:      #8FD4C0;                      /* luminous opal highlight     */
+
+  /* Raw-palette bridge: the portal's --bhw-* names keep working,
+     now pointing at the shared primitives. */
+  --bhw-deep-obsidian:   var(--c-obsidian-950);
+  --bhw-ink-navy:        var(--surface-dark);
+  --bhw-charcoal:        var(--c-stone-800);
+  --bhw-mineral-taupe:   var(--fg-muted);
+  --bhw-sea-glass:       var(--c-blue-400);
+  --bhw-deep-teal-vein:  var(--accent-2);
+  --bhw-opal-mist:       var(--c-blue-100);
+  --bhw-lavender-opal:   var(--c-lavender-400);
+  --bhw-rose-opal:       var(--c-rose-400);
+  --bhw-pale-gold-light: var(--c-gold-300);
+  --bhw-bronze-clay:     var(--gold);
+  --bhw-pyrite-gold:     var(--gold);
+  --bhw-limestone:       var(--c-sand-300);
+  --bhw-warm-ivory:      var(--c-cream-100);
+}
+/* Black opal: lift the dark feature surface so it reads on a dark page. */
+:root[data-theme="dark"]{
+  --surface-dark:   var(--c-boulder-900);
+  --border-on-dark: rgba(233,227,214,0.14);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --surface-dark:   var(--c-boulder-900);
+    --border-on-dark: rgba(233,227,214,0.14);
+  }
 }
 *,*::before,*::after{box-sizing:border-box;}
 html,body{margin:0;padding:0;}
@@ -60,24 +88,25 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 /* ============================================================
    LOGIN VIEW — dark mineral, opal glow
    ============================================================ */
-#view-login{min-height:calc(100vh - 30px); background:#0B1418; position:relative;
+#view-login{min-height:calc(100vh - 30px); background:var(--c-obsidian-950); position:relative;
   display:flex; align-items:center; justify-content:center; padding:48px 20px; overflow:hidden;}
 #view-login::before{content:""; position:absolute; inset:0; pointer-events:none;
-  background:radial-gradient(70% 80% at 75% 30%, rgba(44,167,166,0.22), transparent 55%),
-             radial-gradient(50% 70% at 20% 90%, rgba(232,162,74,0.10), transparent 60%),
-             linear-gradient(180deg,#0E1B22 0%, #0A1316 100%);}
+  background:radial-gradient(70% 80% at 75% 28%, rgba(97,137,111,0.24), transparent 55%),   /* sage fire */
+             radial-gradient(55% 70% at 18% 88%, rgba(78,135,152,0.20), transparent 60%),   /* opal blue */
+             radial-gradient(42% 52% at 52% 55%, rgba(214,178,92,0.09), transparent 60%),    /* gold seam */
+             linear-gradient(180deg,#0E1B18 0%, #0A1311 100%);}
 .login-card{position:relative; z-index:2; width:100%; max-width:440px;}
 .login-lockup{display:flex; align-items:center; gap:12px; margin-bottom:34px;}
 .login-mark{width:38px; height:38px; border-radius:50%; flex-shrink:0;
-  background:radial-gradient(circle at 38% 35%, var(--opal-glow) 0%, var(--bhw-sea-glass) 38%, #C8A6E0 66%, #E8A24A 100%);
-  box-shadow:0 0 24px rgba(95,227,214,0.5);}
+  background:radial-gradient(circle at 38% 35%, #BFE6D6 0%, var(--c-sage-400) 34%, var(--c-blue-400) 62%, var(--c-gold-300) 100%);
+  box-shadow:0 0 24px rgba(143,212,192,0.45);}
 .login-wm{display:flex; flex-direction:column; gap:3px; line-height:1;}
 .login-wm span:first-child{font-size:19px; font-weight:300; letter-spacing:0.04em; color:var(--bhw-warm-ivory);}
 .login-wm span:last-child{font-size:8.5px; font-weight:600; letter-spacing:0.24em; text-transform:uppercase; color:rgba(247,243,234,0.6);}
 .login-card h1{font-family:var(--font-serif); font-weight:300; font-size:clamp(38px,7vw,52px);
   line-height:1.02; letter-spacing:-0.02em; color:var(--bhw-warm-ivory);}
 .login-card h1 em{font-style:italic; font-weight:300;
-  background:linear-gradient(105deg,#2CA7A6 0%,#5FE3D6 40%,#C8A6E0 65%,#E8A24A 92%);
+  background:linear-gradient(105deg,var(--c-sage-400) 0%,#BFE6D6 38%,var(--c-blue-300) 66%,var(--c-gold-300) 94%);
   -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;}
 .login-sub{font-size:14px; line-height:1.7; color:rgba(247,243,234,0.72); margin:20px 0 34px; max-width:360px;}
 .login-field{display:flex; flex-direction:column; gap:7px; margin-bottom:18px;}
@@ -105,7 +134,7 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
   display:flex; align-items:center; justify-content:space-between; gap:16px;}
 .bhw-header__lockup{display:flex; align-items:center; gap:10px; text-decoration:none;}
 .header-mark{width:28px; height:28px; border-radius:50%;
-  background:radial-gradient(circle at 38% 35%, var(--opal-glow) 0%, var(--bhw-sea-glass) 38%, #C8A6E0 66%, #E8A24A 100%);}
+  background:radial-gradient(circle at 38% 35%, #BFE6D6 0%, var(--c-sage-400) 34%, var(--c-blue-400) 62%, var(--c-gold-300) 100%);}
 .bhw-header__wm{display:flex; flex-direction:column; gap:2px; line-height:1;}
 .bhw-header__wm span:first-child{font-size:16px; font-weight:300; letter-spacing:0.04em; color:var(--fg-strong);}
 .bhw-header__wm span:last-child{font-size:7.5px; font-weight:600; letter-spacing:0.22em; text-transform:uppercase; color:var(--fg-muted);}
@@ -139,7 +168,7 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 /* ============================================================
    CARDS + SHARED
    ============================================================ */
-.card{background:#F4EFE5; border:1px solid var(--border); border-radius:14px;
+.card{background:var(--bg-elevated); border:1px solid var(--border); border-radius:14px;
   padding:26px; box-shadow:var(--shadow-sm);}
 .card-dark{background:var(--bhw-ink-navy); color:var(--fg-on-dark); border:1px solid var(--border-on-dark);}
 .btn{display:inline-flex; align-items:center; gap:9px; font-weight:600; font-size:11px;
@@ -161,20 +190,24 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 .home-greet p{font-size:14.5px; color:var(--fg-muted); margin:12px 0 0; max-width:520px; line-height:1.7;}
 
 /* the vein — signature progress element */
-.vein-card{margin-top:28px; position:relative; overflow:hidden;}
-.vein-card::before{content:""; position:absolute; inset:0; pointer-events:none;
-  background:radial-gradient(60% 90% at 85% 20%, rgba(95,227,214,0.10), transparent 60%);}
+/* Signature progress card — real opal stone, the "shimmer moment" of the page */
+.vein-card{margin-top:28px; position:relative; overflow:hidden;
+  background-color:var(--bg-elevated); background-image:var(--opal-stone);
+  border-color:transparent; box-shadow:var(--shadow-md), var(--edge-gold);}
+.vein-card::after{content:""; position:absolute; inset:0; pointer-events:none;
+  background:var(--opal-sheen); mix-blend-mode:soft-light;}
+.vein-card > *{position:relative; z-index:1;}
 .vein-head{display:flex; justify-content:space-between; align-items:baseline; gap:16px; flex-wrap:wrap; margin-bottom:22px;}
-.vein-head .big{font-family:var(--font-serif); font-weight:300; font-size:26px; color:var(--fg-on-dark); letter-spacing:-0.01em;}
-.vein-head .big em{font-style:italic; color:var(--bhw-pale-gold-light);}
-.vein-track{position:relative; height:10px; border-radius:999px; background:rgba(247,243,234,0.10);}
+.vein-head .big{font-family:var(--font-serif); font-weight:300; font-size:26px; color:var(--fg-strong); letter-spacing:-0.01em;}
+.vein-head .big em{font-style:italic; color:var(--accent-2);}
+.vein-track{position:relative; height:10px; border-radius:999px; background:var(--bg-sunken); box-shadow:inset 0 0 0 1px var(--border);}
 .vein-fill{position:absolute; inset:0 auto 0 0; width:0%; border-radius:999px;
-  background:linear-gradient(90deg,var(--bhw-deep-teal-vein) 0%, var(--opal-glow) 55%, var(--bhw-pale-gold-light) 100%);
-  box-shadow:0 0 14px rgba(95,227,214,0.55); transition:width 900ms var(--ease-out);}
+  background:linear-gradient(90deg,var(--accent-2) 0%, var(--accent-tint) 45%, var(--accent-3-tint) 78%, var(--c-gold-300) 100%);
+  box-shadow:0 0 12px rgba(130,105,154,0.35); transition:width 900ms var(--ease-out);}
 .vein-marks{display:flex; justify-content:space-between; margin-top:10px;}
-.vein-marks span{font-size:9.5px; font-weight:600; letter-spacing:0.14em; color:rgba(247,243,234,0.5); text-transform:uppercase;}
+.vein-marks span{font-size:9.5px; font-weight:600; letter-spacing:0.14em; color:var(--fg-muted); text-transform:uppercase;}
 .vein-note{font-family:var(--font-lora); font-style:italic; font-size:13.5px;
-  color:rgba(247,243,234,0.75); margin:20px 0 0;}
+  color:var(--fg-muted); margin:20px 0 0;}
 
 .home-grid{display:grid; grid-template-columns:1.35fr 1fr; gap:18px; margin-top:18px;}
 @media (max-width:820px){ .home-grid{grid-template-columns:1fr;} }
@@ -200,7 +233,7 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 .plan-head h2 em{font-style:italic; color:var(--accent-deep);}
 .plan-head p{font-size:13.5px; color:var(--fg-muted); max-width:560px; line-height:1.7; margin:10px 0 0;}
 .weeks{display:flex; flex-direction:column; gap:10px;}
-.week{background:#F4EFE5; border:1px solid var(--border); border-radius:13px; overflow:hidden;}
+.week{background:var(--bg-elevated); border:1px solid var(--border); border-radius:13px; overflow:hidden;}
 .week-btn{display:flex; width:100%; align-items:center; gap:16px; padding:17px 20px;
   background:transparent; border:0; cursor:pointer; text-align:left;}
 .week-dot{width:34px; height:34px; border-radius:50%; flex-shrink:0;
@@ -240,7 +273,9 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 .fpill{font-size:11.5px; font-weight:600; letter-spacing:0.08em; padding:7px 14px;
   border-radius:999px; background:var(--bg); border:1px solid var(--border); color:var(--fg);}
 .section-label{display:flex; gap:12px; align-items:center; margin:0 0 16px;}
-.section-label .dot{width:8px; height:8px; border-radius:999px; background:var(--accent-soft); box-shadow:0 0 8px rgba(95,169,166,0.6);}
+.section-label .dot{width:9px; height:9px; border-radius:999px;
+  background:conic-gradient(from 200deg, var(--accent-tint), var(--accent-2-tint), var(--accent-3-tint), var(--accent-tint));
+  box-shadow:0 0 8px rgba(130,105,154,0.30);}
 .section-label .txt{font-size:10.5px; font-weight:600; letter-spacing:0.2em; text-transform:uppercase; color:var(--fg-muted);}
 .section-label .line{flex:1; height:1px; background:linear-gradient(90deg,rgba(196,160,56,0.5),transparent);}
 
@@ -251,9 +286,9 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 .msg--me{justify-content:flex-end;}
 .msg-bubble{max-width:78%; padding:14px 17px; border-radius:14px; box-shadow:var(--shadow-sm);}
 .msg--team .msg-bubble{background:var(--bg); border:1px solid var(--border); border-top-left-radius:4px;}
-.msg--me .msg-bubble{background:var(--bhw-ink-navy); color:var(--fg-on-dark); border-top-right-radius:4px;}
+.msg--me .msg-bubble{background:var(--accent-3-quiet); color:var(--fg); border:1px solid var(--border); border-top-right-radius:4px;}
 .msg-who{font-size:9.5px; font-weight:600; letter-spacing:0.16em; text-transform:uppercase; color:var(--fg-muted); margin-bottom:6px;}
-.msg--me .msg-who{color:rgba(247,243,234,0.55);}
+.msg--me .msg-who{color:var(--accent-3-quiet-fg);}
 .msg-bubble p{font-size:13.5px; line-height:1.65; margin:0;}
 .msg-compose{display:flex; gap:10px; align-items:flex-end; margin-top:22px; padding-top:20px; border-top:1px dashed var(--border);}
 .msg-compose textarea{flex:1; font-family:var(--font-sans); font-size:14px; padding:13px 15px;
@@ -269,7 +304,7 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 .lab-row{display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-top:10px;}
 .lab-name{font-size:13.5px; font-weight:600; color:var(--fg-strong);}
 .lab-val{font-size:12px; font-weight:600; letter-spacing:0.06em; padding:3px 10px; border-radius:999px;}
-.lab-val--low{background:rgba(201,160,160,0.25); color:#8C4A3C;}
+.lab-val--low{background:var(--danger-bg); color:var(--danger);}
 .supp{padding:13px 0; border-bottom:1px dashed var(--border);}
 .supp:last-child{border-bottom:0; padding-bottom:0;}
 .supp-name{font-size:14px; font-weight:600; color:var(--fg-strong);}
@@ -287,13 +322,22 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
   --accent:#114766; --accent-deep:#2CA7A6; --accent-soft:#B7A4F7; --accent-gold:#F2B134;
   --border:rgba(11,18,40,0.12);
 }
-.demo-bar{background:var(--bhw-limestone); border-bottom:1px solid rgba(22,36,51,0.1);
+.demo-bar{background:var(--bg-elevated); border-bottom:1px solid var(--border);
   display:flex; align-items:center; justify-content:center; gap:8px; padding:7px 14px; flex-wrap:wrap;}
-.demo-bar .d-label{font-size:9.5px; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; color:var(--bhw-mineral-taupe);}
+.demo-bar .d-label{font-size:9.5px; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; color:var(--fg-muted);}
 .demo-bar button{font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase;
-  padding:5px 12px; border-radius:999px; border:1px solid rgba(22,36,51,0.2); background:transparent;
-  color:var(--bhw-ink-navy); cursor:pointer;}
-.demo-bar button.active{background:var(--bhw-ink-navy); color:var(--bhw-warm-ivory); border-color:var(--bhw-ink-navy);}
+  padding:5px 12px; border-radius:999px; border:1px solid var(--border-strong); background:transparent;
+  color:var(--fg); cursor:pointer;}
+.demo-bar button.active{background:var(--accent); color:var(--accent-fg); border-color:var(--accent);}
+
+/* Light-opal / black-opal theme toggle */
+.theme-toggle{display:inline-flex; gap:2px; padding:3px; border-radius:999px;
+  background:var(--bg-sunken); border:1px solid var(--border);}
+.theme-toggle button{font-size:13px; line-height:1; width:32px; height:26px; border:0;
+  border-radius:999px; background:transparent; color:var(--fg-muted); cursor:pointer;
+  transition:background 200ms var(--ease-out), color 200ms var(--ease-out);}
+.theme-toggle button[aria-pressed="true"]{background:var(--bg-elevated); color:var(--fg-strong); box-shadow:var(--shadow-xs);}
+.login-toggle{position:absolute; top:20px; right:20px; z-index:3;}
 
 .portal-foot{border-top:1px solid var(--border); margin-top:70px; padding-top:22px;
   display:flex; justify-content:space-between; gap:18px; flex-wrap:wrap;
@@ -312,6 +356,10 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 
 <!-- ================= LOGIN ================= -->
 <section id="view-login" aria-label="Sign in">
+  <div class="theme-toggle login-toggle" role="group" aria-label="Color theme">
+    <button type="button" data-theme-set="light" aria-pressed="true" title="Light opal" aria-label="Light opal">☀</button>
+    <button type="button" data-theme-set="dark" aria-pressed="false" title="Black opal" aria-label="Black opal">☾</button>
+  </div>
   <div class="login-card">
     <div class="login-lockup">
       <div class="login-mark" aria-hidden="true"></div>
@@ -342,12 +390,18 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
         <div class="bhw-header__wm"><span>BHW</span><span>Integrative Wellness</span></div>
         <span class="header-portal-tag">Patient Portal</span>
       </a>
-      <div class="patient-chip">
-        <div class="pmeta" style="text-align:right;">
-          <div class="pname">Jordan T.</div>
-          <div class="pid">Demo patient</div>
+      <div style="display:flex; align-items:center; gap:14px;">
+        <div class="theme-toggle" role="group" aria-label="Color theme">
+          <button type="button" data-theme-set="light" aria-pressed="true" title="Light opal" aria-label="Light opal">☀</button>
+          <button type="button" data-theme-set="dark" aria-pressed="false" title="Black opal" aria-label="Black opal">☾</button>
         </div>
-        <div class="avatar">JT</div>
+        <div class="patient-chip">
+          <div class="pmeta" style="text-align:right;">
+            <div class="pname">Jordan T.</div>
+            <div class="pid">Demo patient</div>
+          </div>
+          <div class="avatar">JT</div>
+        </div>
       </div>
     </div>
   </header>
@@ -370,10 +424,10 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
         <p>You're in week 3 of your 12-week care plan. Here's where you are and what this week asks of you.</p>
       </div>
 
-      <div class="card card-dark vein-card">
+      <div class="card vein-card">
         <div class="vein-head">
           <div class="big">Week 3 <em>of 12</em></div>
-          <div style="font-size:11px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:rgba(247,243,234,0.6);" id="programLabel">Care plan · Restore &amp; Rebuild</div>
+          <div style="font-size:11px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:var(--accent);" id="programLabel">Care plan · Restore &amp; Rebuild</div>
         </div>
         <div class="vein-track"><div class="vein-fill" id="veinFill"></div></div>
         <div class="vein-marks"><span>Start</span><span>Week 6</span><span>Week 12</span></div>
@@ -580,9 +634,9 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
             </div>
             <p style="font-size:12.5px; color:var(--fg-muted); line-height:1.65; margin:16px 0 0;">These target the patterns your care team saw in your labs. Swap freely within the list — the pattern matters more than any single food.</p>
           </div>
-          <div class="card card-dark">
-            <p style="font-family:var(--font-lora); font-style:italic; font-size:14.5px; line-height:1.7; margin:0; color:rgba(247,243,234,0.88);">"Nothing here is a rule. It's a direction. A week where you hit most of it, most days, is a very good week."</p>
-            <div style="font-family:var(--font-script); font-size:20px; color:var(--bhw-pale-gold-light); margin-top:12px;">— your BHW care team</div>
+          <div class="card" style="background:var(--opal-wash); border-color:transparent;">
+            <p style="font-family:var(--font-lora); font-style:italic; font-size:14.5px; line-height:1.7; margin:0; color:var(--fg);">"Nothing here is a rule. It's a direction. A week where you hit most of it, most days, is a very good week."</p>
+            <div style="font-family:var(--font-script); font-size:20px; color:var(--accent-3); margin-top:12px;">— your BHW care team</div>
           </div>
         </div>
       </div>
@@ -635,6 +689,26 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 </div>
 
 <script>
+/* ---- Theme: light opal / black opal ---- */
+(function(){
+  var root = document.documentElement;
+  function setTheme(t){
+    root.setAttribute('data-theme', t);
+    document.querySelectorAll('[data-theme-set]').forEach(function(b){
+      b.setAttribute('aria-pressed', String(b.getAttribute('data-theme-set') === t));
+    });
+    try { localStorage.setItem('bhw-theme', t); } catch(e){}
+  }
+  document.querySelectorAll('[data-theme-set]').forEach(function(b){
+    b.addEventListener('click', function(){ setTheme(b.getAttribute('data-theme-set')); });
+  });
+  try {
+    var saved = localStorage.getItem('bhw-theme');
+    if (saved) setTheme(saved);
+    else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) setTheme('dark');
+  } catch(e){}
+})();
+
 var PROGRAMS = {
   bhw:      {cls:'', label:'Care plan · Restore &amp; Rebuild', title:'Your care plan, <em>week by week.</em>'},
   mindmood: {cls:'brand-mindmood', label:'The 12-Week Pathway to the Sunrise', title:'Your Pathway, <em>week by week.</em>'},

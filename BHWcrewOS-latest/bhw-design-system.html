@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BHW Medical Group — Patient Design System</title>
+<meta name="description" content="Opal &amp; Ironstone — the quiet-luxury design token system for BHW Medical Group patient-facing surfaces.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Montserrat:wght@300;400;500;600;700&family=Lora:ital@0;1&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/bhw-tokens.css">
+<style>
+  /* ---- Page-local layout only. Everything visual comes from the tokens. ---- */
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    -webkit-font-smoothing: antialiased;
+    transition: background var(--duration-slow) var(--ease-out),
+                color var(--duration-slow) var(--ease-out);
+  }
+  .wrap { max-width: var(--container-lg); margin: 0 auto; padding: 0 var(--space-6); }
+  section { padding: var(--space-16) 0; border-top: 1px solid var(--divider); }
+  section:first-of-type { border-top: 0; }
+
+  h1, h2, h3, h4 { font-family: var(--font-display); color: var(--fg-strong);
+    font-weight: var(--weight-medium); line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tight); margin: 0 0 var(--space-4); }
+  h2 { font-size: var(--text-2xl); }
+  h3 { font-size: var(--text-lg); margin-bottom: var(--space-2); }
+  p  { margin: 0 0 var(--space-4); max-width: var(--measure); }
+  .lead { font-family: var(--font-serif); font-size: var(--text-md);
+    line-height: var(--leading-relaxed); color: var(--fg); }
+  .muted { color: var(--fg-muted); }
+  .eyebrow { font-size: var(--text-xs); font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-eyebrow); text-transform: uppercase;
+    color: var(--fg-muted); margin: 0 0 var(--space-3); display: block; }
+  code, .mono { font-family: var(--font-mono); font-size: 0.85em;
+    background: var(--bg-sunken); padding: 0.12em 0.45em; border-radius: var(--radius-xs);
+    border: 1px solid var(--border); color: var(--fg); }
+
+  /* ---- Header ---- */
+  header.site {
+    position: sticky; top: 0; z-index: var(--z-header);
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter: saturate(1.4) blur(14px);
+    border-bottom: 1px solid var(--border);
+  }
+  header.site .wrap { display: flex; align-items: center; justify-content: space-between;
+    padding-top: var(--space-4); padding-bottom: var(--space-4); }
+  .brandmark { display: flex; align-items: center; gap: var(--space-3); }
+  .brandmark .logo { height: 44px; width: auto; border-radius: var(--radius-sm);
+    mix-blend-mode: multiply; }
+  :root[data-theme="dark"] .brandmark .logo { mix-blend-mode: normal; background: var(--c-pearl-50);
+    padding: 4px 8px; }
+  .brandmark__txt { padding-left: var(--space-3); border-left: 1px solid var(--border); }
+  .brandmark b { font-family: var(--font-display); font-weight: 500;
+    color: var(--fg-strong); font-size: var(--text-md); letter-spacing: 0; }
+  .brandmark small { display: block; font-family: var(--font-sans); font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; color: var(--fg-muted); }
+
+  /* ---- Theme toggle ---- */
+  .toggle { display: inline-flex; gap: 2px; padding: 4px; border-radius: var(--radius-pill);
+    background: var(--bg-sunken); border: 1px solid var(--border); }
+  .toggle button { font: inherit; font-size: var(--text-xs); font-weight: var(--weight-medium);
+    color: var(--fg-muted); background: transparent; border: 0; cursor: pointer;
+    padding: 6px 14px; border-radius: var(--radius-pill);
+    transition: background var(--duration-base) var(--ease-out), color var(--duration-base) var(--ease-out); }
+  .toggle button[aria-pressed="true"] { background: var(--bg-elevated); color: var(--fg-strong);
+    box-shadow: var(--shadow-xs); }
+
+  /* ---- Hero ---- */
+  .hero { position: relative; overflow: hidden; border-radius: var(--radius-2xl);
+    margin-top: var(--space-12); padding: var(--space-16) var(--space-12);
+    background-color: var(--bg-elevated); background-image: var(--opal-stone);
+    border: 1px solid var(--border); box-shadow: var(--shadow-lg), var(--edge-gold); }
+  .hero::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: var(--opal-sheen); mix-blend-mode: soft-light; }
+  .hero > * { position: relative; z-index: 1; }
+  .hero h1 { font-size: clamp(2.4rem, 6vw, var(--text-5xl)); margin-bottom: var(--space-5);
+    font-weight: var(--weight-medium); }
+  .hero .lead { max-width: 54ch; }
+  .hero .pills { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-8); }
+
+  /* ---- Generic grid ---- */
+  .grid { display: grid; gap: var(--space-4); }
+  .g-2 { grid-template-columns: repeat(2, 1fr); }
+  .g-3 { grid-template-columns: repeat(3, 1fr); }
+  .g-4 { grid-template-columns: repeat(4, 1fr); }
+  @media (max-width: 820px) { .g-3, .g-4 { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 540px) { .g-2, .g-3, .g-4 { grid-template-columns: 1fr; } }
+
+  /* ---- Swatches ---- */
+  .swatch { border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border);
+    background: var(--bg-elevated); box-shadow: var(--shadow-xs); }
+  .swatch .chip { height: 78px; }
+  .swatch .meta { padding: var(--space-3); }
+  .swatch .name { font-size: var(--text-sm); font-weight: var(--weight-medium); color: var(--fg-strong); }
+  .swatch .val { font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--fg-muted);
+    text-transform: uppercase; letter-spacing: 0.04em; }
+  .swatch .note { font-size: var(--text-2xs); color: var(--fg-subtle); margin-top: 2px; }
+
+  /* ---- Cards ---- */
+  .card { background: var(--bg-elevated); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: var(--space-6); box-shadow: var(--shadow-sm); }
+  .card.feature { background-image: var(--opal-stone); box-shadow: var(--shadow-md), var(--edge-gold); border-color: transparent; }
+
+  /* ---- Buttons ---- */
+  .btn { font: inherit; font-family: var(--font-sans); font-weight: var(--weight-semibold);
+    font-size: var(--text-sm); letter-spacing: 0.01em; cursor: pointer;
+    display: inline-flex; align-items: center; gap: var(--space-2);
+    padding: 0.7em 1.35em; border-radius: var(--radius-pill); border: 1px solid transparent;
+    transition: transform var(--duration-fast) var(--ease-out),
+                background var(--duration-base) var(--ease-out),
+                box-shadow var(--duration-base) var(--ease-out); }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary { background: var(--accent); color: var(--accent-fg); box-shadow: var(--shadow-sm); }
+  .btn-primary:hover { background: var(--accent-hover); box-shadow: var(--shadow-md); }
+  .btn-secondary { background: var(--accent-2); color: var(--accent-fg); }
+  .btn-secondary:hover { background: var(--accent-2-hover); }
+  .btn-outline { background: transparent; color: var(--fg-strong); border-color: var(--border-strong); }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-ghost { background: var(--accent-quiet); color: var(--accent-quiet-fg); }
+  .btn-ghost:hover { background: color-mix(in srgb, var(--accent-quiet) 70%, var(--accent) 30%); }
+  .btn-violet { background: var(--accent-3); color: var(--accent-fg); }
+  .btn-violet:hover { background: var(--accent-3-hover); }
+  .btn-gold { background: transparent; color: var(--fg-strong); border-color: var(--gold); }
+  .btn-gold:hover { box-shadow: var(--shadow-gold); }
+
+  /* ---- Badges / tags ---- */
+  .badge { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-xs);
+    font-weight: var(--weight-semibold); padding: 0.32em 0.8em; border-radius: var(--radius-pill);
+    letter-spacing: 0.01em; }
+  .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.9; }
+  .badge.sage { background: var(--success-bg); color: var(--success); }
+  .badge.blue { background: var(--info-bg); color: var(--info); }
+  .badge.violet { background: var(--accent-3-quiet); color: var(--accent-3-quiet-fg); }
+  .badge.gold { background: var(--warning-bg); color: var(--warning); }
+  .badge.rust { background: var(--danger-bg); color: var(--danger); }
+  .badge.neutral { background: var(--bg-muted); color: var(--fg-muted); }
+
+  /* Brand logo tiles */
+  .logo-tile { border-radius: var(--radius-lg); border: 1px solid var(--border);
+    padding: var(--space-8); display: flex; flex-direction: column; align-items: center;
+    gap: var(--space-4); box-shadow: var(--shadow-sm); }
+  .logo-tile img { width: 100%; max-width: 260px; height: auto; }
+  .logo-tile--light { background: var(--bg-elevated); }
+  .logo-tile--light img { mix-blend-mode: multiply; }
+  .logo-tile--dark { background: var(--c-obsidian-950); }
+  .logo-tile--dark img { background: var(--c-pearl-50); border-radius: var(--radius-md);
+    padding: var(--space-4); }
+  .logo-cap { font-size: var(--text-xs); color: var(--fg-muted); letter-spacing: 0.02em; }
+  .logo-tile--dark .logo-cap { color: #9AA39B; }
+
+  /* ---- Alerts ---- */
+  .alert { display: flex; gap: var(--space-3); padding: var(--space-4) var(--space-5);
+    border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-elevated); }
+  .alert .bar { width: 3px; border-radius: var(--radius-pill); flex: 0 0 3px; }
+  .alert.info .bar { background: var(--info); }  .alert.info { background: var(--info-bg); }
+  .alert.success .bar { background: var(--success); } .alert.success { background: var(--success-bg); }
+  .alert.warn .bar { background: var(--warning); } .alert.warn { background: var(--warning-bg); }
+  .alert strong { color: var(--fg-strong); font-family: var(--font-sans); font-weight: var(--weight-semibold); }
+  .alert p { margin: 2px 0 0; font-size: var(--text-sm); }
+
+  /* ---- Form fields ---- */
+  label.field { display: block; margin-bottom: var(--space-4); }
+  label.field > span { display: block; font-size: var(--text-sm); font-weight: var(--weight-medium);
+    color: var(--fg-strong); margin-bottom: var(--space-2); }
+  .input { width: 100%; font: inherit; font-size: var(--text-base); color: var(--fg);
+    background: var(--bg); border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+    padding: 0.7em 0.9em; transition: border-color var(--duration-base) var(--ease-out),
+      box-shadow var(--duration-base) var(--ease-out); }
+  .input::placeholder { color: var(--fg-subtle); }
+  .input:focus { outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+
+  /* ---- Type specimen ---- */
+  .specimen { display: grid; gap: var(--space-3); }
+  .specimen .row { display: grid; grid-template-columns: 92px 1fr; align-items: baseline;
+    gap: var(--space-5); padding-bottom: var(--space-3); border-bottom: 1px solid var(--divider); }
+  .specimen .tag { font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--fg-muted);
+    text-transform: uppercase; letter-spacing: 0.06em; }
+
+  /* ---- Scale demos ---- */
+  .scale-row { display: flex; align-items: center; gap: var(--space-4); margin-bottom: var(--space-3); }
+  .scale-row .bar { background: var(--accent-quiet); border: 1px solid var(--border-accent);
+    border-radius: var(--radius-xs); height: 22px; }
+  .scale-row .lbl { font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--fg-muted); min-width: 130px; }
+  .radii { display: flex; flex-wrap: wrap; gap: var(--space-5); }
+  .radii .box { width: 96px; }
+  .radii .box .b { height: 72px; background: var(--accent-quiet); border: 1px solid var(--border-accent); }
+  .radii .box .lbl { font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--fg-muted);
+    margin-top: var(--space-2); text-align: center; }
+  .shadowbox { height: 96px; border-radius: var(--radius-md); background: var(--bg-elevated);
+    display: flex; align-items: center; justify-content: center; font-family: var(--font-mono);
+    font-size: var(--text-2xs); color: var(--fg-muted); }
+
+  /* ---- Sample patient card ---- */
+  .patient { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: var(--space-6); align-items: stretch; }
+  @media (max-width: 720px) { .patient { grid-template-columns: 1fr; } }
+  .plan-item { display: flex; gap: var(--space-3); padding: var(--space-4) 0; border-top: 1px solid var(--divider); }
+  .plan-item:first-child { border-top: 0; padding-top: 0; }
+  .plan-item .mark { width: 34px; height: 34px; border-radius: var(--radius-pill); flex: 0 0 34px;
+    background: var(--accent-quiet); color: var(--accent-quiet-fg); display: grid; place-items: center;
+    font-family: var(--font-display); font-size: var(--text-sm); }
+  .plan-item h4 { font-family: var(--font-sans); font-weight: var(--weight-semibold); font-size: var(--text-base);
+    color: var(--fg-strong); margin: 0 0 2px; letter-spacing: 0; }
+  .plan-item p { margin: 0; font-size: var(--text-sm); color: var(--fg-muted); }
+  .script { font-family: var(--font-script); font-size: var(--text-xl); color: var(--accent-2); line-height: 1.2; }
+
+  footer.site { padding: var(--space-12) 0 var(--space-20); border-top: 1px solid var(--divider); }
+  footer.site .muted { font-size: var(--text-sm); }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <div class="brandmark">
+      <img class="logo" src="/assets/bhw-medical-logo.png" alt="BHW Medical" width="132" height="85">
+      <div class="brandmark__txt">
+        <b>Patient Design System</b>
+        <small>Opal &amp; Ironstone</small>
+      </div>
+    </div>
+    <div class="toggle" role="group" aria-label="Color theme">
+      <button type="button" data-set-theme="light" aria-pressed="true">Light opal</button>
+      <button type="button" data-set-theme="dark" aria-pressed="false">Black opal</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- HERO ------------------------------------------------------------------->
+  <div class="hero">
+    <span class="eyebrow">Opal &amp; Ironstone</span>
+    <h1>A calm, cared-for place to be a patient.</h1>
+    <p class="lead">This is the look and feel behind everything you see from us — your
+      portal, your plan, your results. Warm and unhurried, quietly refined, and easy on
+      the eyes whether you're reading in the morning light or late at night.</p>
+    <div class="pills">
+      <span class="badge sage">Sage green</span>
+      <span class="badge blue">Opal blue</span>
+      <span class="badge violet">Opal violet</span>
+      <span class="badge gold">Kintsugi gold</span>
+      <span class="badge neutral">Pearl · cream · tan · clay</span>
+    </div>
+  </div>
+
+  <!-- BRAND ------------------------------------------------------------------>
+  <section id="brand">
+    <span class="eyebrow">Brand</span>
+    <h2>The mark</h2>
+    <p class="muted">The BHW Medical logo — three scribbled rings in tan, sage, and dusty
+      blue with the clay-brown wordmark — is where this whole palette comes from. It sits
+      on the pale surfaces by day and on a light card by night, never recolored.</p>
+    <div class="grid g-2" style="margin-top:var(--space-6)">
+      <div class="logo-tile logo-tile--light">
+        <img src="/assets/bhw-medical-logo.png" alt="BHW Medical logo on a light surface" loading="lazy">
+        <span class="logo-cap">On light — pearl &amp; cream surfaces</span>
+      </div>
+      <div class="logo-tile logo-tile--dark">
+        <img src="/assets/bhw-medical-logo.png" alt="BHW Medical logo on a dark surface" loading="lazy">
+        <span class="logo-cap">On dark — a light card keeps it legible</span>
+      </div>
+    </div>
+    <p class="script" style="color:var(--brand-clay); font-size:var(--text-2xl); margin-top:var(--space-6)">Healthcare Excellence, together</p>
+    <p class="muted" style="margin-top:0">The tagline sets in <strong>Caveat</strong>, in the wordmark's clay-brown (<code>--brand-clay</code>).</p>
+  </section>
+
+  <!-- FOUNDATIONS ------------------------------------------------------------>
+  <section id="story">
+    <span class="eyebrow">The idea</span>
+    <h2>Light opal by day, black opal by night</h2>
+    <p class="lead">An opal is a quiet stone that holds a whole sky of color inside it.
+      Our light mode is the <em>light opal</em> — light on light: near-white cards floating
+      on a soft pearl field, with gentle flashes of sage green, opal blue, and lavender.
+      Our dark mode is the <em>black opal</em> — that same fire glowing inside dark
+      ironstone, seamed with fine gold. Same stone, two lights. Flip the switch up top to feel it.</p>
+  </section>
+
+  <!-- SEMANTIC COLOR --------------------------------------------------------->
+  <section id="color">
+    <span class="eyebrow">Color · semantic</span>
+    <h2>The tokens you build with</h2>
+    <p class="muted">Use these meaning-named tokens — never a raw hex. They quietly
+      re-map themselves between light and dark, so a screen built once looks right in both.</p>
+
+    <h3 style="margin-top:var(--space-8)">Surfaces &amp; text</h3>
+    <div class="grid g-4">
+      <div class="swatch"><div class="chip" style="background:var(--bg)"></div><div class="meta"><div class="name">Page</div><div class="val mono">--bg</div></div></div>
+      <div class="swatch"><div class="chip" style="background:var(--bg-elevated)"></div><div class="meta"><div class="name">Elevated · cards</div><div class="val mono">--bg-elevated</div></div></div>
+      <div class="swatch"><div class="chip" style="background:var(--bg-sunken)"></div><div class="meta"><div class="name">Sunken · wells</div><div class="val mono">--bg-sunken</div></div></div>
+      <div class="swatch"><div class="chip" style="background:var(--bg-muted)"></div><div class="meta"><div class="name">Muted fill</div><div class="val mono">--bg-muted</div></div></div>
+      <div class="swatch"><div class="chip" style="background:var(--fg-strong)"></div><div class="meta"><div class="name">Text · strong</div><div class="val mono">--fg-strong</div></div></div>
+      <div class="swatch"><div class="chip" style="background:var(--fg)"></div><div class="meta"><div class="name">Text · body</div><div class="val mono">--fg</div></div></div>
+      <div class="swatch"><div class="chip" style="background:var(--fg-muted)"></div><div class="meta"><div class="name">Text · muted</div><div class="val mono">--fg-muted</div></div></div>
+      <div class="swatch"><div class="chip" style="background:var(--fg-subtle)"></div><div class="meta"><div class="name">Text · subtle</div><div class="val mono">--fg-subtle</div></div></div>
+    </div>
+
+    <h3 style="margin-top:var(--space-8)">Accents &amp; state</h3>
+    <div class="grid g-4">
+      <div class="swatch"><div class="chip" style="background:var(--accent)"></div><div class="meta"><div class="name">Accent · sage</div><div class="val mono">--accent</div><div class="note">Primary actions, brand</div></div></div>
+      <div class="swatch"><div class="chip" style="background:var(--accent-2)"></div><div class="meta"><div class="name">Accent · opal blue</div><div class="val mono">--accent-2</div><div class="note">Links, secondary</div></div></div>
+      <div class="swatch"><div class="chip" style="background:var(--accent-3)"></div><div class="meta"><div class="name">Accent · opal violet</div><div class="val mono">--accent-3</div><div class="note">Tertiary, highlights</div></div></div>
+      <div class="swatch"><div class="chip" style="background:var(--gold)"></div><div class="meta"><div class="name">Gold · kintsugi</div><div class="val mono">--gold</div><div class="note">Focus, fine lines — sparingly</div></div></div>
+      <div class="swatch"><div class="chip" style="background:var(--accent-quiet)"></div><div class="meta"><div class="name">Accent · quiet</div><div class="val mono">--accent-quiet</div><div class="note">Tinted backgrounds</div></div></div>
+      <div class="swatch"><div class="chip" style="background:var(--success)"></div><div class="meta"><div class="name">Success</div><div class="val mono">--success</div></div></div>
+      <div class="swatch"><div class="chip" style="background:var(--info)"></div><div class="meta"><div class="name">Info</div><div class="val mono">--info</div></div></div>
+      <div class="swatch"><div class="chip" style="background:var(--warning)"></div><div class="meta"><div class="name">Warning</div><div class="val mono">--warning</div></div></div>
+      <div class="swatch"><div class="chip" style="background:var(--danger)"></div><div class="meta"><div class="name">Danger · rust</div><div class="val mono">--danger</div></div></div>
+    </div>
+
+    <h3 style="margin-top:var(--space-8)">Opal, three ways</h3>
+    <p class="muted">The real opal moment — a milky stone with pools of blue, violet, sage
+      and a gold core — plus two lighter washes. One shimmer per screen; never a whole page.</p>
+    <div class="grid g-3">
+      <div class="card" style="background-image:var(--opal-stone); box-shadow:var(--shadow-md), var(--edge-gold); border:none; min-height:170px; display:flex; align-items:flex-end;">
+        <span class="badge neutral" style="background:color-mix(in srgb, var(--bg) 78%, transparent)"><span class="mono">--opal-stone</span></span>
+      </div>
+      <div class="card" style="background:var(--opal-wash); border:none; min-height:170px; display:flex; align-items:flex-end;">
+        <span class="badge neutral" style="background:color-mix(in srgb, var(--bg) 70%, transparent)"><span class="mono">--opal-wash</span></span>
+      </div>
+      <div class="card feature" style="min-height:170px; display:flex; align-items:flex-end;">
+        <span class="badge neutral"><span class="mono">--opal-veil</span> over a card</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRIMITIVES ------------------------------------------------------------->
+  <section id="palette">
+    <span class="eyebrow">Color · the raw stone</span>
+    <h2>Full palette</h2>
+    <p class="muted">The primitive scales behind the semantic tokens. Reference these when you need a specific step — for illustrations, charts, or one-off decoration.</p>
+
+    <h3 style="margin-top:var(--space-6)">Sage · the opal fire</h3>
+    <div class="grid g-4" style="grid-template-columns:repeat(5,1fr)" id="ramp-sage"></div>
+    <h3 style="margin-top:var(--space-6)">Opal blue</h3>
+    <div class="grid g-4" style="grid-template-columns:repeat(5,1fr)" id="ramp-blue"></div>
+    <h3 style="margin-top:var(--space-6)">Opal violet</h3>
+    <div class="grid g-4" style="grid-template-columns:repeat(5,1fr)" id="ramp-violet"></div>
+    <h3 style="margin-top:var(--space-6)">Pearl → cream → tan → ironstone brown</h3>
+    <div class="grid g-4" style="grid-template-columns:repeat(5,1fr)" id="ramp-neutral"></div>
+    <h3 style="margin-top:var(--space-6)">Gold, clay &amp; rose</h3>
+    <div class="grid g-4" style="grid-template-columns:repeat(5,1fr)" id="ramp-accent"></div>
+  </section>
+
+  <!-- TYPOGRAPHY ------------------------------------------------------------->
+  <section id="type">
+    <span class="eyebrow">Typography</span>
+    <h2>The voice on the page</h2>
+    <p class="muted"><strong>Playfair Display</strong> for headlines and warmth ·
+      <strong>Montserrat</strong> for the interface and body ·
+      <strong>Lora</strong> for long-form reading ·
+      <strong>Caveat</strong> for the occasional human note.</p>
+
+    <div class="card" style="margin-top:var(--space-6)">
+      <div class="specimen">
+        <div class="row"><span class="tag">5xl · Playfair</span><span style="font-family:var(--font-display);font-size:var(--text-5xl);line-height:var(--leading-tight);letter-spacing:var(--tracking-tight);color:var(--fg-strong)">We've got you.</span></div>
+        <div class="row"><span class="tag">3xl · Playfair</span><span style="font-family:var(--font-display);font-size:var(--text-3xl);color:var(--fg-strong)">Your care, made calm</span></div>
+        <div class="row"><span class="tag">xl · Playfair</span><span style="font-family:var(--font-display);font-size:var(--text-xl);color:var(--fg-strong)">This week's plan</span></div>
+        <div class="row"><span class="tag">md · Lora</span><span style="font-family:var(--font-serif);font-size:var(--text-md);line-height:var(--leading-relaxed)">A protein-first breakfast most mornings — it steadies your energy and takes the edge off the afternoon dip.</span></div>
+        <div class="row"><span class="tag">base · Montserrat</span><span style="font-size:var(--text-base)">Message your care team right here in your portal. We usually reply within one business day.</span></div>
+        <div class="row"><span class="tag">xs · eyebrow</span><span class="eyebrow" style="margin:0">Week 3 — Restore &amp; Rebuild</span></div>
+        <div class="row"><span class="tag">Caveat</span><span class="script">— your care team</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPONENTS ------------------------------------------------------------->
+  <section id="components">
+    <span class="eyebrow">Components</span>
+    <h2>Built from the tokens</h2>
+
+    <h3 style="margin-top:var(--space-6)">Buttons</h3>
+    <div class="card" style="display:flex;flex-wrap:wrap;gap:var(--space-3);align-items:center">
+      <button class="btn btn-primary">Book a visit</button>
+      <button class="btn btn-secondary">View results</button>
+      <button class="btn btn-outline">Not now</button>
+      <button class="btn btn-ghost">Message us</button>
+      <button class="btn btn-violet">Mind &amp; Mood</button>
+      <button class="btn btn-gold">Upgrade care ✦</button>
+    </div>
+
+    <div class="grid g-2" style="margin-top:var(--space-6)">
+      <div>
+        <h3>Badges</h3>
+        <div class="card" style="display:flex;flex-wrap:wrap;gap:var(--space-2)">
+          <span class="badge sage">On track</span>
+          <span class="badge blue">Scheduled</span>
+          <span class="badge gold">Action needed</span>
+          <span class="badge rust">Overdue</span>
+          <span class="badge neutral">Draft</span>
+        </div>
+      </div>
+      <div>
+        <h3>Form field</h3>
+        <div class="card">
+          <label class="field"><span>Preferred name</span>
+            <input class="input" type="text" placeholder="What should we call you?">
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <h3 style="margin-top:var(--space-6)">Messages</h3>
+    <div class="grid" style="gap:var(--space-3)">
+      <div class="alert success"><div class="bar"></div><div><strong>Labs are in.</strong><p>Your care team is reviewing them now — you'll get a plain-language summary here soon.</p></div></div>
+      <div class="alert info"><div class="bar"></div><div><strong>Visit confirmed.</strong><p>Thursday at 10:00 AM, telehealth. We'll send a link an hour before.</p></div></div>
+      <div class="alert warn"><div class="bar"></div><div><strong>One quick thing.</strong><p>Please finish your intake form before your visit so we can make the most of your time.</p></div></div>
+    </div>
+  </section>
+
+  <!-- PATIENT MOMENT --------------------------------------------------------->
+  <section id="inpractice">
+    <span class="eyebrow">In practice</span>
+    <h2>How it comes together</h2>
+    <p class="muted">A patient card, dressed entirely in the system — nothing hand-picked.</p>
+
+    <div class="patient" style="margin-top:var(--space-6)">
+      <div class="card feature">
+        <span class="eyebrow">Week 3 — Restore &amp; Rebuild</span>
+        <h3 style="font-family:var(--font-display);font-size:var(--text-xl);margin-top:var(--space-2)">This week's plan</h3>
+        <div style="margin-top:var(--space-4)">
+          <div class="plan-item"><div class="mark">1</div><div><h4>Morning protein anchor</h4><p>After your largest meals works best. Aim for most days — not every day.</p></div></div>
+          <div class="plan-item"><div class="mark">2</div><div><h4>Iron bisglycinate · 25 mg</h4><p>Every other morning, with vitamin C, away from coffee by an hour.</p></div></div>
+          <div class="plan-item"><div class="mark">3</div><div><h4>Screens down, 30 minutes before bed</h4><p>Notice how you feel by Thursday and jot it down for us.</p></div></div>
+        </div>
+        <div style="margin-top:var(--space-5);display:flex;gap:var(--space-2);align-items:center">
+          <button class="btn btn-primary">Mark this week done</button>
+          <span class="badge sage">2 of 3 on track</span>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:var(--space-4)">
+        <div class="card" style="background:var(--opal-wash);border:none">
+          <span class="eyebrow" style="color:var(--fg-strong);opacity:.75">A note from us</span>
+          <p class="script" style="margin:var(--space-2) 0 0">You're doing the quiet, steady work — and it shows. See you Thursday.</p>
+        </div>
+        <div class="card">
+          <h4 style="font-family:var(--font-sans);font-weight:var(--weight-semibold);margin:0 0 var(--space-2)">Next up</h4>
+          <p style="margin:0;font-size:var(--text-sm);color:var(--fg-muted)">Week 6 — Midpoint review</p>
+          <p style="margin:2px 0 var(--space-4);font-size:var(--text-sm);color:var(--fg-subtle)">Opens Aug 3 · includes a visit with your provider</p>
+          <button class="btn btn-outline" style="width:100%">See what's ahead</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCALES ----------------------------------------------------------------->
+  <section id="scales">
+    <span class="eyebrow">The rest of the system</span>
+    <h2>Space, radius &amp; elevation</h2>
+
+    <div class="grid g-2">
+      <div>
+        <h3>Spacing · 4px grid</h3>
+        <div id="space-scale"></div>
+      </div>
+      <div>
+        <h3>Radius</h3>
+        <div class="radii" id="radius-scale"></div>
+      </div>
+    </div>
+
+    <h3 style="margin-top:var(--space-8)">Elevation</h3>
+    <div class="grid g-4">
+      <div class="shadowbox" style="box-shadow:var(--shadow-xs)">--shadow-xs</div>
+      <div class="shadowbox" style="box-shadow:var(--shadow-sm)">--shadow-sm</div>
+      <div class="shadowbox" style="box-shadow:var(--shadow-md)">--shadow-md</div>
+      <div class="shadowbox" style="box-shadow:var(--shadow-lg)">--shadow-lg</div>
+    </div>
+  </section>
+
+  <!-- USAGE ------------------------------------------------------------------>
+  <section id="usage">
+    <span class="eyebrow">For builders</span>
+    <h2>Using the system</h2>
+    <p class="lead">One line adopts everything. Link the tokens, load the fonts, and build with the semantic names.</p>
+    <div class="card">
+<pre style="margin:0;overflow-x:auto;font-family:var(--font-mono);font-size:var(--text-sm);line-height:1.7;color:var(--fg)"><span class="muted">&lt;!-- 1 · link the tokens (once, in &lt;head&gt;) --&gt;</span>
+&lt;link rel="stylesheet" href="/assets/bhw-tokens.css"&gt;
+
+<span class="muted">&lt;!-- 2 · opt in to the base styles --&gt;</span>
+&lt;body class="bhw"&gt;
+
+<span class="muted">/* 3 · build with semantic tokens — light &amp; dark handle themselves */</span>
+.appointment-card {
+  background: var(--bg-elevated);
+  color:      var(--fg);
+  border:     1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding:    var(--space-6);
+  box-shadow: var(--shadow-sm);
+}
+.appointment-card .cta { background: var(--accent); color: var(--accent-fg); }</pre>
+    </div>
+    <p class="muted" style="margin-top:var(--space-4)">Theme follows the patient's device automatically. To pin one, set
+      <code>&lt;html data-theme="light"&gt;</code> or <code>data-theme="dark"</code>.
+      A machine-readable copy of every token lives in <code>/assets/bhw-tokens.json</code> for Figma and design tooling.</p>
+  </section>
+
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <p class="muted">BHW Medical Group — Patient Design System · <em>Opal &amp; Ironstone</em>.
+      Built to feel warm, quiet, and cared-for, in light and in dark.</p>
+  </div>
+</footer>
+
+<script>
+  // ---- Theme toggle -------------------------------------------------------
+  const root = document.documentElement;
+  const buttons = document.querySelectorAll('[data-set-theme]');
+  function setTheme(name) {
+    root.setAttribute('data-theme', name);
+    buttons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.setTheme === name)));
+    try { localStorage.setItem('bhw-theme', name); } catch (e) {}
+  }
+  buttons.forEach(b => b.addEventListener('click', () => setTheme(b.dataset.setTheme)));
+  try {
+    const saved = localStorage.getItem('bhw-theme');
+    if (saved) setTheme(saved);
+    else if (window.matchMedia('(prefers-color-scheme: dark)').matches) setTheme('dark');
+  } catch (e) {}
+
+  // ---- Render primitive ramps from the live token values ------------------
+  const ramps = {
+    'ramp-sage':    ['--c-sage-100','--c-sage-300','--c-sage-500','--c-sage-700','--c-sage-900'],
+    'ramp-blue':    ['--c-blue-100','--c-blue-300','--c-blue-500','--c-blue-700','--c-blue-900'],
+    'ramp-violet':  ['--c-lavender-100','--c-lavender-300','--c-lavender-500','--c-lavender-700','--c-lavender-900'],
+    'ramp-neutral': ['--c-pearl-50','--c-cream-100','--c-tan-400','--c-ironstone-800','--c-umber-900'],
+    'ramp-accent':  ['--c-gold-300','--c-gold-500','--c-clay-brand','--c-rose-300','--c-lavender-400'],
+  };
+  const cs = getComputedStyle(root);
+  for (const [id, vars] of Object.entries(ramps)) {
+    const host = document.getElementById(id);
+    if (!host) continue;
+    host.innerHTML = vars.map(v => {
+      const hex = cs.getPropertyValue(v).trim();
+      return `<div class="swatch"><div class="chip" style="background:${hex}"></div>`
+           + `<div class="meta"><div class="name">${v.replace('--c-','')}</div>`
+           + `<div class="val mono">${hex}</div></div></div>`;
+    }).join('');
+  }
+
+  // ---- Spacing scale ------------------------------------------------------
+  const spaceHost = document.getElementById('space-scale');
+  [['1','4px'],['2','8px'],['3','12px'],['4','16px'],['6','24px'],['8','32px'],['12','48px'],['16','64px']]
+    .forEach(([step,px]) => {
+      const row = document.createElement('div'); row.className = 'scale-row';
+      row.innerHTML = `<span class="lbl">--space-${step} · ${px}</span>`
+        + `<div class="bar" style="width:var(--space-${step})"></div>`;
+      spaceHost.appendChild(row);
+    });
+
+  // ---- Radius scale -------------------------------------------------------
+  const radiusHost = document.getElementById('radius-scale');
+  ['sm','md','lg','xl','2xl'].forEach(r => {
+    const box = document.createElement('div'); box.className = 'box';
+    box.innerHTML = `<div class="b" style="border-radius:var(--radius-${r})"></div>`
+      + `<div class="lbl">--radius-${r}</div>`;
+    radiusHost.appendChild(box);
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,243 @@
+{
+  "$schema": "https://tr.designtokens.org/format/",
+  "$description": "BHW Medical Group — Patient Design Tokens · 'Opal & Ironstone'. W3C design-tokens format, mirrors assets/bhw-tokens.css. Light mode = light opal; dark mode = boulder / black opal.",
+  "color": {
+    "$type": "color",
+    "primitive": {
+      "neutral": {
+        "pearl-0":       { "$value": "#FEFDFB", "$description": "near-white — airy cards" },
+        "pearl-50":      { "$value": "#F8F6F1", "$description": "pearl — light-on-light page (from the logo bg)" },
+        "porcelain-50":  { "$value": "#FBF9F4", "$description": "off-white" },
+        "cream-100":     { "$value": "#F7F3EA", "$description": "warm ivory" },
+        "linen-200":     { "$value": "#F0EADD" },
+        "sand-300":      { "$value": "#E5DAC6", "$description": "light tan" },
+        "tan-400":       { "$value": "#D3BF9F" },
+        "wheat-500":     { "$value": "#B7A17E", "$description": "deep tan" },
+        "taupe-600":     { "$value": "#8A7E6C", "$description": "warm grey" },
+        "clay-700":      { "$value": "#6A5C4A" },
+        "ironstone-800": { "$value": "#493A2C", "$description": "boulder-opal matrix brown" },
+        "umber-900":     { "$value": "#2C231B" },
+        "clay-brand":    { "$value": "#905B35", "$description": "the BHW Medical wordmark clay-brown" }
+      },
+      "sage": {
+        "50":  { "$value": "#EEF3EE" },
+        "100": { "$value": "#DDE7DD" },
+        "200": { "$value": "#BCCFC0" },
+        "300": { "$value": "#9CB5A2", "$description": "soft sage" },
+        "400": { "$value": "#7D9B86" },
+        "500": { "$value": "#61896F", "$description": "eucalyptus — light-mode primary" },
+        "600": { "$value": "#4D7159" },
+        "700": { "$value": "#3C5946" },
+        "800": { "$value": "#2B4133" },
+        "900": { "$value": "#1B2B22" }
+      },
+      "blue": {
+        "50":  { "$value": "#EDF3F5" },
+        "100": { "$value": "#DBE8ED" },
+        "200": { "$value": "#BAD2DC" },
+        "300": { "$value": "#97BACB", "$description": "light opal blue" },
+        "400": { "$value": "#6E9EB3" },
+        "500": { "$value": "#4E8798", "$description": "deep opal teal — light-mode secondary" },
+        "600": { "$value": "#3D6E7E" },
+        "700": { "$value": "#2F5663" },
+        "800": { "$value": "#223E48" },
+        "900": { "$value": "#15272E" }
+      },
+      "gold": {
+        "200": { "$value": "#F0DDAF" },
+        "300": { "$value": "#E6C98A", "$description": "pale gold" },
+        "400": { "$value": "#D6B25C", "$description": "kintsugi vein — dark-mode gold" },
+        "500": { "$value": "#C0A046", "$description": "pyrite gold — light-mode gold" },
+        "600": { "$value": "#9C8038" }
+      },
+      "rose": {
+        "200": { "$value": "#E7CBCB" },
+        "300": { "$value": "#D4AEAE" },
+        "400": { "$value": "#C39696" }
+      },
+      "lavender": {
+        "$description": "Opal violet — the third fire (lavender → orchid → plum).",
+        "50":  { "$value": "#F2EEF5" },
+        "100": { "$value": "#E6DDEC" },
+        "200": { "$value": "#D3C4DD" },
+        "300": { "$value": "#B9A6C9", "$description": "soft lavender" },
+        "400": { "$value": "#9C86B2" },
+        "500": { "$value": "#82699A", "$description": "orchid" },
+        "600": { "$value": "#6A5480", "$description": "solid fill · AA on white" },
+        "700": { "$value": "#533F66" },
+        "800": { "$value": "#3B2C49" },
+        "900": { "$value": "#261D30" }
+      },
+      "dark": {
+        "obsidian-950": { "$value": "#0A1822", "$description": "page — deep blue-teal black-opal stone" },
+        "stone-900":    { "$value": "#0F2230", "$description": "elevated" },
+        "stone-850":    { "$value": "#15293A", "$description": "card" },
+        "stone-800":    { "$value": "#1D3648", "$description": "raised / hover" },
+        "boulder-900":  { "$value": "#102232", "$description": "deep teal-blue feature surface" },
+        "boulder-800":  { "$value": "#172E42" }
+      },
+      "signal": {
+        "terracotta-300": { "$value": "#E0A896" },
+        "terracotta-500": { "$value": "#B15540", "$description": "danger — muted rust" },
+        "terracotta-600": { "$value": "#98462F" }
+      }
+    },
+    "semantic": {
+      "light": {
+        "$description": "Light opal — the default theme. Light-on-light: near-white cards on a soft pearl page.",
+        "bg":            { "$value": "{color.primitive.neutral.pearl-50}" },
+        "bg-elevated":   { "$value": "{color.primitive.neutral.pearl-0}" },
+        "bg-sunken":     { "$value": "{color.primitive.neutral.cream-100}" },
+        "bg-muted":      { "$value": "{color.primitive.neutral.linen-200}" },
+        "bg-inverse":    { "$value": "{color.primitive.neutral.umber-900}" },
+        "fg":            { "$value": "#2A3A40", "$description": "body · soft slate · 10.9:1 on pearl" },
+        "fg-strong":     { "$value": "#1B2A30" },
+        "fg-muted":      { "$value": "#6E6B62", "$description": "captions · 4.9:1 AA on pearl" },
+        "fg-subtle":     { "$value": "{color.primitive.neutral.wheat-500}" },
+        "fg-on-accent":  { "$value": "{color.primitive.neutral.porcelain-50}" },
+        "accent":        { "$value": "{color.primitive.sage.600}", "$description": "solid fill · AA (5.2:1) on white" },
+        "accent-hover":  { "$value": "{color.primitive.sage.700}" },
+        "accent-quiet":  { "$value": "{color.primitive.sage.100}" },
+        "accent-tint":   { "$value": "{color.primitive.sage.400}", "$description": "soft brand sage for decoration" },
+        "accent-2":      { "$value": "{color.primitive.blue.600}", "$description": "solid fill · AA on white" },
+        "accent-2-quiet":{ "$value": "{color.primitive.blue.100}" },
+        "accent-2-tint": { "$value": "{color.primitive.blue.400}" },
+        "accent-3":      { "$value": "{color.primitive.lavender.600}", "$description": "opal violet · solid fill · AA on white" },
+        "accent-3-quiet":{ "$value": "{color.primitive.lavender.100}" },
+        "accent-3-tint": { "$value": "{color.primitive.lavender.300}" },
+        "brand-clay":    { "$value": "{color.primitive.neutral.clay-brand}" },
+        "gold":          { "$value": "{color.primitive.gold.500}" },
+        "border":        { "$value": "rgba(43, 58, 64, 0.10)" },
+        "border-strong": { "$value": "rgba(43, 58, 64, 0.18)" },
+        "ring":          { "$value": "{color.primitive.gold.500}" },
+        "link":          { "$value": "{color.primitive.blue.600}" },
+        "success":       { "$value": "{color.primitive.sage.600}" },
+        "info":          { "$value": "{color.primitive.blue.600}" },
+        "warning":       { "$value": "{color.primitive.gold.600}" },
+        "danger":        { "$value": "{color.primitive.signal.terracotta-500}" }
+      },
+      "dark": {
+        "$description": "Boulder / black opal.",
+        "bg":            { "$value": "{color.primitive.dark.obsidian-950}" },
+        "bg-elevated":   { "$value": "{color.primitive.dark.stone-900}" },
+        "bg-sunken":     { "$value": "#090C0B" },
+        "bg-muted":      { "$value": "{color.primitive.dark.stone-800}" },
+        "bg-inverse":    { "$value": "{color.primitive.neutral.cream-100}" },
+        "fg":            { "$value": "#E9E3D6" },
+        "fg-strong":     { "$value": "{color.primitive.neutral.porcelain-50}" },
+        "fg-muted":      { "$value": "#9AA39B" },
+        "fg-subtle":     { "$value": "#6C7269" },
+        "fg-on-accent":  { "$value": "#0C120F" },
+        "accent":        { "$value": "{color.primitive.sage.300}", "$description": "glows brighter on dark stone" },
+        "accent-hover":  { "$value": "{color.primitive.sage.200}" },
+        "accent-quiet":  { "$value": "{color.primitive.sage.800}" },
+        "accent-tint":   { "$value": "{color.primitive.sage.400}" },
+        "accent-2":      { "$value": "{color.primitive.blue.300}" },
+        "accent-2-quiet":{ "$value": "{color.primitive.blue.800}" },
+        "accent-2-tint": { "$value": "{color.primitive.blue.400}" },
+        "accent-3":      { "$value": "{color.primitive.lavender.300}", "$description": "opal violet, glowing on dark stone" },
+        "accent-3-quiet":{ "$value": "{color.primitive.lavender.800}" },
+        "accent-3-tint": { "$value": "{color.primitive.lavender.400}" },
+        "gold":          { "$value": "{color.primitive.gold.400}" },
+        "border":        { "$value": "rgba(233, 227, 214, 0.12)" },
+        "border-strong": { "$value": "rgba(233, 227, 214, 0.22)" },
+        "ring":          { "$value": "{color.primitive.gold.400}" },
+        "link":          { "$value": "{color.primitive.blue.300}" },
+        "success":       { "$value": "{color.primitive.sage.300}" },
+        "info":          { "$value": "{color.primitive.blue.300}" },
+        "warning":       { "$value": "{color.primitive.gold.300}" },
+        "danger":        { "$value": "{color.primitive.signal.terracotta-300}" }
+      }
+    }
+  },
+  "fontFamily": {
+    "$type": "fontFamily",
+    "display": { "$value": ["Playfair Display", "Georgia", "serif"], "$description": "voice / headings" },
+    "sans":    { "$value": ["Montserrat", "system-ui", "sans-serif"], "$description": "interface / body" },
+    "serif":   { "$value": ["Lora", "Georgia", "serif"], "$description": "long-form reading" },
+    "script":  { "$value": ["Caveat", "cursive"], "$description": "human accent, sparing" }
+  },
+  "fontSize": {
+    "$type": "dimension",
+    "2xs":  { "$value": "0.694rem" },
+    "xs":   { "$value": "0.833rem" },
+    "sm":   { "$value": "0.889rem" },
+    "base": { "$value": "1rem" },
+    "md":   { "$value": "1.125rem" },
+    "lg":   { "$value": "1.35rem" },
+    "xl":   { "$value": "1.62rem" },
+    "2xl":  { "$value": "1.944rem" },
+    "3xl":  { "$value": "2.488rem" },
+    "4xl":  { "$value": "3.052rem" },
+    "5xl":  { "$value": "3.815rem" }
+  },
+  "fontWeight": {
+    "$type": "fontWeight",
+    "light":    { "$value": 300 },
+    "normal":   { "$value": 400 },
+    "medium":   { "$value": 500 },
+    "semibold": { "$value": 600 },
+    "bold":     { "$value": 700 }
+  },
+  "lineHeight": {
+    "$type": "number",
+    "tight":   { "$value": 1.15 },
+    "snug":    { "$value": 1.3 },
+    "normal":  { "$value": 1.55 },
+    "relaxed": { "$value": 1.7 }
+  },
+  "letterSpacing": {
+    "$type": "dimension",
+    "tight":   { "$value": "-0.02em" },
+    "normal":  { "$value": "0em" },
+    "wide":    { "$value": "0.04em" },
+    "eyebrow": { "$value": "0.16em" }
+  },
+  "space": {
+    "$type": "dimension",
+    "0":  { "$value": "0rem" },
+    "1":  { "$value": "0.25rem" },
+    "2":  { "$value": "0.5rem" },
+    "3":  { "$value": "0.75rem" },
+    "4":  { "$value": "1rem" },
+    "5":  { "$value": "1.25rem" },
+    "6":  { "$value": "1.5rem" },
+    "8":  { "$value": "2rem" },
+    "10": { "$value": "2.5rem" },
+    "12": { "$value": "3rem" },
+    "16": { "$value": "4rem" },
+    "20": { "$value": "5rem" },
+    "24": { "$value": "6rem" }
+  },
+  "radius": {
+    "$type": "dimension",
+    "xs":   { "$value": "4px" },
+    "sm":   { "$value": "8px" },
+    "md":   { "$value": "12px" },
+    "lg":   { "$value": "18px" },
+    "xl":   { "$value": "26px" },
+    "2xl":  { "$value": "36px" },
+    "pill": { "$value": "999px" }
+  },
+  "shadow": {
+    "$type": "shadow",
+    "xs": { "$value": { "offsetX": "0", "offsetY": "1px",  "blur": "2px",  "spread": "0",     "color": "rgba(44,35,27,0.06)" } },
+    "sm": { "$value": { "offsetX": "0", "offsetY": "2px",  "blur": "6px",  "spread": "0",     "color": "rgba(44,35,27,0.08)" } },
+    "md": { "$value": { "offsetX": "0", "offsetY": "10px", "blur": "24px", "spread": "-12px", "color": "rgba(44,35,27,0.20)" } },
+    "lg": { "$value": { "offsetX": "0", "offsetY": "24px", "blur": "48px", "spread": "-20px", "color": "rgba(44,35,27,0.28)" } },
+    "xl": { "$value": { "offsetX": "0", "offsetY": "40px", "blur": "80px", "spread": "-32px", "color": "rgba(44,35,27,0.34)" } }
+  },
+  "duration": {
+    "$type": "duration",
+    "fast":   { "$value": "120ms" },
+    "base":   { "$value": "220ms" },
+    "slow":   { "$value": "380ms" },
+    "slower": { "$value": "640ms" }
+  },
+  "easing": {
+    "$type": "cubicBezier",
+    "out":    { "$value": [0.16, 1, 0.30, 1] },
+    "inOut":  { "$value": [0.65, 0, 0.35, 1] },
+    "soft":   { "$value": [0.33, 1, 0.68, 1] }
+  }
+}
