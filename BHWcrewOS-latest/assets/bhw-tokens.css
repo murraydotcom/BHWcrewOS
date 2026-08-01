@@ -61,6 +61,25 @@
   /* ---- Type families ---- */
   --sans:'Montserrat',system-ui,-apple-system,Segoe UI,sans-serif;
   --serif:'Playfair Display',Georgia,serif;
+
+  /* ---- Foundation / dark surfaces ----
+     Dark, luminous palette drawn from The Foundation (the nonprofit)
+     mark. For HQ and any future dark-themed resource site. */
+  --fnd-navy:#0e2233;
+  --fnd-navy-deep:#091722;
+  --fnd-navy-soft:#14324c;
+  --fnd-panel:rgba(255,255,255,.045);
+  --fnd-panel-hi:rgba(255,255,255,.075);
+  --fnd-panel-line:rgba(255,255,255,.10);
+  --fnd-ink:#e9f0f2;
+  --fnd-ink-soft:#9db4c2;
+  --fnd-gold:#e0b75e;
+  --fnd-gold-deep:#c8933a;
+  --fnd-teal:#5fb3ac;
+  --fnd-peri:#8aa9d6;
+  --fnd-green:#8fce8f;
+  --fnd-cream:#f4eede;
+  --fnd-glow:0 0 60px -10px rgba(224,183,94,.45);
 }
 
 /* ============================================================

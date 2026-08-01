@@ -4,143 +4,299 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0e2233">
 <title>BHW HQ — Staff Resource Hub</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500&family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<!-- The one shared BHW design system. Change a colour there, it changes here. -->
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,500&family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- One shared BHW design system (palette + Foundation dark tokens) -->
 <link rel="stylesheet" href="/assets/bhw-tokens.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+html{scroll-behavior:smooth}
 body{
-  font-family:var(--sans);color:var(--ink);font-size:15px;line-height:1.6;
-  background:var(--page-wash),var(--bg);
-  min-height:100vh;
+  font-family:var(--sans);color:var(--fnd-ink);font-size:15px;line-height:1.6;
+  background:var(--fnd-navy-deep);
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;
 }
-:focus-visible{outline:3px solid var(--sand);outline-offset:2px;border-radius:8px}
 a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--fnd-gold);outline-offset:3px;border-radius:8px}
 
-/* ---- Header ---- */
-header.top{background:var(--deep-grad);color:#eef3f4}
-.top-inner{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:16px;padding:18px 22px}
-.top-inner img{height:40px;width:auto;flex:none}
-.wordmark{font-weight:300;font-size:19px;letter-spacing:.03em;line-height:1.15}
-.wordmark b{font-weight:800}
-.wordmark .hq{color:var(--sand);font-weight:800}
-.wordmark small{display:block;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#a9c2cc;font-weight:600;margin-top:2px}
-.top-right{margin-left:auto;display:flex;gap:9px;align-items:center}
-.gold-rule{height:2px;background:linear-gradient(90deg,#c68e63,#8f5c3d 190px,rgba(220,200,177,.5) 190px,rgba(220,200,177,0) 100%)}
+/* ============ ambient background ============ */
+.bg-wash{position:fixed;inset:0;z-index:-2;background:
+  radial-gradient(1100px 620px at 78% -8%, rgba(95,179,172,.18), transparent 60%),
+  radial-gradient(1000px 700px at 12% 108%, rgba(224,183,94,.12), transparent 55%),
+  radial-gradient(1400px 900px at 50% 40%, rgba(20,50,76,.55), transparent 70%),
+  linear-gradient(180deg,#0b1c2b,#091722 60%,#081521)}
+.bg-grid{position:fixed;inset:0;z-index:-1;opacity:.5;
+  background-image:radial-gradient(rgba(255,255,255,.045) 1px, transparent 1px);
+  background-size:34px 34px;
+  mask-image:radial-gradient(1200px 700px at 50% 12%, #000 0%, transparent 78%)}
 
-/* ---- Hero / search ---- */
-.hero{max-width:1180px;margin:0 auto;padding:34px 22px 8px}
-.hero .eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--clay-deep)}
-.hero h1{font-family:var(--serif);font-weight:500;font-size:34px;letter-spacing:.01em;margin:8px 0 6px;color:var(--deep)}
-.hero p{color:var(--ink-soft);font-size:14.5px;max-width:640px}
-.searchwrap{position:relative;max-width:560px;margin:20px 0 6px}
-.search{width:100%;font-size:15px;padding:15px 16px 15px 44px;border:1.5px solid var(--line);border-radius:14px;background:var(--card);font-family:inherit;box-shadow:var(--shadow)}
-.search:focus{border-color:var(--blue);outline:none}
-.searchwrap svg{position:absolute;left:15px;top:50%;transform:translateY(-50%);width:19px;height:19px;stroke:var(--ink-soft);fill:none;stroke-width:2}
-.hint{font-size:12.5px;color:var(--ink-soft);margin-top:8px}
+/* ============ top bar ============ */
+header.top{position:sticky;top:0;z-index:40;backdrop-filter:blur(12px);
+  background:linear-gradient(180deg,rgba(9,23,34,.86),rgba(9,23,34,.55));
+  border-bottom:1px solid var(--fnd-panel-line)}
+.top-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;gap:14px;padding:13px 22px}
+.brand{display:flex;align-items:center;gap:11px}
+.brand .glyph{width:30px;height:30px;flex:none}
+.brand .wm{font-weight:300;font-size:18px;letter-spacing:.02em;line-height:1}
+.brand .wm b{font-weight:800}
+.brand .wm .accent{background:linear-gradient(92deg,var(--fnd-gold),var(--fnd-teal));-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:800}
+.top-right{margin-left:auto;display:flex;gap:10px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:9px 18px;
+  font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;transition:.18s ease;cursor:pointer;border:1px solid transparent}
+.btn-primary{background:linear-gradient(100deg,var(--fnd-gold),var(--fnd-gold-deep));color:#20140a;box-shadow:0 10px 26px -12px rgba(224,183,94,.7)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 14px 30px -12px rgba(224,183,94,.8)}
+.btn-ghost{border-color:var(--fnd-panel-line);color:var(--fnd-ink);background:var(--fnd-panel)}
+.btn-ghost:hover{background:var(--fnd-panel-hi);border-color:rgba(224,183,94,.5)}
 
-/* ---- Content ---- */
-main{max-width:1180px;margin:0 auto;padding:10px 22px 90px}
-.group{margin-top:34px}
-.group-head{display:flex;align-items:baseline;gap:12px;margin:0 0 4px;padding-top:14px;border-top:2px solid var(--sand)}
-.group-head h2{font-family:var(--serif);font-weight:500;font-size:23px;color:var(--deep)}
-.group-head .count{font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--ink-soft);background:var(--card);border:1px solid var(--line);border-radius:99px;padding:2px 10px}
-.group-lede{font-size:13px;color:var(--ink-soft);margin-bottom:16px}
+/* ============ hero ============ */
+.hero{position:relative;max-width:1200px;margin:0 auto;padding:64px 22px 26px;
+  display:grid;grid-template-columns:1.15fr .85fr;gap:28px;align-items:center}
+.hero-copy .eyebrow{display:inline-flex;align-items:center;gap:9px;font-size:10.5px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--fnd-gold);
+  border:1px solid rgba(224,183,94,.32);background:rgba(224,183,94,.06);padding:7px 13px;border-radius:999px}
+.hero-copy h1{font-family:var(--serif);font-weight:500;font-size:clamp(38px,5.6vw,64px);line-height:1.02;letter-spacing:.005em;margin:20px 0 0}
+.hero-copy h1 .grad{background:linear-gradient(96deg,#f4eede 0%,var(--fnd-gold) 48%,var(--fnd-teal) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero-copy p.sub{color:var(--fnd-ink-soft);font-size:16px;max-width:520px;margin:18px 0 0}
+.searchwrap{position:relative;max-width:520px;margin:26px 0 0}
+.search{width:100%;font-size:15px;padding:16px 16px 16px 46px;border:1px solid var(--fnd-panel-line);border-radius:14px;
+  background:rgba(9,23,34,.6);color:var(--fnd-ink);font-family:inherit;backdrop-filter:blur(8px);transition:.18s}
+.search::placeholder{color:#6f8a9a}
+.search:focus{outline:none;border-color:rgba(224,183,94,.6);box-shadow:0 0 0 4px rgba(224,183,94,.1)}
+.searchwrap svg{position:absolute;left:16px;top:50%;transform:translateY(-50%);width:19px;height:19px;stroke:#7d97a6;fill:none;stroke-width:2}
+.hero-copy .hint{font-size:12.5px;color:#6f8a9a;margin-top:10px}
+.stat-row{display:flex;gap:26px;margin-top:26px;flex-wrap:wrap}
+.stat b{font-family:var(--serif);font-size:26px;font-weight:600;color:var(--fnd-cream);display:block;line-height:1}
+.stat span{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--fnd-ink-soft);font-weight:600}
 
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:15px}
-.tile{
-  display:flex;flex-direction:column;background:var(--card);
-  border:1px solid rgba(220,200,177,.55);border-left:4px solid var(--accent,var(--blue));
-  border-radius:var(--radius);box-shadow:var(--shadow);
-  padding:18px 20px 16px;position:relative;
-  transition:transform .16s ease,box-shadow .16s ease;
-}
-.tile:hover{transform:translateY(-3px);box-shadow:0 18px 40px -18px rgba(47,69,81,.32),0 3px 10px rgba(47,69,81,.06)}
-.tile .top-row{display:flex;align-items:center;gap:10px;margin-bottom:9px}
-.tile .ico{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;background:color-mix(in srgb,var(--accent) 16%,#fff);flex:none}
-.tile h3{font-size:15.5px;font-weight:700;letter-spacing:.005em;line-height:1.25}
-.tile p{font-size:13px;color:var(--ink-soft);flex:1}
-.tile .foot{display:flex;align-items:center;gap:8px;margin-top:13px}
-.tag{font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);background:color-mix(in srgb,var(--accent) 13%,#fff);border-radius:99px;padding:3px 9px}
-.ext{margin-left:auto;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);display:inline-flex;align-items:center;gap:4px}
+/* ============ animated atom ============ */
+.atom-stage{position:relative;display:flex;align-items:center;justify-content:center;min-height:380px}
+.atom-stage::before{content:"";position:absolute;width:70%;aspect-ratio:1;border-radius:50%;
+  background:radial-gradient(circle,rgba(95,179,172,.28),rgba(224,183,94,.12) 45%,transparent 70%);filter:blur(20px)}
+.atom{width:clamp(280px,32vw,440px);height:auto;position:relative}
+.atom .ring{fill:none;stroke-width:1.4;opacity:.6}
+.atom .spin{transform-box:view-box;transform-origin:110px 110px}
+.sp1{animation:spin 18s linear infinite}
+.sp2{animation:spin 24s linear infinite reverse}
+.sp3{animation:spin 21s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.el{filter:drop-shadow(0 0 5px currentColor)}
+.core{animation:pulse 4.4s ease-in-out infinite;transform-box:view-box;transform-origin:110px 110px}
+@keyframes pulse{0%,100%{opacity:.94}50%{opacity:1;transform:scale(1.05)}}
+
+/* ============ tagline band (skyline) ============ */
+.band{max-width:1200px;margin:14px auto 0;padding:0 22px}
+.band-inner{border:1px solid var(--fnd-panel-line);border-radius:20px;overflow:hidden;position:relative;
+  background:linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
+.band-inner img{width:100%;display:block;opacity:.9;filter:brightness(1.15)}
+.band-inner::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(9,23,34,.15),rgba(9,23,34,.55))}
+
+/* ============ family strip ============ */
+.section{max-width:1200px;margin:0 auto;padding:52px 22px 0}
+.sec-label{font-size:10.5px;font-weight:700;letter-spacing:.26em;text-transform:uppercase;color:var(--fnd-gold);margin-bottom:6px}
+.sec-h{font-family:var(--serif);font-weight:500;font-size:26px;color:var(--fnd-cream)}
+.sec-lede{color:var(--fnd-ink-soft);font-size:13.5px;margin:4px 0 20px}
+.family{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
+.fam{background:#fbf8f1;border:1px solid var(--fnd-panel-line);border-radius:16px;padding:16px;height:118px;
+  display:flex;align-items:center;justify-content:center;transition:.2s ease;position:relative;overflow:hidden}
+.fam::after{content:"";position:absolute;inset:0;border-radius:16px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.04)}
+.fam:hover{transform:translateY(-3px);box-shadow:0 16px 40px -18px rgba(0,0,0,.6),var(--fnd-glow)}
+.fam.dark{background:#0c1f2e}
+.fam img{max-width:100%;max-height:82px;object-fit:contain}
+
+/* ============ resource groups ============ */
+.group{margin-top:36px}
+.group-head{display:flex;align-items:center;gap:12px;margin-bottom:3px}
+.group-head .bar{width:26px;height:3px;border-radius:3px;background:var(--accent,var(--fnd-gold))}
+.group-head h2{font-family:var(--serif);font-weight:500;font-size:23px;color:var(--fnd-cream)}
+.group-head .count{font-size:11px;font-weight:700;color:var(--fnd-ink-soft);border:1px solid var(--fnd-panel-line);border-radius:999px;padding:2px 10px}
+.group .lede{font-size:13px;color:var(--fnd-ink-soft);margin:0 0 16px 38px}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(272px,1fr));gap:16px}
+.tile{position:relative;display:flex;flex-direction:column;border-radius:18px;padding:20px;
+  background:linear-gradient(180deg,var(--fnd-panel-hi),var(--fnd-panel));
+  border:1px solid var(--fnd-panel-line);overflow:hidden;
+  transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
+.tile::before{content:"";position:absolute;left:0;top:0;height:100%;width:3px;background:var(--accent,var(--fnd-gold));opacity:.9}
+.tile::after{content:"";position:absolute;inset:0;border-radius:18px;opacity:0;transition:opacity .2s;
+  background:radial-gradient(420px 200px at 20% -10%, color-mix(in srgb,var(--accent) 22%, transparent), transparent 70%)}
+.tile:hover{transform:translateY(-4px);border-color:color-mix(in srgb,var(--accent) 55%, var(--fnd-panel-line));
+  box-shadow:0 22px 50px -24px rgba(0,0,0,.75)}
+.tile:hover::after{opacity:1}
+.tile .top-row{display:flex;align-items:center;gap:12px;margin-bottom:11px;position:relative}
+.chip{width:46px;height:46px;border-radius:12px;flex:none;display:flex;align-items:center;justify-content:center;
+  background:color-mix(in srgb,var(--accent) 18%, #0c1f2e);font-size:22px;border:1px solid var(--fnd-panel-line)}
+.chip.logo{background:#fbf8f1;padding:5px}
+.chip.logo img{max-width:100%;max-height:100%;object-fit:contain}
+.tile h3{font-size:15.5px;font-weight:700;line-height:1.22;color:var(--fnd-ink)}
+.tile p{font-size:13px;color:var(--fnd-ink-soft);flex:1;position:relative}
+.tile .foot{display:flex;align-items:center;gap:8px;margin-top:14px;position:relative}
+.tag{font-size:9.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--accent);
+  background:color-mix(in srgb,var(--accent) 14%, transparent);border:1px solid color-mix(in srgb,var(--accent) 30%, transparent);border-radius:999px;padding:3px 9px}
+.who{margin-left:auto;font-size:10.5px;color:#7d97a6;font-weight:600}
+.ext{margin-left:auto;font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7d97a6;display:inline-flex;align-items:center;gap:4px}
 .ext svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2.2}
-.who{margin-left:auto;font-size:10.5px;color:var(--ink-soft);font-weight:600}
 
-.empty{display:none;text-align:center;color:var(--ink-soft);padding:60px 20px;font-size:14.5px}
+.empty{display:none;text-align:center;color:var(--fnd-ink-soft);padding:56px 20px;font-size:14.5px}
 .empty.show{display:block}
 
-footer{max-width:1180px;margin:0 auto;padding:24px 22px 60px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-soft);display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center}
-footer .dot{width:4px;height:4px;border-radius:50%;background:var(--sand)}
+/* ============ footer ============ */
+footer{max-width:1200px;margin:64px auto 0;padding:26px 22px 64px;border-top:1px solid var(--fnd-panel-line)}
+.foot-grid{display:flex;flex-wrap:wrap;gap:22px 40px;align-items:center}
+.foot-brand{display:flex;align-items:center;gap:14px}
+.foot-brand img{height:66px;width:auto;border-radius:10px}
+.foot-brand .t{font-size:12.5px;color:var(--fnd-ink-soft);max-width:250px}
+.foot-brand .t b{color:var(--fnd-cream);font-weight:700}
+.foot-links{margin-left:auto;display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12.5px;color:var(--fnd-ink-soft)}
+.foot-links a{color:var(--fnd-teal);font-weight:600}
+.foot-meta{margin-top:18px;font-size:11.5px;color:#5f7889;letter-spacing:.02em}
 
-@media (max-width:640px){
-  .hero h1{font-size:28px}
-  .top-inner{padding:14px 18px}
-  .wordmark{font-size:17px}
+@media (max-width:860px){
+  .hero{grid-template-columns:1fr;padding-top:40px}
+  .atom-stage{order:-1;min-height:280px}
+  .foot-links{margin-left:0;width:100%}
 }
 </style>
 </head>
 <body>
+<div class="bg-wash"></div>
+<div class="bg-grid"></div>
 
 <header class="top">
   <div class="top-inner">
-    <img src="/assets/bhw-medical-logo.png" alt="BHW Medical" onerror="this.style.display='none'">
-    <div class="wordmark">BHW <b>HQ</b><small>Staff Resource Hub</small></div>
+    <div class="brand">
+      <svg class="glyph" viewBox="0 0 220 220" aria-hidden="true">
+        <circle cx="110" cy="110" r="17" fill="#7fc98a"/>
+        <ellipse cx="110" cy="110" rx="92" ry="34" fill="none" stroke="#e0b75e" stroke-width="6" transform="rotate(0 110 110)"/>
+        <ellipse cx="110" cy="110" rx="92" ry="34" fill="none" stroke="#5fb3ac" stroke-width="6" transform="rotate(60 110 110)"/>
+        <ellipse cx="110" cy="110" rx="92" ry="34" fill="none" stroke="#8aa9d6" stroke-width="6" transform="rotate(120 110 110)"/>
+      </svg>
+      <div class="wm">BHW <span class="accent">HQ</span></div>
+    </div>
     <div class="top-right">
-      <a class="bhw-btn-ghost" href="/">Sign in to crewOS →</a>
+      <a class="btn btn-ghost" href="/bhw-staff-guide.html">Staff Guide</a>
+      <a class="btn btn-primary" href="/">Sign in →</a>
     </div>
   </div>
-  <div class="gold-rule"></div>
 </header>
 
+<!-- ============ HERO ============ -->
 <section class="hero">
-  <div class="eyebrow">BHW Medical Group</div>
-  <h1>Everything, one tap away.</h1>
-  <p>Your launchpad for every BHW tool, portal, and reference. Pick a card below, or search for what you're trying to do.</p>
-  <div class="searchwrap">
-    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-    <input class="search" id="q" placeholder="Search — e.g. refill, referral, ANA, billing, patient page…" oninput="render()" autocomplete="off">
+  <div class="hero-copy">
+    <span class="eyebrow">BHW Medical Group · A program of The Foundation</span>
+    <h1>Everything,<br><span class="grad">one tap away.</span></h1>
+    <p class="sub">The launchpad for every BHW tool, portal, and clinical reference — and every program under our roof. Pick a card, or search for what you're trying to do.</p>
+    <div class="searchwrap">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input class="search" id="q" placeholder="Search — e.g. refill, referral, ANA, billing, patient page…" oninput="render()" autocomplete="off">
+    </div>
+    <div class="hint">Type what you need. Cards that don't match will hide.</div>
+    <div class="stat-row">
+      <div class="stat"><b id="n-sites">0</b><span>Resources</span></div>
+      <div class="stat"><b id="n-cats">0</b><span>Categories</span></div>
+      <div class="stat"><b>6</b><span>Programs</span></div>
+    </div>
   </div>
-  <div class="hint">Type what you need. Cards that don't match will hide.</div>
+
+  <div class="atom-stage">
+    <svg class="atom" viewBox="0 0 220 220" role="img" aria-label="The Foundation atom mark">
+      <defs>
+        <radialGradient id="core" cx="40%" cy="36%" r="68%">
+          <stop offset="0%" stop-color="#fff7de"/>
+          <stop offset="34%" stop-color="#bfe6a8"/>
+          <stop offset="68%" stop-color="#5fb3ac"/>
+          <stop offset="100%" stop-color="#2c6b8b"/>
+        </radialGradient>
+      </defs>
+      <!-- orbit 1 (gold) -->
+      <g transform="rotate(0 110 110)"><g class="spin sp1">
+        <ellipse cx="110" cy="110" rx="96" ry="35" class="ring" stroke="#e0b75e"/>
+        <circle cx="206" cy="110" r="5.5" class="el" fill="#e0b75e" color="#e0b75e"/>
+      </g></g>
+      <!-- orbit 2 (teal) -->
+      <g transform="rotate(60 110 110)"><g class="spin sp2">
+        <ellipse cx="110" cy="110" rx="96" ry="35" class="ring" stroke="#5fb3ac"/>
+        <circle cx="206" cy="110" r="5.5" class="el" fill="#5fb3ac" color="#5fb3ac"/>
+      </g></g>
+      <!-- orbit 3 (periwinkle) -->
+      <g transform="rotate(120 110 110)"><g class="spin sp3">
+        <ellipse cx="110" cy="110" rx="96" ry="35" class="ring" stroke="#8aa9d6"/>
+        <circle cx="206" cy="110" r="5.5" class="el" fill="#8aa9d6" color="#8aa9d6"/>
+      </g></g>
+      <!-- nucleus -->
+      <circle cx="110" cy="110" r="20" fill="url(#core)" class="core" style="filter:drop-shadow(0 0 16px rgba(127,201,138,.6))"/>
+      <circle cx="110" cy="110" r="20" fill="none" stroke="#e0b75e" stroke-width="1.3" opacity=".85"/>
+    </svg>
+  </div>
 </section>
 
-<main>
-  <div id="groups"></div>
-  <div class="empty" id="empty">Nothing matches that search. Try a different word — or <a href="/bhw-staff-guide.html" style="color:var(--blue-deep);font-weight:600">open the full Staff Guide</a>.</div>
-</main>
+<!-- ============ TAGLINE BAND ============ -->
+<div class="band">
+  <div class="band-inner">
+    <img src="/assets/brand/skyline.png" alt="For the City. For My Health. In Real Life. — Baltimore skyline" onerror="this.closest('.band').style.display='none'">
+  </div>
+</div>
 
+<!-- ============ THE FAMILY ============ -->
+<section class="section">
+  <div class="sec-label">One roof</div>
+  <h2 class="sec-h">The BHW family of programs</h2>
+  <p class="sec-lede">Every card below belongs to one of these. Same crew, same standard of care.</p>
+  <div class="family" id="family"></div>
+</section>
+
+<!-- ============ RESOURCES ============ -->
+<section class="section" style="padding-top:44px">
+  <div class="sec-label">Directory</div>
+  <h2 class="sec-h">Tools, portals &amp; references</h2>
+  <p class="sec-lede">Grouped by what you're doing. Search up top narrows everything at once.</p>
+  <div id="groups"></div>
+  <div class="empty" id="empty">Nothing matches that search. Try another word — or <a href="/bhw-staff-guide.html" style="color:var(--fnd-teal);font-weight:600">open the full Staff Guide</a>.</div>
+</section>
+
+<!-- ============ FOOTER ============ -->
 <footer>
-  <span>BHW Medical Group · BHWcrewOS</span>
-  <span class="dot"></span>
-  <a href="/bhw-staff-guide.html" style="color:var(--blue-deep);font-weight:600">Staff Guide — Where Everything Is</a>
-  <span class="dot"></span>
-  <span>Main line (443) 762-5343</span>
-  <span class="dot"></span>
-  <span>info@bhwmedical.org</span>
+  <div class="foot-grid">
+    <div class="foot-brand">
+      <img src="/assets/brand/foundation-dark.png" alt="The Foundation — Baltimore, MD" onerror="this.style.display='none'">
+      <div class="t"><b>The Foundation</b> · Baltimore, MD · Est. 2026<br>BHW Medical Group is a program of The Foundation.</div>
+    </div>
+    <div class="foot-links">
+      <a href="/bhw-staff-guide.html">Staff Guide</a>
+      <a href="/">Sign in to crewOS</a>
+      <span>Main line (443) 762-5343</span>
+      <span>info@bhwmedical.org</span>
+    </div>
+  </div>
+  <div class="foot-meta">For the City. For My Health. In Real Life.</div>
 </footer>
 
 <script>
 /* ============================================================
-   RESOURCE DIRECTORY — this is the ONLY thing you edit to add a
-   new site. Copy a row, change the fields, done.
+   BRAND FAMILY — the logo strip. Add/reorder freely.
+   ============================================================ */
+const FAMILY = [
+  {name:'The Foundation',            logo:'/assets/brand/foundation-dark.png', dark:true},
+  {name:'BHW Medical',               logo:'/assets/brand/bhw-medical.png'},
+  {name:'Baltimore Healthcare & Wellness', logo:'/assets/brand/bhw-wellness.png'},
+  {name:'CharmEd Minds',             logo:'/assets/brand/charmed-minds.png',   dark:true},
+  {name:'Flow — Vascular Stabilization', logo:'/assets/brand/flow.png'},
+  {name:'Mind & Mood Recovery',      logo:'/assets/brand/mind-mood.png'},
+];
 
-   href     : link (relative "/page.html" for same-site, or a full
-              "https://…" for another Netlify site)
-   external : true → opens in a new tab + shows an "external" mark
-   icon     : any emoji
-   cat      : must match a category key in CATEGORIES below
-   tag      : short label shown on the card
-   who      : who uses it most (optional)
-   keywords : extra words the search should match (optional)
+/* ============================================================
+   RESOURCE DIRECTORY — the ONLY thing you edit to add a site.
+   Copy a row, change the fields, done.
+     href / external / icon / cat / tag / who / keywords
+     logo (optional): path to a brand logo for the card chip
    ============================================================ */
 const CATEGORIES = [
-  {key:'ops',      name:'Operations',            accent:'var(--pc-admin)',   lede:'Run the day — sign in, the front desk, the panel, the crew.'},
-  {key:'clinical', name:'Clinical Tools & References', accent:'var(--blue)',  lede:'Point-of-care analysis and the references providers reach for.'},
-  {key:'billing',  name:'Revenue & Billing',     accent:'var(--clay)',       lede:'Documentation, coding, and the revenue-cycle platform.'},
-  {key:'patient',  name:'Patient Page Previews',  accent:'var(--pc-charmed)', lede:'What patients see for each program — for reference and demos.'},
+  {key:'ops',      name:'Operations',            accent:'var(--fnd-peri)', lede:'Run the day — sign in, the front desk, the panel, the crew.'},
+  {key:'clinical', name:'Clinical Tools & References', accent:'var(--fnd-teal)', lede:'Point-of-care analysis and the references providers reach for.'},
+  {key:'billing',  name:'Revenue & Billing',     accent:'var(--fnd-gold)', lede:'Documentation, coding, and the revenue-cycle platform.'},
+  {key:'patient',  name:'Patient Page Previews',  accent:'var(--fnd-green)', lede:'What patients see for each program — for reference and demos.'},
 ];
 
 const SITES = [
@@ -184,25 +340,33 @@ const SITES = [
    desc:'Revenue-cycle platform — claims, eligibility, ERA/payments, and the billing tracker.',
    who:'Billing', keywords:'billing rcm claims era payment eligibility stedi revenue cycle stripe tracker'},
 
-  // ---- Patient page previews ----
-  {cat:'patient', icon:'✨', title:'CharmEd Minds', href:'/bhw-charmed-patient-mockup.html', tag:'Preview',
+  // ---- Patient page previews (carry the program logos) ----
+  {cat:'patient', logo:'/assets/brand/charmed-minds.png', icon:'✨', title:'CharmEd Minds', href:'/bhw-charmed-patient-mockup.html', tag:'Preview',
    desc:'The patient-facing Strategy Hub for the CharmEd Minds program.',
-   keywords:'charmed minds patient page strategy hub preview mockup'},
-  {cat:'patient', icon:'🌊', title:'Flow', href:'/bhw-flow-patient-mockup.html', tag:'Preview',
-   desc:'The patient "Your Plan" page for the Flow program.',
-   keywords:'flow patient page plan preview mockup'},
-  {cat:'patient', icon:'🌤️', title:'Mind & Mood Recovery', href:'/bhw-mindmood-patient-mockup.html', tag:'Preview',
-   desc:'The patient pathway page for the Mind & Mood Recovery program.',
+   keywords:'charmed minds patient page strategy hub preview mockup behavioral'},
+  {cat:'patient', logo:'/assets/brand/flow.png', icon:'🌊', title:'Flow', href:'/bhw-flow-patient-mockup.html', tag:'Preview',
+   desc:'The patient "Your Plan" page for Flow — the Vascular Stabilization Center.',
+   keywords:'flow patient page plan preview mockup vascular stabilization'},
+  {cat:'patient', logo:'/assets/brand/mind-mood.png', icon:'🌤️', title:'Mind & Mood Recovery', href:'/bhw-mindmood-patient-mockup.html', tag:'Preview',
+   desc:'The patient pathway page for Mind & Mood Recovery. Heal. Restore. Rise.',
    keywords:'mind mood recovery patient page pathway preview mockup behavioral'},
   {cat:'patient', icon:'👤', title:'Patient Portal', href:'/bhw-patient-portal-mockup.html', tag:'Prototype',
    desc:'Design prototype of the unified BHW patient portal.',
    keywords:'patient portal prototype design preview mockup'},
 ];
 
-/* ---- Render ---- */
+/* ---- family strip ---- */
+document.getElementById('family').innerHTML = FAMILY.map(f =>
+  `<div class="fam${f.dark?' dark':''}" title="${f.name}"><img src="${f.logo}" alt="${f.name}" loading="lazy" onerror="this.parentElement.innerHTML='<span style=&quot;color:#7d97a6;font-size:12px;font-weight:600&quot;>${f.name}</span>'"></div>`
+).join('');
+
+/* ---- resources ---- */
 const groupsEl = document.getElementById('groups');
 const emptyEl  = document.getElementById('empty');
-const extSvg   = '<svg viewBox="0 0 24 24"><path d="M14 4h6v6"></path><path d="M20 4l-9 9"></path><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path></svg>';
+const extSvg = '<svg viewBox="0 0 24 24"><path d="M14 4h6v6"></path><path d="M20 4l-9 9"></path><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path></svg>';
+
+document.getElementById('n-sites').textContent = SITES.length;
+document.getElementById('n-cats').textContent = CATEGORIES.length;
 
 function matches(s, q){
   if(!q) return true;
@@ -224,10 +388,10 @@ function render(){
     sec.className = 'group';
     sec.style.setProperty('--accent', cat.accent);
     sec.innerHTML =
-      '<div class="group-head"><h2>'+cat.name+'</h2>'+
-      '<span class="count">'+items.length+'</span></div>'+
-      '<div class="group-lede">'+cat.lede+'</div>'+
-      '<div class="grid"></div>';
+      `<div class="group-head"><span class="bar"></span><h2>${cat.name}</h2>`+
+      `<span class="count">${items.length}</span></div>`+
+      `<div class="lede">${cat.lede}</div>`+
+      `<div class="grid"></div>`;
     const grid = sec.querySelector('.grid');
 
     items.forEach(s => {
@@ -235,18 +399,17 @@ function render(){
       a.className = 'tile';
       a.href = s.href;
       a.style.setProperty('--accent', cat.accent);
-      if(s.external){ a.target = '_blank'; a.rel = 'noopener'; }
+      if(s.external){ a.target='_blank'; a.rel='noopener'; }
+      const chip = s.logo
+        ? `<div class="chip logo"><img src="${s.logo}" alt="" loading="lazy" onerror="this.parentElement.textContent='${s.icon||'🔗'}';this.parentElement.className='chip'"></div>`
+        : `<div class="chip">${s.icon||'🔗'}</div>`;
       a.innerHTML =
-        '<div class="top-row">'+
-          '<div class="ico">'+s.icon+'</div>'+
-          '<h3>'+s.title+'</h3>'+
-        '</div>'+
-        '<p>'+s.desc+'</p>'+
-        '<div class="foot">'+
-          '<span class="tag">'+(s.tag||'')+'</span>'+
-          (s.external ? '<span class="ext">'+extSvg+'External</span>'
-                      : (s.who ? '<span class="who">'+s.who+'</span>' : ''))+
-        '</div>';
+        `<div class="top-row">${chip}<h3>${s.title}</h3></div>`+
+        `<p>${s.desc}</p>`+
+        `<div class="foot"><span class="tag">${s.tag||''}</span>`+
+          (s.external ? `<span class="ext">${extSvg}External</span>`
+                      : (s.who ? `<span class="who">${s.who}</span>` : ''))+
+        `</div>`;
       grid.appendChild(a);
     });
     groupsEl.appendChild(sec);
@@ -254,7 +417,6 @@ function render(){
 
   emptyEl.classList.toggle('show', shown === 0);
 }
-
 render();
 </script>
 </body>
