@@ -8,7 +8,7 @@
 <title>BHW HQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,500&family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/bhw-tokens.css">
 <script>
 /* set theme before paint — no flash. "Black Opal" (dark) / "Light Opal" (light) */
@@ -104,7 +104,8 @@ header.top{position:sticky;top:0;z-index:40;backdrop-filter:blur(12px);backgroun
 /* ---- hero ---- */
 .hero{position:relative;max-width:1120px;margin:0 auto;padding:60px 22px 12px;display:grid;grid-template-columns:1.1fr .9fr;gap:26px;align-items:center}
 .eyebrow{display:inline-flex;align-items:center;gap:9px;font-size:10.5px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);border:1px solid color-mix(in srgb,var(--gold) 34%,transparent);background:color-mix(in srgb,var(--gold) 8%,transparent);padding:7px 13px;border-radius:999px}
-.hero h1{font-family:var(--serif);font-weight:500;font-size:clamp(38px,5.4vw,62px);line-height:1.02;margin:20px 0 0;color:var(--heading)}
+.hero h1{font-family:var(--sans);font-weight:300;letter-spacing:-.015em;font-size:clamp(38px,5.4vw,62px);line-height:1.04;margin:20px 0 0;color:var(--heading)}
+.hero h1 .grad{font-weight:700}
 .hero h1 .grad{background:linear-gradient(96deg,var(--heading) 0%,var(--gold) 48%,var(--teal) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
 .hero p.sub{color:var(--ink-soft);font-size:16px;max-width:480px;margin:18px 0 0}
 
@@ -133,7 +134,7 @@ header.top{position:sticky;top:0;z-index:40;backdrop-filter:blur(12px);backgroun
 .dcard .ico{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;position:relative;
   background:color-mix(in srgb,var(--accent) 18%,transparent);border:1px solid var(--panel-line);color:var(--accent)}
 .dcard .ico svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.9}
-.dcard h2{font-family:var(--serif);font-weight:600;font-size:23px;margin:16px 0 0;color:var(--heading);position:relative}
+.dcard h2{font-family:var(--sans);font-weight:700;letter-spacing:-.01em;font-size:22px;margin:16px 0 0;color:var(--heading);position:relative}
 .dcard .kick{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-top:14px;position:relative}
 .dcard p{font-size:13.5px;color:var(--ink-soft);margin-top:7px;flex:1;position:relative}
 .dcard .go{display:inline-flex;align-items:center;gap:7px;margin-top:16px;font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--accent);position:relative}
@@ -152,7 +153,7 @@ header.top{position:sticky;top:0;z-index:40;backdrop-filter:blur(12px);backgroun
 /* ---- family strip ---- */
 .section{max-width:1120px;margin:0 auto;padding:52px 22px 0}
 .sec-label{font-size:10.5px;font-weight:700;letter-spacing:.26em;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
-.sec-h{font-family:var(--serif);font-weight:500;font-size:25px;color:var(--heading)}
+.sec-h{font-family:var(--sans);font-weight:700;letter-spacing:-.01em;font-size:23px;color:var(--heading)}
 .sec-lede{color:var(--ink-soft);font-size:13.5px;margin:4px 0 20px}
 .family{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
 .fam{background:var(--chip);border:1px solid var(--panel-line);border-radius:16px;padding:16px;height:116px;display:flex;align-items:center;justify-content:center;transition:.2s ease;overflow:hidden}
