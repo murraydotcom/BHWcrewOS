@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>BHW HQ — Staff Resource Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500&family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- The one shared BHW design system. Change a colour there, it changes here. -->
+<link rel="stylesheet" href="/assets/bhw-tokens.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+body{
+  font-family:var(--sans);color:var(--ink);font-size:15px;line-height:1.6;
+  background:var(--page-wash),var(--bg);
+  min-height:100vh;
+}
+:focus-visible{outline:3px solid var(--sand);outline-offset:2px;border-radius:8px}
+a{color:inherit;text-decoration:none}
+
+/* ---- Header ---- */
+header.top{background:var(--deep-grad);color:#eef3f4}
+.top-inner{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:16px;padding:18px 22px}
+.top-inner img{height:40px;width:auto;flex:none}
+.wordmark{font-weight:300;font-size:19px;letter-spacing:.03em;line-height:1.15}
+.wordmark b{font-weight:800}
+.wordmark .hq{color:var(--sand);font-weight:800}
+.wordmark small{display:block;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#a9c2cc;font-weight:600;margin-top:2px}
+.top-right{margin-left:auto;display:flex;gap:9px;align-items:center}
+.gold-rule{height:2px;background:linear-gradient(90deg,#c68e63,#8f5c3d 190px,rgba(220,200,177,.5) 190px,rgba(220,200,177,0) 100%)}
+
+/* ---- Hero / search ---- */
+.hero{max-width:1180px;margin:0 auto;padding:34px 22px 8px}
+.hero .eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--clay-deep)}
+.hero h1{font-family:var(--serif);font-weight:500;font-size:34px;letter-spacing:.01em;margin:8px 0 6px;color:var(--deep)}
+.hero p{color:var(--ink-soft);font-size:14.5px;max-width:640px}
+.searchwrap{position:relative;max-width:560px;margin:20px 0 6px}
+.search{width:100%;font-size:15px;padding:15px 16px 15px 44px;border:1.5px solid var(--line);border-radius:14px;background:var(--card);font-family:inherit;box-shadow:var(--shadow)}
+.search:focus{border-color:var(--blue);outline:none}
+.searchwrap svg{position:absolute;left:15px;top:50%;transform:translateY(-50%);width:19px;height:19px;stroke:var(--ink-soft);fill:none;stroke-width:2}
+.hint{font-size:12.5px;color:var(--ink-soft);margin-top:8px}
+
+/* ---- Content ---- */
+main{max-width:1180px;margin:0 auto;padding:10px 22px 90px}
+.group{margin-top:34px}
+.group-head{display:flex;align-items:baseline;gap:12px;margin:0 0 4px;padding-top:14px;border-top:2px solid var(--sand)}
+.group-head h2{font-family:var(--serif);font-weight:500;font-size:23px;color:var(--deep)}
+.group-head .count{font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--ink-soft);background:var(--card);border:1px solid var(--line);border-radius:99px;padding:2px 10px}
+.group-lede{font-size:13px;color:var(--ink-soft);margin-bottom:16px}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:15px}
+.tile{
+  display:flex;flex-direction:column;background:var(--card);
+  border:1px solid rgba(220,200,177,.55);border-left:4px solid var(--accent,var(--blue));
+  border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:18px 20px 16px;position:relative;
+  transition:transform .16s ease,box-shadow .16s ease;
+}
+.tile:hover{transform:translateY(-3px);box-shadow:0 18px 40px -18px rgba(47,69,81,.32),0 3px 10px rgba(47,69,81,.06)}
+.tile .top-row{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.tile .ico{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;background:color-mix(in srgb,var(--accent) 16%,#fff);flex:none}
+.tile h3{font-size:15.5px;font-weight:700;letter-spacing:.005em;line-height:1.25}
+.tile p{font-size:13px;color:var(--ink-soft);flex:1}
+.tile .foot{display:flex;align-items:center;gap:8px;margin-top:13px}
+.tag{font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);background:color-mix(in srgb,var(--accent) 13%,#fff);border-radius:99px;padding:3px 9px}
+.ext{margin-left:auto;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);display:inline-flex;align-items:center;gap:4px}
+.ext svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2.2}
+.who{margin-left:auto;font-size:10.5px;color:var(--ink-soft);font-weight:600}
+
+.empty{display:none;text-align:center;color:var(--ink-soft);padding:60px 20px;font-size:14.5px}
+.empty.show{display:block}
+
+footer{max-width:1180px;margin:0 auto;padding:24px 22px 60px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-soft);display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center}
+footer .dot{width:4px;height:4px;border-radius:50%;background:var(--sand)}
+
+@media (max-width:640px){
+  .hero h1{font-size:28px}
+  .top-inner{padding:14px 18px}
+  .wordmark{font-size:17px}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-inner">
+    <img src="/assets/bhw-medical-logo.png" alt="BHW Medical" onerror="this.style.display='none'">
+    <div class="wordmark">BHW <b>HQ</b><small>Staff Resource Hub</small></div>
+    <div class="top-right">
+      <a class="bhw-btn-ghost" href="/">Sign in to crewOS →</a>
+    </div>
+  </div>
+  <div class="gold-rule"></div>
+</header>
+
+<section class="hero">
+  <div class="eyebrow">BHW Medical Group</div>
+  <h1>Everything, one tap away.</h1>
+  <p>Your launchpad for every BHW tool, portal, and reference. Pick a card below, or search for what you're trying to do.</p>
+  <div class="searchwrap">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+    <input class="search" id="q" placeholder="Search — e.g. refill, referral, ANA, billing, patient page…" oninput="render()" autocomplete="off">
+  </div>
+  <div class="hint">Type what you need. Cards that don't match will hide.</div>
+</section>
+
+<main>
+  <div id="groups"></div>
+  <div class="empty" id="empty">Nothing matches that search. Try a different word — or <a href="/bhw-staff-guide.html" style="color:var(--blue-deep);font-weight:600">open the full Staff Guide</a>.</div>
+</main>
+
+<footer>
+  <span>BHW Medical Group · BHWcrewOS</span>
+  <span class="dot"></span>
+  <a href="/bhw-staff-guide.html" style="color:var(--blue-deep);font-weight:600">Staff Guide — Where Everything Is</a>
+  <span class="dot"></span>
+  <span>Main line (443) 762-5343</span>
+  <span class="dot"></span>
+  <span>info@bhwmedical.org</span>
+</footer>
+
+<script>
+/* ============================================================
+   RESOURCE DIRECTORY — this is the ONLY thing you edit to add a
+   new site. Copy a row, change the fields, done.
+
+   href     : link (relative "/page.html" for same-site, or a full
+              "https://…" for another Netlify site)
+   external : true → opens in a new tab + shows an "external" mark
+   icon     : any emoji
+   cat      : must match a category key in CATEGORIES below
+   tag      : short label shown on the card
+   who      : who uses it most (optional)
+   keywords : extra words the search should match (optional)
+   ============================================================ */
+const CATEGORIES = [
+  {key:'ops',      name:'Operations',            accent:'var(--pc-admin)',   lede:'Run the day — sign in, the front desk, the panel, the crew.'},
+  {key:'clinical', name:'Clinical Tools & References', accent:'var(--blue)',  lede:'Point-of-care analysis and the references providers reach for.'},
+  {key:'billing',  name:'Revenue & Billing',     accent:'var(--clay)',       lede:'Documentation, coding, and the revenue-cycle platform.'},
+  {key:'patient',  name:'Patient Page Previews',  accent:'var(--pc-charmed)', lede:'What patients see for each program — for reference and demos.'},
+];
+
+const SITES = [
+  // ---- Operations ----
+  {cat:'ops', icon:'🔐', title:'BHWcrewOS', href:'/', tag:'Sign in',
+   desc:'The operations hub. Sign in with your name + PIN and land on your own page.',
+   who:'Everyone', keywords:'login home dashboard rail division admin master my space'},
+  {cat:'ops', icon:'📞', title:'Front Desk', href:'/bhw-front-desk.html', tag:'Live inbox',
+   desc:'Calls, texts, and faxes as they arrive. Patient lookup, referral finder, referral generator.',
+   who:'Front desk', keywords:'phone voicemail fax triage queue sms referral lookup canned response'},
+  {cat:'ops', icon:'📊', title:'Panel & Discharges', href:'/bhw-panel-performance.html', tag:'Performance',
+   desc:'Utilization, HEDIS scorecard, and hospital discharge tracking.',
+   who:'Owner · Care coord', keywords:'panel utilization hedis quality discharge hospital metrics scorecard'},
+  {cat:'ops', icon:'🩺', title:'CrewCare Portal', href:'/bhw-crewcare-portal.html', tag:'Provider',
+   desc:'Provider side — clinical inbox, care-plan builder, post results, patient roster.',
+   who:'Providers', keywords:'care plan roster results inbox provider clinical'},
+  {cat:'ops', icon:'🧭', title:'Staff Guide', href:'/bhw-staff-guide.html', tag:'How-to',
+   desc:'Where everything is and how the day flows. Searchable, printable, plain-language.',
+   who:'Everyone', keywords:'guide help how to where everything sla colors daily rhythm directory'},
+
+  // ---- Clinical ----
+  {cat:'clinical', icon:'🧬', title:'Positive ANA?', href:'/bhw-positive-ana.html', tag:'Analyzer',
+   desc:'Interpret an ANA result — immune patterns, 100 conditions, management protocols.',
+   who:'Providers', keywords:'ana antinuclear autoimmune immune lupus pattern titer rheum'},
+  {cat:'clinical', icon:'⚗️', title:'Hormone Analysis', href:'/bhw-hormone-analysis.html', tag:'Analyzer',
+   desc:'Lab-based hormone interpretation with ratios and pattern recognition.',
+   who:'Providers', keywords:'hormone lab testosterone estrogen thyroid ratio endocrine analysis'},
+  {cat:'clinical', icon:'📖', title:'Hormones Explained', href:'/bhw-hormones-explained.html.html', tag:'Reference',
+   desc:'Plain-language explainer on hormone results for the care team and patients.',
+   keywords:'hormone explained education reference endocrine'},
+  {cat:'clinical', icon:'📑', title:'Hormone Reference', href:'/bhw-hormone-reference.html.html', tag:'Reference',
+   desc:'Quick reference tables for hormone panels and expected ranges.',
+   keywords:'hormone reference ranges table lab values'},
+  {cat:'clinical', icon:'🗂️', title:'Care Management Toolkit', href:'/BHW_Care_Management_Toolkit.html', tag:'Compliance',
+   desc:'Care-management documentation templates, audit tool, and preventive codes with ICD-10.',
+   who:'Billing · Providers', keywords:'care management ccm documentation audit preventive icd10 compliance codes billing toolkit'},
+
+  // ---- Revenue & Billing ----
+  // NOTE: the RCM platform is a SEPARATE Netlify site. Put its real URL below.
+  {cat:'billing', icon:'💳', title:'Billing Tracker (RCM)', href:'https://bhw-rcm-platform.netlify.app/', external:true, tag:'RCM platform',
+   desc:'Revenue-cycle platform — claims, eligibility, ERA/payments, and the billing tracker.',
+   who:'Billing', keywords:'billing rcm claims era payment eligibility stedi revenue cycle stripe tracker'},
+
+  // ---- Patient page previews ----
+  {cat:'patient', icon:'✨', title:'CharmEd Minds', href:'/bhw-charmed-patient-mockup.html', tag:'Preview',
+   desc:'The patient-facing Strategy Hub for the CharmEd Minds program.',
+   keywords:'charmed minds patient page strategy hub preview mockup'},
+  {cat:'patient', icon:'🌊', title:'Flow', href:'/bhw-flow-patient-mockup.html', tag:'Preview',
+   desc:'The patient "Your Plan" page for the Flow program.',
+   keywords:'flow patient page plan preview mockup'},
+  {cat:'patient', icon:'🌤️', title:'Mind & Mood Recovery', href:'/bhw-mindmood-patient-mockup.html', tag:'Preview',
+   desc:'The patient pathway page for the Mind & Mood Recovery program.',
+   keywords:'mind mood recovery patient page pathway preview mockup behavioral'},
+  {cat:'patient', icon:'👤', title:'Patient Portal', href:'/bhw-patient-portal-mockup.html', tag:'Prototype',
+   desc:'Design prototype of the unified BHW patient portal.',
+   keywords:'patient portal prototype design preview mockup'},
+];
+
+/* ---- Render ---- */
+const groupsEl = document.getElementById('groups');
+const emptyEl  = document.getElementById('empty');
+const extSvg   = '<svg viewBox="0 0 24 24"><path d="M14 4h6v6"></path><path d="M20 4l-9 9"></path><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path></svg>';
+
+function matches(s, q){
+  if(!q) return true;
+  const hay = (s.title+' '+s.desc+' '+(s.tag||'')+' '+(s.who||'')+' '+(s.keywords||'')).toLowerCase();
+  return q.split(/\s+/).every(w => hay.includes(w));
+}
+
+function render(){
+  const q = document.getElementById('q').value.trim().toLowerCase();
+  groupsEl.innerHTML = '';
+  let shown = 0;
+
+  CATEGORIES.forEach(cat => {
+    const items = SITES.filter(s => s.cat === cat.key && matches(s, q));
+    if(!items.length) return;
+    shown += items.length;
+
+    const sec = document.createElement('section');
+    sec.className = 'group';
+    sec.style.setProperty('--accent', cat.accent);
+    sec.innerHTML =
+      '<div class="group-head"><h2>'+cat.name+'</h2>'+
+      '<span class="count">'+items.length+'</span></div>'+
+      '<div class="group-lede">'+cat.lede+'</div>'+
+      '<div class="grid"></div>';
+    const grid = sec.querySelector('.grid');
+
+    items.forEach(s => {
+      const a = document.createElement('a');
+      a.className = 'tile';
+      a.href = s.href;
+      a.style.setProperty('--accent', cat.accent);
+      if(s.external){ a.target = '_blank'; a.rel = 'noopener'; }
+      a.innerHTML =
+        '<div class="top-row">'+
+          '<div class="ico">'+s.icon+'</div>'+
+          '<h3>'+s.title+'</h3>'+
+        '</div>'+
+        '<p>'+s.desc+'</p>'+
+        '<div class="foot">'+
+          '<span class="tag">'+(s.tag||'')+'</span>'+
+          (s.external ? '<span class="ext">'+extSvg+'External</span>'
+                      : (s.who ? '<span class="who">'+s.who+'</span>' : ''))+
+        '</div>';
+      grid.appendChild(a);
+    });
+    groupsEl.appendChild(sec);
+  });
+
+  emptyEl.classList.toggle('show', shown === 0);
+}
+
+render();
+</script>
+</body>
+</html>
