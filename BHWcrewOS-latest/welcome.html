@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0e2233">
+<title>welcometoBHW — Onboarding &amp; Training</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,500&family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/bhw-tokens.css">
+<script>(function(){try{var t=localStorage.getItem('bhw-theme');if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+html{scroll-behavior:smooth}
+:root{
+  --bg:#091722;
+  --wash:radial-gradient(1000px 600px at 80% -10%,rgba(143,206,143,.18),transparent 60%),radial-gradient(900px 640px at 10% 108%,rgba(95,179,172,.16),transparent 58%),linear-gradient(180deg,#0b1c2b,#091722 60%,#081521);
+  --grid:rgba(255,255,255,.05);--ink:#e9f0f2;--ink-soft:#9db4c2;--heading:#f4eede;
+  --panel:rgba(255,255,255,.045);--panel-hi:rgba(255,255,255,.075);--panel-line:rgba(255,255,255,.10);
+  --topbar:linear-gradient(180deg,rgba(9,23,34,.86),rgba(9,23,34,.55));
+  --gold:#e0b75e;--teal:#5fb3ac;--peri:#8aa9d6;--green:#8fce8f;
+  --shadow-card:0 22px 50px -24px rgba(0,0,0,.75);--band-bright:1.15;
+}
+:root[data-theme="light"]{
+  --bg:#f4eede;
+  --wash:radial-gradient(1000px 620px at 82% -12%,rgba(95,167,106,.20),transparent 62%),radial-gradient(900px 660px at 6% 110%,rgba(63,143,136,.16),transparent 58%),linear-gradient(180deg,#f7f2e7,#f3ecdc 60%,#efe6d3);
+  --grid:rgba(20,50,76,.05);--ink:#22333f;--ink-soft:#5f7686;--heading:#12293c;
+  --panel:rgba(255,255,255,.62);--panel-hi:rgba(255,255,255,.82);--panel-line:rgba(20,50,76,.14);
+  --topbar:linear-gradient(180deg,rgba(247,242,231,.9),rgba(247,242,231,.6));
+  --gold:#bf8a2f;--teal:#3f8f88;--peri:#5d79b0;--green:#5fa76a;
+  --shadow-card:0 22px 44px -26px rgba(30,50,70,.4);--band-bright:1;
+}
+body{font-family:var(--sans);color:var(--ink);font-size:15px;line-height:1.6;background:var(--bg);-webkit-font-smoothing:antialiased;overflow-x:hidden;transition:background .3s,color .3s}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:8px}
+.bg-wash{position:fixed;inset:0;z-index:-2;background:var(--wash)}
+.bg-grid{position:fixed;inset:0;z-index:-1;background-image:radial-gradient(var(--grid) 1px,transparent 1px);background-size:34px 34px;mask-image:radial-gradient(1200px 700px at 50% 12%,#000,transparent 78%)}
+
+header.top{position:sticky;top:0;z-index:40;backdrop-filter:blur(12px);background:var(--topbar);border-bottom:1px solid var(--panel-line)}
+.top-inner{max-width:1080px;margin:0 auto;display:flex;align-items:center;gap:14px;padding:13px 22px}
+.back{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);border:1px solid var(--panel-line);background:var(--panel);border-radius:999px;padding:8px 14px;transition:.18s}
+.back:hover{background:var(--panel-hi)}
+.wm{font-weight:300;font-size:17px;color:var(--heading);letter-spacing:.02em}
+.wm b{font-weight:800}.wm .accent{background:linear-gradient(92deg,var(--green),var(--teal));-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:800}
+.top-right{margin-left:auto;display:flex;gap:9px;align-items:center}
+.theme-tog{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--panel-line);background:var(--panel);color:var(--ink);border-radius:999px;padding:8px 13px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;font-family:inherit;transition:.18s}
+.theme-tog:hover{background:var(--panel-hi)}
+.theme-tog .dot{width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff7de,var(--teal) 60%,var(--peri));box-shadow:0 0 8px -1px var(--teal)}
+.theme-tog .lbl-dark{display:none}
+:root[data-theme="dark"] .theme-tog .lbl-dark{display:inline}
+:root[data-theme="dark"] .theme-tog .lbl-light{display:none}
+
+.hero{max-width:1080px;margin:0 auto;padding:56px 22px 8px;text-align:center}
+.eyebrow{display:inline-flex;align-items:center;gap:9px;font-size:10.5px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--green);border:1px solid color-mix(in srgb,var(--green) 36%,transparent);background:color-mix(in srgb,var(--green) 9%,transparent);padding:7px 13px;border-radius:999px}
+.hero h1{font-family:var(--serif);font-weight:500;font-size:clamp(36px,5.2vw,58px);line-height:1.04;margin:20px 0 0;color:var(--heading)}
+.hero h1 .grad{background:linear-gradient(96deg,var(--heading),var(--green) 55%,var(--teal));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:var(--ink-soft);font-size:16px;max-width:600px;margin:18px auto 0}
+.scaffold{display:inline-block;margin-top:16px;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);border:1px dashed color-mix(in srgb,var(--gold) 45%,transparent);border-radius:999px;padding:6px 13px}
+
+.wrap{max-width:1080px;margin:40px auto 0;padding:0 22px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.card{position:relative;border-radius:18px;padding:22px;background:linear-gradient(180deg,var(--panel-hi),var(--panel));border:1px solid var(--panel-line);transition:transform .2s,border-color .2s,box-shadow .2s;overflow:hidden}
+.card::before{content:"";position:absolute;left:0;top:0;height:100%;width:3px;background:var(--accent,var(--green))}
+.card:hover{transform:translateY(-4px);border-color:color-mix(in srgb,var(--accent) 55%,var(--panel-line));box-shadow:var(--shadow-card)}
+.card .n{font-family:var(--serif);font-size:13px;color:var(--accent);font-weight:600}
+.card h3{font-size:16px;font-weight:700;color:var(--heading);margin:6px 0 6px}
+.card p{font-size:13px;color:var(--ink-soft)}
+.card ul{margin:10px 0 0 17px;font-size:13px;color:var(--ink-soft)}
+.card li{margin-bottom:5px}
+.tagchip{display:inline-block;margin-top:12px;font-size:9.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);border-radius:999px;padding:3px 9px}
+
+footer{max-width:1080px;margin:56px auto 0;padding:24px 22px 60px;border-top:1px solid var(--panel-line);font-size:12px;color:var(--ink-soft);text-align:center}
+footer a{color:var(--teal);font-weight:600}
+</style>
+</head>
+<body>
+<div class="bg-wash"></div>
+<div class="bg-grid"></div>
+
+<header class="top">
+  <div class="top-inner">
+    <a class="back" href="/hq.html">← BHW HQ</a>
+    <span class="wm">welcome<b>to</b><span class="accent">BHW</span></span>
+    <div class="top-right">
+      <button class="theme-tog" id="themeBtn" type="button" aria-label="Switch theme">
+        <span class="dot"></span><span class="lbl-dark">Black Opal</span><span class="lbl-light">Light Opal</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <span class="eyebrow">Onboarding &amp; Training</span>
+  <h1>Welcome to <span class="grad">BHW.</span></h1>
+  <p>Everything a new teammate needs in the first week and beyond — the checklist, the training, the policies, and the people. Learn the BHW way of caring for our city.</p>
+  <div class="scaffold">Starter page · content coming</div>
+</section>
+
+<div class="wrap">
+  <div class="grid">
+    <div class="card" style="--accent:var(--green)">
+      <div class="n">01</div><h3>Start here — Week one</h3>
+      <p>Your first-five-days checklist, from paperwork to your first shift.</p>
+      <ul><li>Signed paperwork &amp; credentials</li><li>Accounts: email, crewOS PIN, phone system</li><li>Meet your buddy &amp; your division</li><li>Shadow schedule</li></ul>
+      <span class="tagchip">Checklist</span>
+    </div>
+    <div class="card" style="--accent:var(--teal)">
+      <div class="n">02</div><h3>Training modules</h3>
+      <p>Role-based training you work through at your own pace.</p>
+      <ul><li>Front desk &amp; the daily sweep</li><li>Charting &amp; documentation</li><li>Referrals &amp; warm handoffs</li><li>HIPAA &amp; privacy basics</li></ul>
+      <span class="tagchip">Learn</span>
+    </div>
+    <div class="card" style="--accent:var(--peri)">
+      <div class="n">03</div><h3>Policies &amp; handbook</h3>
+      <p>The BHW handbook, standards of care, and the rules that keep patients safe.</p>
+      <ul><li>Employee handbook</li><li>Standards of care &amp; SLAs</li><li>Time off &amp; scheduling</li><li>Safety &amp; incident reporting</li></ul>
+      <span class="tagchip">Reference</span>
+    </div>
+    <div class="card" style="--accent:var(--gold)">
+      <div class="n">04</div><h3>Access &amp; tools</h3>
+      <p>Get into every system you'll touch — and who to ask when something's off.</p>
+      <ul><li>BHWcrewOS sign-in</li><li>RCM / billing access</li><li>Phone, fax &amp; shared inbox</li><li>IT help &amp; contacts</li></ul>
+      <span class="tagchip">Setup</span>
+    </div>
+    <div class="card" style="--accent:var(--green)">
+      <div class="n">05</div><h3>Meet the crew</h3>
+      <p>Who's who across the divisions, and how we work together.</p>
+      <ul><li>Leadership &amp; division leads</li><li>Your division team</li><li>The programs under our roof</li></ul>
+      <span class="tagchip">People</span>
+    </div>
+    <div class="card" style="--accent:var(--teal)">
+      <div class="n">06</div><h3>The BHW way</h3>
+      <p>Our mission, our voice, and what "Healthcare Excellence, together" means day to day.</p>
+      <ul><li>Mission &amp; values</li><li>How we talk to patients</li><li>For the City. For My Health. In Real Life.</li></ul>
+      <span class="tagchip">Culture</span>
+    </div>
+  </div>
+</div>
+
+<footer>
+  A program of <b>The Foundation</b> · Baltimore, MD · <a href="/hq.html">Back to BHW HQ</a> · <a href="/">Sign in to crewOS</a>
+</footer>
+
+<script>
+document.getElementById('themeBtn').addEventListener('click',function(){
+  var cur=document.documentElement.getAttribute('data-theme')==='light'?'light':'dark';
+  var next=cur==='light'?'dark':'light';
+  document.documentElement.setAttribute('data-theme',next);
+  try{localStorage.setItem('bhw-theme',next);}catch(e){}
+  document.querySelector('meta[name=theme-color]').setAttribute('content',next==='light'?'#f4eede':'#0e2233');
+});
+</script>
+</body>
+</html>
