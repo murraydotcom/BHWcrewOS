@@ -334,6 +334,41 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 .bp-log:hover{background:var(--dom, var(--accent)); color:#fff;}
 .bp-link{display:inline-flex; align-items:center; gap:6px; margin-top:2px; font-size:12px; font-weight:600; color:var(--dom, var(--accent)); background:none; border:0; cursor:pointer; font-family:var(--font-sans); padding:0;}
 @media(max-width:560px){.bp-grid{grid-template-columns:1fr;}}
+
+/* The Health Blueprint — dashboard hero, 12-week timeline, trends, diary */
+.bp-hero{display:flex; gap:28px; align-items:center; background:linear-gradient(150deg,#14232E 0%,#266D7A 130%); color:#fff; border-radius:18px; padding:26px 30px; margin-bottom:8px; flex-wrap:wrap;}
+.bp-hero__ring{position:relative; width:118px; height:118px; flex-shrink:0;}
+.bp-hero__ring svg{width:118px; height:118px; transform:rotate(-90deg);}
+.bp-hero__ring .pct{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;}
+.bp-hero__ring .pct b{font-size:28px; font-weight:300; letter-spacing:-0.02em;}
+.bp-hero__ring .pct span{font-size:8.5px; letter-spacing:0.16em; text-transform:uppercase; opacity:0.82; margin-top:2px;}
+.bp-hero__body{flex:1; min-width:250px;}
+.bp-hero__meta{font-size:10.5px; letter-spacing:0.18em; text-transform:uppercase; color:var(--bhw-pale-gold-light); font-weight:600;}
+.bp-hero__body h3{color:#fff; font-family:var(--font-serif); font-weight:400; font-size:23px; margin:6px 0 16px;}
+.bp-weeks{display:flex; gap:4px; margin-bottom:14px;}
+.bp-week{flex:1; height:28px; border-radius:5px; background:rgba(255,255,255,0.12); display:flex; align-items:center; justify-content:center; font-size:9.5px; color:rgba(255,255,255,0.6); font-weight:600;}
+.bp-week.done{background:rgba(255,255,255,0.34); color:#fff;}
+.bp-week.now{background:var(--bhw-pale-gold-light); color:#14232E; box-shadow:0 0 0 2px rgba(232,201,138,0.35);}
+.bp-hero__note{font-size:12.5px; line-height:1.6; color:rgba(255,255,255,0.82); margin:0;}
+.bp-sech{display:flex; align-items:center; gap:12px; margin:30px 0 14px;}
+.bp-sech .t{font-size:11px; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:var(--fg-muted); white-space:nowrap;}
+.bp-sech .line{flex:1; height:1px; background:var(--border);}
+.bp-trends__row{display:grid; grid-template-columns:120px 1fr 96px; gap:16px; align-items:center; padding:12px 0; border-bottom:1px solid var(--border);}
+.bp-trends__row:last-child{border-bottom:0;}
+.bp-trends__nm{font-size:13px; font-weight:600; color:var(--fg-strong); display:flex; align-items:center; gap:8px;}
+.bp-trends__nm i{width:10px; height:10px; border-radius:3px; flex:none;}
+.bp-trends__row .spark{width:100%; height:38px; display:block;}
+.bp-trends__delta{font-size:12px; font-weight:700; text-align:right;}
+.bp-trends__delta span{display:block; font-size:10px; font-weight:500; color:var(--fg-muted);}
+@media(max-width:560px){.bp-trends__row{grid-template-columns:90px 1fr 70px; gap:10px;}}
+.bp-today .drow{display:flex; align-items:center; gap:13px; padding:13px 0; border-bottom:1px solid var(--border);}
+.bp-today .drow:last-child{border-bottom:0;}
+.bp-today .di{width:36px; height:36px; border-radius:10px; display:grid; place-items:center; font-size:17px; flex:none; background:color-mix(in srgb, var(--dom, var(--accent)) 16%, transparent);}
+.bp-today .dn{flex:1;}
+.bp-today .dn b{font-size:13.5px; font-weight:600; color:var(--fg-strong);}
+.bp-today .dn span{display:block; font-size:11.5px; color:var(--fg-muted); margin-top:1px;}
+.bp-today .dlog{border:1px solid var(--border); background:#fff; border-radius:999px; padding:8px 15px; font-size:11px; font-weight:700; letter-spacing:0.06em; cursor:pointer; color:var(--fg); font-family:var(--font-sans); flex:none;}
+.bp-today .dlog.done{background:var(--dom, var(--accent)); border-color:transparent; color:#fff;}
 </style>
 </head>
 <body>
@@ -628,9 +663,31 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
     <!-- ========== BLUEPRINT ========== -->
     <section class="pane" id="pane-blueprint">
       <div class="plan-head">
-        <h2>Your Health Blueprint, <em>all in one view.</em></h2>
-        <p>Five pillars, tracked together. Your care team recommends each one and posts it here — you log as you go, and we watch the whole picture, not just the labs.</p>
+        <h2>The Health Blueprint, <em>your 12-week plan.</em></h2>
+        <p>Your whole-person plan across five pillars — recommended by your care team, tracked by you. This is the same picture your provider sees.</p>
       </div>
+
+      <!-- hero: overall progress + 12-week timeline -->
+      <div class="bp-hero">
+        <div class="bp-hero__ring">
+          <svg viewBox="0 0 118 118" aria-hidden="true">
+            <circle cx="59" cy="59" r="52" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="10"></circle>
+            <circle cx="59" cy="59" r="52" fill="none" stroke="#E8C98A" stroke-width="10" stroke-linecap="round" stroke-dasharray="255 72"></circle>
+          </svg>
+          <div class="pct"><b>78%</b><span>on plan</span></div>
+        </div>
+        <div class="bp-hero__body">
+          <div class="bp-hero__meta">12-week Health Blueprint · Restore &amp; Rebuild</div>
+          <h3>Week 3 of 12 — the pattern is forming.</h3>
+          <div class="bp-weeks">
+            <span class="bp-week done">1</span><span class="bp-week done">2</span><span class="bp-week now">3</span><span class="bp-week">4</span><span class="bp-week">5</span><span class="bp-week">6</span><span class="bp-week">7</span><span class="bp-week">8</span><span class="bp-week">9</span><span class="bp-week">10</span><span class="bp-week">11</span><span class="bp-week">12</span>
+          </div>
+          <p class="bp-hero__note">Two weeks complete. Your plan runs a full 12 weeks across all five pillars — finished weeks stay open so you can see how far you've come.</p>
+        </div>
+      </div>
+
+      <!-- this week's targets -->
+      <div class="bp-sech"><span class="t">This week's targets</span><span class="line"></span></div>
       <section class="blueprint">
         <div class="bp-grid">
 
@@ -676,6 +733,48 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 
         </div>
       </section>
+
+      <!-- 12-week trends -->
+      <div class="bp-sech"><span class="t">Your 12-week trends</span><span class="line"></span></div>
+      <div class="card">
+        <div class="bp-trends">
+          <div class="bp-trends__row">
+            <div class="bp-trends__nm"><i style="background:#8C5A3C"></i>Exercise</div>
+            <svg class="spark" viewBox="0 0 240 40" preserveAspectRatio="none"><polyline points="0,26 20,25 40,23 60,24 80,21 100,20 120,20 140,18 160,18 180,19 200,16 220,16" fill="none" stroke="#8C5A3C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <div class="bp-trends__delta" style="color:#8C5A3C;">▲ 32<span>vs week 1</span></div>
+          </div>
+          <div class="bp-trends__row">
+            <div class="bp-trends__nm"><i style="background:#7C6BD6"></i>Sleep</div>
+            <svg class="spark" viewBox="0 0 240 40" preserveAspectRatio="none"><polyline points="0,21 20,20 40,20 60,19 80,18 100,18 120,17 140,16 160,16 180,16 200,15 220,14" fill="none" stroke="#7C6BD6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <div class="bp-trends__delta" style="color:#7C6BD6;">▲ 21<span>vs week 1</span></div>
+          </div>
+          <div class="bp-trends__row">
+            <div class="bp-trends__nm"><i style="background:#266D7A"></i>Social</div>
+            <svg class="spark" viewBox="0 0 240 40" preserveAspectRatio="none"><polyline points="0,30 20,28 40,26 60,27 80,26 100,25 120,25 140,23 160,24 180,22 200,21 220,21" fill="none" stroke="#266D7A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <div class="bp-trends__delta" style="color:#266D7A;">▲ 27<span>vs week 1</span></div>
+          </div>
+          <div class="bp-trends__row">
+            <div class="bp-trends__nm"><i style="background:#5FA9A6"></i>Coping</div>
+            <svg class="spark" viewBox="0 0 240 40" preserveAspectRatio="none"><polyline points="0,23 20,22 40,21 60,20 80,20 100,19 120,19 140,18 160,17 180,18 200,16 220,16" fill="none" stroke="#5FA9A6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <div class="bp-trends__delta" style="color:#5FA9A6;">▲ 21<span>vs week 1</span></div>
+          </div>
+          <div class="bp-trends__row">
+            <div class="bp-trends__nm"><i style="background:#5AA469"></i>Nutrition</div>
+            <svg class="spark" viewBox="0 0 240 40" preserveAspectRatio="none"><polyline points="0,20 20,19 40,18 60,17 80,16 100,16 120,15 140,15 160,14 180,13 200,13 220,12" fill="none" stroke="#5AA469" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <div class="bp-trends__delta" style="color:#5AA469;">▲ 22<span>vs week 1</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- today's log -->
+      <div class="bp-sech"><span class="t">Today's log</span><span class="line"></span></div>
+      <div class="card bp-today">
+        <div class="drow" style="--dom:#8C5A3C;"><div class="di">🚶</div><div class="dn"><b>Exercise</b><span>Two 20-minute walks after your largest meals</span></div><button class="dlog" type="button">Log</button></div>
+        <div class="drow" style="--dom:#7C6BD6;"><div class="di">😴</div><div class="dn"><b>Sleep</b><span>10:30pm window · screens down 30 minutes before</span></div><button class="dlog" type="button">Log</button></div>
+        <div class="drow" style="--dom:#266D7A;"><div class="di">🤝</div><div class="dn"><b>Social</b><span>One real connection today that isn't a screen</span></div><button class="dlog" type="button">Log</button></div>
+        <div class="drow" style="--dom:#5FA9A6;"><div class="di">🧭</div><div class="dn"><b>Coping</b><span>3-minute wind-down before the afternoon dip</span></div><button class="dlog done" type="button">✓ Done</button></div>
+        <div class="drow" style="--dom:#5AA469;"><div class="di">🍎</div><div class="dn"><b>Nutrition</b><span>Morning protein anchor, 25–30g before caffeine</span></div><button class="dlog done" type="button">✓ Done</button></div>
+      </div>
     </section>
 
     <!-- ========== MESSAGES ========== -->
