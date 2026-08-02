@@ -414,6 +414,57 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 .tool__note{font-size:11.5px; color:var(--fg-muted); margin:12px 0 0; line-height:1.5;}
 .macro tr.train td:first-child::after{content:" · training"; font-weight:400; font-size:10px; color:var(--accent); letter-spacing:0;}
 @media(max-width:560px){.tools-grid{grid-template-columns:1fr;}}
+/* ===== Today screen ===== */
+.clin-banner{display:flex; align-items:center; gap:14px; background:#fff; border:1px solid var(--border); border-left:4px solid var(--accent); border-radius:12px; padding:14px 16px; margin:0 0 20px;}
+.clin-banner .clin-avatar{width:40px; height:40px; border-radius:50%; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; flex-shrink:0; font-family:var(--font-sans);}
+.clin-banner p{margin:0; font-size:13px; color:var(--fg); line-height:1.5;}
+.clin-banner .btn{margin-left:auto; white-space:nowrap; flex-shrink:0;}
+.today__hd{display:flex; align-items:baseline; gap:12px; margin:0 0 14px;}
+.today__hd h3{margin:0; font-family:var(--font-serif); font-size:22px; color:var(--fg-strong);}
+.today__meta{font-size:12px; color:var(--fg-muted); letter-spacing:0.02em;}
+.prio{display:flex; gap:14px; background:#fff; border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:12px; box-shadow:var(--shadow-sm); transition:opacity .2s;}
+.prio__check{flex-shrink:0; width:26px; height:26px; border-radius:50%; border:2px solid var(--border); background:#fff; cursor:pointer; margin-top:2px; position:relative;}
+.prio__check:hover{border-color:var(--accent);}
+.prio.done{opacity:.62;}
+.prio.done .prio__check{background:#5AA469; border-color:#5AA469;}
+.prio.done .prio__check::after{content:"✓"; color:#fff; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:700;}
+.prio.done .prio__name{text-decoration:line-through;}
+.prio__body{flex:1; min-width:0;}
+.prio__top{display:flex; align-items:center; gap:10px; margin-bottom:3px;}
+.prio__time{font-size:12px; font-weight:700; color:var(--fg-muted); font-variant-numeric:tabular-nums;}
+.prio__tier{font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:2px 8px; border-radius:99px; color:#fff;}
+.tier--focus{background:#8C5A3C;} .tier--build{background:#266D7A;} .tier--maintain{background:#5AA469;} .tier--watch{background:#92889B;}
+.prio__name{font-family:var(--font-sans); font-size:15.5px; font-weight:700; color:var(--fg-strong);}
+.prio__why{font-size:13px; color:var(--fg); opacity:.85; margin-top:3px; line-height:1.45;}
+.prio__msg{font-size:12.5px; color:#5AA469; font-weight:700; margin-top:6px; display:none;}
+.prio.done .prio__msg{display:block;}
+.prio__acts{display:flex; gap:16px; margin-top:10px;}
+.link{background:none; border:0; padding:0; font-family:var(--font-sans); font-size:12.5px; font-weight:700; color:var(--accent-deep); cursor:pointer;}
+.link:hover{text-decoration:underline;}
+.trouble,.learn{margin-top:12px; border-top:1px solid var(--border); padding-top:12px;}
+.trouble__lead{font-size:12.5px; color:var(--fg-muted); margin:0 0 8px;}
+.trouble__chips{display:flex; flex-wrap:wrap; gap:7px;}
+.chip{font-family:var(--font-sans); font-size:12px; border:1px solid var(--border); background:var(--bg); border-radius:99px; padding:6px 12px; cursor:pointer; color:var(--fg);}
+.chip:hover,.chip.sel{border-color:var(--accent); background:#fff;}
+.trouble__resp{font-size:13px; color:var(--fg); margin-top:10px; line-height:1.5; display:none; background:var(--bg); border-radius:8px;}
+.trouble__resp.show{display:block; padding:11px 13px;}
+.learn__q{font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--fg-muted); margin:10px 0 3px;}
+.learn p{margin:0 0 4px; font-size:13px; color:var(--fg); line-height:1.5;}
+.learn .tb{background:var(--bg); border-radius:8px; padding:10px 12px; margin-top:10px; font-size:13px;}
+.also{margin-top:8px; border:1px solid var(--border); border-radius:12px; background:#fff; padding:0 16px;}
+.also summary{cursor:pointer; padding:15px 0; font-weight:700; font-size:14px; color:var(--fg-strong); list-style:none;}
+.also summary::-webkit-details-marker{display:none;}
+.also summary span{font-weight:400; color:var(--fg-muted); font-size:12.5px;}
+.also .prio{box-shadow:none; border:0; border-top:1px solid var(--border); border-radius:0; margin:0; padding:14px 0;}
+.tiers{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:14px;}
+.tier{background:#fff; border:1px solid var(--border); border-radius:12px; padding:14px;}
+.tier__hd{font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#fff; padding:4px 10px; border-radius:99px; display:inline-block; margin-bottom:10px;}
+.tier ul{margin:0; padding:0; list-style:none;}
+.tier li{font-size:12.5px; color:var(--fg); font-weight:600; padding:7px 0; border-bottom:1px solid rgba(22,36,51,0.06); line-height:1.35;}
+.tier li:last-child{border-bottom:0;}
+.tier li span{display:block; font-size:11px; font-weight:400; color:var(--fg-muted); margin-top:1px;}
+@media(max-width:760px){.tiers{grid-template-columns:1fr 1fr;}}
+@media(max-width:560px){.tiers{grid-template-columns:1fr;} .clin-banner{flex-wrap:wrap;} .clin-banner .btn{margin-left:0;}}
 </style>
 </head>
 <body>
@@ -484,7 +535,13 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
     <section class="pane active" id="pane-home">
       <div class="home-greet">
         <h2>Good morning, <em>Jordan.</em></h2>
-        <p>You're in week 3 of your 12-week care plan. Here's where you are and what this week asks of you.</p>
+        <p>Three things today — that's it. The rest of your plan can wait for its turn.</p>
+      </div>
+
+      <div class="clin-banner">
+        <div class="clin-avatar">AM</div>
+        <p><strong>This plan was built for you by Amaris &amp; your BHW care team.</strong> They read your check-ins each week and adjust as your labs and your life change — what you log here goes straight to them.</p>
+        <button class="btn" type="button" onclick="document.querySelector('[data-pane=messages]').click(); return false;">Message the team</button>
       </div>
 
       <div class="card card-dark vein-card">
@@ -497,42 +554,166 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
         <p class="vein-note">"Light moves through stone where the veins meet." — two weeks complete, and the pattern is already forming.</p>
       </div>
 
-      <div class="home-grid">
-        <div class="card week-card">
-          <div class="section-label"><span class="dot"></span><span class="txt">This week's focus</span><span class="line"></span></div>
-          <div class="task">
-            <input type="checkbox" id="t1" checked><label for="t1">
-              <div class="t-name">Morning protein anchor</div>
-              <div class="t-sub">25–30g of protein within an hour of waking, before caffeine.</div>
-            </label>
+      <!-- ===== TODAY ===== -->
+      <div class="today__hd"><h3>Today</h3><span class="today__meta">Wednesday · Week 3 of 12</span></div>
+
+      <article class="prio">
+        <button class="prio__check" type="button" aria-label="Mark done" onclick="markDone(this)"></button>
+        <div class="prio__body">
+          <div class="prio__top"><span class="prio__time">8:00 AM</span><span class="prio__tier tier--focus">Focus now</span></div>
+          <div class="prio__name">Take your iron with breakfast</div>
+          <div class="prio__why">Iron is how your blood carries oxygen — it's what lifts the afternoon fog.</div>
+          <div class="prio__msg">Nice — that's one. Your team will see it.</div>
+          <div class="prio__acts">
+            <button class="link" type="button" onclick="toggleTrouble(this)">Having trouble?</button>
+            <button class="link" type="button" onclick="toggleLearn(this)">Learn more</button>
           </div>
-          <div class="task">
-            <input type="checkbox" id="t2"><label for="t2">
-              <div class="t-name">Two 20-minute walks</div>
-              <div class="t-sub">Outside if you can — after your largest meals works best.</div>
-            </label>
+          <div class="trouble" hidden>
+            <p class="trouble__lead">No judgment — what got in the way?</p>
+            <div class="trouble__chips">
+              <button class="chip" type="button" data-b="forgot" onclick="pickBarrier(this)">Forgot</button>
+              <button class="chip" type="button" data-b="side" onclick="pickBarrier(this)">Side effect</button>
+              <button class="chip" type="button" data-b="cost" onclick="pickBarrier(this)">Cost</button>
+              <button class="chip" type="button" data-b="understand" onclick="pickBarrier(this)">Didn't understand</button>
+              <button class="chip" type="button" data-b="tired" onclick="pickBarrier(this)">Too tired</button>
+              <button class="chip" type="button" data-b="schedule" onclick="pickBarrier(this)">Schedule changed</button>
+              <button class="chip" type="button" data-b="disagree" onclick="pickBarrier(this)">Not sure I agree</button>
+              <button class="chip" type="button" data-b="other" onclick="pickBarrier(this)">Other</button>
+            </div>
+            <div class="trouble__resp"></div>
           </div>
-          <div class="task">
-            <input type="checkbox" id="t3"><label for="t3">
-              <div class="t-name">Sleep window: 10:30pm</div>
-              <div class="t-sub">Screens down 30 minutes before. Note how you feel Thursday.</div>
-            </label>
+          <div class="learn" hidden>
+            <div class="learn__q">Why it matters</div>
+            <p>Your ferritin (iron stores) is low. Iron helps your blood carry oxygen to every tissue, including your brain — low stores show up as afternoon fatigue and foggy focus.</p>
+            <div class="learn__q">What to do</div>
+            <p>One capsule with breakfast and a glass of orange juice. Keep it about an hour apart from coffee or calcium.</p>
+            <div class="learn__q">Common problem</div>
+            <p>Coffee first thing blocks absorption — food and juice first, coffee after.</p>
+            <div class="learn__q">When to contact us</div>
+            <p>Darker stools are normal and expected. Call the office for severe stomach pain, vomiting, or blood in your stool.</p>
+            <div class="tb"><strong>Quick check:</strong> which drink helps your body absorb iron — coffee or orange juice? <em>(Orange juice — the vitamin C helps.)</em></div>
           </div>
         </div>
+      </article>
 
-        <div class="quick">
-          <a href="#" onclick="document.querySelector('[data-pane=messages]').click(); return false;">
-            <div><div class="q-name">Message your care team</div><div class="q-sub">Secure messaging, right here in your portal</div></div>
-            <span class="q-arrow">→</span>
-          </a>
-          <a href="#" onclick="return false;">
-            <div><div class="q-name">Your results &amp; summaries</div><div class="q-sub">Posted here by your care team after review</div></div>
-            <span class="q-arrow">→</span>
-          </a>
-          <a href="#" onclick="return false;">
-            <div><div class="q-name">Schedule a visit</div><div class="q-sub">Follow-up, lab draw, or check-in</div></div>
-            <span class="q-arrow">→</span>
-          </a>
+      <article class="prio">
+        <button class="prio__check" type="button" aria-label="Mark done" onclick="markDone(this)"></button>
+        <div class="prio__body">
+          <div class="prio__top"><span class="prio__time">6:30 PM</span><span class="prio__tier tier--focus">Focus now</span></div>
+          <div class="prio__name">Walk 10 minutes after dinner</div>
+          <div class="prio__why">A short walk after your biggest meal blunts the glucose spike that deepens the evening slump.</div>
+          <div class="prio__msg">Done — five of your walking days had lower post-dinner glucose.</div>
+          <div class="prio__acts">
+            <button class="link" type="button" onclick="toggleTrouble(this)">Having trouble?</button>
+            <button class="link" type="button" onclick="toggleLearn(this)">Learn more</button>
+          </div>
+          <div class="trouble" hidden>
+            <p class="trouble__lead">No judgment — what got in the way?</p>
+            <div class="trouble__chips">
+              <button class="chip" type="button" data-b="forgot" onclick="pickBarrier(this)">Forgot</button>
+              <button class="chip" type="button" data-b="tired" onclick="pickBarrier(this)">Too tired</button>
+              <button class="chip" type="button" data-b="schedule" onclick="pickBarrier(this)">No time</button>
+              <button class="chip" type="button" data-b="weather" onclick="pickBarrier(this)">Weather</button>
+              <button class="chip" type="button" data-b="other" onclick="pickBarrier(this)">Other</button>
+            </div>
+            <div class="trouble__resp"></div>
+          </div>
+          <div class="learn" hidden>
+            <div class="learn__q">Why it matters</div>
+            <p>Muscles pull glucose out of your blood while they work — even a gentle 10 minutes after eating flattens the spike that leaves you drained an hour later.</p>
+            <div class="learn__q">What to do</div>
+            <p>Any easy pace, indoors or out. It doesn't have to be brisk — steady and after the meal is what counts.</p>
+            <div class="learn__q">Backup plan</div>
+            <p>Can't get out? Ten minutes of tidying, stairs, or marching in place works too. Done beats perfect.</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="prio">
+        <button class="prio__check" type="button" aria-label="Mark done" onclick="markDone(this)"></button>
+        <div class="prio__body">
+          <div class="prio__top"><span class="prio__time">7:30 PM</span><span class="prio__tier tier--watch">Watching</span></div>
+          <div class="prio__name">Check your blood pressure before 8 PM</div>
+          <div class="prio__why">A few evening readings this week let your team see the pattern — nothing to change yet, just the data.</div>
+          <div class="prio__msg">Logged — thank you. Readings sync to your care team automatically.</div>
+          <div class="prio__acts">
+            <button class="link" type="button" onclick="toggleTrouble(this)">Having trouble?</button>
+            <button class="link" type="button" onclick="toggleLearn(this)">Learn more</button>
+          </div>
+          <div class="trouble" hidden>
+            <p class="trouble__lead">No judgment — what got in the way?</p>
+            <div class="trouble__chips">
+              <button class="chip" type="button" data-b="forgot" onclick="pickBarrier(this)">Forgot</button>
+              <button class="chip" type="button" data-b="device" onclick="pickBarrier(this)">No cuff / device issue</button>
+              <button class="chip" type="button" data-b="understand" onclick="pickBarrier(this)">Not sure how</button>
+              <button class="chip" type="button" data-b="other" onclick="pickBarrier(this)">Other</button>
+            </div>
+            <div class="trouble__resp"></div>
+          </div>
+          <div class="learn" hidden>
+            <div class="learn__q">Why it matters</div>
+            <p>Single readings bounce around; a week of them shows the real trend. Your team is watching whether evenings run high — that's the pattern worth catching early.</p>
+            <div class="learn__q">How to do it</div>
+            <p>Sit for five minutes first, feet flat, arm supported at heart height. Take it before your evening walk, not right after.</p>
+            <div class="learn__q">When to contact us</div>
+            <p>Log the number even if it's high — that's what we want to see. Seek urgent help for a reading over 180/120 with chest pain, trouble breathing, or vision changes.</p>
+          </div>
+        </div>
+      </article>
+
+      <!-- secondary, collapsed -->
+      <details class="also">
+        <summary>Also today <span>· 2 more, no rush</span></summary>
+        <article class="prio">
+          <button class="prio__check" type="button" aria-label="Mark done" onclick="markDone(this)"></button>
+          <div class="prio__body">
+            <div class="prio__top"><span class="prio__time">Morning</span><span class="prio__tier tier--build">Building next</span></div>
+            <div class="prio__name">Protein anchor before caffeine</div>
+            <div class="prio__why">25–30g within an hour of waking — it steadies energy and helps the iron land.</div>
+            <div class="prio__msg">Nice — that's one.</div>
+          </div>
+        </article>
+        <article class="prio">
+          <button class="prio__check" type="button" aria-label="Mark done" onclick="markDone(this)"></button>
+          <div class="prio__body">
+            <div class="prio__top"><span class="prio__time">~3:00 PM</span><span class="prio__tier tier--maintain">Maintaining</span></div>
+            <div class="prio__name">3-minute wind-down at the afternoon dip</div>
+            <div class="prio__why">Box breathing or a short walk beats reaching for caffeine.</div>
+            <div class="prio__msg">Done.</div>
+          </div>
+        </article>
+      </details>
+
+      <!-- ===== plan tiers ===== -->
+      <div class="bp-sech"><span class="t">Your plan, sorted by what matters now</span><span class="line"></span></div>
+      <div class="tiers">
+        <div class="tier">
+          <div class="tier__hd tier--focus">Focus now</div>
+          <ul>
+            <li>Iron repletion<span>Every other morning, with vitamin C</span></li>
+            <li>Walks after meals<span>Blunt the post-meal glucose spike</span></li>
+          </ul>
+        </div>
+        <div class="tier">
+          <div class="tier__hd tier--build">Building next</div>
+          <ul>
+            <li>Morning protein anchor<span>Becoming automatic this week</span></li>
+            <li>10:30pm sleep window<span>Where the rebuilding happens</span></li>
+          </ul>
+        </div>
+        <div class="tier">
+          <div class="tier__hd tier--maintain">Maintaining</div>
+          <ul>
+            <li>Afternoon wind-down<span>Holding steady — keep it up</span></li>
+            <li>Hydration<span>On target</span></li>
+          </ul>
+        </div>
+        <div class="tier">
+          <div class="tier__hd tier--watch">Watching</div>
+          <ul>
+            <li>Evening blood pressure<span>Collecting a week of readings</span></li>
+            <li>Weight &amp; energy trend<span>Improving — no action needed</span></li>
+          </ul>
         </div>
       </div>
     </section>
@@ -1060,6 +1241,34 @@ function toggleWeek(btn){
   var m=document.getElementById('chMetric');
   if(m){m.onchange=function(){drawChart(this.value);}; drawChart('weight');}
 })();
+
+/* ===== Today screen — one-tap, barriers, just-in-time learn ===== */
+function markDone(btn){ btn.closest('.prio').classList.toggle('done'); }
+function _closePanels(body,keep){
+  ['.trouble','.learn'].forEach(function(sel){ var el=body.querySelector(sel); if(el&&sel!==keep){el.hidden=true;} });
+}
+function toggleTrouble(btn){ var b=btn.closest('.prio__body'), t=b.querySelector('.trouble'); _closePanels(b,'.trouble'); t.hidden=!t.hidden; }
+function toggleLearn(btn){ var b=btn.closest('.prio__body'), l=b.querySelector('.learn'); _closePanels(b,'.learn'); l.hidden=!l.hidden; }
+var BARRIERS={
+  forgot:"No problem — forgetting is the most common one. Want a reminder 30 minutes earlier tomorrow?",
+  side:"Thanks for telling us. I'm sending this to your care team for a quick review — you'll hear back before your next dose.",
+  cost:"Got it — I'll flag this for the team. There may be a lower-cost option or a way we can help.",
+  understand:"Here's the short version — tap “Learn more” for the full picture. Want someone to call and walk you through it?",
+  tired:"Let's shrink it. Even a 5-minute version counts today — done beats perfect.",
+  schedule:"Life moves. Pick a time that actually fits and we'll move the reminder there.",
+  weather:"Fair. Ten minutes indoors — stairs, tidying, or marching in place — does the same job.",
+  device:"No cuff handy? We can help you get one, or check it at your next visit. I'll note it for the team.",
+  disagree:"That's fair, and worth a real conversation. I'll open a note so you and your care team can talk it through.",
+  other:"Tell us what got in the way and we'll adjust the plan around it — you can message the team anytime."
+};
+function pickBarrier(chip){
+  var wrap=chip.closest('.trouble');
+  wrap.querySelectorAll('.chip').forEach(function(c){c.classList.remove('sel');});
+  chip.classList.add('sel');
+  var resp=wrap.querySelector('.trouble__resp');
+  resp.textContent=BARRIERS[chip.getAttribute('data-b')]||BARRIERS.other;
+  resp.classList.add('show');
+}
 </script>
 </body>
 </html>
