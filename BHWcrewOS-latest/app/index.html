@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BHW Care Connect — Baltimore Healthcare &amp; Wellness</title>
+    <meta
+      name="description"
+      content="One page for reaching your BHW care team, finding a resource, or opening your Personal Health Blueprint."
+    />
+    <meta name="theme-color" content="#F8F6F1" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0A1822" media="(prefers-color-scheme: dark)" />
+
+    <!--
+      All type is self-hosted — a patient-facing page shouldn't hand every
+      visitor's IP to a font CDN. Playfair Display and Caveat are embedded in
+      src/styles/fonts.css by the design system; Montserrat, Lora and Dancing
+      Script are in src/styles/webfonts.css + src/fonts/.
+    -->
+
+    <script>
+      // Resolve the theme before first paint so Light opal / Black opal never flashes.
+      // Mirrors useTheme() in src/lib/useTheme.ts — keep the storage key in sync.
+      ;(function () {
+        try {
+          var saved = localStorage.getItem('bhw-cc-theme')
+          var theme =
+            saved ||
+            (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light')
+          document.documentElement.setAttribute('data-theme', theme)
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'light')
+        }
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

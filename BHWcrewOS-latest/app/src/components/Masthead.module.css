@@ -1,0 +1,164 @@
+.masthead {
+  margin-top: 26px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-sm), var(--edge-gold);
+  padding: clamp(26px, 4vw, 44px);
+  display: grid;
+  gap: 32px;
+  grid-template-columns: minmax(300px, 1.15fr) minmax(280px, 1fr);
+  align-items: center;
+}
+
+/* Below the point where two 300px tracks plus the gap stop fitting, stack. */
+@media (max-width: 880px) {
+  .masthead {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.lockup {
+  display: block;
+  width: min(280px, 100%);
+  height: auto;
+  margin: 0 0 22px -14px;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--success);
+  background: var(--success-bg);
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+}
+
+.title {
+  margin: 0 0 10px;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(2.4rem, 6vw, var(--text-5xl));
+  line-height: 1.02;
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg-strong);
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--brand-clay);
+}
+
+.intro {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--fg);
+  max-width: 44ch;
+  text-wrap: pretty;
+}
+
+/* Announcements — listed, never behind a button. Skin comes from
+   config.announcementStyle via the custom properties below. */
+.news {
+  border-radius: var(--radius-lg);
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--news-bg);
+  border: var(--news-border);
+  box-shadow: var(--news-shadow);
+}
+
+.newsHead {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding-bottom: 12px;
+}
+
+.newsDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--warning);
+  flex: none;
+}
+
+.newsHeadLabel {
+  margin: 0;
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--fg-muted);
+}
+
+.item {
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+}
+
+.itemMeta {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.itemTag {
+  margin: 0;
+  font-size: var(--text-2xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--tag-tint);
+}
+
+.itemDate {
+  margin: 0;
+  font-size: var(--text-2xs);
+  color: var(--fg-subtle);
+}
+
+.itemTitle {
+  margin: 5px 0 0;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  line-height: 1.25;
+  color: var(--fg-strong);
+}
+
+.itemBody {
+  margin: 4px 0 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--fg);
+  text-wrap: pretty;
+}
+
+.older {
+  margin: 0;
+  padding: 12px 0 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+  background: none;
+  text-align: left;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--fg-strong);
+  text-decoration: underline;
+  cursor: pointer;
+}

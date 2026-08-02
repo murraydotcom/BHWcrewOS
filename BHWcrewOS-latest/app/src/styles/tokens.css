@@ -1,0 +1,614 @@
+/* =============================================================================
+   BHW Medical Group — Patient Design Tokens
+   "Opal & Ironstone" — a quiet-luxury system for patient-facing surfaces.
+
+   One source of truth. Link this once, style with the semantic tokens below,
+   and light/dark handle themselves.
+
+
+   Theme resolves automatically from the patient's OS setting. To pin a theme,
+
+   The feel:
+     · Light mode  — light opal. Milky cream base, quiet sage & sky flashes,
+                     warm sand and taupe. Calm, clean, unhurried.
+     · Dark mode   — boulder / black opal. Dark ironstone stone with opal fire
+                     glowing brighter and thin gold kintsugi veins.
+
+   Layers:
+     1. PRIMITIVES  — raw palette + scales. Never reference these in components.
+     2. SEMANTIC    — meaning-named tokens (--bg, --fg, --accent…). Use THESE.
+     3. TYPE / SPACE / RADIUS / SHADOW / MOTION — the rest of the system.
+   ========================================================================== */
+
+
+/* -----------------------------------------------------------------------------
+   1 · PRIMITIVES — the raw stone
+   Desaturated on purpose. Quiet luxury is restraint; the opal does the talking.
+   -------------------------------------------------------------------------- */
+:root {
+
+  /* — Warm neutrals · pearl → cream → tan → ironstone brown ————————————————
+     The light-on-light base and the boulder-opal matrix, one continuous scale.
+     Pearl values are sampled from the BHW Medical logo background. */
+  --c-pearl-0:       #FEFDFB;   /* near-white — airy cards                      */
+  --c-pearl-50:      #F8F6F1;   /* pearl — the light-on-light page tone         */
+  --c-porcelain-50:  #FBF9F4;   /* off-white                                   */
+  --c-cream-100:     #F7F3EA;   /* warm ivory                                  */
+  --c-linen-200:     #F0EADD;   /* soft sunken surfaces                        */
+  --c-sand-300:      #E5DAC6;   /* light tan                                   */
+  --c-tan-400:       #D3BF9F;   /* tan                                         */
+  --c-wheat-500:     #B7A17E;   /* deep tan, quiet text on light               */
+  --c-taupe-600:     #8A7E6C;   /* warm grey — muted text, dividers            */
+  --c-clay-700:      #6A5C4A;   /* grounded brown                              */
+  --c-ironstone-800: #493A2C;   /* boulder-opal matrix brown                   */
+  --c-umber-900:     #2C231B;   /* deepest earth                               */
+  --c-clay-brand:    #905B35;   /* the BHW Medical wordmark clay-brown         */
+
+  /* — Sage green · the primary opal fire ————————————————————————————————————
+     Muted eucalyptus, never minty. Carries brand and calls to action. */
+  --c-sage-50:   #EEF3EE;
+  --c-sage-100:  #DDE7DD;
+  --c-sage-200:  #BCCFC0;
+  --c-sage-300:  #9CB5A2;       /* soft sage                                   */
+  --c-sage-400:  #7D9B86;       /* sage                                        */
+  --c-sage-500:  #61896F;       /* eucalyptus — light-mode primary             */
+  --c-sage-600:  #4D7159;       /* pressed / hover-dark                        */
+  --c-sage-700:  #3C5946;       /* deep sage vein                              */
+  --c-sage-800:  #2B4133;       /* dark-mode sage surface                      */
+  --c-sage-900:  #1B2B22;
+
+  /* — Opal blue · the sky-and-water flash ———————————————————————————————————
+     Soft, dusty light blue. Secondary accent, info, links. */
+  --c-blue-50:   #EDF3F5;
+  --c-blue-100:  #DBE8ED;
+  --c-blue-200:  #BAD2DC;
+  --c-blue-300:  #97BACB;       /* light opal blue                             */
+  --c-blue-400:  #6E9EB3;
+  --c-blue-500:  #4E8798;       /* deep opal teal — light-mode secondary       */
+  --c-blue-600:  #3D6E7E;
+  --c-blue-700:  #2F5663;
+  --c-blue-800:  #223E48;
+  --c-blue-900:  #15272E;
+
+  /* — Gold · the kintsugi veins ————————————————————————————————————————————
+     From the gold-seamed black opal. Used sparingly: focus, fine rules,
+     one-per-view feature shimmer. Never a background. */
+  --c-gold-200:  #F0DDAF;
+  --c-gold-300:  #E6C98A;       /* pale gold                                   */
+  --c-gold-400:  #D6B25C;       /* kintsugi vein — dark-mode gold              */
+  --c-gold-500:  #C0A046;       /* pyrite gold — light-mode gold               */
+  --c-gold-600:  #9C8038;
+
+  /* — Opal violet · the third fire ——————————————————————————————————————————
+     The lavender-to-orchid light inside the crystal opal, and the plum of the
+     Mind & Mood line. A first-class accent now — soft in tints, deep in solids. */
+  --c-lavender-50:   #F2EEF5;
+  --c-lavender-100:  #E6DDEC;
+  --c-lavender-200:  #D3C4DD;
+  --c-lavender-300:  #B9A6C9;   /* soft lavender                               */
+  --c-lavender-400:  #9C86B2;
+  --c-lavender-500:  #82699A;   /* orchid                                      */
+  --c-lavender-600:  #6A5480;   /* solid fill · AA on white                    */
+  --c-lavender-700:  #533F66;
+  --c-lavender-800:  #3B2C49;   /* dark-mode violet surface                    */
+  --c-lavender-900:  #261D30;
+
+  /* — Opal sparkle · rose ————————————————————————————————————————————————————
+     The warm pinks caught inside the stone. Decorative: soft tags, highlights. */
+  --c-rose-200:      #E7CBCB;
+  --c-rose-300:      #D4AEAE;
+  --c-rose-400:      #C39696;
+
+  /* — Black-opal darks · deep blue stone ————————————————————————————————————
+     Not black — the dark peacock blue of a black opal, so the stone itself
+     reads as opal, and the sage/blue/violet fire glows out of it. */
+  --c-obsidian-950:  #0A1822;   /* page — deep blue-teal opal stone            */
+  --c-stone-900:     #0F2230;   /* elevated                                    */
+  --c-stone-850:     #15293A;   /* card                                        */
+  --c-stone-800:     #1D3648;   /* raised card / hover                         */
+  --c-boulder-900:   #102232;   /* deep teal-blue — feature surfaces           */
+  --c-boulder-800:   #172E42;
+
+  /* — Signal hues (tuned to the palette, not off-the-shelf) ————————————————— */
+  --c-terracotta-300: #E0A896;  /* danger, light-mode text/icon on dark        */
+  --c-terracotta-500: #B15540;  /* danger — muted rust, light mode             */
+  --c-terracotta-600: #98462F;
+
+  /* — Fixed absolutes ——————————————————————————————————————————————————————— */
+  --c-white: #FFFFFF;
+  --c-black: #000000;
+}
+
+
+/* -----------------------------------------------------------------------------
+   2 · SEMANTIC — LIGHT MODE (default) · "light opal"
+   These are the only color tokens components should touch.
+   -------------------------------------------------------------------------- */
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  /* Backgrounds — light opal, layered airy. Light-on-light: near-white cards
+     float on a soft pearl page, so contrast stays gentle and unhurried. */
+  --bg:            var(--c-pearl-50);      /* page — soft pearl               */
+  --bg-elevated:   var(--c-pearl-0);       /* cards, panels — near-white      */
+  --bg-sunken:     var(--c-cream-100);     /* wells, insets, code             */
+  --bg-muted:      var(--c-linen-200);     /* quiet fills, disabled surfaces  */
+  --bg-inverse:    var(--c-umber-900);     /* dark blocks inside light pages  */
+
+  /* Foreground — soft labradorite slate (echoes the logo blue), never black */
+  --fg:            #2A3A40;                /* body text · 10.9:1 on pearl     */
+  --fg-strong:     #1B2A30;                /* headings                        */
+  --fg-muted:      #6E6B62;                /* secondary, captions · 4.9:1 AA  */
+  --fg-subtle:     var(--c-wheat-500);     /* placeholders, timestamps        */
+  --fg-on-accent:  var(--c-pearl-0);       /* text on solid accent fills      */
+  --fg-on-inverse: var(--c-cream-100);     /* text on --bg-inverse            */
+
+  /* Primary accent — sage green. Solid fill is the deeper step so white text
+     clears WCAG AA at UI sizes; the softer sage carries the light-on-light
+     tinted surfaces (--accent-quiet, --accent-tint). */
+  --accent:            var(--c-sage-600);
+  --accent-hover:      var(--c-sage-700);
+  --accent-pressed:    var(--c-sage-800);
+  --accent-fg:         var(--fg-on-accent);
+  --accent-quiet:      var(--c-sage-100);  /* tinted background               */
+  --accent-quiet-fg:   var(--c-sage-700);  /* text on --accent-quiet          */
+  --accent-tint:       var(--c-sage-400);  /* soft brand sage for decoration  */
+
+  /* Secondary accent — opal blue */
+  --accent-2:          var(--c-blue-600);  /* solid fill · AA on white        */
+  --accent-2-hover:    var(--c-blue-700);
+  --accent-2-quiet:    var(--c-blue-100);
+  --accent-2-quiet-fg: var(--c-blue-700);
+  --accent-2-tint:     var(--c-blue-400);  /* soft opal blue for decoration   */
+
+  /* Tertiary accent — opal violet (lavender → orchid). The third fire. */
+  --accent-3:          var(--c-lavender-600);  /* solid fill · AA on white    */
+  --accent-3-hover:    var(--c-lavender-700);
+  --accent-3-quiet:    var(--c-lavender-100);
+  --accent-3-quiet-fg: var(--c-lavender-700);
+  --accent-3-tint:     var(--c-lavender-300);  /* soft lavender for decoration */
+
+  /* Brand clay-brown — the wordmark tone, for brand flourishes & the tagline */
+  --brand-clay:        var(--c-clay-brand);
+
+  /* Gold — the fine luxury line, used rarely */
+  --gold:              var(--c-gold-500);
+  --gold-quiet:        var(--c-gold-200);
+
+  /* Borders & lines — kept faint for the airy light-on-light feel */
+  --border:        rgba(43, 58, 64, 0.10);  /* hairlines, card edges         */
+  --border-strong: rgba(43, 58, 64, 0.18);  /* inputs, emphasis              */
+  --border-accent: var(--c-sage-400);
+  --divider:       rgba(43, 58, 64, 0.07);
+
+  /* Focus ring — warm gold, always visible */
+  --ring:          var(--c-gold-500);
+  --ring-offset:   var(--bg);
+
+  /* Links */
+  --link:          var(--c-blue-600);
+  --link-hover:    var(--c-blue-700);
+  --link-visited:  var(--c-lavender-400);
+
+  /* State surfaces (bg / foreground pairs, low-chroma) */
+  --success:       var(--c-sage-600);   --success-bg:  var(--c-sage-100);
+  --info:          var(--c-blue-600);   --info-bg:     var(--c-blue-100);
+  --warning:       var(--c-gold-600);   --warning-bg:  var(--c-gold-200);
+  --danger:        var(--c-terracotta-500); --danger-bg: #F3DED6;
+
+  /* Opal shimmer — pale blue → green → violet fire, light on light.
+     Restraint: one shimmer moment per view. */
+  --opal-wash: linear-gradient(120deg,
+      var(--c-pearl-50)     0%,
+      var(--c-sage-100)     28%,
+      var(--c-blue-100)     56%,
+      var(--c-lavender-100) 84%,
+      var(--c-pearl-0)      100%);
+  --opal-veil: radial-gradient(120% 140% at 12% 0%,
+      rgba(151,186,203,0.24), transparent 55%),
+    radial-gradient(120% 140% at 92% 20%,
+      rgba(185,166,201,0.22), transparent 55%),
+    radial-gradient(130% 150% at 100% 100%,
+      rgba(156,181,162,0.26), transparent 55%);
+
+  /* Opal stone — the real thing. A milky cream body with visible pools of
+     blue, violet, sage, rose and a gold core, the way light plays inside an
+     opal. Richer than the veil; for hero and feature moments. */
+  --opal-stone:
+    radial-gradient(58% 78% at 18% 22%, rgba(110,158,179,0.44), transparent 60%),
+    radial-gradient(54% 74% at 82% 18%, rgba(156,134,178,0.40), transparent 60%),
+    radial-gradient(64% 82% at 74% 82%, rgba(125,155,134,0.44), transparent 62%),
+    radial-gradient(48% 66% at 30% 88%, rgba(212,174,174,0.32), transparent 60%),
+    radial-gradient(42% 58% at 52% 46%, rgba(230,201,138,0.30), transparent 66%),
+    linear-gradient(135deg, var(--c-porcelain-50) 0%, #F0ECF3 50%, #E9F1EE 100%);
+  /* A hair-thin play-of-colour sheen for glassy card edges (overlay use) */
+  --opal-sheen: linear-gradient(125deg,
+      rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 34%,
+      rgba(185,166,201,0.10) 62%, rgba(110,158,179,0.12) 100%);
+}
+
+
+/* -----------------------------------------------------------------------------
+   2 · SEMANTIC — DARK MODE · "boulder / black opal"
+   Applied for prefers-color-scheme:dark, or explicit data-theme="dark".
+   -------------------------------------------------------------------------- */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg:            var(--c-obsidian-950);
+  --bg-elevated:   var(--c-stone-900);
+  --bg-sunken:     #071019;
+  --bg-muted:      var(--c-stone-800);
+  --bg-inverse:    var(--c-cream-100);
+
+  --fg:            #E9E3D6;                /* warm ivory, softened            */
+  --fg-strong:     var(--c-porcelain-50);
+  --fg-muted:      #9AA39B;                /* cool sage-grey                  */
+  --fg-subtle:     #6C7269;
+  --fg-on-accent:  #0C120F;                /* dark text on bright sage        */
+  --fg-on-inverse: var(--c-umber-900);
+
+  /* Opal fire glows brighter against the dark stone */
+  --accent:            var(--c-sage-300);
+  --accent-hover:      var(--c-sage-200);
+  --accent-pressed:    #B0CCB6;
+  --accent-fg:         var(--fg-on-accent);
+  --accent-quiet:      var(--c-sage-800);
+  --accent-quiet-fg:   var(--c-sage-200);
+  --accent-tint:       var(--c-sage-400);
+
+  --accent-2:          var(--c-blue-300);
+  --accent-2-hover:    #B0D2DF;
+  --accent-2-quiet:    var(--c-blue-800);
+  --accent-2-quiet-fg: var(--c-blue-200);
+  --accent-2-tint:     var(--c-blue-400);
+
+  /* Tertiary — opal violet, glowing on the dark stone */
+  --accent-3:          var(--c-lavender-300);
+  --accent-3-hover:    #CBB9D8;
+  --accent-3-quiet:    var(--c-lavender-800);
+  --accent-3-quiet-fg: var(--c-lavender-200);
+  --accent-3-tint:     var(--c-lavender-400);
+
+  --brand-clay:        #C89A6B;   /* clay lifts to a warm caramel on dark      */
+
+  /* Kintsugi veins read gold on black */
+  --gold:              var(--c-gold-400);
+  --gold-quiet:        rgba(214, 178, 92, 0.16);
+
+  --border:        rgba(233, 227, 214, 0.12);
+  --border-strong: rgba(233, 227, 214, 0.22);
+  --border-accent: var(--c-sage-400);
+  --divider:       rgba(233, 227, 214, 0.08);
+
+  --ring:          var(--c-gold-400);
+  --ring-offset:   var(--bg);
+
+  --link:          var(--c-blue-300);
+  --link-hover:    #B0D2DF;
+  --link-visited:  var(--c-lavender-300);
+
+  --success:       var(--c-sage-300);   --success-bg:  rgba(97, 137, 111, 0.22);
+  --info:          var(--c-blue-300);   --info-bg:     rgba(78, 135, 152, 0.22);
+  --warning:       var(--c-gold-300);   --warning-bg:  rgba(214, 178, 92, 0.18);
+  --danger:        var(--c-terracotta-300); --danger-bg: rgba(177, 85, 64, 0.24);
+
+  /* Fire-in-black-stone: darker, with violet fire and a gold seam */
+  --opal-wash: linear-gradient(135deg,
+      var(--c-obsidian-950) 0%,
+      var(--c-sage-900)     26%,
+      var(--c-blue-900)     52%,
+      var(--c-lavender-900) 76%,
+      var(--c-boulder-900)  100%);
+  --opal-veil: radial-gradient(120% 140% at 12% 0%,
+      rgba(78,135,152,0.30), transparent 55%),
+    radial-gradient(110% 130% at 88% 18%,
+      rgba(130,105,154,0.26), transparent 55%),
+    radial-gradient(130% 150% at 100% 100%,
+      rgba(97,137,111,0.28), transparent 55%),
+    radial-gradient(90% 120% at 60% 40%,
+      rgba(214,178,92,0.10), transparent 60%);
+
+  /* Opal stone on deep blue — fire glowing out of black-opal stone */
+  --opal-stone:
+    radial-gradient(58% 78% at 20% 24%, rgba(96,158,180,0.42), transparent 62%),
+    radial-gradient(54% 74% at 82% 20%, rgba(142,114,168,0.36), transparent 62%),
+    radial-gradient(64% 82% at 74% 82%, rgba(104,150,120,0.36), transparent 62%),
+    radial-gradient(46% 62% at 46% 50%, rgba(214,178,92,0.16), transparent 66%),
+    linear-gradient(135deg, #0A1822 0%, #11253A 52%, #0C1E2E 100%);
+  --opal-sheen: linear-gradient(125deg,
+      rgba(180,210,223,0.18) 0%, rgba(255,255,255,0) 32%,
+      rgba(142,114,168,0.12) 64%, rgba(96,158,180,0.14) 100%);
+}
+
+/* Same dark values when the OS asks for dark and no theme is pinned. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --bg:            var(--c-obsidian-950);
+    --bg-elevated:   var(--c-stone-900);
+    --bg-sunken:     #071019;
+    --bg-muted:      var(--c-stone-800);
+    --bg-inverse:    var(--c-cream-100);
+
+    --fg:            #E9E3D6;
+    --fg-strong:     var(--c-porcelain-50);
+    --fg-muted:      #9AA39B;
+    --fg-subtle:     #6C7269;
+    --fg-on-accent:  #0C120F;
+    --fg-on-inverse: var(--c-umber-900);
+
+    --accent:            var(--c-sage-300);
+    --accent-hover:      var(--c-sage-200);
+    --accent-pressed:    #B0CCB6;
+    --accent-fg:         var(--fg-on-accent);
+    --accent-quiet:      var(--c-sage-800);
+    --accent-quiet-fg:   var(--c-sage-200);
+    --accent-tint:       var(--c-sage-400);
+
+    --accent-2:          var(--c-blue-300);
+    --accent-2-hover:    #B0D2DF;
+    --accent-2-quiet:    var(--c-blue-800);
+    --accent-2-quiet-fg: var(--c-blue-200);
+    --accent-2-tint:     var(--c-blue-400);
+
+    --accent-3:          var(--c-lavender-300);
+    --accent-3-hover:    #CBB9D8;
+    --accent-3-quiet:    var(--c-lavender-800);
+    --accent-3-quiet-fg: var(--c-lavender-200);
+    --accent-3-tint:     var(--c-lavender-400);
+
+    --brand-clay:        #C89A6B;
+
+    --gold:              var(--c-gold-400);
+    --gold-quiet:        rgba(214, 178, 92, 0.16);
+
+    --border:        rgba(233, 227, 214, 0.12);
+    --border-strong: rgba(233, 227, 214, 0.22);
+    --border-accent: var(--c-sage-400);
+    --divider:       rgba(233, 227, 214, 0.08);
+
+    --ring:          var(--c-gold-400);
+    --ring-offset:   var(--bg);
+
+    --link:          var(--c-blue-300);
+    --link-hover:    #B0D2DF;
+    --link-visited:  var(--c-lavender-300);
+
+    --success:       var(--c-sage-300);   --success-bg:  rgba(97, 137, 111, 0.22);
+    --info:          var(--c-blue-300);   --info-bg:     rgba(78, 135, 152, 0.22);
+    --warning:       var(--c-gold-300);   --warning-bg:  rgba(214, 178, 92, 0.18);
+    --danger:        var(--c-terracotta-300); --danger-bg: rgba(177, 85, 64, 0.24);
+
+    --opal-wash: linear-gradient(135deg,
+        var(--c-obsidian-950) 0%,
+        var(--c-sage-900)     26%,
+        var(--c-blue-900)     52%,
+        var(--c-lavender-900) 76%,
+        var(--c-boulder-900)  100%);
+    --opal-veil: radial-gradient(120% 140% at 12% 0%,
+        rgba(78,135,152,0.30), transparent 55%),
+      radial-gradient(110% 130% at 88% 18%,
+        rgba(130,105,154,0.26), transparent 55%),
+      radial-gradient(130% 150% at 100% 100%,
+        rgba(97,137,111,0.28), transparent 55%),
+      radial-gradient(90% 120% at 60% 40%,
+        rgba(214,178,92,0.10), transparent 60%);
+
+    --opal-stone:
+      radial-gradient(58% 78% at 20% 24%, rgba(96,158,180,0.42), transparent 62%),
+      radial-gradient(54% 74% at 82% 20%, rgba(142,114,168,0.36), transparent 62%),
+      radial-gradient(64% 82% at 74% 82%, rgba(104,150,120,0.36), transparent 62%),
+      radial-gradient(46% 62% at 46% 50%, rgba(214,178,92,0.16), transparent 66%),
+      linear-gradient(135deg, #0A1822 0%, #11253A 52%, #0C1E2E 100%);
+    --opal-sheen: linear-gradient(125deg,
+        rgba(180,210,223,0.18) 0%, rgba(255,255,255,0) 32%,
+        rgba(142,114,168,0.12) 64%, rgba(96,158,180,0.14) 100%);
+  }
+}
+
+
+/* -----------------------------------------------------------------------------
+   3 · TYPOGRAPHY
+   Playfair Display for voice, Montserrat for interface, Lora for long reading,
+   Caveat for the occasional human touch. Load the families once in the page:
+
+   -------------------------------------------------------------------------- */
+:root {
+  --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --font-sans:    'Montserrat', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-serif:   'Lora', Georgia, 'Times New Roman', serif;   /* body long-form */
+  --font-script:  'Caveat', ui-serif, cursive;                 /* accent, sparing */
+  --font-mono:    ui-monospace, 'SFMono-Regular', 'Menlo', 'Consolas', monospace;
+
+  /* Type scale — 1.200 minor third, base 1rem = 16px */
+  --text-2xs:  0.694rem;   /* 11px — legal, micro-labels           */
+  --text-xs:   0.833rem;   /* 13px — captions, meta                */
+  --text-sm:   0.889rem;   /* 14px — dense UI, secondary           */
+  --text-base: 1rem;       /* 16px — body                          */
+  --text-md:   1.125rem;   /* 18px — comfortable reading           */
+  --text-lg:   1.35rem;    /* ~22px — lead paragraph, card titles  */
+  --text-xl:   1.62rem;    /* ~26px — section headings             */
+  --text-2xl:  1.944rem;   /* ~31px — page headings                */
+  --text-3xl:  2.488rem;   /* ~40px — hero sub                     */
+  --text-4xl:  3.052rem;   /* ~49px — hero                         */
+  --text-5xl:  3.815rem;   /* ~61px — display                      */
+
+  /* Weights */
+  --weight-light:    300;
+  --weight-normal:   400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+
+  /* Line heights */
+  --leading-tight:   1.15;   /* display / headings                 */
+  --leading-snug:    1.3;
+  --leading-normal:  1.55;   /* body                               */
+  --leading-relaxed: 1.7;    /* long-form serif reading            */
+
+  /* Letter spacing — quiet luxury leans on airy, tracked small caps */
+  --tracking-tight:  -0.02em;  /* large display                    */
+  --tracking-normal: 0;
+  --tracking-wide:   0.04em;
+  --tracking-eyebrow: 0.16em;  /* uppercase eyebrows / labels      */
+}
+
+
+/* -----------------------------------------------------------------------------
+   4 · SPACE · RADIUS · SIZING
+   4px base grid. Generous whitespace is part of the luxury.
+   -------------------------------------------------------------------------- */
+:root {
+  --space-0:  0;
+  --space-1:  0.25rem;   /*  4px */
+  --space-2:  0.5rem;    /*  8px */
+  --space-3:  0.75rem;   /* 12px */
+  --space-4:  1rem;      /* 16px */
+  --space-5:  1.25rem;   /* 20px */
+  --space-6:  1.5rem;    /* 24px */
+  --space-8:  2rem;      /* 32px */
+  --space-10: 2.5rem;    /* 40px */
+  --space-12: 3rem;      /* 48px */
+  --space-16: 4rem;      /* 64px */
+  --space-20: 5rem;      /* 80px */
+  --space-24: 6rem;      /* 96px */
+
+  --radius-xs:   4px;
+  --radius-sm:   8px;
+  --radius-md:   12px;
+  --radius-lg:   18px;
+  --radius-xl:   26px;
+  --radius-2xl:  36px;
+  --radius-pill: 999px;
+
+  /* Reading measure & layout rails */
+  --measure:      66ch;      /* ideal line length for body copy      */
+  --container-sm: 40rem;
+  --container-md: 56rem;
+  --container-lg: 72rem;
+  --container-xl: 84rem;
+}
+
+
+/* -----------------------------------------------------------------------------
+   5 · ELEVATION — soft, low-contrast shadows (quiet luxury never shouts)
+   Dark mode leans on lighter borders + glow rather than heavy drop shadow.
+   -------------------------------------------------------------------------- */
+:root {
+  --shadow-xs: 0 1px 2px rgba(44, 35, 27, 0.06);
+  --shadow-sm: 0 2px 6px rgba(44, 35, 27, 0.08);
+  --shadow-md: 0 10px 24px -12px rgba(44, 35, 27, 0.20);
+  --shadow-lg: 0 24px 48px -20px rgba(44, 35, 27, 0.28);
+  --shadow-xl: 0 40px 80px -32px rgba(44, 35, 27, 0.34);
+
+  /* A whisper of gold on lifted / focused feature cards */
+  --shadow-gold: 0 12px 32px -16px rgba(192, 160, 70, 0.35);
+  /* Fine gold hairline (inset ring) — the quiet-lux edge on feature surfaces.
+     Uses the theme-aware --gold, so it works in light and dark alike. */
+  --edge-gold: inset 0 0 0 1px color-mix(in srgb, var(--gold) 42%, transparent);
+}
+:root[data-theme="dark"] {
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.40);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 14px 30px -14px rgba(0, 0, 0, 0.60);
+  --shadow-lg: 0 28px 56px -22px rgba(0, 0, 0, 0.68);
+  --shadow-xl: 0 44px 88px -32px rgba(0, 0, 0, 0.75);
+  --shadow-gold: 0 14px 36px -16px rgba(214, 178, 92, 0.30);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.40);
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.45);
+    --shadow-md: 0 14px 30px -14px rgba(0, 0, 0, 0.60);
+    --shadow-lg: 0 28px 56px -22px rgba(0, 0, 0, 0.68);
+    --shadow-xl: 0 44px 88px -32px rgba(0, 0, 0, 0.75);
+    --shadow-gold: 0 14px 36px -16px rgba(214, 178, 92, 0.30);
+  }
+}
+
+
+/* -----------------------------------------------------------------------------
+   6 · MOTION — calm, eased, and respectful of reduced-motion
+   -------------------------------------------------------------------------- */
+:root {
+  --duration-fast:   120ms;
+  --duration-base:   220ms;
+  --duration-slow:   380ms;
+  --duration-slower: 640ms;
+
+  --ease-out:    cubic-bezier(0.16, 1, 0.30, 1);   /* the house easing        */
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-soft:   cubic-bezier(0.33, 1, 0.68, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms; --duration-base: 0ms;
+    --duration-slow: 0ms; --duration-slower: 0ms;
+  }
+}
+
+
+/* -----------------------------------------------------------------------------
+   7 · Z-INDEX — a named stacking order
+   -------------------------------------------------------------------------- */
+:root {
+  --z-base:     0;
+  --z-raised:   10;
+  --z-sticky:   100;
+  --z-header:   200;
+  --z-overlay:  800;
+  --z-modal:    900;
+  --z-toast:    1000;
+  --z-tooltip:  1100;
+}
+
+
+/* =============================================================================
+   OPTIONAL BASE — a light, unobtrusive starting point.
+   Only applied inside .bhw (opt-in), so linking the tokens never restyles a
+   ========================================================================== */
+.bhw {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  font-weight: var(--weight-normal);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  transition: background var(--duration-base) var(--ease-out),
+              color var(--duration-base) var(--ease-out);
+}
+.bhw h1, .bhw h2, .bhw h3, .bhw .display {
+  font-family: var(--font-display);
+  color: var(--fg-strong);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+}
+.bhw :where(a):not([class]) {
+  color: var(--link);
+  text-underline-offset: 0.15em;
+  text-decoration-thickness: 1px;
+}
+.bhw :where(a):not([class]):hover { color: var(--link-hover); }
+
+/* Consistent, on-brand focus for keyboard users everywhere */
+.bhw :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+/* The eyebrow — small tracked caps, a quiet-luxury signature */
+.bhw .eyebrow {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}

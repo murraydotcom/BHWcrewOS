@@ -1,0 +1,33 @@
+.strip {
+  padding: 16px 20px;
+  border-radius: var(--radius-md);
+  background: var(--danger-bg);
+  display: flex;
+  gap: 14px;
+}
+
+.hub {
+  margin-top: 40px;
+}
+
+.resources {
+  margin-top: 48px;
+}
+
+.bar {
+  width: 3px;
+  align-self: stretch;
+  border-radius: var(--radius-pill);
+  background: var(--danger);
+  flex: none;
+}
+
+.text {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--fg-strong);
+}
+
+.text strong {
+  font-weight: 600;
+}

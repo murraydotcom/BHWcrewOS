@@ -1,0 +1,82 @@
+/* Opal & Ironstone tokens — copied verbatim from the design bundle.
+   Look up real --* names in tokens.css before inventing new ones. */
+@import './fonts.css';
+@import './webfonts.css';
+@import './tokens.css';
+
+body {
+  margin: 0;
+  background: var(--bg);
+}
+
+a {
+  color: var(--link);
+  text-underline-offset: 0.15em;
+}
+a:hover {
+  color: var(--link-hover);
+}
+
+button {
+  font-family: inherit;
+}
+input,
+textarea {
+  font-family: inherit;
+}
+
+:where(a, button, input, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* The page shell. */
+.app {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Shared layout rails — the hub and the resource library sit on the same grid. */
+.page {
+  max-width: var(--container-lg);
+  margin: 0 auto;
+  padding: 0 24px 96px;
+}
+
+/* Skip link — keyboard users shouldn't have to tab the whole header. */
+.skipLink {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: var(--z-toast);
+  background: var(--bg-elevated);
+  color: var(--fg-strong);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  padding: 12px 20px;
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-md);
+}
+.skipLink:focus {
+  left: 16px;
+  top: 12px;
+}
+
+/* Visually hidden but read aloud — used for form group labels and live regions. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

@@ -1,6 +1,10 @@
 [build]
-  publish = "."
+  command = "cd app && npm ci && npm run build && cd .. && node build-merge.mjs"
+  publish = "app/dist"
   functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "22"
 
 [[headers]]
   for = "/*"

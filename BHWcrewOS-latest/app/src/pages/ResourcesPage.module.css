@@ -1,0 +1,214 @@
+.backRow {
+  margin-top: 26px;
+}
+
+.back {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--fg-muted);
+  padding: 0;
+}
+
+.back:hover {
+  color: var(--fg-strong);
+}
+
+.hero {
+  margin-top: 18px;
+  border-radius: var(--radius-xl);
+  background-image: var(--opal-stone);
+  box-shadow: var(--shadow-md), var(--edge-gold);
+  padding: clamp(26px, 4vw, 44px);
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--fg-muted);
+}
+
+.heroEyebrow {
+  margin-bottom: 10px;
+}
+
+.heroTitle {
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(2rem, 5vw, var(--text-3xl));
+  line-height: 1.08;
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg-strong);
+}
+
+.heroBody {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  color: var(--fg);
+  max-width: 56ch;
+  text-wrap: pretty;
+}
+
+.askSection {
+  margin-top: 56px;
+}
+
+.askHead {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.script {
+  margin: 0 0 2px;
+  font-family: 'Dancing Script', var(--font-script), cursive;
+  font-weight: 600;
+  font-size: clamp(1.7rem, 3.4vw, 2.5rem);
+  line-height: 1;
+  color: var(--brand-clay);
+}
+
+.askTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: var(--text-2xl);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg-strong);
+}
+
+.askHint {
+  margin: 0 0 4px auto;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  max-width: 34ch;
+  text-wrap: pretty;
+}
+
+.section {
+  margin-top: 64px;
+}
+
+.sectionTitle {
+  margin: 0 0 20px;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: var(--text-2xl);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg-strong);
+}
+
+/* Education handouts. */
+.handouts {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.handout {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  padding: 16px 18px;
+}
+
+.pdfMark {
+  flex: 0 0 36px;
+  height: 36px;
+  border-radius: var(--radius-xs);
+  display: grid;
+  place-items: center;
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.handoutBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.handoutTitle {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--fg-strong);
+}
+
+.handoutMeta {
+  margin: 2px 0 0;
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+
+.download {
+  flex: none;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--link);
+}
+
+/* Baltimore community help. */
+.community {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.communityCard {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: var(--shadow-sm);
+}
+
+.communityTag {
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--community-tint);
+}
+
+.communityName {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  line-height: 1.2;
+  color: var(--fg-strong);
+}
+
+.communityBody {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  text-wrap: pretty;
+}
+
+.communityCta {
+  margin: auto 0 0;
+  padding-top: 10px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--link);
+}

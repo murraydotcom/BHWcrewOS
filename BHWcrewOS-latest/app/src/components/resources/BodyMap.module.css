@@ -1,0 +1,225 @@
+.layout {
+  margin-top: 22px;
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(300px, 380px) minmax(320px, 1fr);
+  align-items: start;
+}
+
+@media (max-width: 720px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.mapPanel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-sm);
+  padding: 22px 20px;
+  position: relative;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--fg-muted);
+}
+
+.figure {
+  position: relative;
+  height: 520px;
+  display: grid;
+  place-items: center;
+}
+
+.figure svg {
+  display: block;
+  overflow: visible;
+}
+
+/* Label pills anchor to the card edges so long labels wrap instead of
+   overflowing: left-side flush left, right-side flush right, mind centred
+   above the head. */
+.region {
+  position: absolute;
+  max-width: min(180px, 52%);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  border-radius: var(--radius-pill);
+  padding: 6px 12px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: left;
+  box-shadow: var(--shadow-sm);
+  top: var(--region-y);
+  background: var(--bg-elevated);
+  color: var(--fg-strong);
+  border: 1px solid var(--border-strong);
+}
+
+.region[aria-pressed='true'] {
+  background: var(--fg-strong);
+  color: var(--bg-elevated);
+  border-color: var(--fg-strong);
+}
+
+.regionLeft {
+  left: 0;
+  right: auto;
+  transform: translateY(-50%);
+}
+
+.regionRight {
+  left: auto;
+  right: 0;
+  transform: translateY(-50%);
+}
+
+.regionTop {
+  left: 50%;
+  right: auto;
+  transform: translate(-50%, -50%);
+}
+
+.regionDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--region-tint);
+}
+
+.figureNote {
+  margin: 10px 0 0;
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+  text-wrap: pretty;
+}
+
+/* The picks for the selected system. */
+.listPanel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.listHead {
+  padding: 22px 24px;
+  border-bottom: 1px solid var(--divider);
+  background: var(--region-quiet);
+}
+
+.listTitle {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: var(--text-xl);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg-strong);
+}
+
+.listNote {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--fg);
+  max-width: 56ch;
+  text-wrap: pretty;
+}
+
+.item {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--divider);
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.mark {
+  flex: 0 0 42px;
+  height: 42px;
+  border-radius: var(--radius-sm);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  background: var(--bg-muted);
+  color: var(--fg-strong);
+}
+
+.itemBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.itemHead {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.product {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--fg-strong);
+}
+
+.brand {
+  margin: 0;
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--fg-subtle);
+}
+
+.why {
+  margin: 5px 0 0;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  text-wrap: pretty;
+}
+
+.itemFoot {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.code {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--gold-quiet);
+  color: var(--c-gold-600);
+  border: 1px dashed var(--gold);
+}
+
+.visit {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--link);
+}
+
+.disclosure {
+  margin: 0;
+  padding: 16px 24px;
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+  text-wrap: pretty;
+}

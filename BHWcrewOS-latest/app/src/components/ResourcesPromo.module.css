@@ -1,0 +1,82 @@
+.promo {
+  margin-top: 60px;
+  border-radius: var(--radius-xl);
+  background-image: var(--opal-stone);
+  box-shadow: var(--shadow-md), var(--edge-gold);
+  padding: clamp(24px, 4vw, 38px);
+  display: grid;
+  gap: 28px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  align-items: center;
+}
+
+.script {
+  margin: 0 0 2px;
+  font-family: 'Dancing Script', var(--font-script), cursive;
+  font-weight: 600;
+  font-size: clamp(1.7rem, 3.4vw, 2.5rem);
+  line-height: 1;
+  color: var(--brand-clay);
+}
+
+.title {
+  margin: 0 0 10px;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: var(--text-xl);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg-strong);
+}
+
+.body {
+  margin: 0 0 18px;
+  font-size: var(--text-base);
+  color: var(--fg-muted);
+  max-width: 48ch;
+  text-wrap: pretty;
+}
+
+.cta {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border: 0;
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  padding: 12px 22px;
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-sm);
+}
+
+.cta:hover {
+  background: var(--accent-hover);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 0;
+  border-top: 1px solid var(--divider);
+}
+
+.row:last-child {
+  border-bottom: 1px solid var(--divider);
+}
+
+.rowLabel {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--fg-strong);
+}
+
+.rowValue {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}

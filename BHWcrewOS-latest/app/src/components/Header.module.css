@@ -1,0 +1,135 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-header);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--divider);
+}
+
+.inner {
+  max-width: var(--container-lg);
+  margin: 0 auto;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Brand: the three brush circles from the logo sit behind the wordmark at
+   50% opacity, background knocked out. The clipping window crops the SVG
+   down to just the circles. */
+.brand {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: none;
+  border: 0;
+  padding: 6px 4px 6px 30px;
+  cursor: pointer;
+}
+
+.brandMark {
+  position: absolute;
+  left: -14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 106px;
+  height: 53px;
+  overflow: hidden;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.brandMark img {
+  position: absolute;
+  left: -2.4px;
+  top: -7px;
+  width: 122px;
+  height: 61px;
+  display: block;
+}
+
+.brandWord {
+  position: relative;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg-strong);
+}
+
+.nav {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.navLink {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--fg-muted);
+  padding: 8px 12px;
+  border-radius: var(--radius-pill);
+  text-decoration: none;
+}
+
+.navLink:hover {
+  color: var(--fg-strong);
+  background: var(--bg-muted);
+}
+
+.navLink[aria-current='page'] {
+  color: var(--fg-strong);
+}
+
+.cta {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border: 0;
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  padding: 9px 18px;
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-sm);
+}
+
+.cta:hover {
+  background: var(--accent-hover);
+}
+
+.themeToggle {
+  margin-left: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  background: var(--bg-muted);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--fg-muted);
+  padding: 8px 12px;
+  border-radius: var(--radius-pill);
+}
+
+.themeToggle:hover {
+  color: var(--fg-strong);
+  border-color: var(--border-strong);
+}
+
+/* A chip of opal stone, gold-rimmed. */
+.themeDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-image: var(--opal-stone);
+  box-shadow: var(--edge-gold);
+}

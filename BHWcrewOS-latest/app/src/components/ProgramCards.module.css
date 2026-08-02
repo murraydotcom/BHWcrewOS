@@ -1,0 +1,261 @@
+.section {
+  margin-top: 64px;
+}
+
+.head {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--fg-muted);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: var(--text-2xl);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg-strong);
+}
+
+.hint {
+  margin: 0 0 4px auto;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+
+.grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+.scene {
+  perspective: 1400px;
+  height: 330px;
+}
+
+.card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 620ms var(--ease-out);
+  transform: rotateY(0deg);
+}
+
+.cardFlipped {
+  transform: rotateY(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+}
+
+/* Shared geometry for both faces. */
+.face {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  backface-visibility: hidden;
+  border-radius: var(--radius-lg);
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+/* Front — iridescent, gold hairline, program mark in the bottom-right corner. */
+.front {
+  all: unset;
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  backface-visibility: hidden;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm), var(--edge-gold);
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+  background-color: var(--program-veil);
+  background-image: var(--program-iris);
+}
+
+/* A soft wash so the mark reads without fighting the copy.
+   Flips with the theme: white lift on light, dark wash on black opal. */
+.wash {
+  position: absolute;
+  right: -40px;
+  bottom: -40px;
+  width: 250px;
+  height: 220px;
+  pointer-events: none;
+  background: var(--program-wash);
+}
+
+.frontMark {
+  position: absolute;
+  right: -22px;
+  bottom: -6px;
+  width: 200px;
+  height: 180px;
+  opacity: 0.42;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-position: right center;
+  background-size: contain;
+  filter: var(--program-front-filter);
+  background-image: var(--program-logo);
+}
+
+.num {
+  position: relative;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  opacity: 0.55;
+  color: var(--program-tint);
+}
+
+.name {
+  position: relative;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  line-height: 1.15;
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg-strong);
+}
+
+.blurb {
+  position: relative;
+  font-family: var(--font-serif);
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  color: var(--fg);
+  text-wrap: pretty;
+}
+
+.flipHint {
+  position: relative;
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-2xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--fg-muted);
+}
+
+.flipGlyph {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  border: 1px solid var(--border-strong);
+}
+
+/* Back — the program's own deep opal surface, cream text. */
+.back {
+  transform: rotateY(180deg);
+  box-shadow: var(--shadow-md);
+  gap: 12px;
+  color: var(--c-cream-100);
+  background: var(--program-back);
+}
+
+.backMark {
+  position: absolute;
+  left: -22px;
+  top: 26px;
+  width: 160px;
+  height: 140px;
+  opacity: 0.13;
+  pointer-events: none;
+  transform: scaleX(-1);
+  background-repeat: no-repeat;
+  background-position: right center;
+  background-size: contain;
+  filter: var(--program-back-filter);
+  background-image: var(--program-logo);
+}
+
+/* Clicking anywhere on the back turns the card over; the program link sits
+   above it and wins the click. */
+.backCover {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.backBody {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  pointer-events: none;
+}
+
+.backName {
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--program-back-tint);
+}
+
+.backGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.backLabel {
+  font-size: var(--text-2xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  opacity: 0.6;
+}
+
+.backValue {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+.backLink {
+  margin-top: auto;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--c-gold-300);
+  text-decoration: underline;
+  pointer-events: auto;
+  align-self: flex-start;
+}
+
+.backLink:hover {
+  color: var(--c-gold-200);
+}
