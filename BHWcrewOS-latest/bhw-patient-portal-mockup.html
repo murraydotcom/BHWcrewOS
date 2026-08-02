@@ -525,6 +525,10 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 .off-item__n{font-size:13px; font-weight:700; color:var(--fg-strong); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 .off-item__m{font-size:11.5px; color:var(--fg-muted); margin-top:2px;}
 .off-item .btn{white-space:nowrap; padding:7px 13px; font-size:12px; flex-shrink:0;}
+.off-cam{margin-top:10px;}
+.off-cam[hidden]{display:none;}
+.off-cam video{width:100%; max-width:340px; border-radius:10px; background:#000; display:block;}
+.off-cam__bar{display:flex; align-items:center; gap:12px; margin-top:8px; font-size:12px; color:var(--fg-muted);}
 /* foods to fill gaps */
 .gaps{display:flex; flex-direction:column; gap:12px; margin-top:6px;}
 .gap{border:1px solid var(--border); border-radius:12px; padding:14px 16px; background:#fff;}
@@ -1246,8 +1250,13 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
           <button class="btn btn--go" id="offGo" type="button">Search</button>
         </div>
         <div class="off-bar" style="margin-top:8px;">
-          <input id="offCode" type="text" inputmode="numeric" placeholder="…or type a barcode number">
+          <input id="offCode" type="text" inputmode="numeric" placeholder="…or type / scan a barcode">
           <button class="btn" id="offCodeGo" type="button">Look up</button>
+          <button class="btn btn--go" id="offScan" type="button">📷 Scan</button>
+        </div>
+        <div class="off-cam" id="offCam" hidden>
+          <video id="offVideo" playsinline muted></video>
+          <div class="off-cam__bar"><span id="offCamHint">Point your camera at a barcode…</span><button class="btn" id="offCamStop" type="button">Stop</button></div>
         </div>
         <div class="off-status" id="offStatus"></div>
         <div class="off-results" id="offResults"></div>
@@ -1583,6 +1592,32 @@ function pickBarrier(chip){
   document.getElementById('offGo').onclick=search;
   q.addEventListener('keydown',function(e){ if(e.key==='Enter') search(); });
   document.getElementById('offCodeGo').onclick=lookup;
+
+  /* live camera barcode scan — native BarcodeDetector, graceful fallback */
+  var scanBtn=document.getElementById('offScan'), cam=document.getElementById('offCam'),
+      video=document.getElementById('offVideo'), stopBtn=document.getElementById('offCamStop'),
+      hint=document.getElementById('offCamHint');
+  var stream=null, detector=null, scanning=false, raf=null;
+  function stopCam(){ scanning=false; if(raf) cancelAnimationFrame(raf); if(stream){ stream.getTracks().forEach(function(t){t.stop();}); stream=null; } if(cam) cam.hidden=true; }
+  async function startCam(){
+    if(!('BarcodeDetector' in window)){ status.textContent='Live scanning isn’t supported on this browser — type the barcode instead.'; return; }
+    try{ detector=new window.BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128']}); }
+    catch(e){ status.textContent='Live scanning isn’t available here — type the barcode instead.'; return; }
+    try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}); }
+    catch(e){ status.textContent='Camera unavailable or permission denied — type the barcode instead.'; return; }
+    cam.hidden=false; video.srcObject=stream;
+    try{ await video.play(); }catch(e){}
+    scanning=true; hint.textContent='Point your camera at a barcode…'; status.textContent='';
+    (function loop(){
+      if(!scanning) return;
+      detector.detect(video).then(function(codes){
+        if(codes && codes.length){ var val=codes[0].rawValue||''; stopCam(); document.getElementById('offCode').value=val; lookup(); }
+        else { raf=requestAnimationFrame(loop); }
+      }).catch(function(){ raf=requestAnimationFrame(loop); });
+    })();
+  }
+  if(scanBtn) scanBtn.onclick=startCam;
+  if(stopBtn) stopBtn.onclick=stopCam;
 })();
 </script>
 </body>
