@@ -218,7 +218,11 @@ textarea{resize:vertical;min-height:60px;line-height:1.5}
   <div class="preview-panel">
     <div class="pv-bar">
       <div class="eyebrow">Live document</div>
-      <button class="btn" id="printBtn">Print / Save PDF</button>
+      <span id="officialWrap" style="display:none;gap:6px;align-items:center">
+        <select id="officialSel" style="padding:8px 10px;border:1.5px solid var(--line);border-radius:9px;background:#fff;font-size:12px"></select>
+        <button class="btn ghost2" id="officialBtn" title="Fill the real agency/payer PDF and download it">Fill official form</button>
+      </span>
+      <button class="btn" id="printBtn" style="margin-left:8px">Print / Save PDF</button>
     </div>
     <div class="doc" id="doc"></div>
   </div>
@@ -247,7 +251,7 @@ textarea{resize:vertical;min-height:60px;line-height:1.5}
    PACKETS. To add pre-written diagnosis language, edit ICD10.
    ============================================================ */
 
-const ORG = { name:"BHW Medical Group", tag:"Baltimore Healthcare & Wellness", addr:"2131 Maryland Ave, Baltimore, MD 21218", phone:"(443) 762-5343", fax:"(833) 258-3941" };
+const ORG = { name:"BHW Medical Group", tag:"Baltimore Healthcare & Wellness", addr:"2131 Maryland Ave, Baltimore, MD 21218", street:"2131 Maryland Ave", city:"Baltimore", state:"MD", zip:"21218", phone:"(443) 762-5343", fax:"(833) 258-3941", email:"info@bhwmedical.org" };
 
 // ---- ICD-10 starter library (editable boilerplate). Add freely. ----
 const ICD10 = {
@@ -382,7 +386,7 @@ $("types").innerHTML = PACKETS.map(p =>
 $("types").addEventListener("click", e => {
   const b = e.target.closest(".type"); if(!b) return;
   state.packet = b.dataset.id; state.bodyOverride=""; state.checks={};
-  buildForm(); renderAll();
+  buildForm(); renderAll(); updateOfficial();
 });
 
 /* ---------- render: request fields ---------- */
@@ -645,9 +649,93 @@ $("printBtn").addEventListener("click", () => window.print());
 function renderDoc(){ $("doc").innerHTML = packet().doc(); }
 function renderAll(){ renderIcds(); renderStatus(); renderDoc(); }
 
+/* ============================================================
+   OFFICIAL FORM FILLING — fills the real agency/payer PDF (AcroForm)
+   client-side with pdf-lib. No PHI leaves the browser. Blank forms
+   live in /assets/forms/; pdf-lib is lazy-loaded on first use.
+   To add a form: drop the blank PDF in /assets/forms/, read its field
+   names, and add a { file, map } entry keyed by packet id.
+   ============================================================ */
+const mdy = iso => { if(!iso) return ""; const [y,m,d]=iso.split("-"); return d?`${m}/${d}/${y}`:iso; };
+function fillCtx(){
+  const f=state.fields, icds=state.icds;
+  const parts=(f.patient||"").trim().split(/\s+/);
+  const first=parts[0]||"", last=parts.length>1?parts[parts.length-1]:"", middle=parts.slice(1,-1).join(" ");
+  return {
+    first, middle, last, middle1:(middle||"").slice(0,1), full:f.patient||"",
+    dob:f.dob||"", dobMDY:mdy(f.dob),
+    employer:f.employer||"", provider:f.provider||`${ORG.name} provider`, providerTitle:"Provider",
+    specialty:"Primary care / Behavioral health",
+    onset:mdy(f.leaveFrom||f.dateFrom||""), duration:f.duration||"",
+    dxLabels:icds.map(i=>`${i.code} ${i.label}`).join("; "),
+    dxCodes:icds.map(i=>i.code).join(", "),
+    dxNarrative:[f.limitations, icds.map(i=>`${i.code} ${i.label}`).join("; ")].filter(Boolean).join(" — "),
+    orgName:ORG.name, orgStreet:ORG.street, orgCity:ORG.city, orgState:ORG.state, orgZip:ORG.zip,
+    orgAddr:ORG.addr, orgPhone:ORG.phone, orgFax:ORG.fax, orgEmail:ORG.email,
+    auditMDY:mdy(val("auditDate")),
+  };
+}
+const FMLA_MAP={
+  "Employee name First":"first","Employee name Middle":"middle","Employee name Last":"last",
+  "Employee Name":"full","Employer name":"employer",
+  "Health Care Providers name Print":"provider","Health Care Providers business address":"orgAddr",
+  "Type of practice  Medical specialty":"specialty","Telephone":"orgPhone","Fax":"orgFax","Email":"orgEmail",
+  "1 State the approximate date the condition started or will start":"onset",
+  "2 Provide your best estimate of how long the condition lasted or will last":"duration",
+  "If needed, briefly describe other appropriate medical facts related to the condition(s) for which the employee seeks FMLA leave. (e., use of nebulizer, dialysis)., use of nebulizer, dialysis)":"dxNarrative",
+  "Date":"auditMDY","Date_2":"auditMDY",
+};
+const MTA_CERT_MAP={
+  "Last Name":"last","First Name":"first","Middle Initial":"middle1","Date of Birth MMDDYYYY":"dobMDY",
+  "Applicant Last Name":"last","Applicant First Name":"first","Applicant Middle Initial":"middle1","Applicant Name":"full",
+  "Healthcare Professional Name":"provider","Title":"providerTitle","Facility Institution Agency":"orgName",
+  "State Issued":"orgState","Mailing Address":"orgStreet","City_3":"orgCity","State_3":"orgState","Zip Code_3":"orgZip",
+  "Phone":"orgPhone","Fax":"orgFax","Email Address_2":"orgEmail",
+  "Written Diagnosis List all":"dxLabels","ICD10  DSM Codes":"dxCodes","Date":"auditMDY","Date_2":"auditMDY",
+};
+const MTA_RECERT_MAP={
+  "Last Name":"last","First Name":"first","Middle Initial (2 characters)":"middle1","Date of Birth (MM/DD/YYYY)":"dobMDY",
+  "Applicant Last Name":"last","Applicant First Name":"first","Applicant Middle Initial (2 characters)":"middle1",
+  "What is the primary disability or health condition that prevents you from being able to use MTAs buses and trains Please be specific":"dxLabels",
+  "Date of Diagnosis or Onset":"onset","Date of Signature":"auditMDY",
+};
+const FORMS={
+  fmla:[{ id:"FMLA-WH380E", label:"FMLA WH-380-E (official DOL form)", file:"/assets/forms/fmla-wh380e.pdf", map:FMLA_MAP }],
+  mta:[
+    { id:"MTA-Certification", label:"MTA Mobility Certification (official)", file:"/assets/forms/mta-certification.pdf", map:MTA_CERT_MAP },
+    { id:"MTA-Recertification", label:"MTA Recertification (official)", file:"/assets/forms/mta-recertification.pdf", map:MTA_RECERT_MAP },
+  ],
+};
+function loadPdfLib(){ return new Promise((res,rej)=>{ if(window.PDFLib) return res(); const s=document.createElement("script"); s.src="/assets/vendor/pdf-lib.min.js"; s.onload=()=>res(); s.onerror=()=>rej(new Error("Couldn't load the PDF engine.")); document.head.appendChild(s); }); }
+function updateOfficial(){
+  const forms=FORMS[state.packet]; const wrap=$("officialWrap"), sel=$("officialSel");
+  if(!forms){ wrap.style.display="none"; return; }
+  wrap.style.display="flex";
+  sel.innerHTML=forms.map((f,i)=>`<option value="${i}">${f.label}</option>`).join("");
+}
+$("officialBtn").addEventListener("click", async () => {
+  const forms=FORMS[state.packet]; if(!forms) return;
+  const form=forms[+$("officialSel").value || 0];
+  const btn=$("officialBtn"); const label=btn.textContent; btn.textContent="Filling…"; btn.disabled=true;
+  try{
+    await loadPdfLib();
+    const bytes=await (await fetch(form.file)).arrayBuffer();
+    const doc=await PDFLib.PDFDocument.load(bytes);
+    const pdfForm=doc.getForm(); const ctx=fillCtx(); let filled=0;
+    for(const [fld,key] of Object.entries(form.map)){ const v=ctx[key]; if(v==null||v==="") continue; try{ pdfForm.getTextField(fld).setText(String(v)); filled++; }catch(e){} }
+    const out=await doc.save();
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(new Blob([out],{type:"application/pdf"}));
+    a.download=`${form.id}_${(val("patient")||"patient").replace(/[^a-z0-9]+/gi,"-")}.pdf`;
+    a.click(); URL.revokeObjectURL(a.href);
+    btn.textContent=`Filled ${filled} fields ✓`;
+    setTimeout(()=>{ btn.textContent=label; btn.disabled=false; }, 2200);
+  }catch(e){ btn.textContent="Error — retry"; btn.disabled=false; setTimeout(()=>btn.textContent=label,2200); }
+});
+
 // init
 $("auditDate").value = "";
-buildForm(); renderAll(); setConnected();
+buildForm(); renderAll(); setConnected(); updateOfficial();
 </script>
 </body>
 </html>
