@@ -70,6 +70,31 @@ td a{color:var(--clay-deep);font-weight:700;text-decoration:none}
 .cp-row{display:flex;gap:10px;align-items:center;margin-top:10px}
 .cp-row .cp-sign{flex:1}
 .cp-row .btn{white-space:nowrap}
+/* client roster (Pro) + 12-week trends */
+.roster{width:100%;border-collapse:collapse;margin-top:12px}
+.roster th{text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--soft);padding:8px 10px;border-bottom:1px solid #e5e0d8;font-weight:700}
+.roster td{padding:11px 10px;border-bottom:1px solid #f0ebe2;vertical-align:middle}
+.roster tr:last-child td{border-bottom:0}
+.roster tr:hover td{background:#fbf9f5}
+.roster .nm{font-weight:700;color:var(--ink);font-size:13.5px}
+.roster .wk{font-size:11.5px;color:var(--soft)}
+.roster .progs{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
+.roster .pg{font-size:9px;font-weight:700;letter-spacing:.04em;padding:2px 7px;border-radius:99px;color:#fff}
+.roster .adh{display:flex;align-items:center;gap:9px;min-width:130px}
+.roster .adh .bar{flex:1;height:8px;background:var(--linen);border-radius:99px;overflow:hidden;border:1px solid #e9e2d6}
+.roster .adh .bar span{display:block;height:100%;border-radius:99px}
+.roster .adh b{font-size:12px;color:var(--ink);min-width:32px;text-align:right}
+.roster .spark{width:88px;height:26px;display:block}
+.roster .view{border:1px solid #ddd6cc;background:#fff;border-radius:99px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;color:var(--ink);font-family:var(--sans)}
+.roster .view:hover{border-color:var(--river);color:var(--clay-deep)}
+@media(max-width:720px){.roster .s{display:none}}
+.tr-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-top:14px}
+.tr-card{border:1px solid #eee8df;border-radius:11px;padding:14px}
+.tr-card .tl{font-size:12px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:7px}
+.tr-card .tl i{width:9px;height:9px;border-radius:3px}
+.tr-card .spark{width:100%;height:40px;display:block;margin:8px 0 6px}
+.tr-card .dl{font-size:11px;color:var(--soft)}
+.tr-card .dl b{color:var(--ok)}
 </style>
 </head>
 <body>
@@ -93,8 +118,50 @@ td a{color:var(--clay-deep);font-weight:700;text-decoration:none}
 </section>
 
 <section class="view" id="v-blueprint">
-  <div class="card"><span class="eyebrow">Whole-person tracking</span><h2>Health Blueprint — Provider side</h2>
-    <p style="font-size:12.5px;color:var(--soft)">Track a patient across the five pillars — exercise, sleep, social, coping, nutrition — and post a recommendation straight onto their Blueprint. Progress below is demo data until patient logging connects; the recommendation composer writes to their live patient page now.</p>
+  <div class="card"><span class="eyebrow">Client roster</span><h2>Health Blueprint — Provider side</h2>
+    <p style="font-size:12.5px;color:var(--soft)">Every patient on a 12-week Health Blueprint, at a glance. Demo data — open a client to see and manage their Blueprint below.</p>
+    <table class="roster">
+      <tr><th>Client</th><th>Blueprint</th><th>Adherence · this week</th><th class="s">4-wk trend</th><th></th></tr>
+      <tr>
+        <td><div class="nm">Jordan T.</div><div class="progs"><span class="pg" style="background:#4f7f92">Primary Care</span></div></td>
+        <td class="wk">Week 3 / 12</td>
+        <td><div class="adh"><div class="bar"><span style="width:78%;background:#6f8f6a"></span></div><b>78%</b></div></td>
+        <td class="s"><svg class="spark" viewBox="0 0 88 26" preserveAspectRatio="none"><polyline points="0,20 22,18 44,17 66,13 88,10" fill="none" stroke="#6f8f6a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></td>
+        <td><button class="view" onclick="document.getElementById('bp-client').scrollIntoView({behavior:'smooth'})">View →</button></td>
+      </tr>
+      <tr>
+        <td><div class="nm">Sam R.</div><div class="progs"><span class="pg" style="background:#AF6763">Mind &amp; Mood</span><span class="pg" style="background:#4f7f92">Primary Care</span></div></td>
+        <td class="wk">Week 9 / 12</td>
+        <td><div class="adh"><div class="bar"><span style="width:71%;background:#6f8f6a"></span></div><b>71%</b></div></td>
+        <td class="s"><svg class="spark" viewBox="0 0 88 26" preserveAspectRatio="none"><polyline points="0,19 22,20 44,16 66,15 88,12" fill="none" stroke="#6f8f6a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></td>
+        <td><button class="view" onclick="document.getElementById('bp-client').scrollIntoView({behavior:'smooth'})">View →</button></td>
+      </tr>
+      <tr>
+        <td><div class="nm">Theo M.</div><div class="progs"><span class="pg" style="background:#2CA7A6">CharmEd Minds</span></div></td>
+        <td class="wk">Week 4 / 12</td>
+        <td><div class="adh"><div class="bar"><span style="width:66%;background:#b07a55"></span></div><b>66%</b></div></td>
+        <td class="s"><svg class="spark" viewBox="0 0 88 26" preserveAspectRatio="none"><polyline points="0,18 22,16 44,17 66,14 88,13" fill="none" stroke="#b07a55" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></td>
+        <td><button class="view" onclick="document.getElementById('bp-client').scrollIntoView({behavior:'smooth'})">View →</button></td>
+      </tr>
+      <tr>
+        <td><div class="nm">Jen L.</div><div class="progs"><span class="pg" style="background:#167A9A">Flow</span><span class="pg" style="background:#4f7f92">Primary Care</span></div></td>
+        <td class="wk">Week 8 / 12</td>
+        <td><div class="adh"><div class="bar"><span style="width:84%;background:#6f8f6a"></span></div><b>84%</b></div></td>
+        <td class="s"><svg class="spark" viewBox="0 0 88 26" preserveAspectRatio="none"><polyline points="0,17 22,14 44,15 66,11 88,8" fill="none" stroke="#6f8f6a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></td>
+        <td><button class="view" onclick="document.getElementById('bp-client').scrollIntoView({behavior:'smooth'})">View →</button></td>
+      </tr>
+      <tr>
+        <td><div class="nm">Maria G.</div><div class="progs"><span class="pg" style="background:#4f7f92">Primary Care</span></div></td>
+        <td class="wk">Week 1 / 12 · new</td>
+        <td><div class="adh"><div class="bar"><span style="width:41%;background:#a85846"></span></div><b>41%</b></div></td>
+        <td class="s"><svg class="spark" viewBox="0 0 88 26" preserveAspectRatio="none"><polyline points="0,19 22,18 44,20 66,17 88,16" fill="none" stroke="#a85846" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></td>
+        <td><button class="view" onclick="document.getElementById('bp-client').scrollIntoView({behavior:'smooth'})">View →</button></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card" id="bp-client"><span class="eyebrow">Whole-person tracking</span><h2 style="font-size:17px">Client Blueprint · <span style="color:var(--clay-deep)">Jordan T.</span></h2>
+    <p style="font-size:12.5px;color:var(--soft)">Track this patient across the five pillars and post a recommendation straight onto their Blueprint. Progress is demo data until patient logging connects; the recommendation composer writes to their live patient page now.</p>
     <label>Patient</label><select id="bp-pat"></select>
   </div>
 
@@ -107,6 +174,16 @@ td a{color:var(--clay-deep);font-weight:700;text-decoration:none}
       <div class="bp-row"><div class="dom"><span class="d" style="background:#6f8f6a"></span>Nutrition<br><span class="rx">AM protein anchor, focus foods</span></div><div class="bp-bar"><span style="width:86%;background:#6f8f6a"></span></div><div class="val"><b>6 / 7</b> days</div></div>
     </div>
     <div class="bp-legend">Bars show this week's adherence to each recommended pillar. This view mirrors what the patient sees on their Blueprint tab.</div>
+  </div>
+
+  <div class="card"><span class="eyebrow">12-week trends</span><h2 style="font-size:17px">Blueprint trends · 12 weeks</h2>
+    <div class="tr-grid">
+      <div class="tr-card"><div class="tl"><i style="background:#80abbd"></i>Exercise</div><svg class="spark" viewBox="0 0 200 40" preserveAspectRatio="none"><polyline points="0,26 40,24 80,21 120,20 160,17 200,15" fill="none" stroke="#80abbd" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="dl"><b>▲ 32</b> vs week 1</div></div>
+      <div class="tr-card"><div class="tl"><i style="background:#8188c0"></i>Sleep</div><svg class="spark" viewBox="0 0 200 40" preserveAspectRatio="none"><polyline points="0,21 40,20 80,18 120,17 160,15 200,14" fill="none" stroke="#8188c0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="dl"><b>▲ 21</b> vs week 1</div></div>
+      <div class="tr-card"><div class="tl"><i style="background:#b07a55"></i>Social</div><svg class="spark" viewBox="0 0 200 40" preserveAspectRatio="none"><polyline points="0,30 40,27 80,25 120,24 160,22 200,21" fill="none" stroke="#b07a55" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="dl"><b>▲ 27</b> vs week 1</div></div>
+      <div class="tr-card"><div class="tl"><i style="background:#5fa9a6"></i>Coping</div><svg class="spark" viewBox="0 0 200 40" preserveAspectRatio="none"><polyline points="0,23 40,21 80,20 120,19 160,17 200,16" fill="none" stroke="#5fa9a6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="dl"><b>▲ 21</b> vs week 1</div></div>
+      <div class="tr-card"><div class="tl"><i style="background:#6f8f6a"></i>Nutrition</div><svg class="spark" viewBox="0 0 200 40" preserveAspectRatio="none"><polyline points="0,20 40,18 80,16 120,15 160,13 200,12" fill="none" stroke="#6f8f6a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="dl"><b>▲ 22</b> vs week 1</div></div>
+    </div>
   </div>
 
   <div class="card"><span class="eyebrow">Recommend &amp; upload</span><h2 style="font-size:17px">Post a Blueprint recommendation</h2>
