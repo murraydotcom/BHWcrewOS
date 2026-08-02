@@ -47,6 +47,18 @@ td{padding:10px;border-bottom:1px solid #f0ebe2}
 td a{color:var(--clay-deep);font-weight:700;text-decoration:none}
 .warn{color:var(--urgent);font-weight:700;font-size:11px}
 .planbox{white-space:pre-wrap;background:var(--linen);border-radius:11px;padding:14px;font-size:12.5px;max-height:420px;overflow:auto}
+/* Blueprint pillar tracking */
+.bp-track{display:flex;flex-direction:column;gap:15px;margin-top:16px}
+.bp-row{display:grid;grid-template-columns:150px 1fr 150px;gap:16px;align-items:center}
+.bp-row .dom{font-weight:700;font-size:13px;display:flex;align-items:center;gap:9px;color:var(--ink)}
+.bp-row .dom .d{width:10px;height:10px;border-radius:50%;flex:none}
+.bp-row .dom .rx{font-size:10.5px;font-weight:500;color:var(--soft);letter-spacing:0}
+.bp-bar{height:10px;background:var(--linen);border-radius:99px;overflow:hidden;border:1px solid #e9e2d6}
+.bp-bar span{display:block;height:100%;border-radius:99px}
+.bp-row .val{font-size:12px;color:var(--soft);white-space:nowrap;font-weight:600;text-align:right}
+.bp-row .val b{color:var(--ink);font-weight:700}
+.bp-legend{font-size:11.5px;color:var(--soft);margin-top:14px}
+@media(max-width:640px){.bp-row{grid-template-columns:1fr auto}.bp-row .bp-bar{grid-column:1/-1;order:3}}
 </style>
 </head>
 <body>
@@ -56,6 +68,7 @@ td a{color:var(--clay-deep);font-weight:700;text-decoration:none}
   <nav>
     <button class="on" data-v="inbox">Inbox</button>
     <button data-v="plan">Care plan builder</button>
+    <button data-v="blueprint">Blueprint</button>
     <button data-v="results">Post results</button>
     <button data-v="patients">Patients</button>
   </nav>
@@ -92,6 +105,44 @@ td a{color:var(--clay-deep);font-weight:700;text-decoration:none}
         </select>
         <button class="btn warm" style="margin-top:14px" onclick="publishWeek()">🌿 Publish week to patient page</button>
         <div class="status" id="p-st"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="view" id="v-blueprint">
+  <div class="card"><span class="eyebrow">Whole-person tracking</span><h2>Health Blueprint</h2>
+    <p style="font-size:12.5px;color:var(--soft)">Track a patient across the five pillars — exercise, sleep, social, coping, nutrition — and post a recommendation straight onto their Blueprint. Progress below is demo data until patient logging connects; the recommendation composer writes to their live patient page now.</p>
+    <label>Patient</label><select id="bp-pat"></select>
+  </div>
+
+  <div class="card"><span class="eyebrow">This week · adherence</span><h2 style="font-size:17px">Pillar progress</h2>
+    <div class="bp-track">
+      <div class="bp-row"><div class="dom"><span class="d" style="background:#80abbd"></span>Exercise<br><span class="rx">2× 20-min walks after meals</span></div><div class="bp-bar"><span style="width:57%;background:#80abbd"></span></div><div class="val"><b>4 / 7</b> days · ↑ 1</div></div>
+      <div class="bp-row"><div class="dom"><span class="d" style="background:#8188c0"></span>Sleep<br><span class="rx">10:30p window, screens down</span></div><div class="bp-bar"><span style="width:71%;background:#8188c0"></span></div><div class="val"><b>7h 05m</b> avg · ↑</div></div>
+      <div class="bp-row"><div class="dom"><span class="d" style="background:#b07a55"></span>Social<br><span class="rx">1 real connection this week</span></div><div class="bp-bar"><span style="width:50%;background:#b07a55"></span></div><div class="val"><b>1 / 2</b> planned</div></div>
+      <div class="bp-row"><div class="dom"><span class="d" style="background:#5fa9a6"></span>Coping<br><span class="rx">3-min wind-down at the 3pm dip</span></div><div class="bp-bar"><span style="width:71%;background:#5fa9a6"></span></div><div class="val"><b>5 / 7</b> check-ins</div></div>
+      <div class="bp-row"><div class="dom"><span class="d" style="background:#6f8f6a"></span>Nutrition<br><span class="rx">AM protein anchor, focus foods</span></div><div class="bp-bar"><span style="width:86%;background:#6f8f6a"></span></div><div class="val"><b>6 / 7</b> days</div></div>
+    </div>
+    <div class="bp-legend">Bars show this week's adherence to each recommended pillar. This view mirrors what the patient sees on their Blueprint tab.</div>
+  </div>
+
+  <div class="card"><span class="eyebrow">Recommend &amp; upload</span><h2 style="font-size:17px">Post a Blueprint recommendation</h2>
+    <p style="font-size:12.5px;color:var(--soft)">Written in plain patient language — this appears on their page as a Blueprint recommendation they can log against.</p>
+    <div class="grid2">
+      <div>
+        <label>Pillar</label>
+        <select id="bp-dom"><option>Exercise</option><option>Sleep</option><option>Social</option><option>Coping</option><option>Nutrition</option></select>
+        <label>Recommendation (patient language)</label>
+        <textarea id="bp-rx" rows="5" placeholder="Two 20-minute walks after your largest meals — they blunt the afternoon dip…"></textarea>
+      </div>
+      <div>
+        <label>Target / cadence (optional)</label>
+        <input id="bp-target" placeholder="e.g., 4 days this week">
+        <label>Signed</label>
+        <select id="bp-prov"><option>Amaris, CRNP</option><option>Yahaira, CRNP</option><option>Tanya, PMHNP</option><option>Eleshiea, LCSW-C</option></select>
+        <button class="btn warm" style="margin-top:14px" onclick="postBlueprint()">🧭 Post to patient's Blueprint</button>
+        <div class="status" id="bp-st"></div>
       </div>
     </div>
   </div>
@@ -145,7 +196,7 @@ async function boot(){
   try{
     const d=await api('mode=patients');
     PATIENTS=d.patients;
-    ['p-pat','r-pat'].forEach(id=>{
+    ['p-pat','r-pat','bp-pat'].forEach(id=>{
       const s=$(id); s.innerHTML='<option value="">Choose patient…</option>';
       PATIENTS.forEach((p,i)=>{const o=document.createElement('option');o.value=i;
         o.textContent=`${p.name}${p.ctl?' · '+p.ctl:''}${p.pageId?'':' — ⚠ no page linked'}`;s.appendChild(o);});
@@ -222,6 +273,20 @@ async function postResult(){
       meaning:$('r-mean').value,provider:$('r-prov').value});
     st.textContent=`✓ Posted to ${p.name.split(',')[0]}'s page with your interpretation.`;
     ['r-lab','r-val','r-mean'].forEach(id=>$(id).value='');
+  }catch(e){ st.textContent='Error: '+e.message; }
+}
+
+async function postBlueprint(){
+  const p=PATIENTS[$('bp-pat').value]; const st=$('bp-st');
+  if(!p){ st.textContent='Pick a patient.'; return; }
+  if(!p.pageId){ st.textContent='⚠ No Patient Page URL on the Master List for this patient.'; return; }
+  if(!$('bp-rx').value.trim()){ st.textContent='Write the recommendation first.'; return; }
+  st.textContent='Posting…';
+  try{
+    await api('',{action:'publishblueprint',pageId:p.pageId,domain:$('bp-dom').value,
+      rec:$('bp-rx').value,target:$('bp-target').value,provider:$('bp-prov').value});
+    st.textContent=`✓ ${$('bp-dom').value} recommendation posted to ${p.name.split(',')[0]}'s Blueprint.`;
+    $('bp-rx').value='';$('bp-target').value='';
   }catch(e){ st.textContent='Error: '+e.message; }
 }
 

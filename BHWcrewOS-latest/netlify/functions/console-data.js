@@ -5,6 +5,7 @@
 // GET  ?mode=inbox               -> triage queue items (provider lens)
 // POST {action:'publishweek', pageId, week, title, body}   -> appends week to patient's page
 // POST {action:'postresult', pageId, lab, value, meaning, provider} -> appends result callout
+// POST {action:'publishblueprint', pageId, domain, rec, target, provider} -> appends Blueprint recommendation callout
 // POST {action:'start'|'done', id}                          -> queue status (same as front desk)
 // Env: NOTION_TOKEN, MASTER_DB_ID, QUEUE_DB_ID, DASH_KEY
 
@@ -55,6 +56,25 @@ exports.handler = async (event) => {
         const res = await fetch(`${NOTION}/blocks/${b.pageId}/children`, {
           method: 'PATCH', headers: H(),
           body: JSON.stringify({ children: [{ object: 'block', type: 'callout', callout: { icon: { emoji: '🧪' }, color: 'blue_background', rich_text: [{ text: { content: content.slice(0, 1900) } }] } }] }),
+        });
+        if (!res.ok) return J(502, { error: (await res.text()).slice(0, 300) });
+        return J(200, { ok: true });
+      }
+
+      if (b.action === 'publishblueprint') {
+        if (!b.pageId) return J(400, { error: 'no patient page linked — add the Patient Page URL on the Master List' });
+        const ICONS = { Exercise: '🏃', Sleep: '😴', Social: '🤝', Coping: '🧭', Nutrition: '🍎' };
+        const emoji = ICONS[b.domain] || '🧭';
+        const parts = [
+          `${emoji} ${b.domain || 'Blueprint'} — recommended by your care team`,
+          b.rec || '',
+        ];
+        if (b.target) parts.push(`Target: ${b.target}`);
+        parts.push(`— ${b.provider || 'your care team'}, ${new Date().toLocaleDateString('en-US')}`);
+        const content = parts.filter(Boolean).join('\n');
+        const res = await fetch(`${NOTION}/blocks/${b.pageId}/children`, {
+          method: 'PATCH', headers: H(),
+          body: JSON.stringify({ children: [{ object: 'block', type: 'callout', callout: { icon: { emoji }, color: 'green_background', rich_text: [{ text: { content: content.slice(0, 1900) } }] } }] }),
         });
         if (!res.ok) return J(502, { error: (await res.text()).slice(0, 300) });
         return J(200, { ok: true });

@@ -298,6 +298,42 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 .portal-foot{border-top:1px solid var(--border); margin-top:70px; padding-top:22px;
   display:flex; justify-content:space-between; gap:18px; flex-wrap:wrap;
   font-size:11px; color:var(--fg-muted); letter-spacing:0.05em;}
+
+/* ============================================================
+   HEALTH BLUEPRINT — five-pillar tracker (Cronometer-style).
+   Built on the portal's accent vars. Demo data only.
+   ============================================================ */
+.blueprint{margin:2px 0 40px;}
+.bp-head{max-width:640px; margin-bottom:22px;}
+.bp-head h2{font-family:var(--font-serif); font-weight:400; font-size:26px; color:var(--fg-strong); margin:8px 0 8px; letter-spacing:-0.01em; line-height:1.2;}
+.bp-head p{font-size:13.5px; color:var(--fg-muted); line-height:1.65; margin:0;}
+.bp-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(256px,1fr)); gap:16px;}
+.bp-card{background:#fff; border:1px solid var(--border); border-radius:16px; padding:22px; display:flex; flex-direction:column; position:relative; overflow:hidden; box-shadow:var(--shadow-sm);}
+.bp-card::before{content:""; position:absolute; left:0; top:0; width:100%; height:3px; background:var(--dom, var(--accent));}
+.bp-card__top{display:flex; align-items:center; gap:12px; margin-bottom:15px;}
+.bp-ico{width:40px; height:40px; border-radius:11px; display:grid; place-items:center; font-size:19px; flex-shrink:0; background:color-mix(in srgb, var(--dom, var(--accent)) 16%, transparent);}
+.bp-dom{font-size:15px; font-weight:700; color:var(--fg-strong); line-height:1.1;}
+.bp-tag{font-size:9.5px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--dom, var(--accent)); margin-top:4px;}
+.bp-rx{background:var(--bg-warm); border-radius:11px; padding:13px 14px; margin-bottom:15px;}
+.bp-rx__label{font-size:9px; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; color:var(--fg-muted); margin-bottom:5px; display:flex; align-items:center; gap:6px;}
+.bp-rx__label::before{content:"⬆"; font-size:9px; color:var(--dom, var(--accent));}
+.bp-rx p{font-size:12.5px; color:var(--fg); line-height:1.55; margin:0;}
+.bp-rx p strong{color:var(--fg-strong); font-weight:600;}
+.bp-prog{margin-bottom:14px;}
+.bp-prog__row{display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; color:var(--fg-muted); margin-bottom:8px;}
+.bp-prog__row strong{font-size:12.5px; color:var(--fg-strong); font-weight:700;}
+.bp-dots{display:flex; gap:5px;}
+.bp-dots span{flex:1; height:8px; border-radius:3px; background:var(--border);}
+.bp-dots span.on{background:var(--dom, var(--accent));}
+.bp-dots span.half{background:color-mix(in srgb, var(--dom, var(--accent)) 45%, var(--border));}
+.bp-metric{display:flex; align-items:flex-end; gap:8px; margin-bottom:16px;}
+.bp-metric .n{font-family:var(--font-sans); font-weight:300; font-size:29px; line-height:1; color:var(--fg-strong); letter-spacing:-0.02em;}
+.bp-metric .u{font-size:11px; color:var(--fg-muted); padding-bottom:3px;}
+.bp-metric .ch{font-size:11px; font-weight:600; color:var(--dom, var(--accent)); padding-bottom:4px; margin-left:auto;}
+.bp-log{margin-top:auto; align-self:flex-start; background:transparent; color:var(--dom, var(--accent)); border:1px solid color-mix(in srgb, var(--dom, var(--accent)) 40%, transparent); padding:9px 16px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:0.08em; cursor:pointer; font-family:var(--font-sans); transition:all 180ms;}
+.bp-log:hover{background:var(--dom, var(--accent)); color:#fff;}
+.bp-link{display:inline-flex; align-items:center; gap:6px; margin-top:2px; font-size:12px; font-weight:600; color:var(--dom, var(--accent)); background:none; border:0; cursor:pointer; font-family:var(--font-sans); padding:0;}
+@media(max-width:560px){.bp-grid{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
@@ -356,6 +392,7 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
     <div class="portal-tabs__inner">
       <button class="ptab active" data-pane="home" onclick="go('home',this)">Home</button>
       <button class="ptab" data-pane="plan" onclick="go('plan',this)">Care plan</button>
+      <button class="ptab" data-pane="blueprint" onclick="go('blueprint',this)">Blueprint</button>
       <button class="ptab" data-pane="nutrition" onclick="go('nutrition',this)">Nutrition</button>
       <button class="ptab" data-pane="messages" onclick="go('messages',this)">Messages</button>
     </div>
@@ -586,6 +623,59 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
           </div>
         </div>
       </div>
+    </section>
+
+    <!-- ========== BLUEPRINT ========== -->
+    <section class="pane" id="pane-blueprint">
+      <div class="plan-head">
+        <h2>Your Health Blueprint, <em>all in one view.</em></h2>
+        <p>Five pillars, tracked together. Your care team recommends each one and posts it here — you log as you go, and we watch the whole picture, not just the labs.</p>
+      </div>
+      <section class="blueprint">
+        <div class="bp-grid">
+
+          <article class="bp-card" style="--dom:#8C5A3C;">
+            <div class="bp-card__top"><span class="bp-ico">🚶</span><div><div class="bp-dom">Exercise</div><div class="bp-tag">On track</div></div></div>
+            <div class="bp-rx"><div class="bp-rx__label">Your care team recommends</div><p><strong>Two 20-minute walks after your largest meals</strong> — they blunt the glucose spike that deepens the 3pm dip.</p></div>
+            <div class="bp-prog"><div class="bp-prog__row"><span>This week</span><strong>4 / 7 days</strong></div><div class="bp-dots"><span class="on"></span><span class="on"></span><span></span><span class="on"></span><span class="on"></span><span></span><span></span></div></div>
+            <div class="bp-metric"><span class="n">4</span><span class="u">days moved</span><span class="ch">↑ 1 vs last wk</span></div>
+            <button class="bp-log" type="button">Log movement</button>
+          </article>
+
+          <article class="bp-card" style="--dom:#7C6BD6;">
+            <div class="bp-card__top"><span class="bp-ico">😴</span><div><div class="bp-dom">Sleep</div><div class="bp-tag">Protected</div></div></div>
+            <div class="bp-rx"><div class="bp-rx__label">Your care team recommends</div><p>A <strong>10:30pm sleep window</strong>, screens down 30 minutes before. Iron repletion without sleep is pouring water into a cracked cup.</p></div>
+            <div class="bp-prog"><div class="bp-prog__row"><span>On-time window</span><strong>5 / 7 nights</strong></div><div class="bp-dots"><span class="on"></span><span class="on"></span><span></span><span class="on"></span><span class="on"></span><span></span><span class="on"></span></div></div>
+            <div class="bp-metric"><span class="n">7h 05m</span><span class="u">avg sleep</span><span class="ch">↑ improving</span></div>
+            <button class="bp-log" type="button">Log sleep</button>
+          </article>
+
+          <article class="bp-card" style="--dom:#266D7A;">
+            <div class="bp-card__top"><span class="bp-ico">🤝</span><div><div class="bp-dom">Social</div><div class="bp-tag">Room to grow</div></div></div>
+            <div class="bp-rx"><div class="bp-rx__label">Your care team recommends</div><p>One <strong>real connection this week that isn't a screen</strong> — a walk with a friend ties two pillars together.</p></div>
+            <div class="bp-prog"><div class="bp-prog__row"><span>This week</span><strong>1 / 2 planned</strong></div><div class="bp-dots"><span></span><span class="on"></span><span></span><span></span><span class="half"></span><span></span><span></span></div></div>
+            <div class="bp-metric"><span class="n">1</span><span class="u">connection</span><span class="ch">keep going</span></div>
+            <button class="bp-log" type="button">Log a connection</button>
+          </article>
+
+          <article class="bp-card" style="--dom:#5FA9A6;">
+            <div class="bp-card__top"><span class="bp-ico">🧭</span><div><div class="bp-dom">Coping</div><div class="bp-tag">Steady</div></div></div>
+            <div class="bp-rx"><div class="bp-rx__label">Your care team recommends</div><p>A <strong>3-minute wind-down before the afternoon dip</strong> — box breathing or a short walk beats reaching for caffeine.</p></div>
+            <div class="bp-prog"><div class="bp-prog__row"><span>Check-ins</span><strong>5 / 7 days</strong></div><div class="bp-dots"><span class="on"></span><span class="on"></span><span class="on"></span><span></span><span class="on"></span><span class="on"></span><span></span></div></div>
+            <div class="bp-metric"><span class="n">5</span><span class="u">check-ins</span><span class="ch">steady</span></div>
+            <button class="bp-log" type="button">Coping check-in</button>
+          </article>
+
+          <article class="bp-card" style="--dom:#5AA469;">
+            <div class="bp-card__top"><span class="bp-ico">🍎</span><div><div class="bp-dom">Nutrition</div><div class="bp-tag">On track</div></div></div>
+            <div class="bp-rx"><div class="bp-rx__label">Your care team recommends</div><p><strong>Morning protein anchor, 25–30g before caffeine</strong>, plus leafy greens, salmon, and lentils from your focus list.</p></div>
+            <div class="bp-prog"><div class="bp-prog__row"><span>Fueled mornings</span><strong>6 / 7 days</strong></div><div class="bp-dots"><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span></span><span class="on"></span></div></div>
+            <div class="bp-metric"><span class="n">6</span><span class="u">fueled AMs</span><span class="ch">steady</span></div>
+            <button class="bp-link" type="button" onclick="document.querySelector('[data-pane=nutrition]').click(); return false;">See your full nutrition plan →</button>
+          </article>
+
+        </div>
+      </section>
     </section>
 
     <!-- ========== MESSAGES ========== -->

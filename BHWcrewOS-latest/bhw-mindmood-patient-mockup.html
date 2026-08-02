@@ -536,6 +536,42 @@ h1,h2,h3,h4,h5{margin:0; color:var(--fg-strong); text-wrap:balance;}
 }
 .bhw.bhw--dark .eyebrow { color: var(--fg-on-dark-muted); }
 
+  /* ============================================================
+     HEALTH BLUEPRINT — five-pillar tracker (Cronometer-style).
+     Built on the page's own accent vars so it inherits the
+     program palette automatically. Demo data only.
+     ============================================================ */
+  .blueprint{margin:2px 0 84px;}
+  .bp-head{max-width:660px; margin-bottom:22px;}
+  .bp-head h2{font-family:var(--font-serif); font-weight:500; font-size:26px; color:var(--fg-strong); margin:8px 0 8px; letter-spacing:-0.01em; line-height:1.2;}
+  .bp-head p{font-size:13.5px; color:var(--fg-muted); line-height:1.65; margin:0;}
+  .bp-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(256px,1fr)); gap:16px;}
+  .bp-card{background:#fff; border:1px solid var(--border); border-radius:16px; padding:22px; display:flex; flex-direction:column; position:relative; overflow:hidden;}
+  .bp-card::before{content:""; position:absolute; left:0; top:0; width:100%; height:3px; background:var(--dom, var(--accent));}
+  .bp-card__top{display:flex; align-items:center; gap:12px; margin-bottom:15px;}
+  .bp-ico{width:40px; height:40px; border-radius:11px; display:grid; place-items:center; font-size:19px; flex-shrink:0; background:color-mix(in srgb, var(--dom, var(--accent)) 16%, transparent);}
+  .bp-dom{font-size:15px; font-weight:700; color:var(--fg-strong); line-height:1.1;}
+  .bp-tag{font-size:9.5px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--dom, var(--accent)); margin-top:4px;}
+  .bp-rx{background:var(--bg-warm); border-radius:11px; padding:13px 14px; margin-bottom:15px;}
+  .bp-rx__label{font-size:9px; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; color:var(--fg-muted); margin-bottom:5px; display:flex; align-items:center; gap:6px;}
+  .bp-rx__label::before{content:"⬆"; font-size:9px; color:var(--dom, var(--accent));}
+  .bp-rx p{font-size:12.5px; color:var(--fg); line-height:1.55; margin:0;}
+  .bp-rx p strong{color:var(--fg-strong); font-weight:600;}
+  .bp-prog{margin-bottom:14px;}
+  .bp-prog__row{display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; color:var(--fg-muted); margin-bottom:8px;}
+  .bp-prog__row strong{font-size:12.5px; color:var(--fg-strong); font-weight:700;}
+  .bp-dots{display:flex; gap:5px;}
+  .bp-dots span{flex:1; height:8px; border-radius:3px; background:var(--border);}
+  .bp-dots span.on{background:var(--dom, var(--accent));}
+  .bp-dots span.half{background:color-mix(in srgb, var(--dom, var(--accent)) 45%, var(--border));}
+  .bp-metric{display:flex; align-items:flex-end; gap:8px; margin-bottom:16px;}
+  .bp-metric .n{font-family:var(--font-sans); font-weight:300; font-size:29px; line-height:1; color:var(--fg-strong); letter-spacing:-0.02em;}
+  .bp-metric .u{font-size:11px; color:var(--fg-muted); padding-bottom:3px;}
+  .bp-metric .ch{font-size:11px; font-weight:600; color:var(--dom, var(--accent)); padding-bottom:4px; margin-left:auto;}
+  .bp-log{margin-top:auto; align-self:flex-start; background:transparent; color:var(--dom, var(--accent)); border:1px solid color-mix(in srgb, var(--dom, var(--accent)) 40%, transparent); padding:9px 16px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:0.08em; cursor:pointer; font-family:var(--font-sans); transition:all 180ms;}
+  .bp-log:hover{background:var(--dom, var(--accent)); color:#fff;}
+  @media(max-width:560px){.bp-grid{grid-template-columns:1fr;}}
+
 </style>
 <style>
   body{background:var(--bg);}
@@ -1024,6 +1060,59 @@ input[type=checkbox]{accent-color:#D69C60 !important}
 
       </div>
     </div>
+
+    <!-- ================= HEALTH BLUEPRINT ================= -->
+    <section class="blueprint">
+      <div class="bp-head">
+        <div class="eyebrow eyebrow--accent" style="color:#AF6763;">Your Health Blueprint</div>
+        <h2>Recovery is a whole-life practice.</h2>
+        <p>Mood doesn't move on medication alone — it moves on how you slept, moved, connected, and coped. Your team recommends each pillar below and posts it here; you log what's real, no judgment, and we watch the pattern together.</p>
+      </div>
+      <div class="bp-grid">
+
+        <article class="bp-card" style="--dom:#6E8F79;">
+          <div class="bp-card__top"><span class="bp-ico">🚶</span><div><div class="bp-dom">Exercise</div><div class="bp-tag">Gentle start</div></div></div>
+          <div class="bp-rx"><div class="bp-rx__label">Your team recommends</div><p><strong>Behavioral activation</strong> — a 10-minute walk on the hard days counts double. Aim to move three times this week; no streak pressure.</p></div>
+          <div class="bp-prog"><div class="bp-prog__row"><span>This week</span><strong>3 / 7 days</strong></div><div class="bp-dots"><span class="on"></span><span></span><span class="on"></span><span></span><span></span><span class="on"></span><span></span></div></div>
+          <div class="bp-metric"><span class="n">3</span><span class="u">days moved</span><span class="ch">↑ 1 vs last wk</span></div>
+          <button class="bp-log" type="button">Log movement</button>
+        </article>
+
+        <article class="bp-card" style="--dom:#7C6BD6;">
+          <div class="bp-card__top"><span class="bp-ico">😴</span><div><div class="bp-dom">Sleep</div><div class="bp-tag">Improving</div></div></div>
+          <div class="bp-rx"><div class="bp-rx__label">Your team recommends</div><p>A protected window <strong>10:30p–6:30a</strong>, caffeine curfew at noon, and trazodone PRN as Dr. Park set. Sleep is your first medicine.</p></div>
+          <div class="bp-prog"><div class="bp-prog__row"><span>On-time window</span><strong>6 / 7 nights</strong></div><div class="bp-dots"><span class="on"></span><span class="on"></span><span class="on"></span><span></span><span class="on"></span><span class="on"></span><span class="on"></span></div></div>
+          <div class="bp-metric"><span class="n">7h 10m</span><span class="u">avg sleep</span><span class="ch">↑ steadier</span></div>
+          <button class="bp-log" type="button">Log sleep</button>
+        </article>
+
+        <article class="bp-card" style="--dom:#AF6763;">
+          <div class="bp-card__top"><span class="bp-ico">🤝</span><div><div class="bp-dom">Social</div><div class="bp-tag">Protective</div></div></div>
+          <div class="bp-rx"><div class="bp-rx__label">Your team recommends</div><p>Recovery group <strong>Tu/Th</strong> and one reach-out when the 4–6p window hits — text Mara. Isolation is the relapse; connection is the plan.</p></div>
+          <div class="bp-prog"><div class="bp-prog__row"><span>This week</span><strong>3 / 3 planned</strong></div><div class="bp-dots"><span class="on"></span><span></span><span class="on"></span><span></span><span class="on"></span><span></span><span></span></div></div>
+          <div class="bp-metric"><span class="n">3</span><span class="u">connections</span><span class="ch">on plan</span></div>
+          <button class="bp-log" type="button">Log a connection</button>
+        </article>
+
+        <article class="bp-card" style="--dom:#B07A55;">
+          <div class="bp-card__top"><span class="bp-ico">🧭</span><div><div class="bp-dom">Coping</div><div class="bp-tag">Practicing</div></div></div>
+          <div class="bp-rx"><div class="bp-rx__label">Your team recommends</div><p><strong>Urge-surf the wave</strong> and run 5-4-3-2-1 grounding when distress spikes. Log your mood daily — you and the team read the same graph.</p></div>
+          <div class="bp-prog"><div class="bp-prog__row"><span>Mood logs</span><strong>5 / 5 days</strong></div><div class="bp-dots"><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span></span><span></span></div></div>
+          <div class="bp-metric"><span class="n">5.6</span><span class="u">avg mood</span><span class="ch">↑ steadier</span></div>
+          <button class="bp-log" type="button">Coping check-in</button>
+        </article>
+
+        <article class="bp-card" style="--dom:#5AA469;">
+          <div class="bp-card__top"><span class="bp-ico">🥗</span><div><div class="bp-dom">Nutrition</div><div class="bp-tag">Food for Mood</div></div></div>
+          <div class="bp-rx"><div class="bp-rx__label">Your team recommends</div><p><strong>Omega-3s twice</strong>, something fermented most days, and protein at breakfast to steady the 4–6p dip.</p></div>
+          <div class="bp-prog"><div class="bp-prog__row"><span>On-plan days</span><strong>5 / 7 days</strong></div><div class="bp-dots"><span class="on"></span><span class="on"></span><span></span><span class="on"></span><span class="on"></span><span></span><span class="on"></span></div></div>
+          <div class="bp-metric"><span class="n">5</span><span class="u">on-plan days</span><span class="ch">steady</span></div>
+          <button class="bp-log" type="button">Log a meal</button>
+        </article>
+
+      </div>
+    </section>
+
   </div>
 </div>
 
