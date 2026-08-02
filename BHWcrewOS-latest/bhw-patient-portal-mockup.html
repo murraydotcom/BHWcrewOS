@@ -369,6 +369,51 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 .bp-today .dn span{display:block; font-size:11.5px; color:var(--fg-muted); margin-top:1px;}
 .bp-today .dlog{border:1px solid var(--border); background:#fff; border-radius:999px; padding:8px 15px; font-size:11px; font-weight:700; letter-spacing:0.06em; cursor:pointer; color:var(--fg); font-family:var(--font-sans); flex:none;}
 .bp-today .dlog.done{background:var(--dom, var(--accent)); border-color:transparent; color:#fff;}
+/* ===== Blueprint tools (functional, Cronometer-style) ===== */
+.tools-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+.tool{background:#fff; border:1px solid var(--border); border-radius:12px; padding:18px 18px 16px; box-shadow:var(--shadow-sm);}
+.tool--wide{grid-column:1 / -1;}
+.tool--soon{opacity:0.72;}
+.tool__hd{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px;}
+.tool__hd h4{margin:0; font-family:var(--font-sans); font-size:14px; font-weight:700; color:var(--fg-strong);}
+.tool__meta{font-size:11px; color:var(--fg-muted); letter-spacing:0.04em;}
+.tool select,.tool input{font-family:var(--font-sans); font-size:13px; color:var(--fg); background:#fff; border:1px solid var(--border); border-radius:8px; padding:8px 10px;}
+.tool label{display:block; font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--fg-muted); margin:0 0 5px;}
+.btn{font-family:var(--font-sans); font-size:12.5px; font-weight:700; border:1px solid var(--border); background:#fff; color:var(--fg); border-radius:99px; padding:9px 16px; cursor:pointer;}
+.btn:hover{border-color:var(--accent);}
+.btn--go{background:var(--accent); border-color:var(--accent); color:#fff;}
+.btn:disabled{opacity:0.45; cursor:not-allowed;}
+.ft{display:flex; gap:20px; align-items:center; flex-wrap:wrap;}
+.ft__ring{position:relative; width:120px; height:120px; flex-shrink:0;}
+.ft__ring svg{width:120px; height:120px; transform:rotate(-90deg);}
+.ft__read{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;}
+.ft__read b{font-family:var(--font-sans); font-size:18px; font-weight:700; color:var(--fg-strong); font-variant-numeric:tabular-nums;}
+.ft__read span{font-size:10px; color:var(--fg-muted); letter-spacing:0.03em; margin-top:2px; text-align:center; max-width:96px;}
+.ft__ctrl{flex:1; min-width:180px;}
+.ft__btns{display:flex; gap:8px; margin:10px 0;}
+.ft__sched{font-size:11.5px; color:var(--fg-muted); display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
+.ft__sched input{padding:5px 8px;}
+.ft__hist{margin-top:14px; border-top:1px solid var(--border); padding-top:8px; display:flex; flex-direction:column;}
+.ft__hrow{display:flex; align-items:center; gap:10px; font-size:12.5px; padding:5px 0;}
+.ft__hrow span{color:var(--fg-muted); width:82px;}
+.ft__hrow b{font-variant-numeric:tabular-nums; color:var(--fg);}
+.ft__hrow i{margin-left:auto; font-style:normal; font-size:11px; color:#5AA469;}
+.bio,.macro{width:100%; border-collapse:collapse;}
+.bio th,.macro th{text-align:left; font-size:10px; letter-spacing:0.09em; text-transform:uppercase; color:var(--fg-muted); font-weight:700; padding:7px 8px; border-bottom:1px solid var(--border);}
+.bio td,.macro td{padding:9px 8px; border-bottom:1px solid rgba(22,36,51,0.06); font-size:13px; color:var(--fg);}
+.bio tr:last-child td,.macro tr:last-child td{border-bottom:0;}
+.bio td:first-child,.macro td:first-child{font-weight:600; color:var(--fg-strong);}
+.macro td+td{font-variant-numeric:tabular-nums;}
+.up{color:#5AA469; font-weight:700;} .dn{color:#266D7A; font-weight:700;} td.ok{color:var(--fg-muted);}
+.bio__add{display:flex; gap:8px; margin-top:12px;}
+.bio__add input{flex:1; min-width:0;}
+.chart{width:100%; height:auto; display:block; border:1px solid var(--border); border-radius:8px; background:#fff;}
+#chLine{stroke:var(--accent);}
+.chart__x{display:flex; justify-content:space-between; font-size:10.5px; color:var(--fg-muted); margin-top:6px;}
+.chart__cap{font-size:12px; color:var(--fg-muted); margin:10px 0 0;}
+.tool__note{font-size:11.5px; color:var(--fg-muted); margin:12px 0 0; line-height:1.5;}
+.macro tr.train td:first-child::after{content:" · training"; font-weight:400; font-size:10px; color:var(--accent); letter-spacing:0;}
+@media(max-width:560px){.tools-grid{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
@@ -775,6 +820,107 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
         <div class="drow" style="--dom:#5FA9A6;"><div class="di">🧭</div><div class="dn"><b>Coping</b><span>3-minute wind-down before the afternoon dip</span></div><button class="dlog done" type="button">✓ Done</button></div>
         <div class="drow" style="--dom:#5AA469;"><div class="di">🍎</div><div class="dn"><b>Nutrition</b><span>Morning protein anchor, 25–30g before caffeine</span></div><button class="dlog done" type="button">✓ Done</button></div>
       </div>
+
+      <!-- ===== tools for progress ===== -->
+      <div class="bp-sech"><span class="t">Tools for progress</span><span class="line"></span></div>
+      <div class="tools-grid">
+
+        <!-- Fasting timer -->
+        <div class="tool">
+          <div class="tool__hd"><h4>Fasting timer</h4><span class="tool__meta">metabolic reset</span></div>
+          <div class="ft">
+            <div class="ft__ring">
+              <svg viewBox="0 0 120 120" aria-hidden="true">
+                <circle cx="60" cy="60" r="52" fill="none" stroke="var(--border)" stroke-width="9"></circle>
+                <circle id="ftArc" cx="60" cy="60" r="52" fill="none" stroke="#8C5A3C" stroke-width="9" stroke-linecap="round" stroke-dasharray="0 400"></circle>
+              </svg>
+              <div class="ft__read"><b id="ftElapsed">00:00:00</b><span id="ftState">Not fasting</span></div>
+            </div>
+            <div class="ft__ctrl">
+              <label for="ftProto">Protocol</label>
+              <select id="ftProto"><option>16:8 — 16h fast</option><option>18:6 — 18h fast</option><option>20:4 — 20h fast</option><option>24h — full day</option></select>
+              <div class="ft__btns">
+                <button id="ftStart" class="btn btn--go" type="button">Start fast</button>
+                <button id="ftStop" class="btn" type="button" disabled>End fast</button>
+              </div>
+              <div class="ft__sched"><span>Auto-start</span><input id="ftSched" type="time" value="20:00"><span>daily</span></div>
+            </div>
+          </div>
+          <div class="ft__hist">
+            <div class="ft__hrow"><span>Yesterday</span><b>16h 12m</b><i>goal met</i></div>
+            <div class="ft__hrow"><span>Tue</span><b>15h 40m</b><i>goal met</i></div>
+            <div class="ft__hrow"><span>Mon</span><b>13h 05m</b><i style="color:var(--fg-muted)">short</i></div>
+          </div>
+        </div>
+
+        <!-- Custom biometrics -->
+        <div class="tool">
+          <div class="tool__hd"><h4>Custom biometrics</h4><span class="tool__meta">your markers</span></div>
+          <table class="bio">
+            <thead><tr><th>Marker</th><th>Latest</th><th>Change</th><th>Target</th></tr></thead>
+            <tbody>
+              <tr><td>Weight</td><td>168 lb</td><td class="dn">▼ 3.2</td><td>160 lb</td></tr>
+              <tr><td>Resting HR</td><td>62 bpm</td><td class="dn">▼ 4</td><td>&lt; 65</td></tr>
+              <tr><td>Blood pressure</td><td>118/76</td><td class="ok">stable</td><td>&lt; 120/80</td></tr>
+              <tr><td>Fasting glucose</td><td>94 mg/dL</td><td class="dn">▼ 7</td><td>&lt; 100</td></tr>
+              <tr><td>HRV (rMSSD)</td><td>48 ms</td><td class="up">▲ 6</td><td>rising</td></tr>
+              <tr><td>Ferritin</td><td>34 ng/mL</td><td class="up">▲ 9</td><td>50–150</td></tr>
+            </tbody>
+            <tbody id="bioAdded"></tbody>
+          </table>
+          <div class="bio__add">
+            <input id="bioName" type="text" placeholder="New marker (e.g. migraine days)">
+            <input id="bioVal" type="text" placeholder="Value">
+            <button class="btn" id="bioAdd" type="button">Add</button>
+          </div>
+        </div>
+
+        <!-- Custom chart -->
+        <div class="tool tool--wide">
+          <div class="tool__hd"><h4>Custom chart</h4>
+            <select id="chMetric">
+              <option value="weight">Weight</option>
+              <option value="glucose">Fasting glucose</option>
+              <option value="hrv">HRV (rMSSD)</option>
+              <option value="bp">Systolic BP</option>
+            </select>
+          </div>
+          <svg id="chSvg" class="chart" viewBox="0 0 640 200">
+            <line x1="0" y1="50" x2="640" y2="50" stroke="rgba(22,36,51,0.06)"></line>
+            <line x1="0" y1="100" x2="640" y2="100" stroke="rgba(22,36,51,0.06)"></line>
+            <line x1="0" y1="150" x2="640" y2="150" stroke="rgba(22,36,51,0.06)"></line>
+            <polyline id="chLine" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points=""></polyline>
+            <g id="chDots"></g>
+          </svg>
+          <div class="chart__x"><span>Wk 1</span><span>Wk 3</span><span>Wk 6</span><span>Wk 9</span><span>Wk 12</span></div>
+          <p class="chart__cap" id="chCap"></p>
+        </div>
+
+        <!-- Macro scheduler -->
+        <div class="tool tool--wide">
+          <div class="tool__hd"><h4>Macro scheduler</h4><span class="tool__meta">per-day targets</span></div>
+          <table class="macro">
+            <thead><tr><th>Day</th><th>Calories</th><th>Protein</th><th>Carbs</th><th>Fat</th></tr></thead>
+            <tbody>
+              <tr class="train"><td>Mon</td><td>2,050</td><td>150g</td><td>190g</td><td>65g</td></tr>
+              <tr><td>Tue</td><td>1,850</td><td>145g</td><td>140g</td><td>68g</td></tr>
+              <tr class="train"><td>Wed</td><td>2,050</td><td>150g</td><td>190g</td><td>65g</td></tr>
+              <tr><td>Thu</td><td>1,850</td><td>145g</td><td>140g</td><td>68g</td></tr>
+              <tr><td>Fri</td><td>1,850</td><td>145g</td><td>140g</td><td>68g</td></tr>
+              <tr class="train"><td>Sat</td><td>2,100</td><td>150g</td><td>200g</td><td>66g</td></tr>
+              <tr><td>Sun</td><td>1,800</td><td>140g</td><td>135g</td><td>66g</td></tr>
+            </tbody>
+          </table>
+          <p class="tool__note">Higher-carb targets on training days (Mon / Wed / Sat), leaner on rest days — set with your care team to match your Primary Care plan.</p>
+        </div>
+
+        <!-- Coming soon: needs verified food database -->
+        <div class="tool tool--wide tool--soon">
+          <div class="tool__hd"><h4>Photo log &amp; Oracle nutrient search</h4><span class="tool__meta">coming soon</span></div>
+          <p class="tool__note">Snap a photo of a meal to identify ingredients and servings, and search a verified food database to find foods that fill specific nutrient gaps (magnesium, iron, and more). These require BHW's food database and image model — the interface is reserved here and will switch on once that data source is connected.</p>
+        </div>
+
+      </div>
     </section>
 
     <!-- ========== MESSAGES ========== -->
@@ -859,6 +1005,61 @@ function toggleWeek(btn){
   if(wk.classList.contains('locked')) return;
   wk.classList.toggle('open');
 }
+</script>
+<script>
+/* ===== Blueprint tools ===== */
+(function(){
+  /* Fasting timer */
+  var timer=null, startTs=null, goalH=16, R=52, CIRC=2*Math.PI*R;
+  var proto=document.getElementById('ftProto');
+  function pad(n){return String(n).padStart(2,'0');}
+  function fmt(ms){var s=Math.max(0,Math.floor(ms/1000));return pad(Math.floor(s/3600))+':'+pad(Math.floor(s%3600/60))+':'+pad(s%60);}
+  function tick(){
+    var el=Date.now()-startTs;
+    document.getElementById('ftElapsed').textContent=fmt(el);
+    var frac=Math.min(el/(goalH*3600000),1);
+    document.getElementById('ftArc').setAttribute('stroke-dasharray',(frac*CIRC).toFixed(1)+' '+CIRC.toFixed(1));
+    document.getElementById('ftState').textContent=frac>=1?('Goal reached — '+goalH+'h'):('Fasting · goal '+goalH+'h');
+  }
+  var sBtn=document.getElementById('ftStart'), eBtn=document.getElementById('ftStop');
+  if(sBtn){
+    sBtn.onclick=function(){goalH=[16,18,20,24][proto.selectedIndex]||16; startTs=Date.now(); sBtn.disabled=true; eBtn.disabled=false; tick(); timer=setInterval(tick,1000);};
+    eBtn.onclick=function(){if(timer){clearInterval(timer);timer=null;} eBtn.disabled=true; sBtn.disabled=false; document.getElementById('ftState').textContent='Fast ended · logged';};
+  }
+
+  /* Custom biometrics — add row */
+  var bAdd=document.getElementById('bioAdd');
+  if(bAdd){bAdd.onclick=function(){
+    var n=document.getElementById('bioName'), v=document.getElementById('bioVal');
+    var nm=n.value.trim(); if(!nm){n.focus();return;}
+    var esc=function(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;');};
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td>'+esc(nm)+'</td><td>'+(esc(v.value.trim())||'—')+'</td><td class="ok">new</td><td>—</td>';
+    document.getElementById('bioAdded').appendChild(tr);
+    n.value=''; v.value=''; n.focus();
+  };}
+
+  /* Custom chart */
+  var CH={
+    weight:{u:'lb', label:'Weight', data:[171,171,170,169,169,168,168,167,166,166,165,164]},
+    glucose:{u:'mg/dL', label:'Fasting glucose', data:[101,100,99,98,97,96,95,95,94,93,93,92]},
+    hrv:{u:'ms', label:'HRV (rMSSD)', data:[38,39,40,41,42,43,44,45,45,46,47,48]},
+    bp:{u:'mmHg', label:'Systolic BP', data:[128,127,126,124,123,122,121,120,120,119,118,118]}
+  };
+  var SVGNS='http://www.w3.org/2000/svg';
+  function drawChart(key){
+    var c=CH[key], d=c.data, n=d.length;
+    var min=Math.min.apply(null,d), max=Math.max.apply(null,d), pad=(max-min)*0.18||1, lo=min-pad, hi=max+pad;
+    var X=function(i){return (i/(n-1))*620+10;}, Y=function(v){return 180-((v-lo)/(hi-lo))*160;};
+    var pts=d.map(function(v,i){return X(i).toFixed(1)+','+Y(v).toFixed(1);}).join(' ');
+    document.getElementById('chLine').setAttribute('points',pts);
+    var g=document.getElementById('chDots'); g.innerHTML='';
+    d.forEach(function(v,i){var el=document.createElementNS(SVGNS,'circle');el.setAttribute('cx',X(i).toFixed(1));el.setAttribute('cy',Y(v).toFixed(1));el.setAttribute('r','3');el.setAttribute('fill','#fff');el.setAttribute('stroke','#8C5A3C');el.setAttribute('stroke-width','2');g.appendChild(el);});
+    document.getElementById('chCap').textContent=c.label+': '+d[0]+' → '+d[n-1]+' '+c.u+' over 12 weeks';
+  }
+  var m=document.getElementById('chMetric');
+  if(m){m.onchange=function(){drawChart(this.value);}; drawChart('weight');}
+})();
 </script>
 </body>
 </html>
