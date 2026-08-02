@@ -134,6 +134,7 @@ textarea{resize:vertical;min-height:60px;line-height:1.5}
   <div class="top-inner">
     <div class="wm">BHW <b>Paperwork</b> <span class="k">Studio</span><small>Chart pulls · Prior auth · Disability · FMLA · MTA</small></div>
     <div class="top-right">
+      <button class="ghost" id="connBtn" type="button">Connect</button>
       <a class="ghost" href="/hq.html">BHW HQ</a>
       <a class="ghost" href="/">crewOS</a>
     </div>
@@ -151,15 +152,26 @@ textarea{resize:vertical;min-height:60px;line-height:1.5}
     </div>
 
     <div class="panel" style="margin-top:16px">
-      <div class="eyebrow">Step 2 · No data leaves this page</div>
+      <div class="eyebrow" id="step2eyebrow">Step 2 · Local scan stays in your browser</div>
       <h2 class="sec">Patient &amp; request</h2>
+
+      <div class="f full" id="patientPickWrap" style="display:none">
+        <label>Pull from Master Patient List</label>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="patientSearch" placeholder="Search patients by name…" list="patientOptions" style="flex:1">
+          <datalist id="patientOptions"></datalist>
+          <button class="btn ghost2 sm" id="patientPickBtn">Load</button>
+        </div>
+        <span class="hint" id="patientHint">Fills demographics &amp; insurance from Notion. ICD-10s come from the note or manual entry.</span>
+      </div>
 
       <div class="prefill">
         <label>Smart prefill — paste a note or the request</label>
-        <textarea id="noteText" placeholder="Paste a progress note, records request, or referral here. We'll scan for ICD-10 codes and dates and fill them in below — right here in your browser, nothing is uploaded."></textarea>
+        <textarea id="noteText" placeholder="Paste a progress note, records request, or referral here. 'Local scan' extracts ICD-10 codes and dates in your browser. 'AI read' (once connected) sends it to OpenAI server-side for a fuller prefill."></textarea>
         <div class="row">
-          <button class="btn sm" id="prefillBtn">Scan &amp; prefill</button>
-          <span class="pill-note" id="prefillNote">Extracts ICD-10 codes &amp; dates locally. (AI note-reading is a planned Phase 2.)</span>
+          <button class="btn sm" id="aiBtn">AI read note</button>
+          <button class="btn ghost2 sm" id="prefillBtn">Local scan</button>
+          <span class="pill-note" id="prefillNote">Local scan stays offline. AI read needs a connected session + OpenAI key.</span>
         </div>
       </div>
 
@@ -209,6 +221,22 @@ textarea{resize:vertical;min-height:60px;line-height:1.5}
       <button class="btn" id="printBtn">Print / Save PDF</button>
     </div>
     <div class="doc" id="doc"></div>
+  </div>
+</div>
+
+<!-- crewOS sign-in (for patient pull + AI prefill) -->
+<div id="signin" style="display:none;position:fixed;inset:0;background:rgba(20,32,38,.55);z-index:100;align-items:center;justify-content:center;padding:20px">
+  <div class="panel" style="max-width:360px;width:100%">
+    <div class="eyebrow">crewOS sign-in</div>
+    <h2 class="sec">Connect to pull patients &amp; use AI</h2>
+    <div class="f"><label>Your name</label><select id="siStaff"></select></div>
+    <div class="f"><label>PIN</label><input type="password" id="siPin" inputmode="numeric" autocomplete="off"></div>
+    <div class="status no" id="siErr" style="display:none"><span class="dot"></span><span id="siErrTxt"></span></div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn" id="siGo">Sign in</button>
+      <button class="btn ghost2" id="siCancel">Cancel</button>
+    </div>
+    <p class="hint" style="margin-top:10px">Uses your crewOS PIN. Patient pull &amp; AI prefill handle PHI, so a signed-in session is required. Manual entry works without it.</p>
   </div>
 </div>
 
@@ -410,7 +438,7 @@ function renderIcds(){
 }
 
 /* ---------- smart prefill (local regex, no upload) ---------- */
-$("prefillBtn").addEventListener("click", () => {
+function localScan(){
   const t = $("noteText").value; if(!t.trim()){ return; }
   // ICD-10 codes
   const codes = [...new Set((t.match(/\b[A-TV-Z][0-9][0-9AB](?:\.[0-9A-Z]{1,4})?\b/g)||[]))];
@@ -425,8 +453,96 @@ $("prefillBtn").addEventListener("click", () => {
   const mem = t.match(/\b(member|policy|id)\s*#?:?\s*([A-Z0-9]{6,})/i);
   if(mem && packet().fields.includes("member") && !val("member")) state.fields.member=mem[2];
   renderIcds(); buildForm(); renderAll();
-  $("prefillNote").textContent = `Found ${codes.length} code(s), ${dates.length} date(s) — added ${added} new. Review before printing.`;
+  $("prefillNote").textContent = `Local scan: ${codes.length} code(s), ${dates.length} date(s) — added ${added} new. Review before printing.`;
+}
+$("prefillBtn").addEventListener("click", localScan);
+
+/* ---------- connect to crewOS (session) + patient pull + AI extract ---------- */
+let TOKEN = sessionStorage.getItem("crewos_token") || "";
+let PATIENTS = [];
+
+async function post(fn, body){
+  const r = await fetch(`/.netlify/functions/${fn}`, { method:"POST",
+    headers:{ "Content-Type":"application/json", ...(TOKEN?{Authorization:`Bearer ${TOKEN}`}:{}) },
+    body: JSON.stringify(body) });
+  const d = await r.json().catch(()=>({}));
+  return { ok:r.ok, status:r.status, d };
+}
+function payerMatch(v){ if(!v) return ""; const s=String(v).toLowerCase(); const hit=F.payer.options.find(o=>o && (o.toLowerCase().includes(s)||s.includes(o.toLowerCase()))); return hit || "Other"; }
+
+function setConnected(name){
+  const b=$("connBtn");
+  if(TOKEN){
+    b.textContent = name ? `✓ ${String(name).split(" ")[0]}` : "✓ Connected";
+    b.title="Connected to crewOS — click to disconnect";
+    $("patientPickWrap").style.display="";
+    $("step2eyebrow").textContent="Step 2 · Connected — patient pull & AI available";
+    loadPatients();
+  } else {
+    b.textContent="Connect"; b.title="Sign in to pull patients & use AI prefill";
+    $("patientPickWrap").style.display="none";
+    $("step2eyebrow").textContent="Step 2 · Local scan stays in your browser";
+  }
+}
+$("connBtn").addEventListener("click", ()=>{
+  if(TOKEN){ if(confirm("Disconnect this session?")){ TOKEN=""; sessionStorage.removeItem("crewos_token"); setConnected(); } }
+  else openSignin();
 });
+function expire(msg){ TOKEN=""; sessionStorage.removeItem("crewos_token"); setConnected(); if(msg) $("prefillNote").textContent=msg; }
+
+async function openSignin(){
+  const { d } = await post("auth",{action:"roster"});
+  $("siStaff").innerHTML = (d.staff||[]).map(s=>`<option value="${s.id}">${esc(s.name)}${s.role?` — ${esc(s.role)}`:""}</option>`).join("");
+  $("siErr").style.display="none"; $("siPin").value=""; $("signin").style.display="flex"; setTimeout(()=>$("siPin").focus(),50);
+}
+$("siCancel").addEventListener("click",()=>$("signin").style.display="none");
+$("siGo").addEventListener("click", doLogin);
+$("siPin").addEventListener("keydown", e=>{ if(e.key==="Enter") doLogin(); });
+async function doLogin(){
+  const staffId=$("siStaff").value, pin=$("siPin").value.trim();
+  if(!staffId||!pin) return;
+  const { ok, d } = await post("auth",{action:"login",staffId,pin});
+  if(ok && d.token){ TOKEN=d.token; sessionStorage.setItem("crewos_token",TOKEN); $("signin").style.display="none"; setConnected(d.user?.name||d.name); }
+  else { $("siErr").style.display="flex"; $("siErrTxt").textContent=d.error||"Sign-in failed."; }
+}
+
+async function loadPatients(){
+  const { ok, status, d } = await post("patients",{action:"list"});
+  if(status===401) return expire("Session expired — reconnect.");
+  if(ok && d.patients){ PATIENTS=d.patients;
+    $("patientOptions").innerHTML = PATIENTS.map(p=>`<option value="${esc(p.name)}${p.dob?` (${fmtDate(p.dob)})`:""}">`).join(""); }
+}
+$("patientPickBtn").addEventListener("click", ()=>{
+  const raw=$("patientSearch").value.trim(); if(!raw) return;
+  const q=raw.split(" (")[0].toLowerCase();
+  const p = PATIENTS.find(x=>x.name.toLowerCase()===q) || PATIENTS.find(x=>x.name.toLowerCase().includes(q));
+  if(!p){ $("patientHint").textContent="No match — check the name."; return; }
+  state.fields.patient=p.name;
+  if(p.dob) state.fields.dob=p.dob;
+  if(p.chart && packet().fields.includes("mrn")) state.fields.mrn=p.chart;
+  if(p.memberId && packet().fields.includes("member")) state.fields.member=p.memberId;
+  if(p.insurance && packet().fields.includes("payer")) state.fields.payer=payerMatch(p.insurance);
+  buildForm(); renderAll();
+  $("patientHint").textContent=`Loaded ${p.name}${p.bhwId?` (${p.bhwId})`:""}. Add ICD-10s from the note or manually.`;
+});
+
+$("aiBtn").addEventListener("click", aiExtract);
+async function aiExtract(){
+  const t=$("noteText").value.trim(); if(!t) return;
+  if(!TOKEN){ openSignin(); return; }
+  $("prefillNote").textContent="Reading note with AI…";
+  const { ok, status, d } = await post("note-extract",{note:t});
+  if(status===401) return expire("Session expired — reconnect, then try AI read.");
+  if(!ok){ $("prefillNote").textContent = d.error || "AI unavailable."; if(d.needsKey) localScan(); return; }
+  applyExtract(d.fields||{}, d.icds||[]);
+  $("prefillNote").textContent=`AI prefilled ${Object.keys(d.fields||{}).length} field(s) and ${(d.icds||[]).length} code(s). Review before printing.`;
+}
+function applyExtract(fields, icds){
+  const map={patient:"patient",dob:"dob",mrn:"mrn",memberId:"member",insurer:"payer",dateFrom:"dateFrom",dateTo:"dateTo",medication:"medication",triedFailed:"triedFailed",limitations:"limitations"};
+  Object.entries(fields).forEach(([k,v])=>{ const fid=map[k]; if(!fid||!v) return; if(fid!=="patient" && fid!=="dob" && !packet().fields.includes(fid)) return; state.fields[fid] = (fid==="payer")?payerMatch(v):v; });
+  icds.forEach(it=>{ const code=(it.code||"").toUpperCase(); if(!code||state.icds.some(i=>i.code===code)) return; const lib=ICD10[code]; state.icds.push({ code, label: lib?lib.label:(it.label||"(enter description)"), text: lib?lib.text:"" }); });
+  renderIcds(); buildForm(); renderAll();
+}
 
 /* ---------- status ---------- */
 function renderStatus(){
@@ -531,7 +647,7 @@ function renderAll(){ renderIcds(); renderStatus(); renderDoc(); }
 
 // init
 $("auditDate").value = "";
-buildForm(); renderAll();
+buildForm(); renderAll(); setConnected();
 </script>
 </body>
 </html>
