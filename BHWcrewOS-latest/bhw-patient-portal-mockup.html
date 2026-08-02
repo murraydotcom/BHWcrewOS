@@ -515,6 +515,16 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 .pl-ctrl button:hover{border-color:var(--accent); color:var(--accent);}
 .water{flex-shrink:0; text-align:center;}
 @media(max-width:560px){.fuel-layout{gap:16px; justify-content:center;}}
+/* Open Food Facts search */
+.off-bar{display:flex; gap:8px;}
+.off-bar input{flex:1; min-width:0; font-family:var(--font-sans); font-size:13px; border:1px solid var(--border); border-radius:8px; padding:9px 11px; background:#fff; color:var(--fg);}
+.off-status{font-size:12px; color:var(--fg-muted); margin-top:11px;}
+.off-results{display:flex; flex-direction:column; gap:8px; margin-top:8px;}
+.off-item{display:flex; align-items:center; gap:12px; border:1px solid var(--border); border-radius:10px; padding:10px 12px;}
+.off-item__b{flex:1; min-width:0;}
+.off-item__n{font-size:13px; font-weight:700; color:var(--fg-strong); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.off-item__m{font-size:11.5px; color:var(--fg-muted); margin-top:2px;}
+.off-item .btn{white-space:nowrap; padding:7px 13px; font-size:12px; flex-shrink:0;}
 /* foods to fill gaps */
 .gaps{display:flex; flex-direction:column; gap:12px; margin-top:6px;}
 .gap{border:1px solid var(--border); border-radius:12px; padding:14px 16px; background:#fff;}
@@ -1228,6 +1238,21 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
         </div>
       </div>
 
+      <div class="bp-sech"><span class="t">Log a food</span><span class="line"></span></div>
+      <div class="card">
+        <p class="tool__note" style="margin-top:0">Search a real food or enter a barcode — nutrition facts come from <b>Open Food Facts</b>, a free open database — and add straight to today's plate above. (Photographing a home-cooked plate still needs image recognition; this covers packaged and searchable foods.)</p>
+        <div class="off-bar">
+          <input id="offQ" type="text" placeholder="Search a food — e.g. greek yogurt, oatmeal, black beans">
+          <button class="btn btn--go" id="offGo" type="button">Search</button>
+        </div>
+        <div class="off-bar" style="margin-top:8px;">
+          <input id="offCode" type="text" inputmode="numeric" placeholder="…or type a barcode number">
+          <button class="btn" id="offCodeGo" type="button">Look up</button>
+        </div>
+        <div class="off-status" id="offStatus"></div>
+        <div class="off-results" id="offResults"></div>
+      </div>
+
       <div class="bp-sech"><span class="t">Foods to fill your gaps</span><span class="line"></span></div>
       <div class="card">
         <p style="font-size:12.5px; color:var(--fg-muted); margin:0 0 12px;">Matched to the labs your Blueprint is rebuilding and the supplements you were prescribed — easy foods that do the same work.</p>
@@ -1475,6 +1500,14 @@ function toggleWeek(btn){
         }
       }
       drawFill(); drawLegend();
+      if(mode==='intake'){
+        window.__plateAdd=function(p,c,f){
+          macros[0].cur=Math.max(0,macros[0].cur+Math.round(p||0));
+          macros[1].cur=Math.max(0,macros[1].cur+Math.round(c||0));
+          macros[2].cur=Math.max(0,macros[2].cur+Math.round(f||0));
+          drawFill(); drawLegend();
+        };
+      }
     });
   })();
 })();
@@ -1506,6 +1539,51 @@ function pickBarrier(chip){
   resp.textContent=BARRIERS[chip.getAttribute('data-b')]||BARRIERS.other;
   resp.classList.add('show');
 }
+</script>
+<script>
+/* ===== Open Food Facts — real food search + barcode lookup ===== */
+(function(){
+  var q=document.getElementById('offQ'); if(!q) return;
+  var status=document.getElementById('offStatus'), results=document.getElementById('offResults');
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function num(n){ return (n==null||isNaN(n))?0:Math.round(n*10)/10; }
+  function row(p){
+    var nu=p.nutriments||{};
+    var pr=num(nu.proteins_100g), cb=num(nu.carbohydrates_100g), ft=num(nu.fat_100g);
+    var name=(p.product_name||'Unnamed food').trim();
+    var brand=(p.brands||'').split(',')[0].trim();
+    var el=document.createElement('div'); el.className='off-item';
+    el.innerHTML='<div class="off-item__b"><div class="off-item__n">'+esc(name)+(brand?' · <span style="font-weight:400;color:var(--fg-muted)">'+esc(brand)+'</span>':'')+'</div><div class="off-item__m">per 100g · '+pr+'g protein · '+cb+'g carbs · '+ft+'g fat</div></div>';
+    var b=document.createElement('button'); b.className='btn'; b.type='button'; b.textContent='Add 100g';
+    b.onclick=function(){ if(window.__plateAdd){ window.__plateAdd(pr,cb,ft); b.textContent='Added ✓'; b.disabled=true; } };
+    el.appendChild(b); return el;
+  }
+  async function search(){
+    var term=q.value.trim(); if(!term) return;
+    status.textContent='Searching Open Food Facts…'; results.innerHTML='';
+    try{
+      var url='https://world.openfoodfacts.org/cgi/search.pl?search_terms='+encodeURIComponent(term)+'&search_simple=1&action=process&json=1&page_size=8&fields=product_name,brands,nutriments';
+      var r=await fetch(url); var d=await r.json();
+      var ps=(d.products||[]).filter(function(p){ return p.product_name && p.nutriments; });
+      if(!ps.length){ status.textContent='No matches — try a simpler term.'; return; }
+      status.textContent=ps.length+' results · tap Add to fill today’s plate';
+      ps.slice(0,8).forEach(function(p){ results.appendChild(row(p)); });
+    }catch(e){ status.textContent='Couldn’t reach the food database right now — check your connection and try again.'; }
+  }
+  async function lookup(){
+    var code=(document.getElementById('offCode').value||'').trim(); if(!code) return;
+    status.textContent='Looking up barcode…'; results.innerHTML='';
+    try{
+      var url='https://world.openfoodfacts.org/api/v2/product/'+encodeURIComponent(code)+'.json?fields=product_name,brands,nutriments';
+      var r=await fetch(url); var d=await r.json();
+      if(d.status!==1 || !d.product){ status.textContent='No product found for that barcode.'; return; }
+      status.textContent='Found it · tap Add to fill today’s plate'; results.appendChild(row(d.product));
+    }catch(e){ status.textContent='Couldn’t reach the food database right now — check your connection and try again.'; }
+  }
+  document.getElementById('offGo').onclick=search;
+  q.addEventListener('keydown',function(e){ if(e.key==='Enter') search(); });
+  document.getElementById('offCodeGo').onclick=lookup;
+})();
 </script>
 </body>
 </html>
