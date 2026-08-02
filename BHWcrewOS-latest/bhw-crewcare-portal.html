@@ -78,7 +78,6 @@ td a{color:var(--clay-deep);font-weight:700;text-decoration:none}
   <div><h1>BHWCrewCare Portal</h1><div class="sub">provider side · care in motion</div></div>
   <nav>
     <button class="on" data-v="inbox">Inbox</button>
-    <button data-v="plan">Care plan builder</button>
     <button data-v="blueprint">Blueprint</button>
     <button data-v="results">Post results</button>
     <button data-v="patients">Patients</button>
@@ -91,34 +90,6 @@ td a{color:var(--clay-deep);font-weight:700;text-decoration:none}
     <p style="font-size:12.5px;color:var(--soft)">Live from the triage queue — same queue the front desk works, provider lens. SLA colors live on the front desk page.</p>
   </div>
   <div id="inbox-list"><div class="card">Loading…</div></div>
-</section>
-
-<section class="view" id="v-plan">
-  <div class="card"><span class="eyebrow">From plan to pathway</span><h2>Care plan builder</h2>
-    <p style="font-size:12.5px;color:var(--soft)">Pulls the patient's existing care plan from Notion. Write each week in your voice, publish, and it appears on their patient page.</p>
-    <div class="grid2" style="margin-top:8px">
-      <div>
-        <label>Patient</label><select id="p-pat"></select>
-        <button class="btn ghost" style="margin-top:10px" onclick="loadPlan()">Load their care plan</button>
-        <div class="status" id="p-loadst"></div>
-        <div class="planbox" id="p-source">Care plan appears here…</div>
-      </div>
-      <div>
-        <label>Week #</label><input id="p-week" inputmode="numeric" placeholder="1–12">
-        <label>Week title</label><input id="p-title" placeholder="e.g., Protecting your mornings">
-        <label>This week's plan (one line per point — becomes their page content)</label>
-        <textarea id="p-body" rows="9" placeholder="What we're focusing on&#10;What to do each day&#10;What to notice"></textarea>
-        <label>Provider note — in your voice (optional, shows with 💛)</label>
-        <textarea id="p-note" rows="3" placeholder="A direct word to this patient…"></textarea>
-        <label>Signed</label>
-        <select id="p-prov">
-          <option>Amaris, CRNP</option><option>Yahaira, CRNP</option><option>Tanya, PMHNP</option><option>Eleshiea, LCSW-C</option>
-        </select>
-        <button class="btn warm" style="margin-top:14px" onclick="publishWeek()">🌿 Publish week to patient page</button>
-        <div class="status" id="p-st"></div>
-      </div>
-    </div>
-  </div>
 </section>
 
 <section class="view" id="v-blueprint">
@@ -262,7 +233,7 @@ async function boot(){
   try{
     const d=await api('mode=patients');
     PATIENTS=d.patients;
-    ['p-pat','r-pat','bp-pat'].forEach(id=>{
+    ['r-pat','bp-pat'].forEach(id=>{
       const s=$(id); s.innerHTML='<option value="">Choose patient…</option>';
       PATIENTS.forEach((p,i)=>{const o=document.createElement('option');o.value=i;
         o.textContent=`${p.name}${p.ctl?' · '+p.ctl:''}${p.pageId?'':' — ⚠ no page linked'}`;s.appendChild(o);});
@@ -301,32 +272,6 @@ async function loadInbox(){
   }catch(e){ $('inbox-list').innerHTML=`<div class="card warn">Inbox error: ${e.message}</div>`; }
 }
 async function act(a,id,btn){ btn.disabled=true; try{ await api('',{action:a,id}); loadInbox(); }catch(e){ btn.disabled=false; alert(e.message);} }
-
-async function loadPlan(){
-  const p=PATIENTS[$('p-pat').value]; const st=$('p-loadst');
-  if(!p){ st.textContent='Pick a patient first.'; return; }
-  st.textContent='Loading their care plan…';
-  try{
-    const d=await api(`mode=plan&pid=${p.id}`);
-    if(!d.plan){ st.textContent=d.note||'No plan linked.'; $('p-source').textContent='—'; return; }
-    st.textContent=`Loaded: ${d.plan.title}`;
-    $('p-source').textContent=d.plan.text||'(plan is empty)';
-  }catch(e){ st.textContent='Error: '+e.message; }
-}
-
-async function publishWeek(){
-  const p=PATIENTS[$('p-pat').value]; const st=$('p-st');
-  if(!p){ st.textContent='Pick a patient.'; return; }
-  if(!p.pageId){ st.textContent='⚠ This patient has no Patient Page URL on the Master List — add it there first.'; return; }
-  if(!$('p-body').value.trim()){ st.textContent='Write the week content first.'; return; }
-  st.textContent='Publishing…';
-  try{
-    await api('',{action:'publishweek',pageId:p.pageId,week:$('p-week').value,title:$('p-title').value,
-      body:$('p-body').value,providerNote:$('p-note').value,provider:$('p-prov').value});
-    st.textContent=`✓ Week ${$('p-week').value||''} published to ${p.name.split(',')[0]}'s page.`;
-    $('p-body').value='';$('p-note').value='';
-  }catch(e){ st.textContent='Error: '+e.message; }
-}
 
 async function postResult(){
   const p=PATIENTS[$('r-pat').value]; const st=$('r-st');

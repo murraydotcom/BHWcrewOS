@@ -197,7 +197,7 @@ h1,h2,h3,h4,h5{margin:0; color:var(--fg-strong); text-wrap:balance;}
 .bhw-header__wm span:first-child{font-size:18px; font-weight:300; letter-spacing:0.04em; color:var(--fg-strong);}
 .bhw-header__wm span:last-child{font-size:8.5px; font-weight:600; letter-spacing:0.22em; text-transform:uppercase; color:var(--fg-muted);}
 .bhw-header__brand-name{display:inline-flex; align-items:center; gap:10px; font-size:12px; font-weight:500; letter-spacing:0.18em; text-transform:uppercase; padding-left:18px; margin-left:18px; border-left:1px solid var(--border); color:var(--accent);}
-.bhw-header__brand-name::before{content:""; display:inline-block; width:22px; height:26px; background:url(assets/logo-geode.png) center/contain no-repeat; flex-shrink:0;}
+.bhw-header__brand-name::before{content:none;}
 .hero-mark{display:inline-block; width:64px; height:auto; margin-bottom:18px;}
 .hero-brand-lockup{display:flex; align-items:center; gap:14px; margin-bottom:18px;}
 .hero-brand-lockup img{width:48px; height:auto;}
@@ -689,9 +689,8 @@ document.addEventListener('DOMContentLoaded',function(){
 <header class="bhw-header">
   <div class="bhw-header__inner">
     <a href="index.html" class="bhw-header__lockup">
-      <img class="bhw-header__mark" src="assets/logo-geode.png" alt="">
-      <div class="bhw-header__wm"><span>BHW</span><span>Integrative Wellness</span></div>
-      <div class="bhw-header__brand-name" style="color:#2CA7A6;">CharmEd Minds</div>
+      <img class="bhw-header__mark" src="assets/charmed-minds-logo.png" alt="CharmEd Minds" style="height:36px; width:auto;">
+      <div class="bhw-header__brand-name" style="color:#2CA7A6; font-weight:600; font-size:19px;">CharmEd Minds</div>
     </a>
     <nav class="bhw-header__nav">
       <a href="#who">Who we help</a>
@@ -703,19 +702,6 @@ document.addEventListener('DOMContentLoaded',function(){
   </div>
 </header>
 
-<div class="switch-bar">
-  <div class="container">
-    <div style="display:flex; gap:14px; align-items:center;">
-      <span class="switch-meta">CharmEd Minds</span>
-      <span style="color:rgba(0,0,0,0.2); font-size:18px;">/</span>
-      <span class="switch-meta" id="audLabel" style="color:#2CA7A6;">For new clients</span>
-    </div>
-    <div class="audience-tabs">
-      <button class="active" data-pane-btn="potential">For new clients</button>
-      <button data-pane-btn="current">My strategy hub</button>
-    </div>
-  </div>
-</div>
 
 <!-- POTENTIAL -->
 <div data-pane="potential" class="active">
@@ -766,7 +752,7 @@ document.addEventListener('DOMContentLoaded',function(){
 
       <div class="svc-tabs">
         <button class="active" data-svc="assess">Assessment</button>
-        <button data-svc="coach">EF Coaching</button>
+        <button data-svc="coach">Brain Health &amp; Cognition Coaching</button>
         <button data-svc="family">Family work</button>
         <button data-svc="school">School advocacy</button>
       </div>
@@ -774,11 +760,11 @@ document.addEventListener('DOMContentLoaded',function(){
       <div class="svc-pane active" data-svc-pane="assess">
         <div>
           <h3>The Bright Insights™ workup</h3>
-          <p style="font-size:14.5px; color:#0B1228; line-height:1.65; margin-top:14px;">A 90-minute structured evaluation drawing on validated EF, attention, and processing measures — translated into a one-page action map you can hand to a teacher, coach, or therapist on day one.</p>
+          <p style="font-size:14.5px; color:#0B1228; line-height:1.65; margin-top:14px;">A 90-minute structured evaluation drawing on validated cognition, attention, and processing measures — translated into a one-page action map you can hand to a teacher, coach, or therapist on day one.</p>
         </div>
         <ul>
           <li><span class="n">01</span><span class="t">Intake interview · history, school records, prior testing</span></li>
-          <li><span class="n">02</span><span class="t">Structured testing · attention, working memory, processing speed, EF</span></li>
+          <li><span class="n">02</span><span class="t">Structured testing · attention, working memory, processing speed, cognition</span></li>
           <li><span class="n">03</span><span class="t">Mood + sleep + screen-time screen</span></li>
           <li><span class="n">04</span><span class="t">One-page strategy map · clear, no jargon</span></li>
           <li><span class="n">05</span><span class="t">Family debrief · everyone in the same room</span></li>
@@ -786,7 +772,7 @@ document.addEventListener('DOMContentLoaded',function(){
       </div>
       <div class="svc-pane" data-svc-pane="coach">
         <div>
-          <h3>Executive function coaching</h3>
+          <h3>Brain Health &amp; Cognition coaching</h3>
           <p style="font-size:14.5px; color:#0B1228; line-height:1.65; margin-top:14px;">8 or 16-week skills programs. We work on real things from your week — not generic worksheets.</p>
         </div>
         <ul>
@@ -800,7 +786,7 @@ document.addEventListener('DOMContentLoaded',function(){
       <div class="svc-pane" data-svc-pane="family">
         <div>
           <h3>Family systems work</h3>
-          <p style="font-size:14.5px; color:#0B1228; line-height:1.65; margin-top:14px;">EF is a household sport. We work with parents and kids together so structure becomes a shared system, not a battleground.</p>
+          <p style="font-size:14.5px; color:#0B1228; line-height:1.65; margin-top:14px;">Brain health is a household sport. We work with parents and kids together so structure becomes a shared system, not a battleground.</p>
         </div>
         <ul>
           <li><span class="n">01</span><span class="t">Parent skills · scaffold without rescue</span></li>
@@ -909,7 +895,7 @@ document.addEventListener('DOMContentLoaded',function(){
     <div class="container">
       <div>
         <div class="eyebrow eyebrow--accent" style="color:#2CA7A6;">My strategy hub</div>
-        <div style="font-family:var(--font-sans); font-weight:300; font-size:30px; color:#0B1228; margin-top:4px;">Hi Theo — week <em style="color:#2CA7A6;">4</em> of your EF program.</div>
+        <div style="font-family:var(--font-sans); font-weight:300; font-size:30px; color:#0B1228; margin-top:4px;">Hi Theo — week <em style="color:#2CA7A6;">4</em> of your Brain Health &amp; Cognition program.</div>
       </div>
       <div style="display:flex; gap:10px;">
         <button class="btn btn--ghost">Message coach</button>
@@ -933,7 +919,7 @@ document.addEventListener('DOMContentLoaded',function(){
         </div>
 
         <div class="panel">
-          <h3>Executive function · this month</h3>
+          <h3>Brain Health &amp; Cognition · this month</h3>
           <p class="eyebrow" style="margin:6px 0 0;">From your weekly self-report</p>
           <div class="ef-grid">
             <div class="ef"><div class="l">Task initiation</div><div class="b"><div class="v">6.4</div><div class="ch">↑ 1.2</div></div><div class="bars"><span style="height:30%;"></span><span style="height:38%;"></span><span style="height:42%;"></span><span style="height:55%;"></span><span style="height:64%;"></span></div></div>
@@ -958,7 +944,7 @@ document.addEventListener('DOMContentLoaded',function(){
           <h3>Next session</h3>
           <div style="background:linear-gradient(135deg,#B7A4F7,#2CA7A6); border-radius:12px; padding:22px; color:#fff; margin-top:14px;">
             <div style="font-size:11px; letter-spacing:0.18em; text-transform:uppercase; opacity:0.8;">Thursday · 4:30p · 50 min</div>
-            <div style="font-family:var(--font-serif); font-size:22px; font-weight:500; margin:8px 0;">EF Coaching · Session 5</div>
+            <div style="font-family:var(--font-serif); font-size:22px; font-weight:500; margin:8px 0;">Brain Health &amp; Cognition · Session 5</div>
             <div style="font-size:13px; opacity:0.9;">Focus: midterm task map + first-draft scaffold</div>
             <button style="margin-top:18px;" class="btn btn--accent">Join video →</button>
           </div>
@@ -967,7 +953,7 @@ document.addEventListener('DOMContentLoaded',function(){
         <div class="panel">
           <h3>From your coach</h3>
           <p style="font-family:var(--font-serif); font-size:17px; font-style:italic; color:#0B1228; line-height:1.5; margin:10px 0;">"Wins last week — the pre-flight note worked. Two starts vs. zero. Let's protect Tu/Th body-doubles and try moving Thursdays 30 min earlier."</p>
-          <div style="font-size:11px; letter-spacing:0.18em; text-transform:uppercase; color:#2CA7A6; font-weight:700; margin-top:14px;">— Ms. Coltrane, EF Coach</div>
+          <div style="font-size:11px; letter-spacing:0.18em; text-transform:uppercase; color:#2CA7A6; font-weight:700; margin-top:14px;">— Ms. Coltrane, Brain Health &amp; Cognition Coach</div>
           <div style="display:flex; gap:10px; margin-top:18px;">
             <button class="btn btn--accent" style="background:#2CA7A6;">Reply</button>
             <button class="btn btn--ghost">Audio note</button>
@@ -989,58 +975,6 @@ document.addEventListener('DOMContentLoaded',function(){
       </div>
     </div>
 
-    <!-- ================= HEALTH BLUEPRINT ================= -->
-    <section class="blueprint">
-      <div class="bp-head">
-        <div class="eyebrow eyebrow--accent" style="color:#2CA7A6;">Your Health Blueprint</div>
-        <h2>The whole picture, not just the schoolwork.</h2>
-        <p>Executive function doesn't run on strategy alone — it runs on a slept-on, moved-in, connected brain. Your coach recommends each pillar below and uploads it here; you log as you go, and we track it together.</p>
-      </div>
-      <div class="bp-grid">
-
-        <article class="bp-card" style="--dom:#2CA7A6;">
-          <div class="bp-card__top"><span class="bp-ico">🏃</span><div><div class="bp-dom">Exercise</div><div class="bp-tag">On track</div></div></div>
-          <div class="bp-rx"><div class="bp-rx__label">Coach recommends</div><p>A <strong>20-minute move before your hardest block</strong> — it primes attention for about two hours. Add sport or a strength session twice a week.</p></div>
-          <div class="bp-prog"><div class="bp-prog__row"><span>This week</span><strong>4 / 5 days</strong></div><div class="bp-dots"><span class="on"></span><span class="on"></span><span class="on"></span><span class="half"></span><span class="on"></span><span></span><span></span></div></div>
-          <div class="bp-metric"><span class="n">4</span><span class="u">days moved</span><span class="ch">↑ 1 vs last wk</span></div>
-          <button class="bp-log" type="button">Log movement</button>
-        </article>
-
-        <article class="bp-card" style="--dom:#7C6BD6;">
-          <div class="bp-card__top"><span class="bp-ico">😴</span><div><div class="bp-dom">Sleep</div><div class="bp-tag">Needs attention</div></div></div>
-          <div class="bp-rx"><div class="bp-rx__label">Coach recommends</div><p>Same wake time <strong>seven days a week</strong> — EF collapses on a shifting schedule. Screens parked outside the room by 10:30p.</p></div>
-          <div class="bp-prog"><div class="bp-prog__row"><span>On-time wake</span><strong>5 / 7 nights</strong></div><div class="bp-dots"><span class="on"></span><span class="on"></span><span></span><span class="on"></span><span class="on"></span><span></span><span class="on"></span></div></div>
-          <div class="bp-metric"><span class="n">6h 40m</span><span class="u">avg sleep</span><span class="ch">goal 8h</span></div>
-          <button class="bp-log" type="button">Log sleep</button>
-        </article>
-
-        <article class="bp-card" style="--dom:#C0872E;">
-          <div class="bp-card__top"><span class="bp-ico">🤝</span><div><div class="bp-dom">Social</div><div class="bp-tag">Steady</div></div></div>
-          <div class="bp-rx"><div class="bp-rx__label">Coach recommends</div><p>Two <strong>body-double sessions</strong> (Tu/Th) plus one unstructured hang that isn't school. Accountability is a tool, not a weakness.</p></div>
-          <div class="bp-prog"><div class="bp-prog__row"><span>This week</span><strong>2 / 3 planned</strong></div><div class="bp-dots"><span class="on"></span><span></span><span class="on"></span><span></span><span></span><span class="half"></span><span></span></div></div>
-          <div class="bp-metric"><span class="n">2</span><span class="u">body-doubles</span><span class="ch">on plan</span></div>
-          <button class="bp-log" type="button">Log a session</button>
-        </article>
-
-        <article class="bp-card" style="--dom:#3E7CA8;">
-          <div class="bp-card__top"><span class="bp-ico">🧭</span><div><div class="bp-dom">Coping</div><div class="bp-tag">Building</div></div></div>
-          <div class="bp-rx"><div class="bp-rx__label">Coach recommends</div><p><strong>Box breathing (4-4-4-4)</strong> before a task you're avoiding, and name the feeling out loud — "name it to tame it."</p></div>
-          <div class="bp-prog"><div class="bp-prog__row"><span>Check-ins</span><strong>5 / 7 days</strong></div><div class="bp-dots"><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span></span><span class="on"></span><span></span></div></div>
-          <div class="bp-metric"><span class="n">6.8</span><span class="u">regulation</span><span class="ch">↑ 0.9</span></div>
-          <button class="bp-log" type="button">Coping check-in</button>
-        </article>
-
-        <article class="bp-card" style="--dom:#5AA469;">
-          <div class="bp-card__top"><span class="bp-ico">🍎</span><div><div class="bp-dom">Nutrition</div><div class="bp-tag">On track</div></div></div>
-          <div class="bp-rx"><div class="bp-rx__label">Coach recommends</div><p><strong>Protein plus something you like at breakfast</strong> — a fed brain starts tasks. Keep a water bottle on the desk.</p></div>
-          <div class="bp-prog"><div class="bp-prog__row"><span>Fueled mornings</span><strong>6 / 7 days</strong></div><div class="bp-dots"><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span></span><span class="on"></span></div></div>
-          <div class="bp-metric"><span class="n">6</span><span class="u">fueled AMs</span><span class="ch">steady</span></div>
-          <button class="bp-log" type="button">Log a meal</button>
-        </article>
-
-      </div>
-    </section>
-
   </div>
 </div>
 
@@ -1052,10 +986,10 @@ document.addEventListener('DOMContentLoaded',function(){
           <img src="assets/logo-geode.png" alt="" style="width:34px; filter:invert(0.95);">
           <div class="bhw-header__wm"><span style="color:#fff;">CharmEd</span><span style="color:rgba(255,255,255,0.7);">Minds</span></div>
         </div>
-        <p>Executive function and cognitive support across the lifespan. In-clinic (insurance) + online (cash).</p>
+        <p>Brain health and cognitive support across the lifespan. In-clinic (insurance) + online (cash).</p>
       </div>
       <div class="bhw-footer__groups">
-        <div><h5>Services</h5><ul><li><a href="#">Bright Insights™</a></li><li><a href="#">EF Coaching</a></li><li><a href="#">Family work</a></li></ul></div>
+        <div><h5>Services</h5><ul><li><a href="#">Bright Insights™</a></li><li><a href="#">Brain Health &amp; Cognition Coaching</a></li><li><a href="#">Family work</a></li></ul></div>
         <div><h5>For families</h5><ul><li><a href="#">Online program</a></li><li><a href="#">In-clinic visits</a></li><li><a href="#">School advocacy</a></li></ul></div>
         <div><h5>Resources</h5><ul><li><a href="#">Parent library</a></li><li><a href="#">Tool stack</a></li></ul></div>
         <div><h5>Family</h5><ul><li><a href="index.html">All brands</a></li><li><a href="bhw-medical.html">BHW Medical</a></li></ul></div>
