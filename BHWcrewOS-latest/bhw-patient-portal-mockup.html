@@ -509,6 +509,10 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 .pl-b{font-size:13px; font-weight:700; color:var(--fg-strong);}
 .pl-b span{font-weight:400; color:var(--fg-muted); font-size:11.5px;}
 .pl-foods{font-size:11.5px; color:var(--fg-muted); margin-top:2px; line-height:1.45;}
+.pl-val{font-weight:400; color:var(--fg-muted); font-size:11.5px; font-variant-numeric:tabular-nums;}
+.pl-ctrl{display:inline-flex; gap:6px; margin-top:7px;}
+.pl-ctrl button{width:26px; height:26px; border-radius:50%; border:1px solid var(--border); background:#fff; font-size:15px; font-weight:700; cursor:pointer; color:var(--fg); line-height:1;}
+.pl-ctrl button:hover{border-color:var(--accent); color:var(--accent);}
 .water{flex-shrink:0; text-align:center;}
 @media(max-width:560px){.fuel-layout{gap:16px; justify-content:center;}}
 /* foods to fill gaps */
@@ -1068,6 +1072,24 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
         </div>
       </div>
 
+      <!-- recommended plate -->
+      <div class="bp-sech"><span class="t">Your recommended plate</span><span class="line"></span></div>
+      <div class="card">
+        <p style="font-size:12.5px; color:var(--fg-muted); margin:0 0 4px;">The balance your care team set — aim for roughly this split at each meal. Log what you actually eat on the <b>Check in</b> tab, where today's plate fills in against this target.</p>
+        <div class="fuel-layout">
+          <div class="plate-card" data-mode="reference">
+            <div class="plate">
+              <svg viewBox="0 0 200 200" aria-label="Recommended plate by macronutrient">
+                <circle cx="100" cy="100" r="94" class="plate-rim"></circle>
+                <circle cx="100" cy="100" r="78" fill="#fff" stroke="rgba(22,36,51,0.08)" stroke-width="1"></circle>
+                <g class="p-target"></g><g class="p-fill"></g><g class="p-icons"></g>
+              </svg>
+            </div>
+            <div class="plate-legend"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- today's log -->
       <div class="bp-sech"><span class="t">Today's log</span><span class="line"></span></div>
       <div class="card bp-today">
@@ -1186,16 +1208,18 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 
       <div class="bp-sech"><span class="t">Today's fuel</span><span class="line"></span></div>
       <div class="card">
-        <p style="font-size:12.5px; color:var(--fg-muted); margin:0 0 4px;">The balance your care team set for your plate — aim for roughly this split at each meal. Examples of what fills each part are on the right. Log your water below.</p>
+        <p style="font-size:12.5px; color:var(--fg-muted); margin:0 0 4px;">Your plate <b>today</b> — tap <b>+</b> as you eat and each section shades in toward your care team's target. Snap your plate above and we'll fill it in for you. Your recommended split lives on the Blueprint tab. Log water on the right.</p>
         <div class="fuel-layout">
-          <div class="plate">
-            <svg viewBox="0 0 200 200" aria-label="Your plate by macronutrient">
-              <circle cx="100" cy="100" r="94" class="plate-rim"></circle>
-              <circle cx="100" cy="100" r="78" fill="#fff" stroke="rgba(22,36,51,0.08)" stroke-width="1"></circle>
-              <g id="plateSlices"></g>
-            </svg>
+          <div class="plate-card" data-mode="intake">
+            <div class="plate">
+              <svg viewBox="0 0 200 200" aria-label="Today's plate">
+                <circle cx="100" cy="100" r="94" class="plate-rim"></circle>
+                <circle cx="100" cy="100" r="78" fill="#fff" stroke="rgba(22,36,51,0.08)" stroke-width="1"></circle>
+                <g class="p-target"></g><g class="p-fill"></g><g class="p-icons"></g>
+              </svg>
+            </div>
+            <div class="plate-legend"></div>
           </div>
-          <div class="plate-legend" id="plateLegend"></div>
           <div class="water fuel" data-cur="3" data-target="8" data-step="1" data-unit="cups" style="--fc:#4f8fbf">
             <div class="fuel__vessel"><div class="fuel__fill"></div></div>
             <div class="fuel__name">Water</div><div class="fuel__val"></div>
@@ -1395,30 +1419,63 @@ function toggleWeek(btn){
     render();
   });
 
-  /* Divided plate — macros by care-plan % */
+  /* Plates — reference (target split) + intake (fills toward target), with food icons */
   (function(){
-    var slices=document.getElementById('plateSlices'); if(!slices) return;
-    var macros=[
-      {name:'Protein', pct:32, grams:'140g', color:'#b0603f', foods:'Salmon · eggs · chicken · lentils · Greek yogurt'},
-      {name:'Whole carbs', pct:37, grams:'160g', color:'#5AA469', foods:'Oats · sweet potato · quinoa · beans · berries'},
-      {name:'Healthy fats', pct:31, grams:'60g', color:'#C4A038', foods:'Avocado · olive oil · nuts · seeds'}
-    ];
-    var cx=100, cy=100, r=74, ang=-Math.PI/2, NS='http://www.w3.org/2000/svg';
-    macros.forEach(function(m){
-      var frac=m.pct/100, a2=ang+frac*2*Math.PI;
-      var x1=cx+r*Math.cos(ang), y1=cy+r*Math.sin(ang);
-      var x2=cx+r*Math.cos(a2), y2=cy+r*Math.sin(a2);
-      var large=frac>0.5?1:0;
-      var p=document.createElementNS(NS,'path');
-      p.setAttribute('d','M'+cx+','+cy+' L'+x1.toFixed(2)+','+y1.toFixed(2)+' A'+r+','+r+' 0 '+large+' 1 '+x2.toFixed(2)+','+y2.toFixed(2)+' Z');
-      p.setAttribute('fill',m.color); p.setAttribute('fill-opacity','0.82'); p.setAttribute('stroke','#fff'); p.setAttribute('stroke-width','2.5');
-      slices.appendChild(p);
-      ang=a2;
+    var FISH='M168,76a12,12,0,1,1-12-12A12,12,0,0,1,168,76Zm42,79.08c-15.08,20.84-37.53,34.88-66.7,41.74-20.08,4.72-43.54,6-70.12,3.93q2.4,17.82,6.72,37.54a8,8,0,0,1-6.1,9.52,7.81,7.81,0,0,1-1.72.19,8,8,0,0,1-7.81-6.29q-4.89-22.36-7.41-42.62-20.22-2.51-42.58-7.41a8,8,0,0,1,3.43-15.63q19.7,4.32,37.5,6.73c-2.09-26.56-.78-50,3.93-70.06C66,83.55,80.05,61.1,100.88,46,115,35.76,140.14,23.64,179.27,24c21.19.21,40.83,4.33,43.81,6.08a8,8,0,0,1,2.83,2.83c1.75,3,5.87,22.59,6.08,43.78C232.21,98.31,228.57,129.44,210,155.08Zm2.43-111.52a175.75,175.75,0,0,0-39.22-3.51c-24.34.64-44.71,6.49-60.76,17.39a96,96,0,0,0,86.09,86.1c10.91-16,16.76-36.42,17.4-60.76A175.82,175.82,0,0,0,212.44,43.56Z';
+    var GRAINS='M208,56a87.52,87.52,0,0,0-31.84,6c-14.32-29.7-43.25-44.46-44.57-45.13a8,8,0,0,0-7.16,0C123.1,17.51,94.17,32.27,79.85,62A87.52,87.52,0,0,0,48,56a8,8,0,0,0-8,8v80a88.12,88.12,0,0,0,75.48,87.1,4,4,0,0,0,4.52-4V176.27a8.18,8.18,0,0,1,7.47-8.25,8,8,0,0,1,8.53,8v51.14a4,4,0,0,0,4.52,4A88.12,88.12,0,0,0,216,144V64A8,8,0,0,0,208,56Zm-88,93.46a88,88,0,0,0-64-37.09V72.44A72.1,72.1,0,0,1,120,144Zm8-42.1A88.61,88.61,0,0,0,94.16,69.11c9.21-19.21,26.4-31.33,33.84-35.9,7.45,4.58,24.63,16.7,33.84,35.9A88.61,88.61,0,0,0,128,107.36Zm72,5a88,88,0,0,0-64,37.09V144a72.1,72.1,0,0,1,64-71.56Z';
+    var AVO='M211,130.66,181.2,46.47a56,56,0,0,0-106-1.14h0l-29.51,83.5A88,88,0,1,0,211,130.66ZM128,200a40,40,0,1,1,40-40A40,40,0,0,1,128,200Z';
+    var NS='http://www.w3.org/2000/svg', cx=100, cy=100, R=74;
+    function wedge(a1,a2,r){
+      var x1=cx+r*Math.cos(a1),y1=cy+r*Math.sin(a1),x2=cx+r*Math.cos(a2),y2=cy+r*Math.sin(a2);
+      var large=(a2-a1)>Math.PI?1:0;
+      return 'M'+cx+','+cy+' L'+x1.toFixed(2)+','+y1.toFixed(2)+' A'+r+','+r+' 0 '+large+' 1 '+x2.toFixed(2)+','+y2.toFixed(2)+' Z';
+    }
+    document.querySelectorAll('.plate-card').forEach(function(card){
+      var mode=card.dataset.mode;
+      var macros=[
+        {name:'Protein', pct:32, target:140, unit:'g', step:10, color:'#b0603f', foods:'Salmon · eggs · chicken · lentils', icon:FISH, cur:mode==='intake'?45:140},
+        {name:'Whole carbs', pct:37, target:160, unit:'g', step:15, color:'#5AA469', foods:'Oats · sweet potato · quinoa · beans', icon:GRAINS, cur:mode==='intake'?60:160},
+        {name:'Healthy fats', pct:31, target:60, unit:'g', step:5, color:'#C4A038', foods:'Avocado · olive oil · nuts · seeds', icon:AVO, cur:mode==='intake'?20:60}
+      ];
+      var gT=card.querySelector('.p-target'), gF=card.querySelector('.p-fill'), gI=card.querySelector('.p-icons'), leg=card.querySelector('.plate-legend');
+      var ang=-Math.PI/2;
+      macros.forEach(function(m){ m.a1=ang; m.a2=ang+(m.pct/100)*2*Math.PI; m.mid=(m.a1+m.a2)/2; ang=m.a2; });
+      macros.forEach(function(m){
+        var p=document.createElementNS(NS,'path'); p.setAttribute('d',wedge(m.a1,m.a2,R));
+        p.setAttribute('fill',m.color); p.setAttribute('fill-opacity','0.15'); p.setAttribute('stroke','#fff'); p.setAttribute('stroke-width','2.5');
+        gT.appendChild(p);
+        var s=20/256, ix=cx+52*Math.cos(m.mid)-10, iy=cy+52*Math.sin(m.mid)-10;
+        var g=document.createElementNS(NS,'g'); g.setAttribute('transform','translate('+ix.toFixed(1)+','+iy.toFixed(1)+') scale('+s.toFixed(4)+')');
+        var ip=document.createElementNS(NS,'path'); ip.setAttribute('fill',m.color); ip.setAttribute('d',m.icon);
+        g.appendChild(ip); gI.appendChild(g);
+      });
+      function drawFill(){
+        gF.innerHTML='';
+        macros.forEach(function(m){
+          var frac=Math.max(0,Math.min(1,m.cur/m.target)); if(frac<=0) return;
+          var p=document.createElementNS(NS,'path'); p.setAttribute('d',wedge(m.a1,m.a2,R*frac));
+          p.setAttribute('fill',m.color); p.setAttribute('fill-opacity','0.85'); p.setAttribute('stroke','#fff'); p.setAttribute('stroke-width','2');
+          gF.appendChild(p);
+        });
+      }
+      function drawLegend(){
+        leg.innerHTML=macros.map(function(m,i){
+          if(mode==='reference'){
+            return '<div class="pl-item"><span class="pl-dot" style="background:'+m.color+'"></span><div><div class="pl-b">'+m.name+' <span>· '+m.pct+'% · '+m.target+m.unit+'/day</span></div><div class="pl-foods">'+m.foods+'</div></div></div>';
+          }
+          return '<div class="pl-item"><span class="pl-dot" style="background:'+m.color+'"></span><div><div class="pl-b">'+m.name+' <span class="pl-val">· '+m.cur+' / '+m.target+m.unit+'</span></div><div class="pl-foods">'+m.foods+'</div><div class="pl-ctrl" data-i="'+i+'"><button type="button" data-d="-1" aria-label="less">–</button><button type="button" data-d="1" aria-label="more">+</button></div></div></div>';
+        }).join('');
+        if(mode==='intake'){
+          leg.querySelectorAll('.pl-ctrl').forEach(function(c){
+            var i=+c.dataset.i;
+            c.querySelectorAll('button').forEach(function(b){
+              b.addEventListener('click',function(){ macros[i].cur=Math.max(0,macros[i].cur+(+b.dataset.d)*macros[i].step); drawFill(); drawLegend(); });
+            });
+          });
+        }
+      }
+      drawFill(); drawLegend();
     });
-    var leg=document.getElementById('plateLegend');
-    if(leg) leg.innerHTML=macros.map(function(m){
-      return '<div class="pl-item"><span class="pl-dot" style="background:'+m.color+'"></span><div><div class="pl-b">'+m.name+' <span>· '+m.pct+'% · '+m.grams+'/day</span></div><div class="pl-foods">'+m.foods+'</div></div></div>';
-    }).join('');
   })();
 })();
 
