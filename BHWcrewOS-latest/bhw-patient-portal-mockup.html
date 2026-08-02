@@ -465,6 +465,49 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 .tier li span{display:block; font-size:11px; font-weight:400; color:var(--fg-muted); margin-top:1px;}
 @media(max-width:760px){.tiers{grid-template-columns:1fr 1fr;}}
 @media(max-width:560px){.tiers{grid-template-columns:1fr;} .clin-banner{flex-wrap:wrap;} .clin-banner .btn{margin-left:0;}}
+/* ===== Check-in ===== */
+.checkin{background:#fff; border:1px solid var(--border); border-radius:14px; padding:18px; box-shadow:var(--shadow-sm); margin-bottom:20px;}
+.ci-hd{display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:4px;}
+.ci-hd h3{margin:0; font-family:var(--font-serif); font-size:19px; color:var(--fg-strong);}
+.ci-hd span{font-size:11.5px; color:var(--fg-muted);}
+.ci-scan{display:flex; align-items:center; gap:14px; border:1.5px dashed var(--border); border-radius:12px; padding:14px 16px; cursor:pointer; background:var(--bg); margin-top:14px;}
+.ci-scan:hover{border-color:var(--accent);}
+.ci-scan__ico{width:44px; height:44px; border-radius:10px; background:color-mix(in srgb, var(--accent) 14%, #fff); color:var(--accent); display:grid; place-items:center; flex-shrink:0;}
+.ci-scan__t{flex:1;} .ci-scan__t b{font-size:14px; color:var(--fg-strong); display:block;} .ci-scan__t i{font-style:normal; font-size:12px; color:var(--fg-muted);}
+.ci-scan__go{font-size:12px; font-weight:700; color:var(--accent-deep); white-space:nowrap;}
+.ci-shot{display:flex; align-items:center; gap:12px; margin-top:10px; font-size:12.5px; color:#5AA469; font-weight:700;}
+.ci-shot img{width:52px; height:52px; object-fit:cover; border-radius:9px; border:1px solid var(--border);}
+.ci-shot[hidden]{display:none;}
+.ci-q{margin-top:16px; display:flex; flex-direction:column; gap:13px;}
+.ci-row{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;}
+.ci-lbl{font-size:13px; font-weight:700; color:var(--fg-strong);}
+.ci-lbl em{font-style:normal; font-weight:400; color:var(--fg-muted); font-size:11.5px;}
+.ci-opts{display:flex; gap:7px; flex-wrap:wrap;}
+.ci-opts button{font-family:var(--font-sans); font-size:12px; border:1px solid var(--border); background:var(--bg); border-radius:99px; padding:6px 13px; cursor:pointer; color:var(--fg);}
+.ci-opts button:hover{border-color:var(--accent);}
+.ci-opts button.sel{background:var(--accent); border-color:var(--accent); color:#fff;}
+.ci-save{margin-top:16px;}
+.ci-done{margin-top:10px; font-size:12.5px; font-weight:700; color:#5AA469;}
+/* fuel fill-ups */
+.fuel-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:12px;}
+.fuel{text-align:center;}
+.fuel__vessel{position:relative; width:66px; height:92px; margin:4px auto 10px; border:2px solid var(--fc); border-radius:9px 9px 16px 16px; overflow:hidden; background:color-mix(in srgb, var(--fc) 7%, #fff);}
+.fuel__fill{position:absolute; left:0; right:0; bottom:0; height:0; background:color-mix(in srgb, var(--fc) 42%, #fff); border-top:2px solid var(--fc); transition:height .35s var(--ease-out);}
+.fuel__name{font-size:12.5px; font-weight:700; color:var(--fg-strong);}
+.fuel__val{font-size:11.5px; color:var(--fg-muted); margin-top:2px; font-variant-numeric:tabular-nums;}
+.fuel__ctrl{display:flex; justify-content:center; gap:8px; margin-top:9px;}
+.fuel__ctrl button{width:28px; height:28px; border-radius:50%; border:1px solid var(--border); background:#fff; font-size:15px; font-weight:700; cursor:pointer; color:var(--fg); line-height:1;}
+.fuel__ctrl button:hover{border-color:var(--fc); color:var(--fc);}
+/* foods to fill gaps */
+.gaps{display:flex; flex-direction:column; gap:12px; margin-top:6px;}
+.gap{border:1px solid var(--border); border-radius:12px; padding:14px 16px; background:#fff;}
+.gap__hd{display:flex; align-items:center; gap:10px; margin-bottom:9px; flex-wrap:wrap;}
+.gap__tag{font-size:11px; font-weight:700; padding:3px 10px; border-radius:99px; color:#fff;}
+.gap__lvl{font-size:11.5px; color:var(--fg-muted);}
+.gap__foods{display:flex; flex-wrap:wrap; gap:7px;}
+.food{font-size:12px; border:1px solid var(--border); background:var(--bg); border-radius:99px; padding:5px 11px; color:var(--fg);}
+.gap__why{font-size:11.5px; color:var(--fg-muted); margin:9px 0 0; line-height:1.5;}
+@media(max-width:560px){.fuel-grid{grid-template-columns:1fr 1fr;}}
 </style>
 </head>
 <body>
@@ -522,6 +565,7 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
   <nav class="portal-tabs" aria-label="Portal sections">
     <div class="portal-tabs__inner">
       <button class="ptab active" data-pane="home" onclick="go('home',this)">Today</button>
+      <button class="ptab" data-pane="checkin" onclick="go('checkin',this)">Check in</button>
       <button class="ptab" data-pane="plan" onclick="go('plan',this)">Care plan</button>
       <button class="ptab" data-pane="blueprint" onclick="go('blueprint',this)">Blueprint</button>
       <button class="ptab" data-pane="nutrition" onclick="go('nutrition',this)">Nutrition</button>
@@ -542,6 +586,25 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
         <div class="clin-avatar">AM</div>
         <p><strong>This plan was built for you by Amaris &amp; your BHW care team.</strong> They read your check-ins each week and adjust as your labs and your life change — what you log here goes straight to them.</p>
         <button class="btn" type="button" onclick="document.querySelector('[data-pane=messages]').click(); return false;">Message the team</button>
+      </div>
+
+      <div class="checkin">
+        <div class="ci-hd"><h3>Today's check-in</h3><span>Under a minute · goes to your care team</span></div>
+        <label class="ci-scan">
+          <input type="file" accept="image/*" capture="environment" hidden>
+          <span class="ci-scan__ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg></span>
+          <span class="ci-scan__t"><b>Snap your plate</b><i>Photo your meal — we'll break down the nutrients</i></span>
+          <span class="ci-scan__go">Open camera →</span>
+        </label>
+        <div class="ci-shot" hidden><img alt="Your meal"><span>Got it — sent to your care team to break down.</span></div>
+        <div class="ci-q">
+          <div class="ci-row"><span class="ci-lbl">How was your sleep?</span><div class="ci-opts" data-q="sleep"><button type="button" data-v="Rough">Rough</button><button type="button" data-v="OK">OK</button><button type="button" data-v="Good">Good</button><button type="button" data-v="Great">Great</button></div></div>
+          <div class="ci-row"><span class="ci-lbl">Took your vitamins? <em>iron · vitamin D</em></span><div class="ci-opts" data-q="vitamins"><button type="button" data-v="Yes">Yes</button><button type="button" data-v="Not yet">Not yet</button></div></div>
+          <div class="ci-row"><span class="ci-lbl">Moved your body?</span><div class="ci-opts" data-q="exercise"><button type="button" data-v="Not yet">Not yet</button><button type="button" data-v="10 min">10 min</button><button type="button" data-v="20 min">20 min</button><button type="button" data-v="30+ min">30+</button></div></div>
+          <div class="ci-row"><span class="ci-lbl">Time connecting off-screen?</span><div class="ci-opts" data-q="social"><button type="button" data-v="None">None</button><button type="button" data-v="A little">A little</button><button type="button" data-v="Real time">Real time</button></div></div>
+        </div>
+        <button class="btn btn--go ci-save" type="button">Save today's check-in</button>
+        <div class="ci-done" hidden>Saved — thank you. Your care team sees this.</div>
       </div>
 
       <div class="card card-dark vein-card">
@@ -1058,12 +1121,12 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 
         <!-- Custom chart -->
         <div class="tool tool--wide">
-          <div class="tool__hd"><h4>Custom chart</h4>
+          <div class="tool__hd"><h4>Custom chart <span class="tool__meta" style="font-weight:400">· vitamins &amp; minerals from your Blueprint</span></h4>
             <select id="chMetric">
-              <option value="weight">Weight</option>
-              <option value="glucose">Fasting glucose</option>
-              <option value="hrv">HRV (rMSSD)</option>
-              <option value="bp">Systolic BP</option>
+              <option value="ferritin">Ferritin (iron stores)</option>
+              <option value="vitd">Vitamin D</option>
+              <option value="b12">Vitamin B12</option>
+              <option value="magnesium">Magnesium</option>
             </select>
           </div>
           <svg id="chSvg" class="chart" viewBox="0 0 640 200">
@@ -1077,30 +1140,84 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
           <p class="chart__cap" id="chCap"></p>
         </div>
 
-        <!-- Macro scheduler -->
-        <div class="tool tool--wide">
-          <div class="tool__hd"><h4>Macro scheduler</h4><span class="tool__meta">per-day targets</span></div>
-          <table class="macro">
-            <thead><tr><th>Day</th><th>Calories</th><th>Protein</th><th>Carbs</th><th>Fat</th></tr></thead>
-            <tbody>
-              <tr class="train"><td>Mon</td><td>2,050</td><td>150g</td><td>190g</td><td>65g</td></tr>
-              <tr><td>Tue</td><td>1,850</td><td>145g</td><td>140g</td><td>68g</td></tr>
-              <tr class="train"><td>Wed</td><td>2,050</td><td>150g</td><td>190g</td><td>65g</td></tr>
-              <tr><td>Thu</td><td>1,850</td><td>145g</td><td>140g</td><td>68g</td></tr>
-              <tr><td>Fri</td><td>1,850</td><td>145g</td><td>140g</td><td>68g</td></tr>
-              <tr class="train"><td>Sat</td><td>2,100</td><td>150g</td><td>200g</td><td>66g</td></tr>
-              <tr><td>Sun</td><td>1,800</td><td>140g</td><td>135g</td><td>66g</td></tr>
-            </tbody>
-          </table>
-          <p class="tool__note">Higher-carb targets on training days (Mon / Wed / Sat), leaner on rest days — set with your care team to match your Primary Care plan.</p>
-        </div>
+        <p class="tool__note" style="grid-column:1/-1; margin-top:0;">Logging your meals, water, and how you feel lives on the <b>Check in</b> tab — your intake fills up against the targets in your care plan, and suggested foods are matched to the nutrients your Blueprint is rebuilding.</p>
 
-        <!-- Coming soon: needs verified food database -->
-        <div class="tool tool--wide tool--soon">
-          <div class="tool__hd"><h4>Photo log &amp; Oracle nutrient search</h4><span class="tool__meta">coming soon</span></div>
-          <p class="tool__note">Snap a photo of a meal to identify ingredients and servings, and search a verified food database to find foods that fill specific nutrient gaps (magnesium, iron, and more). These require BHW's food database and image model — the interface is reserved here and will switch on once that data source is connected.</p>
-        </div>
+      </div>
+    </section>
 
+    <!-- ========== CHECK IN ========== -->
+    <section class="pane" id="pane-checkin">
+      <div class="plan-head">
+        <h2>Check in, <em>in under a minute.</em></h2>
+        <p>A few taps and a photo of your plate — only what changes your care. Everything here goes straight to your BHW team.</p>
+      </div>
+
+      <div class="checkin">
+        <div class="ci-hd"><h3>Today's check-in</h3><span>Under a minute · goes to your care team</span></div>
+        <label class="ci-scan">
+          <input type="file" accept="image/*" capture="environment" hidden>
+          <span class="ci-scan__ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg></span>
+          <span class="ci-scan__t"><b>Snap your plate</b><i>Photo your meal — we'll break down the nutrients and fill in your intake below</i></span>
+          <span class="ci-scan__go">Open camera →</span>
+        </label>
+        <div class="ci-shot" hidden><img alt="Your meal"><span>Got it — sent to your care team to break down.</span></div>
+        <div class="ci-q">
+          <div class="ci-row"><span class="ci-lbl">How was your sleep?</span><div class="ci-opts" data-q="sleep"><button type="button" data-v="Rough">Rough</button><button type="button" data-v="OK">OK</button><button type="button" data-v="Good">Good</button><button type="button" data-v="Great">Great</button></div></div>
+          <div class="ci-row"><span class="ci-lbl">Took your vitamins? <em>iron · vitamin D</em></span><div class="ci-opts" data-q="vitamins"><button type="button" data-v="Yes">Yes</button><button type="button" data-v="Not yet">Not yet</button></div></div>
+          <div class="ci-row"><span class="ci-lbl">Moved your body?</span><div class="ci-opts" data-q="exercise"><button type="button" data-v="Not yet">Not yet</button><button type="button" data-v="10 min">10 min</button><button type="button" data-v="20 min">20 min</button><button type="button" data-v="30+ min">30+</button></div></div>
+          <div class="ci-row"><span class="ci-lbl">Time connecting off-screen?</span><div class="ci-opts" data-q="social"><button type="button" data-v="None">None</button><button type="button" data-v="A little">A little</button><button type="button" data-v="Real time">Real time</button></div></div>
+        </div>
+        <button class="btn btn--go ci-save" type="button">Save today's check-in</button>
+        <div class="ci-done" hidden>Saved — thank you. Your care team sees this.</div>
+      </div>
+
+      <div class="bp-sech"><span class="t">Today's fuel</span><span class="line"></span></div>
+      <div class="card">
+        <p style="font-size:12.5px; color:var(--fg-muted); margin:0 0 4px;">Your care team's targets for the day. Tap <b>+</b> as you eat and drink — each fills toward your goal. No calorie counting; just the anchors that matter for your iron and energy.</p>
+        <div class="fuel-grid">
+          <div class="fuel" data-cur="3" data-target="8" data-step="1" data-unit="cups" style="--fc:#4f8fbf">
+            <div class="fuel__vessel"><div class="fuel__fill"></div></div>
+            <div class="fuel__name">Water</div><div class="fuel__val"></div>
+            <div class="fuel__ctrl"><button type="button" class="fuel__minus" aria-label="less">–</button><button type="button" class="fuel__plus" aria-label="more">+</button></div>
+          </div>
+          <div class="fuel" data-cur="55" data-target="140" data-step="10" data-unit="g" style="--fc:#b0603f">
+            <div class="fuel__vessel"><div class="fuel__fill"></div></div>
+            <div class="fuel__name">Protein</div><div class="fuel__val"></div>
+            <div class="fuel__ctrl"><button type="button" class="fuel__minus" aria-label="less">–</button><button type="button" class="fuel__plus" aria-label="more">+</button></div>
+          </div>
+          <div class="fuel" data-cur="25" data-target="60" data-step="5" data-unit="g" style="--fc:#C4A038">
+            <div class="fuel__vessel"><div class="fuel__fill"></div></div>
+            <div class="fuel__name">Healthy fats</div><div class="fuel__val"></div>
+            <div class="fuel__ctrl"><button type="button" class="fuel__minus" aria-label="less">–</button><button type="button" class="fuel__plus" aria-label="more">+</button></div>
+          </div>
+          <div class="fuel" data-cur="70" data-target="160" data-step="15" data-unit="g" style="--fc:#5AA469">
+            <div class="fuel__vessel"><div class="fuel__fill"></div></div>
+            <div class="fuel__name">Carbs</div><div class="fuel__val"></div>
+            <div class="fuel__ctrl"><button type="button" class="fuel__minus" aria-label="less">–</button><button type="button" class="fuel__plus" aria-label="more">+</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bp-sech"><span class="t">Foods to fill your gaps</span><span class="line"></span></div>
+      <div class="card">
+        <p style="font-size:12.5px; color:var(--fg-muted); margin:0 0 12px;">Matched to the labs your Blueprint is rebuilding and the supplements you were prescribed — easy foods that do the same work.</p>
+        <div class="gaps">
+          <div class="gap">
+            <div class="gap__hd"><span class="gap__tag" style="background:#a85846">Iron · ferritin</span><span class="gap__lvl">Low (18 ng/mL) · rebuilding</span></div>
+            <div class="gap__foods"><span class="food">Lentils</span><span class="food">Spinach</span><span class="food">Lean red meat</span><span class="food">Pumpkin seeds</span><span class="food">Fortified oats</span></div>
+            <p class="gap__why">Pairs with your <b>iron bisglycinate</b>. Add a vitamin-C food (peppers, citrus, strawberries) to the same meal to boost absorption — and keep coffee an hour away.</p>
+          </div>
+          <div class="gap">
+            <div class="gap__hd"><span class="gap__tag" style="background:#C4A038">Vitamin D</span><span class="gap__lvl">Insufficient (24 ng/mL)</span></div>
+            <div class="gap__foods"><span class="food">Salmon</span><span class="food">Sardines</span><span class="food">Egg yolks</span><span class="food">Fortified milk</span><span class="food">15 min sun</span></div>
+            <p class="gap__why">Alongside your <b>D3 2,000 IU</b> — take it with a meal that has some fat so it absorbs.</p>
+          </div>
+          <div class="gap">
+            <div class="gap__hd"><span class="gap__tag" style="background:#5AA469">Magnesium</span><span class="gap__lvl">Low-normal · supports sleep</span></div>
+            <div class="gap__foods"><span class="food">Almonds</span><span class="food">Black beans</span><span class="food">Dark chocolate</span><span class="food">Avocado</span><span class="food">Pumpkin seeds</span></div>
+            <p class="gap__why">Helps the 10:30pm sleep window and softens the afternoon dip.</p>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -1222,10 +1339,10 @@ function toggleWeek(btn){
 
   /* Custom chart */
   var CH={
-    weight:{u:'lb', label:'Weight', data:[171,171,170,169,169,168,168,167,166,166,165,164]},
-    glucose:{u:'mg/dL', label:'Fasting glucose', data:[101,100,99,98,97,96,95,95,94,93,93,92]},
-    hrv:{u:'ms', label:'HRV (rMSSD)', data:[38,39,40,41,42,43,44,45,45,46,47,48]},
-    bp:{u:'mmHg', label:'Systolic BP', data:[128,127,126,124,123,122,121,120,120,119,118,118]}
+    ferritin:{u:'ng/mL', label:'Ferritin (iron stores)', data:[18,20,22,24,25,27,29,31,33,36,39,42]},
+    vitd:{u:'ng/mL', label:'Vitamin D', data:[24,25,26,27,28,30,31,32,34,35,37,39]},
+    b12:{u:'pg/mL', label:'Vitamin B12', data:[310,320,335,350,365,385,405,430,455,480,500,520]},
+    magnesium:{u:'mg/dL', label:'Magnesium', data:[1.7,1.7,1.8,1.8,1.85,1.9,1.9,1.95,2.0,2.0,2.05,2.1]}
   };
   var SVGNS='http://www.w3.org/2000/svg';
   function drawChart(key){
@@ -1239,7 +1356,38 @@ function toggleWeek(btn){
     document.getElementById('chCap').textContent=c.label+': '+d[0]+' → '+d[n-1]+' '+c.u+' over 12 weeks';
   }
   var m=document.getElementById('chMetric');
-  if(m){m.onchange=function(){drawChart(this.value);}; drawChart('weight');}
+  if(m){m.onchange=function(){drawChart(this.value);}; drawChart('ferritin');}
+
+  /* Check-in cards (scanner, quick questions) */
+  document.querySelectorAll('.checkin').forEach(function(ci){
+    var inp=ci.querySelector('.ci-scan input');
+    if(inp) inp.addEventListener('change',function(){
+      var f=inp.files&&inp.files[0]; if(!f) return;
+      var shot=ci.querySelector('.ci-shot'); if(!shot) return;
+      var img=shot.querySelector('img'); if(img) img.src=URL.createObjectURL(f);
+      shot.hidden=false;
+    });
+    ci.querySelectorAll('.ci-opts').forEach(function(g){
+      g.querySelectorAll('button').forEach(function(b){
+        b.addEventListener('click',function(){
+          g.querySelectorAll('button').forEach(function(x){x.classList.remove('sel');});
+          b.classList.add('sel');
+        });
+      });
+    });
+    var save=ci.querySelector('.ci-save');
+    if(save) save.addEventListener('click',function(){ var d=ci.querySelector('.ci-done'); if(d) d.hidden=false; });
+  });
+
+  /* Fuel fill-ups */
+  document.querySelectorAll('.fuel').forEach(function(fl){
+    var cur=+fl.dataset.cur, tgt=+fl.dataset.target, step=+fl.dataset.step, unit=fl.dataset.unit;
+    var fill=fl.querySelector('.fuel__fill'), val=fl.querySelector('.fuel__val');
+    function render(){ var pct=Math.max(0,Math.min(100,Math.round(cur/tgt*100))); fill.style.height=pct+'%'; val.textContent=cur+' / '+tgt+' '+unit; }
+    fl.querySelector('.fuel__minus').addEventListener('click',function(){ cur=Math.max(0,cur-step); render(); });
+    fl.querySelector('.fuel__plus').addEventListener('click',function(){ cur=cur+step; render(); });
+    render();
+  });
 })();
 
 /* ===== Today screen — one-tap, barriers, just-in-time learn ===== */
