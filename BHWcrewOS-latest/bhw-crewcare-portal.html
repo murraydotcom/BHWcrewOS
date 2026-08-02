@@ -95,6 +95,17 @@ td a{color:var(--clay-deep);font-weight:700;text-decoration:none}
 .tr-card .spark{width:100%;height:40px;display:block;margin:8px 0 6px}
 .tr-card .dl{font-size:11px;color:var(--soft)}
 .tr-card .dl b{color:var(--ok)}
+/* barriers & exceptions */
+.bx__row{display:flex; gap:12px; align-items:flex-start; padding:12px 2px; border-bottom:1px solid #f0ebe2;}
+.bx__row:last-child{border-bottom:0;}
+.bx__tag{flex-shrink:0; font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:3px 9px; border-radius:99px; color:#fff; margin-top:2px; white-space:nowrap;}
+.bx__b{flex:1; min-width:0;}
+.bx__who{font-size:13px; font-weight:700; color:var(--ink);}
+.bx__who span{font-weight:400; color:var(--soft);}
+.bx__said{font-size:12.5px; color:var(--ink); opacity:.82; margin-top:2px; font-style:italic;}
+.bx__do{flex-shrink:0; border:1px solid #ddd6cc; background:#fff; border-radius:99px; padding:7px 13px; font-size:11px; font-weight:700; cursor:pointer; color:var(--clay-deep); font-family:var(--sans); white-space:nowrap; margin-top:1px;}
+.bx__do:hover{border-color:var(--clay-deep);}
+@media(max-width:640px){.bx__row{flex-wrap:wrap;} .bx__do{margin-left:44px;}}
 </style>
 </head>
 <body>
@@ -176,6 +187,37 @@ td a{color:var(--clay-deep);font-weight:700;text-decoration:none}
     <div class="bp-legend">Bars show this week's adherence to each recommended pillar. This view mirrors what the patient sees on their Blueprint tab.</div>
   </div>
 
+  <div class="card"><span class="eyebrow">Barriers &amp; exceptions</span><h2 style="font-size:17px">What patients flagged this week</h2>
+    <p style="font-size:12.5px;color:var(--soft)">Review exceptions, not every data point — only patients who hit a barrier on a recommended action show here, in their own words. Each has a next step tied to the barrier.</p>
+    <div class="bx">
+      <div class="bx__row">
+        <span class="bx__tag" style="background:#a85846">Cost</span>
+        <div class="bx__b"><div class="bx__who">Jordan T. <span>· Iron (Focus now)</span></div><div class="bx__said">"Copay was more than I expected this month."</div></div>
+        <button class="bx__do" type="button">Offer lower-cost option</button>
+      </div>
+      <div class="bx__row">
+        <span class="bx__tag" style="background:#a85846">Side effect</span>
+        <div class="bx__b"><div class="bx__who">Sam R. <span>· Sertraline (Focus now)</span></div><div class="bx__said">"Some nausea in the mornings."</div></div>
+        <button class="bx__do" type="button">Clinical review</button>
+      </div>
+      <div class="bx__row">
+        <span class="bx__tag" style="background:#2CA7A6">Didn't understand</span>
+        <div class="bx__b"><div class="bx__who">Theo M. <span>· Cognitive exercise (Building next)</span></div><div class="bx__said">"Wasn't sure what the exercise wanted me to do."</div></div>
+        <button class="bx__do" type="button">Send short explainer</button>
+      </div>
+      <div class="bx__row">
+        <span class="bx__tag" style="background:#4f7f92">No device</span>
+        <div class="bx__b"><div class="bx__who">Maria G. <span>· Blood-pressure checks (Watching)</span></div><div class="bx__said">"Don't have a cuff at home."</div></div>
+        <button class="bx__do" type="button">Arrange a cuff</button>
+      </div>
+      <div class="bx__row">
+        <span class="bx__tag" style="background:#b0863a">Too tired</span>
+        <div class="bx__b"><div class="bx__who">Jen L. <span>· Post-work walks (Maintaining)</span></div><div class="bx__said">"Wiped out after work most days."</div></div>
+        <button class="bx__do" type="button">Reduce the goal</button>
+      </div>
+    </div>
+  </div>
+
   <div class="card"><span class="eyebrow">12-week trends</span><h2 style="font-size:17px">Blueprint trends · 12 weeks</h2>
     <div class="tr-grid">
       <div class="tr-card"><div class="tl"><i style="background:#80abbd"></i>Exercise</div><svg class="spark" viewBox="0 0 200 40" preserveAspectRatio="none"><polyline points="0,26 40,24 80,21 120,20 160,17 200,15" fill="none" stroke="#80abbd" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="dl"><b>▲ 32</b> vs week 1</div></div>
@@ -187,20 +229,28 @@ td a{color:var(--clay-deep);font-weight:700;text-decoration:none}
   </div>
 
   <div class="card"><span class="eyebrow">Recommend &amp; upload</span><h2 style="font-size:17px">Post a Blueprint recommendation</h2>
-    <p style="font-size:12.5px;color:var(--soft)">Written in plain patient language — this appears on their page as a Blueprint recommendation they can log against.</p>
+    <p style="font-size:12.5px;color:var(--soft)">Written in plain patient language — this lands on the patient's <b>Today</b> screen under the tier you assign, with the cadence, target, and duration you set. Attach just-in-time education so the "why" travels with the action.</p>
     <div class="grid2">
       <div>
         <label>Pillar</label>
-        <select id="bp-dom"><option>Exercise</option><option>Sleep</option><option>Social</option><option>Coping</option><option>Nutrition</option></select>
+        <select id="bp-dom"><option>Exercise</option><option>Sleep</option><option>Social</option><option>Coping</option><option>Nutrition</option><option>Medication</option><option>Monitoring</option></select>
         <label>Recommendation (patient language)</label>
         <textarea id="bp-rx" rows="5" placeholder="Two 20-minute walks after your largest meals — they blunt the afternoon dip…"></textarea>
+        <label style="margin-top:12px">Attach just-in-time education (optional)</label>
+        <select id="bp-edu"><option>None</option><option>Iron repletion</option><option>Post-meal walks</option><option>Home blood-pressure checks</option><option>Protein anchor</option><option>Sleep window</option></select>
       </div>
       <div>
-        <label>Target / cadence (optional)</label>
-        <input id="bp-target" placeholder="e.g., 4 days this week">
+        <label>Priority tier</label>
+        <select id="bp-tier"><option>Focus now</option><option>Building next</option><option>Maintaining</option><option>Watching</option></select>
+        <label>Cadence</label>
+        <select id="bp-cad"><option>Daily</option><option>Selected days</option><option>Every other day</option><option>Weekly</option><option>As needed</option></select>
+        <label>Target</label>
+        <input id="bp-target" placeholder="e.g., 4 days this week · &lt;130 systolic">
+        <label>Duration</label>
+        <select id="bp-dur"><option>This week</option><option>2 weeks</option><option>Until next visit</option><option>Full 12-week plan</option><option>Ongoing</option></select>
         <label>Signed</label>
         <select id="bp-prov"><option>Amaris, CRNP</option><option>Yahaira, CRNP</option><option>Tanya, PMHNP</option><option>Eleshiea, LCSW-C</option></select>
-        <button class="btn warm" style="margin-top:14px" onclick="postBlueprint()">🧭 Post to patient's Blueprint</button>
+        <button class="btn warm" style="margin-top:14px" onclick="postBlueprint()">🧭 Post to patient's Today</button>
         <div class="status" id="bp-st"></div>
       </div>
     </div>
@@ -372,8 +422,9 @@ async function postBlueprint(){
   st.textContent='Posting…';
   try{
     await api('',{action:'publishblueprint',pageId:p.pageId,domain:$('bp-dom').value,
-      rec:$('bp-rx').value,target:$('bp-target').value,provider:$('bp-prov').value});
-    st.textContent=`✓ ${$('bp-dom').value} recommendation posted to ${p.name.split(',')[0]}'s Blueprint.`;
+      rec:$('bp-rx').value,target:$('bp-target').value,provider:$('bp-prov').value,
+      tier:$('bp-tier').value,cadence:$('bp-cad').value,duration:$('bp-dur').value,education:$('bp-edu').value});
+    st.textContent=`✓ ${$('bp-dom').value} → “${$('bp-tier').value}” posted to ${p.name.split(',')[0]}'s Today · ${$('bp-cad').value}, ${$('bp-dur').value}.`;
     $('bp-rx').value='';$('bp-target').value='';
   }catch(e){ st.textContent='Error: '+e.message; }
 }
