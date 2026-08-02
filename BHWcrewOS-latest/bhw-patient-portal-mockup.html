@@ -498,6 +498,19 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 .fuel__ctrl{display:flex; justify-content:center; gap:8px; margin-top:9px;}
 .fuel__ctrl button{width:28px; height:28px; border-radius:50%; border:1px solid var(--border); background:#fff; font-size:15px; font-weight:700; cursor:pointer; color:var(--fg); line-height:1;}
 .fuel__ctrl button:hover{border-color:var(--fc); color:var(--fc);}
+/* divided plate */
+.fuel-layout{display:flex; gap:24px; align-items:center; flex-wrap:wrap; margin-top:12px;}
+.plate{flex-shrink:0; width:180px; height:180px;}
+.plate svg{width:100%; height:100%; display:block;}
+.plate-rim{fill:#fff; stroke:var(--border); stroke-width:5;}
+.plate-legend{flex:1; min-width:210px; display:flex; flex-direction:column; gap:13px;}
+.pl-item{display:flex; gap:11px; align-items:flex-start;}
+.pl-dot{width:12px; height:12px; border-radius:3px; margin-top:3px; flex-shrink:0;}
+.pl-b{font-size:13px; font-weight:700; color:var(--fg-strong);}
+.pl-b span{font-weight:400; color:var(--fg-muted); font-size:11.5px;}
+.pl-foods{font-size:11.5px; color:var(--fg-muted); margin-top:2px; line-height:1.45;}
+.water{flex-shrink:0; text-align:center;}
+@media(max-width:560px){.fuel-layout{gap:16px; justify-content:center;}}
 /* foods to fill gaps */
 .gaps{display:flex; flex-direction:column; gap:12px; margin-top:6px;}
 .gap{border:1px solid var(--border); border-radius:12px; padding:14px 16px; background:#fff;}
@@ -1173,26 +1186,19 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 
       <div class="bp-sech"><span class="t">Today's fuel</span><span class="line"></span></div>
       <div class="card">
-        <p style="font-size:12.5px; color:var(--fg-muted); margin:0 0 4px;">Your care team's targets for the day. Tap <b>+</b> as you eat and drink — each fills toward your goal. No calorie counting; just the anchors that matter for your iron and energy.</p>
-        <div class="fuel-grid">
-          <div class="fuel" data-cur="3" data-target="8" data-step="1" data-unit="cups" style="--fc:#4f8fbf">
+        <p style="font-size:12.5px; color:var(--fg-muted); margin:0 0 4px;">The balance your care team set for your plate — aim for roughly this split at each meal. Examples of what fills each part are on the right. Log your water below.</p>
+        <div class="fuel-layout">
+          <div class="plate">
+            <svg viewBox="0 0 200 200" aria-label="Your plate by macronutrient">
+              <circle cx="100" cy="100" r="94" class="plate-rim"></circle>
+              <circle cx="100" cy="100" r="78" fill="#fff" stroke="rgba(22,36,51,0.08)" stroke-width="1"></circle>
+              <g id="plateSlices"></g>
+            </svg>
+          </div>
+          <div class="plate-legend" id="plateLegend"></div>
+          <div class="water fuel" data-cur="3" data-target="8" data-step="1" data-unit="cups" style="--fc:#4f8fbf">
             <div class="fuel__vessel"><div class="fuel__fill"></div></div>
             <div class="fuel__name">Water</div><div class="fuel__val"></div>
-            <div class="fuel__ctrl"><button type="button" class="fuel__minus" aria-label="less">–</button><button type="button" class="fuel__plus" aria-label="more">+</button></div>
-          </div>
-          <div class="fuel" data-cur="55" data-target="140" data-step="10" data-unit="g" style="--fc:#b0603f">
-            <div class="fuel__vessel"><div class="fuel__fill"></div></div>
-            <div class="fuel__name">Protein</div><div class="fuel__val"></div>
-            <div class="fuel__ctrl"><button type="button" class="fuel__minus" aria-label="less">–</button><button type="button" class="fuel__plus" aria-label="more">+</button></div>
-          </div>
-          <div class="fuel" data-cur="25" data-target="60" data-step="5" data-unit="g" style="--fc:#C4A038">
-            <div class="fuel__vessel"><div class="fuel__fill"></div></div>
-            <div class="fuel__name">Healthy fats</div><div class="fuel__val"></div>
-            <div class="fuel__ctrl"><button type="button" class="fuel__minus" aria-label="less">–</button><button type="button" class="fuel__plus" aria-label="more">+</button></div>
-          </div>
-          <div class="fuel" data-cur="70" data-target="160" data-step="15" data-unit="g" style="--fc:#5AA469">
-            <div class="fuel__vessel"><div class="fuel__fill"></div></div>
-            <div class="fuel__name">Carbs</div><div class="fuel__val"></div>
             <div class="fuel__ctrl"><button type="button" class="fuel__minus" aria-label="less">–</button><button type="button" class="fuel__plus" aria-label="more">+</button></div>
           </div>
         </div>
@@ -1388,6 +1394,32 @@ function toggleWeek(btn){
     fl.querySelector('.fuel__plus').addEventListener('click',function(){ cur=cur+step; render(); });
     render();
   });
+
+  /* Divided plate — macros by care-plan % */
+  (function(){
+    var slices=document.getElementById('plateSlices'); if(!slices) return;
+    var macros=[
+      {name:'Protein', pct:32, grams:'140g', color:'#b0603f', foods:'Salmon · eggs · chicken · lentils · Greek yogurt'},
+      {name:'Whole carbs', pct:37, grams:'160g', color:'#5AA469', foods:'Oats · sweet potato · quinoa · beans · berries'},
+      {name:'Healthy fats', pct:31, grams:'60g', color:'#C4A038', foods:'Avocado · olive oil · nuts · seeds'}
+    ];
+    var cx=100, cy=100, r=74, ang=-Math.PI/2, NS='http://www.w3.org/2000/svg';
+    macros.forEach(function(m){
+      var frac=m.pct/100, a2=ang+frac*2*Math.PI;
+      var x1=cx+r*Math.cos(ang), y1=cy+r*Math.sin(ang);
+      var x2=cx+r*Math.cos(a2), y2=cy+r*Math.sin(a2);
+      var large=frac>0.5?1:0;
+      var p=document.createElementNS(NS,'path');
+      p.setAttribute('d','M'+cx+','+cy+' L'+x1.toFixed(2)+','+y1.toFixed(2)+' A'+r+','+r+' 0 '+large+' 1 '+x2.toFixed(2)+','+y2.toFixed(2)+' Z');
+      p.setAttribute('fill',m.color); p.setAttribute('fill-opacity','0.82'); p.setAttribute('stroke','#fff'); p.setAttribute('stroke-width','2.5');
+      slices.appendChild(p);
+      ang=a2;
+    });
+    var leg=document.getElementById('plateLegend');
+    if(leg) leg.innerHTML=macros.map(function(m){
+      return '<div class="pl-item"><span class="pl-dot" style="background:'+m.color+'"></span><div><div class="pl-b">'+m.name+' <span>· '+m.pct+'% · '+m.grams+'/day</span></div><div class="pl-foods">'+m.foods+'</div></div></div>';
+    }).join('');
+  })();
 })();
 
 /* ===== Today screen — one-tap, barriers, just-in-time learn ===== */
