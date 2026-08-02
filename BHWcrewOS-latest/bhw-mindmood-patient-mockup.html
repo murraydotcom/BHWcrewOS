@@ -197,7 +197,7 @@ h1,h2,h3,h4,h5{margin:0; color:var(--fg-strong); text-wrap:balance;}
 .bhw-header__wm span:first-child{font-size:18px; font-weight:300; letter-spacing:0.04em; color:var(--fg-strong);}
 .bhw-header__wm span:last-child{font-size:8.5px; font-weight:600; letter-spacing:0.22em; text-transform:uppercase; color:var(--fg-muted);}
 .bhw-header__brand-name{display:inline-flex; align-items:center; gap:10px; font-size:12px; font-weight:500; letter-spacing:0.18em; text-transform:uppercase; padding-left:18px; margin-left:18px; border-left:1px solid var(--border); color:var(--accent);}
-.bhw-header__brand-name::before{content:""; display:inline-block; width:22px; height:26px; background:url(assets/logo-geode.png) center/contain no-repeat; flex-shrink:0;}
+.bhw-header__brand-name::before{content:none;}
 .hero-mark{display:inline-block; width:64px; height:auto; margin-bottom:18px;}
 .hero-brand-lockup{display:flex; align-items:center; gap:14px; margin-bottom:18px;}
 .hero-brand-lockup img{width:48px; height:auto;}
@@ -712,9 +712,8 @@ input[type=checkbox]{accent-color:#D69C60 !important}
 <header class="bhw-header">
   <div class="bhw-header__inner">
     <a href="index.html" class="bhw-header__lockup">
-      <img class="bhw-header__mark" src="assets/logo-geode.png" alt="">
-      <div class="bhw-header__wm"><span>BHW</span><span>Integrative Wellness</span></div>
-      <div class="bhw-header__brand-name" style="color:#AF6763;">Mind &amp; Mood Recovery</div>
+      <img class="bhw-header__mark" src="assets/mind-mood-logo.png" alt="Mind & Mood Recovery" style="height:36px; width:auto;">
+      <div class="bhw-header__brand-name" style="color:#AF6763; font-weight:600; font-size:19px;">Mind &amp; Mood Recovery</div>
     </a>
     <nav class="bhw-header__nav">
       <a href="#promise">Our promise</a>
@@ -726,19 +725,6 @@ input[type=checkbox]{accent-color:#D69C60 !important}
   </div>
 </header>
 
-<div class="switch-bar">
-  <div class="container">
-    <div style="display:flex; gap:14px; align-items:center;">
-      <span class="switch-meta">Mind &amp; Mood Recovery</span>
-      <span style="color:rgba(0,0,0,0.2); font-size:18px;">/</span>
-      <span class="switch-meta" id="audLabel" style="color:#AF6763;">For new patients</span>
-    </div>
-    <div class="audience-tabs">
-      <button class="active" data-pane-btn="potential">Considering care</button>
-      <button data-pane-btn="current">My recovery hub</button>
-    </div>
-  </div>
-</div>
 
 <!-- POTENTIAL -->
 <div data-pane="potential" class="active">
@@ -1061,57 +1047,6 @@ input[type=checkbox]{accent-color:#D69C60 !important}
       </div>
     </div>
 
-    <!-- ================= HEALTH BLUEPRINT ================= -->
-    <section class="blueprint">
-      <div class="bp-head">
-        <div class="eyebrow eyebrow--accent" style="color:#AF6763;">Your Health Blueprint</div>
-        <h2>Recovery is a whole-life practice.</h2>
-        <p>Mood doesn't move on medication alone — it moves on how you slept, moved, connected, and coped. Your team recommends each pillar below and posts it here; you log what's real, no judgment, and we watch the pattern together.</p>
-      </div>
-      <div class="bp-grid">
-
-        <article class="bp-card" style="--dom:#6E8F79;">
-          <div class="bp-card__top"><span class="bp-ico">🚶</span><div><div class="bp-dom">Exercise</div><div class="bp-tag">Gentle start</div></div></div>
-          <div class="bp-rx"><div class="bp-rx__label">Your team recommends</div><p><strong>Behavioral activation</strong> — a 10-minute walk on the hard days counts double. Aim to move three times this week; no streak pressure.</p></div>
-          <div class="bp-prog"><div class="bp-prog__row"><span>This week</span><strong>3 / 7 days</strong></div><div class="bp-dots"><span class="on"></span><span></span><span class="on"></span><span></span><span></span><span class="on"></span><span></span></div></div>
-          <div class="bp-metric"><span class="n">3</span><span class="u">days moved</span><span class="ch">↑ 1 vs last wk</span></div>
-          <button class="bp-log" type="button">Log movement</button>
-        </article>
-
-        <article class="bp-card" style="--dom:#7C6BD6;">
-          <div class="bp-card__top"><span class="bp-ico">😴</span><div><div class="bp-dom">Sleep</div><div class="bp-tag">Improving</div></div></div>
-          <div class="bp-rx"><div class="bp-rx__label">Your team recommends</div><p>A protected window <strong>10:30p–6:30a</strong>, caffeine curfew at noon, and trazodone PRN as Dr. Park set. Sleep is your first medicine.</p></div>
-          <div class="bp-prog"><div class="bp-prog__row"><span>On-time window</span><strong>6 / 7 nights</strong></div><div class="bp-dots"><span class="on"></span><span class="on"></span><span class="on"></span><span></span><span class="on"></span><span class="on"></span><span class="on"></span></div></div>
-          <div class="bp-metric"><span class="n">7h 10m</span><span class="u">avg sleep</span><span class="ch">↑ steadier</span></div>
-          <button class="bp-log" type="button">Log sleep</button>
-        </article>
-
-        <article class="bp-card" style="--dom:#AF6763;">
-          <div class="bp-card__top"><span class="bp-ico">🤝</span><div><div class="bp-dom">Social</div><div class="bp-tag">Protective</div></div></div>
-          <div class="bp-rx"><div class="bp-rx__label">Your team recommends</div><p>Recovery group <strong>Tu/Th</strong> and one reach-out when the 4–6p window hits — text Mara. Isolation is the relapse; connection is the plan.</p></div>
-          <div class="bp-prog"><div class="bp-prog__row"><span>This week</span><strong>3 / 3 planned</strong></div><div class="bp-dots"><span class="on"></span><span></span><span class="on"></span><span></span><span class="on"></span><span></span><span></span></div></div>
-          <div class="bp-metric"><span class="n">3</span><span class="u">connections</span><span class="ch">on plan</span></div>
-          <button class="bp-log" type="button">Log a connection</button>
-        </article>
-
-        <article class="bp-card" style="--dom:#B07A55;">
-          <div class="bp-card__top"><span class="bp-ico">🧭</span><div><div class="bp-dom">Coping</div><div class="bp-tag">Practicing</div></div></div>
-          <div class="bp-rx"><div class="bp-rx__label">Your team recommends</div><p><strong>Urge-surf the wave</strong> and run 5-4-3-2-1 grounding when distress spikes. Log your mood daily — you and the team read the same graph.</p></div>
-          <div class="bp-prog"><div class="bp-prog__row"><span>Mood logs</span><strong>5 / 5 days</strong></div><div class="bp-dots"><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span></span><span></span></div></div>
-          <div class="bp-metric"><span class="n">5.6</span><span class="u">avg mood</span><span class="ch">↑ steadier</span></div>
-          <button class="bp-log" type="button">Coping check-in</button>
-        </article>
-
-        <article class="bp-card" style="--dom:#5AA469;">
-          <div class="bp-card__top"><span class="bp-ico">🥗</span><div><div class="bp-dom">Nutrition</div><div class="bp-tag">Food for Mood</div></div></div>
-          <div class="bp-rx"><div class="bp-rx__label">Your team recommends</div><p><strong>Omega-3s twice</strong>, something fermented most days, and protein at breakfast to steady the 4–6p dip.</p></div>
-          <div class="bp-prog"><div class="bp-prog__row"><span>On-plan days</span><strong>5 / 7 days</strong></div><div class="bp-dots"><span class="on"></span><span class="on"></span><span></span><span class="on"></span><span class="on"></span><span></span><span class="on"></span></div></div>
-          <div class="bp-metric"><span class="n">5</span><span class="u">on-plan days</span><span class="ch">steady</span></div>
-          <button class="bp-log" type="button">Log a meal</button>
-        </article>
-
-      </div>
-    </section>
 
   </div>
 </div>

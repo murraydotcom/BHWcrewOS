@@ -197,7 +197,7 @@ h1,h2,h3,h4,h5{margin:0; color:var(--fg-strong); text-wrap:balance;}
 .bhw-header__wm span:first-child{font-size:18px; font-weight:300; letter-spacing:0.04em; color:var(--fg-strong);}
 .bhw-header__wm span:last-child{font-size:8.5px; font-weight:600; letter-spacing:0.22em; text-transform:uppercase; color:var(--fg-muted);}
 .bhw-header__brand-name{display:inline-flex; align-items:center; gap:10px; font-size:12px; font-weight:500; letter-spacing:0.18em; text-transform:uppercase; padding-left:18px; margin-left:18px; border-left:1px solid var(--border); color:var(--accent);}
-.bhw-header__brand-name::before{content:""; display:inline-block; width:22px; height:26px; background:url(assets/logo-geode.png) center/contain no-repeat; flex-shrink:0;}
+.bhw-header__brand-name::before{content:none;}
 .hero-mark{display:inline-block; width:64px; height:auto; margin-bottom:18px;}
 .hero-brand-lockup{display:flex; align-items:center; gap:14px; margin-bottom:18px;}
 .hero-brand-lockup img{width:48px; height:auto;}
@@ -684,9 +684,8 @@ document.addEventListener('DOMContentLoaded',function(){
 <header class="bhw-header">
   <div class="bhw-header__inner">
     <a href="index.html" class="bhw-header__lockup">
-      <img class="bhw-header__mark" src="assets/logo-geode.png" alt="">
-      <div class="bhw-header__wm"><span>BHW</span><span>Integrative Wellness</span></div>
-      <div class="bhw-header__brand-name" style="color:#167A9A;">Flow</div>
+      <img class="bhw-header__mark" src="assets/flow.png" alt="Flow" style="height:36px; width:auto;">
+      <div class="bhw-header__brand-name" style="color:#167A9A; font-weight:600; font-size:19px;">Flow</div>
     </a>
     <nav class="bhw-header__nav">
       <a href="#why">Why Flow</a>
@@ -698,19 +697,6 @@ document.addEventListener('DOMContentLoaded',function(){
   </div>
 </header>
 
-<div class="switch-bar">
-  <div class="container">
-    <div style="display:flex; gap:14px; align-items:center;">
-      <span class="switch-meta">Flow Vascular</span>
-      <span style="color:rgba(11,93,115,0.3); font-size:18px;">/</span>
-      <span class="switch-meta" id="audLabel" style="color:#167A9A;">For new patients</span>
-    </div>
-    <div class="audience-tabs">
-      <button class="active" data-pane-btn="potential">For new patients</button>
-      <button data-pane-btn="current">My program</button>
-    </div>
-  </div>
-</div>
 
 <!-- =================== POTENTIAL =================== -->
 <div data-pane="potential" class="active">
@@ -968,57 +954,6 @@ document.addEventListener('DOMContentLoaded',function(){
       </div>
     </div>
 
-    <!-- ================= HEALTH BLUEPRINT ================= -->
-    <section class="blueprint">
-      <div class="bp-head">
-        <div class="eyebrow eyebrow--accent" style="color:#167A9A;">Your Health Blueprint</div>
-        <h2>Stabilization runs across every system.</h2>
-        <p>Your vascular numbers move with how you pace, sleep, hydrate, and recover — not the protocol alone. Dr. Lin recommends each pillar below and posts it here; you log the day, and we track it against your readings.</p>
-      </div>
-      <div class="bp-grid">
-
-        <article class="bp-card" style="--dom:#167A9A;">
-          <div class="bp-card__top"><span class="bp-ico">🚴</span><div><div class="bp-dom">Exercise</div><div class="bp-tag">Paced</div></div></div>
-          <div class="bp-rx"><div class="bp-rx__label">Dr. Lin recommends</div><p><strong>Recumbent intervals, 18 min, RPE cap 13</strong> — stop on symptoms. Horizontal-start cardio protects your autonomics.</p></div>
-          <div class="bp-prog"><div class="bp-prog__row"><span>This week</span><strong>4 / 6 sessions</strong></div><div class="bp-dots"><span class="on"></span><span></span><span class="on"></span><span class="on"></span><span></span><span class="on"></span><span class="half"></span></div></div>
-          <div class="bp-metric"><span class="n">4</span><span class="u">sessions</span><span class="ch">↑ tolerance</span></div>
-          <button class="bp-log" type="button">Log a session</button>
-        </article>
-
-        <article class="bp-card" style="--dom:#5A6FB0;">
-          <div class="bp-card__top"><span class="bp-ico">😴</span><div><div class="bp-dom">Sleep</div><div class="bp-tag">Stable</div></div></div>
-          <div class="bp-rx"><div class="bp-rx__label">Dr. Lin recommends</div><p>Head of bed elevated <strong>6–8°</strong>, a consistent window, and front-load your 3.5L fluid so nocturia doesn't fragment sleep.</p></div>
-          <div class="bp-prog"><div class="bp-prog__row"><span>On-time window</span><strong>6 / 7 nights</strong></div><div class="bp-dots"><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span></span><span class="on"></span><span class="on"></span></div></div>
-          <div class="bp-metric"><span class="n">7h 25m</span><span class="u">avg sleep</span><span class="ch">steady</span></div>
-          <button class="bp-log" type="button">Log sleep</button>
-        </article>
-
-        <article class="bp-card" style="--dom:#C0872E;">
-          <div class="bp-card__top"><span class="bp-ico">🤝</span><div><div class="bp-dom">Social</div><div class="bp-tag">Pacing</div></div></div>
-          <div class="bp-rx"><div class="bp-rx__label">Dr. Lin recommends</div><p>One <strong>low-exertion social plan</strong> this week, seated where you can. Spend your spoons on purpose — recovery isn't isolation.</p></div>
-          <div class="bp-prog"><div class="bp-prog__row"><span>This week</span><strong>1 / 1 planned</strong></div><div class="bp-dots"><span></span><span></span><span class="on"></span><span></span><span></span><span></span><span></span></div></div>
-          <div class="bp-metric"><span class="n">1</span><span class="u">plan kept</span><span class="ch">on pace</span></div>
-          <button class="bp-log" type="button">Log a plan</button>
-        </article>
-
-        <article class="bp-card" style="--dom:#0B5D73;">
-          <div class="bp-card__top"><span class="bp-ico">🧭</span><div><div class="bp-dom">Coping</div><div class="bp-tag">Skilled</div></div></div>
-          <div class="bp-rx"><div class="bp-rx__label">Dr. Lin recommends</div><p><strong>Paced diaphragmatic breathing</strong> at the first pre-syncope cue, and log symptom severity daily for the tracker.</p></div>
-          <div class="bp-prog"><div class="bp-prog__row"><span>Days logged</span><strong>26 / 28</strong></div><div class="bp-dots"><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span></div></div>
-          <div class="bp-metric"><span class="n">0.84</span><span class="u">vascular idx</span><span class="ch">↑ 0.21</span></div>
-          <button class="bp-log" type="button">Coping check-in</button>
-        </article>
-
-        <article class="bp-card" style="--dom:#5AA469;">
-          <div class="bp-card__top"><span class="bp-ico">🧂</span><div><div class="bp-dom">Nutrition</div><div class="bp-tag">Dialed in</div></div></div>
-          <div class="bp-rx"><div class="bp-rx__label">Dr. Lin recommends</div><p><strong>Electrolyte loading</strong> — 1L + salt before exercise, 3.5L total daily. Here, salt is prescribed, not avoided.</p></div>
-          <div class="bp-prog"><div class="bp-prog__row"><span>Fluid target</span><strong>7 / 7 days</strong></div><div class="bp-dots"><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span></div></div>
-          <div class="bp-metric"><span class="n">3.5L</span><span class="u">daily fluid</span><span class="ch">target met</span></div>
-          <button class="bp-log" type="button">Log intake</button>
-        </article>
-
-      </div>
-    </section>
 
   </div>
 </div>
