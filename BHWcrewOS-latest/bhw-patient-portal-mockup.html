@@ -311,7 +311,7 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 .bp-card{background:#fff; border:1px solid var(--border); border-radius:16px; padding:22px; display:flex; flex-direction:column; position:relative; overflow:hidden; box-shadow:var(--shadow-sm);}
 .bp-card::before{content:""; position:absolute; left:0; top:0; width:100%; height:3px; background:var(--dom, var(--accent));}
 .bp-card__top{display:flex; align-items:center; gap:12px; margin-bottom:15px;}
-.bp-ico{width:40px; height:40px; border-radius:11px; display:grid; place-items:center; font-size:19px; flex-shrink:0; background:color-mix(in srgb, var(--dom, var(--accent)) 16%, transparent);}
+.bp-ico{width:40px; height:40px; border-radius:11px; display:grid; place-items:center; font-size:19px; flex-shrink:0; color:var(--dom, var(--accent)); background:color-mix(in srgb, var(--dom, var(--accent)) 16%, transparent);}
 .bp-dom{font-size:15px; font-weight:700; color:var(--fg-strong); line-height:1.1;}
 .bp-tag{font-size:9.5px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--dom, var(--accent)); margin-top:4px;}
 .bp-rx{background:var(--bg-warm); border-radius:11px; padding:13px 14px; margin-bottom:15px;}
@@ -363,7 +363,7 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 @media(max-width:560px){.bp-trends__row{grid-template-columns:90px 1fr 70px; gap:10px;}}
 .bp-today .drow{display:flex; align-items:center; gap:13px; padding:13px 0; border-bottom:1px solid var(--border);}
 .bp-today .drow:last-child{border-bottom:0;}
-.bp-today .di{width:36px; height:36px; border-radius:10px; display:grid; place-items:center; font-size:17px; flex:none; background:color-mix(in srgb, var(--dom, var(--accent)) 16%, transparent);}
+.bp-today .di{width:36px; height:36px; border-radius:10px; display:grid; place-items:center; font-size:17px; flex:none; color:var(--dom, var(--accent)); background:color-mix(in srgb, var(--dom, var(--accent)) 16%, transparent);}
 .bp-today .dn{flex:1;}
 .bp-today .dn b{font-size:13.5px; font-weight:600; color:var(--fg-strong);}
 .bp-today .dn span{display:block; font-size:11.5px; color:var(--fg-muted); margin-top:1px;}
@@ -918,7 +918,7 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
         <div class="bp-grid">
 
           <article class="bp-card" style="--dom:#8C5A3C;">
-            <div class="bp-card__top"><span class="bp-ico">🚶</span><div><div class="bp-dom">Exercise</div><div class="bp-tag">On track</div></div></div>
+            <div class="bp-card__top"><span class="bp-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/><path d="M16 17h4"/><path d="M4 13h4"/></svg></span><div><div class="bp-dom">Exercise</div><div class="bp-tag">On track</div></div></div>
             <div class="bp-rx"><div class="bp-rx__label">Your care team recommends</div><p><strong>Two 20-minute walks after your largest meals</strong> — they blunt the glucose spike that deepens the 3pm dip.</p></div>
             <div class="bp-prog"><div class="bp-prog__row"><span>This week</span><strong>4 / 7 days</strong></div><div class="bp-dots"><span class="on"></span><span class="on"></span><span></span><span class="on"></span><span class="on"></span><span></span><span></span></div></div>
             <div class="bp-metric"><span class="n">4</span><span class="u">days moved</span><span class="ch">↑ 1 vs last wk</span></div>
@@ -926,7 +926,7 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
           </article>
 
           <article class="bp-card" style="--dom:#7C6BD6;">
-            <div class="bp-card__top"><span class="bp-ico">😴</span><div><div class="bp-dom">Sleep</div><div class="bp-tag">Protected</div></div></div>
+            <div class="bp-card__top"><span class="bp-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg></span><div><div class="bp-dom">Sleep</div><div class="bp-tag">Protected</div></div></div>
             <div class="bp-rx"><div class="bp-rx__label">Your care team recommends</div><p>A <strong>10:30pm sleep window</strong>, screens down 30 minutes before. Iron repletion without sleep is pouring water into a cracked cup.</p></div>
             <div class="bp-prog"><div class="bp-prog__row"><span>On-time window</span><strong>5 / 7 nights</strong></div><div class="bp-dots"><span class="on"></span><span class="on"></span><span></span><span class="on"></span><span class="on"></span><span></span><span class="on"></span></div></div>
             <div class="bp-metric"><span class="n">7h 05m</span><span class="u">avg sleep</span><span class="ch">↑ improving</span></div>
@@ -934,7 +934,7 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
           </article>
 
           <article class="bp-card" style="--dom:#266D7A;">
-            <div class="bp-card__top"><span class="bp-ico">🤝</span><div><div class="bp-dom">Social</div><div class="bp-tag">Room to grow</div></div></div>
+            <div class="bp-card__top"><span class="bp-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/></svg></span><div><div class="bp-dom">Social</div><div class="bp-tag">Room to grow</div></div></div>
             <div class="bp-rx"><div class="bp-rx__label">Your care team recommends</div><p>One <strong>real connection this week that isn't a screen</strong> — a walk with a friend ties two pillars together.</p></div>
             <div class="bp-prog"><div class="bp-prog__row"><span>This week</span><strong>1 / 2 planned</strong></div><div class="bp-dots"><span></span><span class="on"></span><span></span><span></span><span class="half"></span><span></span><span></span></div></div>
             <div class="bp-metric"><span class="n">1</span><span class="u">connection</span><span class="ch">keep going</span></div>
@@ -942,7 +942,7 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
           </article>
 
           <article class="bp-card" style="--dom:#5FA9A6;">
-            <div class="bp-card__top"><span class="bp-ico">🧭</span><div><div class="bp-dom">Coping</div><div class="bp-tag">Steady</div></div></div>
+            <div class="bp-card__top"><span class="bp-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z"/></svg></span><div><div class="bp-dom">Coping</div><div class="bp-tag">Steady</div></div></div>
             <div class="bp-rx"><div class="bp-rx__label">Your care team recommends</div><p>A <strong>3-minute wind-down before the afternoon dip</strong> — box breathing or a short walk beats reaching for caffeine.</p></div>
             <div class="bp-prog"><div class="bp-prog__row"><span>Check-ins</span><strong>5 / 7 days</strong></div><div class="bp-dots"><span class="on"></span><span class="on"></span><span class="on"></span><span></span><span class="on"></span><span class="on"></span><span></span></div></div>
             <div class="bp-metric"><span class="n">5</span><span class="u">check-ins</span><span class="ch">steady</span></div>
@@ -950,7 +950,7 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
           </article>
 
           <article class="bp-card" style="--dom:#5AA469;">
-            <div class="bp-card__top"><span class="bp-ico">🍎</span><div><div class="bp-dom">Nutrition</div><div class="bp-tag">On track</div></div></div>
+            <div class="bp-card__top"><span class="bp-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 21h10"/><path d="M12 21a9 9 0 0 0 9-9H3a9 9 0 0 0 9 9Z"/><path d="M11.38 12a2.4 2.4 0 0 1-.4-4.77 2.4 2.4 0 0 1 3.2-2.77 2.4 2.4 0 0 1 3.47-.63 2.4 2.4 0 0 1 3.37 3.37 2.4 2.4 0 0 1-1.1 3.7 2.51 2.51 0 0 1 .03 1.1"/><path d="m13 12 4-4"/><path d="M10.9 7.25A3.99 3.99 0 0 0 4 10c0 .73.2 1.41.54 2"/></svg></span><div><div class="bp-dom">Nutrition</div><div class="bp-tag">On track</div></div></div>
             <div class="bp-rx"><div class="bp-rx__label">Your care team recommends</div><p><strong>Morning protein anchor, 25–30g before caffeine</strong>, plus leafy greens, salmon, and lentils from your focus list.</p></div>
             <div class="bp-prog"><div class="bp-prog__row"><span>Fueled mornings</span><strong>6 / 7 days</strong></div><div class="bp-dots"><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span></span><span class="on"></span></div></div>
             <div class="bp-metric"><span class="n">6</span><span class="u">fueled AMs</span><span class="ch">steady</span></div>
@@ -995,11 +995,11 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
       <!-- today's log -->
       <div class="bp-sech"><span class="t">Today's log</span><span class="line"></span></div>
       <div class="card bp-today">
-        <div class="drow" style="--dom:#8C5A3C;"><div class="di">🚶</div><div class="dn"><b>Exercise</b><span>Two 20-minute walks after your largest meals</span></div><button class="dlog" type="button">Log</button></div>
-        <div class="drow" style="--dom:#7C6BD6;"><div class="di">😴</div><div class="dn"><b>Sleep</b><span>10:30pm window · screens down 30 minutes before</span></div><button class="dlog" type="button">Log</button></div>
-        <div class="drow" style="--dom:#266D7A;"><div class="di">🤝</div><div class="dn"><b>Social</b><span>One real connection today that isn't a screen</span></div><button class="dlog" type="button">Log</button></div>
-        <div class="drow" style="--dom:#5FA9A6;"><div class="di">🧭</div><div class="dn"><b>Coping</b><span>3-minute wind-down before the afternoon dip</span></div><button class="dlog done" type="button">✓ Done</button></div>
-        <div class="drow" style="--dom:#5AA469;"><div class="di">🍎</div><div class="dn"><b>Nutrition</b><span>Morning protein anchor, 25–30g before caffeine</span></div><button class="dlog done" type="button">✓ Done</button></div>
+        <div class="drow" style="--dom:#8C5A3C;"><div class="di"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/><path d="M16 17h4"/><path d="M4 13h4"/></svg></div><div class="dn"><b>Exercise</b><span>Two 20-minute walks after your largest meals</span></div><button class="dlog" type="button">Log</button></div>
+        <div class="drow" style="--dom:#7C6BD6;"><div class="di"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg></div><div class="dn"><b>Sleep</b><span>10:30pm window · screens down 30 minutes before</span></div><button class="dlog" type="button">Log</button></div>
+        <div class="drow" style="--dom:#266D7A;"><div class="di"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/></svg></div><div class="dn"><b>Social</b><span>One real connection today that isn't a screen</span></div><button class="dlog" type="button">Log</button></div>
+        <div class="drow" style="--dom:#5FA9A6;"><div class="di"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z"/></svg></div><div class="dn"><b>Coping</b><span>3-minute wind-down before the afternoon dip</span></div><button class="dlog done" type="button">✓ Done</button></div>
+        <div class="drow" style="--dom:#5AA469;"><div class="di"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 21h10"/><path d="M12 21a9 9 0 0 0 9-9H3a9 9 0 0 0 9 9Z"/><path d="M11.38 12a2.4 2.4 0 0 1-.4-4.77 2.4 2.4 0 0 1 3.2-2.77 2.4 2.4 0 0 1 3.47-.63 2.4 2.4 0 0 1 3.37 3.37 2.4 2.4 0 0 1-1.1 3.7 2.51 2.51 0 0 1 .03 1.1"/><path d="m13 12 4-4"/><path d="M10.9 7.25A3.99 3.99 0 0 0 4 10c0 .73.2 1.41.54 2"/></svg></div><div class="dn"><b>Nutrition</b><span>Morning protein anchor, 25–30g before caffeine</span></div><button class="dlog done" type="button">✓ Done</button></div>
       </div>
 
       <!-- ===== tools for progress ===== -->
