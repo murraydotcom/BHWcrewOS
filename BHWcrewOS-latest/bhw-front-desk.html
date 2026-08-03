@@ -58,6 +58,8 @@
   .p-head{background:var(--river);color:#fff;padding:14px 18px;display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline}
   .p-head .name{font-size:1.15rem;font-weight:800}
   .p-head .meta{font-size:.78rem;font-weight:600;opacity:.94}
+  .p-head .p-open{margin-left:auto;font-size:.74rem;font-weight:700;color:#fff;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.5);padding:6px 12px;border-radius:8px;text-decoration:none;white-space:nowrap}
+  .p-head .p-open:hover{background:rgba(255,255,255,.3)}
   .p-grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
   .p-col{padding:14px 18px}
   .p-col+.p-col{border-left:1px solid var(--line)}
@@ -180,6 +182,7 @@
       <div class="p-head">
         <span class="name" id="p-name"></span>
         <span class="meta" id="p-meta"></span>
+        <a class="p-open" id="p-open" target="_blank" rel="noopener" style="display:none">Open patient page ↗</a>
       </div>
       <div class="p-grid">
         <div class="p-col">
@@ -494,8 +497,10 @@ async function lookup(){
         <div class="req urgent"><div class="top"><span>Refill / Rx · Voicemail</span><span class="when">today 11:43 PM</span></div><div class="sub">Critical lab callback — LabCorp ref #19055310 — <b>Not started</b></div></div>
         <div class="req"><div class="top"><span>Reschedule · Text / SMS</span><span class="when">Jul 02</span></div><div class="sub">Moved follow-up to the 14th — <b>Done</b></div></div>
         <div class="req"><div class="top"><span>Records Request · Fax</span><span class="when">Jun 18</span></div><div class="sub">Sent cardiology consult to Dr. Example — <b>Done</b></div></div>`;
+      $('p-open').style.display='none';
       $('profile').classList.add('show');
       $('lkstatus').textContent='Demo profile — live search connects after deployment.';
+      fillReferralPatient(window.lastPatient,{auto:true});
       return;
     }
     $('lkstatus').innerHTML='Live lookup isn\u2019t connected yet — open the patient in <a href="https://app.notion.com/p/2cf580758d3080f0825de4bbfb6c7528" target="_rel"><b>Patients Master List</b></a> for now.';
@@ -510,6 +515,8 @@ async function lookup(){
     const p=d.patient;
     window.lastPatient=p; $('p-name').textContent=p.name;
     $('p-meta').textContent=[p.ctl,p.dob?`DOB ${p.dob}`:null].filter(Boolean).join(' · ');
+    const open=$('p-open');
+    if(p.pageUrl){ open.href=p.pageUrl; open.style.display=''; } else { open.style.display='none'; }
     $('p-info').innerHTML=[
       p.allergies?`<div class="kv allergy"><b>⚠️ Allergies:</b> ${p.allergies}</div>`:'<div class="kv allergy nkda"><b>Allergies:</b> not on file — verify</div>',
       p.phone?`<div class="kv"><b>Phone:</b> ${p.phone}</div>`:'',
@@ -528,6 +535,8 @@ async function lookup(){
       </div>`).join(''):'<div class="req"><div class="sub">No logged requests yet.</div></div>';
     $('profile').classList.add('show');
     $('lkstatus').textContent='';
+    // Auto-populate the referral form from the Master List record.
+    fillReferralPatient(p,{auto:true});
   }catch(e){$('lkstatus').textContent='Lookup failed — check the connection or search the Master List directly.';}
 }
 $('go').addEventListener('click',lookup);
@@ -568,15 +577,20 @@ $('g-spec').addEventListener('change',e=>{
   $('g-sorg').value=s.org||''; $('g-saddr').value=s.address||'';
   $('g-sphone').value=s.phone||''; $('g-sfax').value=s.fax||'';
 });
-$('g-usepatient').addEventListener('click',()=>{
-  const p = window.lastPatient;
-  if(!p){ $('g-status').textContent='Look up a patient first — then tap this.'; return; }
+function fillReferralPatient(p,{auto}={}){
+  if(!p) return false;
   $('g-pname').value=p.name||'';
   $('g-pdob').value=p.dob?fmtDate(p.dob):'';
   $('g-pphone').value=p.phone||'';
   $('g-pmember').value=(p.member||'').includes('●')?'':(p.member||'');
   $('g-cname').value=[p.payer,p.mco].filter(Boolean).join(' — ');
-  $('g-status').textContent='Patient loaded from lookup ✓ — verify member # against the card.';
+  $('g-status').textContent = auto
+    ? `Referral pre-filled for ${p.name||'this patient'} from the Master List ✓ — pick a specialist above, then verify member #.`
+    : 'Patient loaded from lookup ✓ — verify member # against the card.';
+  return true;
+}
+$('g-usepatient').addEventListener('click',()=>{
+  if(!fillReferralPatient(window.lastPatient)){ $('g-status').textContent='Look up a patient first — then tap this.'; }
 });
 function fmtDate(d){ const m=String(d).match(/(\d{4})-(\d{2})-(\d{2})/); return m?`${m[2]}/${m[3]}/${m[1]}`:String(d); }
 $('g-make').addEventListener('click', async ()=>{

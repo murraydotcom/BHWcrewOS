@@ -205,9 +205,10 @@ exports.handler = async (event) => {
       dob: P['DOB']?.date?.start || '',
       phone: P['Phone']?.phone_number || '',
       payer: sel(P['Payer']) || text(P['Payer']),
-      mco: sel(P['MCO']) || text(P['MCO']),
+      mco: sel(P['Medicaid MCO']) || sel(P['MCO']) || text(P['MCO']),
       member: text(P['MRN / Member ID']) || text(P['Member ID']),
-      status: sel(P['Status']) || sel(P['Patient Status']),
+      status: sel(P['Status']) || sel(P['Patient Status']) ||
+              (P['Program Enrollment']?.multi_select || []).map(m => m.name).join(', '),
       allergies: text(P['Allergies']),
       meds: text(P['Medications']),
       lastVisit: P['Last Visit']?.date?.start || P['Last Visit Date']?.date?.start || '',
