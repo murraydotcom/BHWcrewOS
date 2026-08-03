@@ -1,97 +1,62 @@
 // netlify/functions/dialpad-events.js
-// Receives Dialpad Event Subscription webhooks (SMS events) and creates
-// entries in the Patient Request Triage Queue — patient-matched by phone.
-// Env vars: NOTION_TOKEN, MASTER_DB_ID, QUEUE_DB_ID
-// Optional:  DIALPAD_WEBHOOK_SECRET (set the same value when creating the webhook)
+// Receives Dialpad Event Subscription webhooks and drops matched entries into
+// the Patient Request Triage Queue, which the Front Desk OS inbox renders.
+// Handles inbound SMS, missed calls, and voicemails (answered/outbound are
+// ignored). This is part of the Keragon replacement — a direct webhook, no
+// middleware.
+//
+// Env: NOTION_TOKEN, MASTER_DB_ID, QUEUE_DB_ID
+// Optional: DIALPAD_WEBHOOK_SECRET (set the same value on the Dialpad webhook)
 
-const NOTION = 'https://api.notion.com/v1';
-const H = () => ({
-  'Authorization': `Bearer ${process.env.NOTION_TOKEN}`,
-  'Notion-Version': '2022-06-28',
-  'Content-Type': 'application/json',
-});
-const digits = s => (s || '').replace(/\D/g, '');
+const { matchPatientByPhone, createQueueEntry, parseDialpadBody } = require("./lib/triage");
 
 exports.handler = async (event) => {
   try {
-    if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'method not allowed' };
+    if (event.httpMethod !== "POST") return { statusCode: 405, body: "method not allowed" };
 
-    // Dialpad sends the payload as a JWT when a secret is set, else raw JSON.
     let payload;
-    const raw = event.body || '';
-    if (raw.trim().startsWith('{')) {
-      payload = JSON.parse(raw);
-    } else if (process.env.DIALPAD_WEBHOOK_SECRET) {
-      // JWT: header.payload.signature — verify signature (HS256) then decode
-      const crypto = require('crypto');
-      const [h, p, sig] = raw.trim().split('.');
-      const expected = crypto.createHmac('sha256', process.env.DIALPAD_WEBHOOK_SECRET)
-        .update(`${h}.${p}`).digest('base64url');
-      if (sig !== expected) return { statusCode: 401, body: 'bad signature' };
-      payload = JSON.parse(Buffer.from(p, 'base64url').toString('utf8'));
+    try { payload = parseDialpadBody(event.body || "", process.env.DIALPAD_WEBHOOK_SECRET); }
+    catch { return { statusCode: 400, body: "bad payload" }; }
+    if (payload === null) return { statusCode: 401, body: "bad signature or unrecognized payload" };
+
+    // Inbound only.
+    const dir = (payload.direction || "").toLowerCase();
+    if (dir && dir !== "inbound") return { statusCode: 200, body: "ignored: not inbound" };
+
+    const from = payload.from_number || payload.external_number || payload.contact?.phone || payload.from?.phone_number || "";
+
+    // Classify the event.
+    const text = payload.text || payload.text_content || payload.message?.text || "";
+    let source, summary, link;
+    if (text) {
+      source = "Text / SMS";
+      summary = text;
     } else {
-      return { statusCode: 400, body: 'unrecognized payload' };
-    }
+      const state = String(payload.state || payload.call_state || payload.event_type || payload.event || "").toLowerCase();
+      const vmLink = payload.voicemail_link || payload.recording_url || payload.voicemail?.link || payload.voicemail?.recording_url || "";
+      const transcript = payload.transcription || payload.voicemail?.transcription || payload.transcript || "";
+      const connected = !!(payload.was_connected || payload.answered) || Number(payload.duration) > 0 || /connected|answered/.test(state);
+      const isVoicemail = /voicemail|voice_?mail/.test(state) || !!vmLink || !!transcript;
+      const isMissed = /missed|no[_\s-]?answer|abandon|hangup|unanswered/.test(state) && !connected;
 
-    // Only act on INBOUND SMS events
-    const dir = (payload.direction || '').toLowerCase();
-    if (dir && dir !== 'inbound') return { statusCode: 200, body: 'ignored outbound' };
-
-    const from = payload.from_number || payload.contact?.phone || '';
-    const text = payload.text || payload.text_content || '';
-    if (!from && !text) return { statusCode: 200, body: 'no sms content' };
-
-    // ---- try to match the sender to a patient on the master list ----
-    let patientId = null, patientName = '';
-    const last7 = digits(from).slice(-7);
-    if (last7.length === 7) {
-      const res = await fetch(`${NOTION}/databases/${process.env.MASTER_DB_ID}/query`, {
-        method: 'POST', headers: H(),
-        body: JSON.stringify({
-          filter: { property: 'Phone', phone_number: { contains: last7.replace(/(\d{3})(\d{4})/, '$1-$2') } },
-          page_size: 5,
-        }),
-      });
-      let data = await res.json();
-      let hits = data.results || [];
-      if (!hits.length) {
-        const res2 = await fetch(`${NOTION}/databases/${process.env.MASTER_DB_ID}/query`, {
-          method: 'POST', headers: H(),
-          body: JSON.stringify({
-            filter: { property: 'Phone', phone_number: { contains: last7.slice(-4) } }, page_size: 10,
-          }),
-        });
-        const d2 = await res2.json();
-        hits = (d2.results || []).filter(r =>
-          digits(r.properties?.Phone?.phone_number || '').endsWith(digits(from).slice(-10)));
-      }
-      if (hits.length === 1) {
-        patientId = hits[0].id;
-        patientName = hits[0].properties?.['Patient Name']?.title?.[0]?.plain_text || '';
+      if (isVoicemail) {
+        source = "Voicemail";
+        summary = transcript ? `Voicemail: ${transcript}` : "New voicemail";
+        link = vmLink || undefined;
+      } else if (isMissed) {
+        source = "Missed Call (Phone)";
+        summary = "Missed call — no message left";
+      } else {
+        return { statusCode: 200, body: "ignored: answered/other call event" };
       }
     }
 
-    // ---- create the queue entry ----
-    const now = new Date().toISOString();
-    const props = {
-      'Patient Name': { title: [{ text: { content: patientName || `Text from ${from || 'unknown number'}` } }] },
-      'Callback Number': { phone_number: from || null },
-      'Summary': { rich_text: [{ text: { content: (text || '(no text content)').slice(0, 1900) } }] },
-      'Source': { select: { name: 'Text / SMS' } },
-      'Received': { date: { start: now } },
-      'Status': { status: { name: 'Not started' } },
-    };
-    if (patientId) props['Patient'] = { relation: [{ id: patientId }] };
+    if (!from && !summary) return { statusCode: 200, body: "ignored: no content" };
 
-    const cres = await fetch(`${NOTION}/pages`, {
-      method: 'POST', headers: H(),
-      body: JSON.stringify({ parent: { database_id: process.env.QUEUE_DB_ID }, properties: props }),
-    });
-    if (!cres.ok) {
-      const detail = await cres.text();
-      return { statusCode: 502, body: `notion error: ${detail.slice(0, 300)}` };
-    }
-    return { statusCode: 200, body: JSON.stringify({ ok: true, matched: !!patientId }) };
+    const { patientId, patientName } = await matchPatientByPhone(from);
+    const r = await createQueueEntry({ patientId, patientName, from, summary, source, link, receivedISO: new Date().toISOString() });
+    if (!r.ok) return { statusCode: 502, body: `notion error: ${r.error}` };
+    return { statusCode: 200, body: JSON.stringify({ ok: true, source, matched: r.matched }) };
   } catch (e) {
     return { statusCode: 500, body: String(e) };
   }
