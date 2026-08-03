@@ -237,14 +237,14 @@ const API_ACT  = "/.netlify/functions/action";
 const DIV_COLORS = {
   "Primary Care":"var(--pc-primary)", "CharmEd Minds":"var(--pc-charmed)",
   "Mind & Mood Recovery":"var(--pc-mind)", "The Porter House":"var(--pc-porter)",
-  "Chronic Care":"var(--pc-chronic)", "Flow":"var(--pc-flow)", "Admin Master":"var(--pc-admin)"
+  "Care Management":"var(--pc-chronic)", "Flow":"var(--pc-flow)", "Admin Master":"var(--pc-admin)"
 };
 const DIV_BLURBS = {
   "Primary Care":"Panel care, referrals out, and warm handoffs across BHW.",
   "CharmEd Minds":"Lifespan cognition and brain health — confidence through cognition and education.",
   "Mind & Mood Recovery":"Behavioral health and the Pathway to the Sunrise program.",
   "The Porter House":"Behavioral health transition housing — 2nd floor residents and coordination.",
-  "Chronic Care":"APCM, CCM, RPM, BHI, CoCM, and care coordination.",
+  "Care Management":"APCM, CCM, RPM, BHI, CoCM, and care coordination.",
   "Flow":"Vascular stabilization referral pathway (Room 4).",
   "Admin Master":"Whole-circle view: every division, every referral, the full schedule."
 };
@@ -451,17 +451,17 @@ function divisionView(div){
 
     ${div==="Mind & Mood Recovery" ? `<div style="display:flex;align-items:center;gap:14px;margin:2px 0 14px"><img src="assets/mind-mood-logo.png" alt="BHW Mind and Mood Recovery" style="width:64px;height:64px;object-fit:cover;object-position:top;border-radius:50%"><div><div style="font-family:Montserrat,sans-serif;font-weight:800;letter-spacing:.5px;color:#2f4551">BHW MIND & MOOD RECOVERY</div><div style="font-style:italic;font-size:12.5px;color:#b07a55">Depth restores clarity.</div></div></div>` : ""}
 
-    ${div==="Chronic Care" ? ccNeedsCard() : ""}
+    ${div==="Care Management" ? ccNeedsCard() : ""}
 
-    ${(div==="Chronic Care"||div==="Mind & Mood Recovery") ? todayCard(div) : ""}
+    ${(div==="Care Management"||div==="Mind & Mood Recovery") ? todayCard(div) : ""}
 
     ${isPorter && D.phPlans ? phGrowthCard() : ""}
 
     ${isPorter && D.porterhouse ? porterCensus() : ""}
 
-    ${(div==="Chronic Care"||div==="Primary Care") ? prevCard() : ""}
+    ${(div==="Care Management"||div==="Primary Care") ? prevCard() : ""}
 
-    ${(div==="Chronic Care"||div==="Primary Care") ? awvCard(div) : ""}
+    ${(div==="Care Management"||div==="Primary Care") ? awvCard(div) : ""}
 
     ${div==="CharmEd Minds" ? `<div style="display:flex;align-items:center;gap:14px;margin:2px 0 14px"><img src="assets/charmed-minds-logo.png" alt="CharmEd Minds" style="width:56px;height:56px;border-radius:50%"><div><div style="font-family:Montserrat,sans-serif;font-weight:800;letter-spacing:.5px;color:#0B1228">CHARMED MINDS</div><div style="font-style:italic;font-size:12.5px;color:#2CA7A6">Bright minds supported with strategy.</div></div></div>` : ""}
 
@@ -494,7 +494,7 @@ const CC_NEEDS = [
 function ccNeedsCard(){
   return `<div class="card" style="border-left:4px solid var(--pc-chronic)">
     <h2>Request care coordination <span class="grow"></span></h2>
-    <p class="lede">Tap the reason — it opens a referral addressed to Chronic Care with the type already set, so the coordinator gets a specific ask instead of "please help."</p>
+    <p class="lede">Tap the reason — it opens a referral addressed to Care Management with the type already set, so the coordinator gets a specific ask instead of "please help."</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       ${CC_NEEDS.map((n,i)=>`<button class="btn sm sec" onclick="ccRequest(${i})">${esc(n[1])}</button>`).join("")}
     </div>
@@ -504,7 +504,7 @@ function ccRequest(i){
   const n = CC_NEEDS[i]; if(!n) return;
   openReferralForm("");
   setTimeout(function(){
-    const to=document.getElementById("f-to"); if(to) to.value="Chronic Care";
+    const to=document.getElementById("f-to"); if(to) to.value="Care Management";
     const t=document.getElementById("f-type");
     if(t){
       if(![...t.options].some(o=>o.text===n[0])){ const o=document.createElement("option"); o.textContent=n[0]; t.appendChild(o); }
@@ -525,7 +525,7 @@ function resourcesCard(div){
     <h2>Resources &amp; workflows</h2>
     <p class="lede">The division's documentation, workflows, and assessments — straight from Notion. Add a row to the Resource Library in Notion and it appears here.</p>
     ${groups.map(g=>`
-      <div class="res-cat">${esc(g.c)}${g.c==="Assessment" && div==="Chronic Care" ? " · AWV steps in order" : ""}</div>
+      <div class="res-cat">${esc(g.c)}${g.c==="Assessment" && div==="Care Management" ? " · AWV steps in order" : ""}</div>
       <div class="res-grid">${g.list.map(r=>`
         <a class="res ${r.pinned?"pin":""}" href="${esc(r.link)}" target="_blank" rel="noopener">
           ${r.pinned?'<span class="star">★</span>':''}${esc(r.title)}<span>${esc(r.notes)}</span>
@@ -568,7 +568,7 @@ function adminView(){
   const upcoming = D.schedule.filter(b=>b.status==="Scheduled" && b.date>=todayStr).slice(0,20);
   const aging = openR.map(r=>({...r, days: r.sentDate? Math.floor((Date.now()-new Date(r.sentDate))/86400000):0})).sort((a,b)=>b.days-a.days);
   const rollup = D.adminRollup||{};
-  const divs = ["Primary Care","CharmEd Minds","Mind & Mood Recovery","The Porter House","Chronic Care","Flow"];
+  const divs = ["Primary Care","CharmEd Minds","Mind & Mood Recovery","The Porter House","Care Management","Flow"];
   return `<section class="view" id="view-admin-master" style="--pc:var(--pc-admin)">
     <div class="prog-head"><div class="bar"></div><div><h1>Admin Master</h1><p>${DIV_BLURBS["Admin Master"]}</p></div></div>
     <div class="kpis">
@@ -1074,9 +1074,9 @@ function awvSummary(){
   if(flags.includes("Depression screen positive")||flags.includes("Anxiety screen positive"))
     acts.push(`<button class="btn sm warn" onclick="closeModal();openHandoffForm('Primary Care');setTimeout(()=>{document.getElementById('f-to').value='Mind & Mood Recovery';document.getElementById('f-pat').value='${AWV.patientId}';},50)">→ Warm handoff to Mind & Mood</button>`);
   if(flags.includes("CCM enrollment yes")||flags.includes("RPM enrollment yes"))
-    acts.push(`<button class="btn sm" onclick="awvEnrollReferral()">→ Send enrollment referral to Chronic Care</button>`);
+    acts.push(`<button class="btn sm" onclick="awvEnrollReferral()">→ Send enrollment referral to Care Management</button>`);
   if(flags.includes("Fall risk")||flags.includes("Med access barrier")||flags.includes("HRSN screening agreed"))
-    acts.push(`<button class="btn sm sec" onclick="closeModal();openReferralForm('Primary Care');setTimeout(()=>{document.getElementById('f-to').value='Chronic Care';document.getElementById('f-type').value='SDH';document.getElementById('f-pat').value='${AWV.patientId}';},50)">→ SDH referral to care management</button>`);
+    acts.push(`<button class="btn sm sec" onclick="closeModal();openReferralForm('Primary Care');setTimeout(()=>{document.getElementById('f-to').value='Care Management';document.getElementById('f-type').value='SDH';document.getElementById('f-pat').value='${AWV.patientId}';},50)">→ SDH referral to care management</button>`);
   openModal(`<h3>✅ AWV Summary</h3><div class="msub">${esc(patLabel(AWV.patientId))} — review flags, fire the next steps, then mark complete.</div>
   <div class="f">
     <div class="awv-q"><div class="awv-l">Flags</div>${flags.length?flags.map(f=>`<span class="pill ${/positive|Cognitive/.test(f)?"alert":/risk|barrier|apnea/.test(f)?"warn":"ok"}">${esc(f)}</span> `).join(""):'<span class="pill ok">None</span>'}</div>
@@ -1112,8 +1112,8 @@ async function awvEnrollReferral(){
   const a1 = AWV.answers[0];
   const what = [a1.ccm==="Yes, enroll"?"CCM":null, a1.rpm==="Yes, enroll"?"RPM":null].filter(Boolean).join(" + ");
   try{
-    await api(API_ACT, {action:"referral-create", patientId:AWV.patientId, from:"Primary Care", to:"Chronic Care", type:"Division Referral", details:`AWV enrollment decision: patient agreed to ${what}. Enroll and begin monthly cycle.`, priority:"Routine"});
-    toast("Enrollment referral sent to Chronic Care");
+    await api(API_ACT, {action:"referral-create", patientId:AWV.patientId, from:"Primary Care", to:"Care Management", type:"Division Referral", details:`AWV enrollment decision: patient agreed to ${what}. Enroll and begin monthly cycle.`, priority:"Routine"});
+    toast("Enrollment referral sent to Care Management");
   }catch(e){ toast("⚠ "+e.message); }
 }
 async function awvComplete(){
@@ -1665,7 +1665,7 @@ function cpNote(id){
 
 /* ============ Patient registration (everyone) + duplicate guard ============ */
 const NP_INS = ["Medicare","Medicaid","Medicare + Medicaid","Aetna","CareFirst BCBS","Cigna","UnitedHealthcare","Johns Hopkins EHP","Tricare","Self-Pay","Other"];
-const NP_PROGS = ["Primary Care","CharmEd Minds","Mind & Mood Recovery","Chronic Care","Flow","The Porter House","BHI","RPM","12-Week Program"];
+const NP_PROGS = ["Primary Care","CharmEd Minds","Mind & Mood Recovery","Care Management","Flow","The Porter House","BHI","RPM","12-Week Program"];
 
 function npEnsureOverlay(){
   if(document.getElementById("np-overlay")) return;
@@ -2097,9 +2097,9 @@ async function cmSendGo(assessmentId, kind){
 }
 
 
-/* ============ Today's Tasks (top of Chronic Care + Mind & Mood pages) ============ */
+/* ============ Today's Tasks (top of Care Management + Mind & Mood pages) ============ */
 const TODAY_TASKS = {
- "Chronic Care": {
+ "Care Management": {
   owner: "Care Manager",
   anchors: [
    "8:00 — Review & prioritize task list",
@@ -2120,7 +2120,7 @@ const TODAY_TASKS = {
     "Flag patients who hit threshold today",
     "By 5:00 — Documentation supports every code billed",
     "By 5:00 — Below-threshold list + action plan for each"]},
-   3: {t:"RPM + Chronic Care Deep Work", items:[
+   3: {t:"RPM + Care Management Deep Work", items:[
     "9:00–12:00 — Full RPM dashboard review: trends, not just alerts",
     "By 2:00 — Escalate abnormal readings to Amaris with context",
     "12:00–4:00 — Chronic condition follow-ups (DM · HTN · CHF · COPD · CKD)",
@@ -2255,7 +2255,7 @@ function openReferralForm(from){
   <div class="f">
     <label>Patient</label><select id="f-pat"><option value="">Select patient…</option>${patientOptions()}</select>
     <div class="row"><div><label>From</label><select id="f-from">${divisionOptions(froms)}</select></div>
-    <div><label>To</label><select id="f-to">${divisionOptions(["Primary Care","CharmEd Minds","Mind & Mood Recovery","The Porter House","Chronic Care","Flow"])}</select></div></div>
+    <div><label>To</label><select id="f-to">${divisionOptions(["Primary Care","CharmEd Minds","Mind & Mood Recovery","The Porter House","Care Management","Flow"])}</select></div></div>
     <div class="row"><div><label>Type</label><select id="f-type"><option>Division Referral</option><option>SDH</option><option>Acute follow-up</option><option>Chronic follow-up</option><option>Specialist coordination</option><option>Care plan support</option><option>Visit spacing / more time</option><option>Monitoring equipment</option><option>Device Order</option><option>Flow Pathway</option><option>Lab/Imaging Follow-up</option><option>Other</option></select></div>
     <div><label>Device (if device order)</label><select id="f-dev"><option value="">—</option>${DEVICES.map(d=>`<option>${d}</option>`).join("")}</select></div></div>
     <label>Details — what's needed</label><textarea id="f-det"></textarea>
@@ -2279,7 +2279,7 @@ function openHandoffForm(from){
   <div class="f">
     <label>Patient</label><select id="f-pat"><option value="">Select patient…</option>${patientOptions()}</select>
     <div class="row"><div><label>From</label><select id="f-from">${divisionOptions(D.visibleDivisions)}</select></div>
-    <div><label>To</label><select id="f-to">${divisionOptions(["Primary Care","CharmEd Minds","Mind & Mood Recovery","The Porter House","Chronic Care","Flow"])}</select></div></div>
+    <div><label>To</label><select id="f-to">${divisionOptions(["Primary Care","CharmEd Minds","Mind & Mood Recovery","The Porter House","Care Management","Flow"])}</select></div></div>
     <label>Warm handoff summary — reason, context, what they need to know</label><textarea id="f-sum"></textarea>
     <label>Needs</label><div class="needs" id="f-needs">${NEEDS.map(n=>`<button class="chip" type="button" onclick="this.classList.toggle('on')" data-n="${n}">${n}</button>`).join("")}</div>
     <label>First visit date (if known)</label><input type="date" id="f-date">
@@ -2320,7 +2320,7 @@ function openBookingForm(){
     <label>Room</label><select id="f-room" onchange="filterServices()"><option value="">Select room…</option>${D.rooms.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join("")}</select>
     <label>Service</label><select id="f-svc">${SERVICES.map(s=>`<option>${s}</option>`).join("")}</select>
     <label>Staff (hold Ctrl/Cmd for multiple)</label><select id="f-staff" multiple size="4">${D.staff.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join("")}</select>
-    <div class="row"><div><label>Date</label><input type="date" id="f-date"></div><div><label>Division</label><select id="f-div">${divisionOptions(["Primary Care","CharmEd Minds","Mind & Mood Recovery","The Porter House","Chronic Care","Flow","Shared"])}</select></div></div>
+    <div class="row"><div><label>Date</label><input type="date" id="f-date"></div><div><label>Division</label><select id="f-div">${divisionOptions(["Primary Care","CharmEd Minds","Mind & Mood Recovery","The Porter House","Care Management","Flow","Shared"])}</select></div></div>
     <div class="row"><div><label>Start</label><input type="time" id="f-start"></div><div><label>End</label><input type="time" id="f-end"></div></div>
     <label>Notes (no patient identifiers needed)</label><input type="text" id="f-note">
     <div class="ferr" id="f-err"></div>

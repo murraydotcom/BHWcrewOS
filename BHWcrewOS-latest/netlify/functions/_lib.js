@@ -58,7 +58,7 @@ const DB = {
   crewProjects: "386e620a9df545209a02207c4554c75b",
 };
 
-const DIVISIONS = ["Primary Care", "CharmEd Minds", "Mind & Mood Recovery", "The Porter House", "Chronic Care", "Flow"];
+const DIVISIONS = ["Primary Care", "CharmEd Minds", "Mind & Mood Recovery", "The Porter House", "Care Management", "Flow"];
 
 // ---------- Notion ----------
 async function queryDb(dbId, filter, sorts) {
