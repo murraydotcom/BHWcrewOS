@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>BHW Medical Group — Questionnaire</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/bhw-tokens.css">
+<script>
+  // Set theme before paint to avoid a flash (shared with HQ: localStorage bhw-theme)
+  try { var t = localStorage.getItem("bhw-theme"); if (t) document.documentElement.setAttribute("data-theme", t); } catch (e) {}
+</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+body{font-family:var(--sans);color:var(--ink);font-size:15px;line-height:1.6;
+  background:var(--page-wash),var(--bg);min-height:100vh;padding:0 0 60px}
+:focus-visible{outline:2px solid var(--clay);outline-offset:2px;border-radius:6px}
+button{font-family:inherit;cursor:pointer}
+
+header.top{background:var(--deep-grad,linear-gradient(120deg,#33505e,#2f4551 65%));color:#eef3f4}
+.top-inner{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:12px;padding:15px 22px}
+.wm{font-weight:300;font-size:17px;letter-spacing:.02em}
+.wm b{font-weight:800}.wm .k{color:var(--sand);font-weight:800}
+.wm small{display:block;font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:#a9c2cc;font-weight:600;margin-top:2px}
+.theme-btn{margin-left:auto;background:rgba(244,247,247,.08);border:1px solid rgba(220,200,177,.4);color:#e9eef0;padding:7px 13px;border-radius:999px;font-size:11px;font-weight:600;letter-spacing:.06em}
+.theme-btn:hover{background:rgba(220,200,177,.2)}
+.gold-rule{height:2px;background:linear-gradient(90deg,#c68e63,#8f5c3d 190px,rgba(220,200,177,.5) 190px,rgba(220,200,177,0) 100%)}
+
+.wrap{max-width:720px;margin:0 auto;padding:22px}
+.card{background:var(--card);border:1px solid rgba(220,200,177,.6);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px 26px;margin-bottom:18px}
+.eyebrow{font-size:10px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--clay-deep)}
+h1{font-size:22px;font-weight:800;letter-spacing:-.01em;margin:4px 0 6px;color:var(--deep)}
+.lede{color:var(--ink-soft);font-size:13.5px;margin-bottom:4px}
+.intro{background:color-mix(in srgb,var(--blue) 7%,transparent);border:1px solid color-mix(in srgb,var(--blue) 26%,transparent);border-radius:11px;padding:13px 15px;font-size:14px;font-weight:600;color:var(--deep);margin:14px 0 6px}
+
+.who{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.who label{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);width:100%}
+.who .opt{border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:7px 15px;font-size:12.5px;font-weight:600}
+.who .opt.on{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 10%,var(--card));color:var(--deep)}
+.field{margin-top:12px}
+.field label{display:block;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:4px}
+.field input{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);font-size:14px}
+.field input:focus{outline:none;border-color:var(--blue)}
+
+.crisis{display:flex;gap:11px;align-items:flex-start;background:color-mix(in srgb,var(--alert,#b4472e) 9%,transparent);border:1px solid color-mix(in srgb,var(--alert,#b4472e) 34%,transparent);border-radius:11px;padding:13px 15px;margin:16px 0;font-size:13px;color:var(--ink)}
+.crisis b{color:var(--alert,#b4472e)}
+.crisis .ic{font-size:18px;line-height:1}
+
+.q{border-bottom:1px solid var(--line-soft);padding:16px 0}
+.q:last-child{border-bottom:none}
+.q .stem{display:flex;gap:10px;font-size:14.5px;font-weight:600;margin-bottom:11px}
+.q .num{color:var(--clay-deep);font-weight:800;flex:none;min-width:22px}
+.opts{display:flex;flex-direction:column;gap:7px;padding-left:32px}
+.opts .o{display:flex;align-items:center;gap:10px;border:1.5px solid var(--line);border-radius:10px;padding:9px 13px;font-size:13.5px;transition:.12s;background:var(--card)}
+.opts .o:hover{border-color:var(--sand)}
+.opts .o.sel{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 9%,var(--card));font-weight:600}
+.opts .o input{width:17px;height:17px;accent-color:var(--blue);flex:none}
+.opts .o .val{margin-left:auto;font-size:11px;font-weight:700;color:var(--ink-soft)}
+.q.err .stem{color:var(--alert,#b4472e)}
+.q.err .opts .o{border-color:color-mix(in srgb,var(--alert,#b4472e) 45%,var(--line))}
+
+.consent{display:flex;gap:10px;align-items:flex-start;margin:18px 0 6px;font-size:12.5px;color:var(--ink-soft)}
+.consent input{margin-top:2px;width:17px;height:17px;accent-color:var(--ok);flex:none}
+.submit{background:var(--clay-grad);color:#fff;border:none;border-radius:999px;padding:13px 26px;font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;box-shadow:0 10px 22px -10px rgba(143,92,61,.6);width:100%;margin-top:6px}
+.submit:hover{transform:translateY(-1px)}
+.submit:disabled{opacity:.55;transform:none;cursor:not-allowed}
+.err-line{color:var(--alert,#b4472e);font-size:12.5px;font-weight:600;margin-top:10px;min-height:16px}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.foot{text-align:center;color:var(--ink-soft);font-size:11px;margin-top:8px}
+.done{text-align:center;padding:34px 20px}
+.done .big{font-size:44px}
+.done h2{font-size:20px;font-weight:800;color:var(--deep);margin:8px 0 6px}
+.progress{position:sticky;top:0;height:4px;background:var(--line-soft);z-index:5}
+.progress .bar{height:100%;background:var(--clay-grad);width:0;transition:width .25s}
+</style>
+</head>
+<body>
+<div class="progress"><div class="bar" id="bar"></div></div>
+<header class="top"><div class="top-inner">
+  <div class="wm"><b>BHW</b> <span class="k">Medical Group</span><small>Confidential Questionnaire</small></div>
+  <button class="theme-btn" id="themeBtn" type="button">◐ Theme</button>
+</div></header>
+<div class="gold-rule"></div>
+
+<div class="wrap" id="app"><div class="card"><p class="lede">Loading…</p></div></div>
+
+<script>
+/* ===== Screener registry — PUBLIC-DOMAIN instruments only =====
+   PHQ-9, PHQ-2, GAD-7, GAD-2 (Pfizer/Spitzer, free to reproduce) and AUDIT-C
+   (WHO, public domain). Copyrighted instruments (ASQ-3, SRS-2, SDQ, Vanderbilt
+   scoring aside, CTOPP-2, DIAL-4, CAST, RAADS, AQ-10, etc.) are NOT reproduced
+   here — add them with their licensed/official item text when available. The
+   server (screener-submit.js) mirrors the item COUNT + value bounds for each
+   slug below; keep the two in sync. */
+var SCALE_0_3 = [
+  {v:0,l:"Not at all"},{v:1,l:"Several days"},
+  {v:2,l:"More than half the days"},{v:3,l:"Nearly every day"}
+];
+var DIFF_Q = { q:"If you checked off any problems, how difficult have these made it for you to do your work, take care of things at home, or get along with other people?",
+  scale:[{v:"Not difficult at all",l:"Not difficult at all"},{v:"Somewhat difficult",l:"Somewhat difficult"},{v:"Very difficult",l:"Very difficult"},{v:"Extremely difficult",l:"Extremely difficult"}] };
+
+var PHQ_ITEMS = [
+  "Little interest or pleasure in doing things",
+  "Feeling down, depressed, or hopeless",
+  "Trouble falling or staying asleep, or sleeping too much",
+  "Feeling tired or having little energy",
+  "Poor appetite or overeating",
+  "Feeling bad about yourself — or that you are a failure or have let yourself or your family down",
+  "Trouble concentrating on things, such as reading the newspaper or watching television",
+  "Moving or speaking so slowly that other people could have noticed? Or the opposite — being so fidgety or restless that you have been moving around a lot more than usual",
+  "Thoughts that you would be better off dead, or of hurting yourself in some way"
+];
+var GAD_ITEMS = [
+  "Feeling nervous, anxious, or on edge",
+  "Not being able to stop or control worrying",
+  "Worrying too much about different things",
+  "Trouble relaxing",
+  "Being so restless that it is hard to sit still",
+  "Becoming easily annoyed or irritable",
+  "Feeling afraid, as if something awful might happen"
+];
+var PHQ_INTRO = "Over the last 2 weeks, how often have you been bothered by any of the following problems?";
+
+var SCREENERS = {
+  "phq-9": { name:"PHQ-9", full:"Patient Health Questionnaire (PHQ-9)", topic:"mood over the last 2 weeks",
+    who:"Self", intro:PHQ_INTRO, scale:SCALE_0_3, items:PHQ_ITEMS, difficulty:true, crisis:true,
+    ages:["High School","Young Adult","Adult"] },
+  "phq-a": { name:"PHQ-9 (Teen)", full:"Patient Health Questionnaire for Adolescents (PHQ-A)", topic:"how you've been feeling",
+    who:"Self", intro:PHQ_INTRO, scale:SCALE_0_3, items:PHQ_ITEMS, difficulty:true, crisis:true,
+    ages:["Middle School","High School"] },
+  "phq-2": { name:"PHQ-2", full:"Patient Health Questionnaire (PHQ-2)", topic:"mood over the last 2 weeks",
+    who:"Self", intro:PHQ_INTRO, scale:SCALE_0_3, items:PHQ_ITEMS.slice(0,2),
+    ages:["High School","Young Adult","Adult"] },
+  "gad-7": { name:"GAD-7", full:"Generalized Anxiety Disorder scale (GAD-7)", topic:"anxiety over the last 2 weeks",
+    who:"Self", intro:PHQ_INTRO, scale:SCALE_0_3, items:GAD_ITEMS, difficulty:true,
+    ages:["High School","Young Adult","Adult"] },
+  "gad-2": { name:"GAD-2", full:"Generalized Anxiety Disorder scale (GAD-2)", topic:"anxiety over the last 2 weeks",
+    who:"Self", intro:PHQ_INTRO, scale:SCALE_0_3, items:GAD_ITEMS.slice(0,2),
+    ages:["High School","Young Adult","Adult"] },
+  "audit-c": { name:"AUDIT-C", full:"Alcohol Use — AUDIT-C", topic:"alcohol use",
+    who:"Self", intro:"Please answer the following questions about your use of alcohol during the past year.", ages:["Young Adult","Adult"],
+    items:[
+      { q:"How often do you have a drink containing alcohol?", scale:[{v:0,l:"Never"},{v:1,l:"Monthly or less"},{v:2,l:"2–4 times a month"},{v:3,l:"2–3 times a week"},{v:4,l:"4+ times a week"}] },
+      { q:"How many standard drinks containing alcohol do you have on a typical day when you are drinking?", scale:[{v:0,l:"1 or 2"},{v:1,l:"3 or 4"},{v:2,l:"5 or 6"},{v:3,l:"7 to 9"},{v:4,l:"10 or more"}] },
+      { q:"How often do you have six or more drinks on one occasion?", scale:[{v:0,l:"Never"},{v:1,l:"Less than monthly"},{v:2,l:"Monthly"},{v:3,l:"Weekly"},{v:4,l:"Daily or almost daily"}] }
+    ] }
+};
+
+var qp = new URLSearchParams(location.search);
+var slug = (qp.get("s") || "").toLowerCase();
+var S = SCREENERS[slug];
+var caseId = qp.get("case") || "";
+var audParam = qp.get("aud") || "";
+var ptParam = qp.get("pt") || "";
+var app = document.getElementById("app");
+var state = { who: (audParam || (S && S.who) || "Self") };
+
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+
+function item(idx, q, scale, key){
+  return '<div class="q" data-key="'+key+'"><div class="stem"><span class="num">'+(typeof idx==="number"?idx+".":"")+'</span><span>'+esc(q)+'</span></div>'+
+    '<div class="opts">'+scale.map(function(o){
+      return '<label class="o"><input type="radio" name="'+key+'" value="'+esc(o.v)+'"><span>'+esc(o.l)+'</span>'+(typeof o.v==="number"?'<span class="val">'+o.v+'</span>':'')+'</label>';
+    }).join("")+'</div></div>';
+}
+
+function render(){
+  if(!S){
+    app.innerHTML = '<div class="card"><div class="done"><div class="big">🔍</div><h2>Questionnaire not found</h2>'+
+      '<p class="lede">This link may be out of date. Please contact the BHW office and we\'ll send you a fresh one.</p></div></div>';
+    return;
+  }
+  var whoOpts = ["Self","Parent","Teacher","Provider"];
+  var itemsHtml = S.items.map(function(it,i){
+    var q = typeof it==="string"? it : it.q;
+    var scale = (typeof it==="object" && it.scale)? it.scale : S.scale;
+    return item(i+1, q, scale, "i"+(i+1));
+  }).join("");
+
+  app.innerHTML =
+  '<div class="card">'+
+    '<div class="eyebrow">BHW Medical Group · Confidential</div>'+
+    '<h1>'+esc(S.full)+'</h1>'+
+    '<p class="lede">A few quick questions about '+esc(S.topic)+'. There are no right or wrong answers — please answer as honestly as you can. It takes just a few minutes.</p>'+
+    (S.crisis? '<div class="crisis"><span class="ic">💙</span><div>If you are in crisis or thinking about harming yourself, help is available right now. Call or text <b>988</b> (Suicide &amp; Crisis Lifeline), or call <b>911</b> if you are in immediate danger. This form is not monitored in real time.</div></div>' : '')+
+    '<div class="who"><label>Who is filling this out?</label>'+
+      whoOpts.map(function(w){ return '<button type="button" class="opt'+(state.who===w?' on':'')+'" data-who="'+w+'">'+w+'</button>'; }).join("")+
+    '</div>'+
+    '<div class="field"><label>Name (optional — helps us match your answers)</label><input id="pt" type="text" value="'+esc(ptParam)+'" placeholder="First and last name" autocomplete="name"></div>'+
+    '<div class="intro">'+esc(S.intro)+'</div>'+
+    '<div id="items">'+itemsHtml+
+      (S.difficulty? item(null, DIFF_Q.q, DIFF_Q.scale, "difficulty") : "")+
+    '</div>'+
+    '<label class="consent"><input type="checkbox" id="consent"><span>I understand my answers become part of my confidential record at BHW Medical Group and help my care team.</span></label>'+
+    '<input class="hp" tabindex="-1" autocomplete="off" id="hp" aria-hidden="true" placeholder="Leave blank">'+
+    '<button class="submit" id="go" disabled>Submit my answers</button>'+
+    '<div class="err-line" id="err"></div>'+
+    '<p class="foot">BHW Medical Group · Your responses are transmitted securely.</p>'+
+  '</div>';
+
+  wire();
+  updateProgress();
+}
+
+function wire(){
+  app.querySelectorAll("[data-who]").forEach(function(b){
+    b.onclick = function(){ state.who = b.dataset.who; app.querySelectorAll("[data-who]").forEach(function(x){x.classList.toggle("on", x.dataset.who===state.who);}); };
+  });
+  app.querySelectorAll(".opts .o input").forEach(function(inp){
+    inp.onchange = function(){
+      var group = inp.closest(".opts");
+      group.querySelectorAll(".o").forEach(function(o){ o.classList.toggle("sel", o.querySelector("input").checked); });
+      inp.closest(".q").classList.remove("err");
+      updateProgress();
+    };
+  });
+  var consent = document.getElementById("consent"), go = document.getElementById("go");
+  consent.onchange = function(){ go.disabled = !consent.checked; };
+  go.onclick = submit;
+}
+
+function scoredKeys(){ return S.items.map(function(_,i){ return "i"+(i+1); }); }
+
+function updateProgress(){
+  var keys = scoredKeys(), done = keys.filter(function(k){ return !!app.querySelector('input[name="'+k+'"]:checked'); }).length;
+  document.getElementById("bar").style.width = Math.round(done/keys.length*100)+"%";
+}
+
+function collect(){
+  var answers = {}, missing = [];
+  scoredKeys().forEach(function(k,i){
+    var sel = app.querySelector('input[name="'+k+'"]:checked');
+    if(sel) answers[i+1] = Number(sel.value); else missing.push(k);
+  });
+  var extra = {};
+  var diff = app.querySelector('input[name="difficulty"]:checked');
+  if(diff) extra.difficulty = diff.value;
+  return { answers: answers, extra: extra, missing: missing };
+}
+
+async function submit(){
+  var err = document.getElementById("err"); err.textContent = "";
+  var c = collect();
+  if(c.missing.length){
+    c.missing.forEach(function(k){ var q = app.querySelector('.q[data-key="'+k+'"]'); if(q) q.classList.add("err"); });
+    var first = app.querySelector(".q.err"); if(first) first.scrollIntoView({behavior:"smooth",block:"center"});
+    err.textContent = "Please answer every question ("+c.missing.length+" left) before submitting.";
+    return;
+  }
+  var go = document.getElementById("go"); go.disabled = true; go.textContent = "Submitting…";
+  var payload = {
+    slug: slug, answers: c.answers, extra: c.extra, who: state.who,
+    ageGroups: S.ages || [], patientLabel: (document.getElementById("pt").value||"").trim(),
+    case: caseId, formUrl: location.origin + location.pathname + "?s=" + encodeURIComponent(slug),
+    hp: document.getElementById("hp").value
+  };
+  try{
+    var r = await fetch("/.netlify/functions/screener-submit", {
+      method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(payload)
+    });
+    var data = await r.json().catch(function(){ return {}; });
+    if(!r.ok || !data.ok){ throw new Error(data.error || "Something went wrong."); }
+    app.innerHTML = '<div class="card"><div class="done"><div class="big">✅</div><h2>Thank you — your answers are in.</h2>'+
+      '<p class="lede">Your care team at BHW Medical Group will review them. You can close this window now.</p></div></div>';
+    document.getElementById("bar").style.width = "100%";
+    window.scrollTo({top:0,behavior:"smooth"});
+  }catch(e){
+    go.disabled = false; go.textContent = "Submit my answers";
+    err.textContent = e.message || "Couldn't submit. Please check your connection and try again.";
+  }
+}
+
+// theme toggle (shared with HQ)
+document.getElementById("themeBtn").onclick = function(){
+  var cur = document.documentElement.getAttribute("data-theme")==="black-opal" ? "" : "black-opal";
+  if(cur) document.documentElement.setAttribute("data-theme", cur); else document.documentElement.removeAttribute("data-theme");
+  try{ localStorage.setItem("bhw-theme", cur); }catch(e){}
+};
+
+render();
+</script>
+</body>
+</html>

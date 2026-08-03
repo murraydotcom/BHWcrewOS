@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0e2233">
+<title>BHW HQ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/bhw-tokens.css">
+<script>
+/* set theme before paint — no flash. "Black Opal" (dark) / "Light Opal" (light) */
+(function(){try{
+  var t=localStorage.getItem('bhw-theme');
+  if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';
+  document.documentElement.setAttribute('data-theme',t);
+}catch(e){}})();
+</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+html{scroll-behavior:smooth}
+
+/* ============================================================
+   THEME LAYER — Black Opal (dark) is default; Light Opal (light)
+   overrides. Every rule below uses these page vars, so the whole
+   page recolours from this one block.
+   ============================================================ */
+:root{                       /* ---------- BLACK OPAL (dark) ---------- */
+  --bg:#091722;
+  --wash:
+    radial-gradient(1100px 620px at 78% -8%, rgba(95,179,172,.20), transparent 60%),
+    radial-gradient(1000px 700px at 12% 108%, rgba(224,183,94,.13), transparent 55%),
+    radial-gradient(760px 520px at 62% 30%, rgba(138,169,214,.14), transparent 66%),
+    radial-gradient(1400px 900px at 50% 40%, rgba(20,50,76,.55), transparent 70%),
+    linear-gradient(180deg,#0b1c2b,#091722 60%,#081521);
+  --grid:rgba(255,255,255,.05);
+  --ink:#e9f0f2; --ink-soft:#9db4c2; --heading:#f4eede;
+  --panel:rgba(255,255,255,.045); --panel-hi:rgba(255,255,255,.075); --panel-line:rgba(255,255,255,.10);
+  --topbar:linear-gradient(180deg,rgba(9,23,34,.86),rgba(9,23,34,.55));
+  --chip:#fbf8f1;
+  --gold:#e0b75e; --teal:#5fb3ac; --peri:#8aa9d6; --green:#8fce8f;
+  --search-bg:rgba(9,23,34,.6);
+  --band-overlay:linear-gradient(180deg,rgba(9,23,34,.15),rgba(9,23,34,.5));
+  --band-bright:1.15;
+  --shadow-card:0 22px 50px -24px rgba(0,0,0,.75);
+  --glow:0 0 60px -10px rgba(224,183,94,.45);
+}
+:root[data-theme="light"]{   /* ---------- LIGHT OPAL (light) ---------- */
+  --bg:#f4eede;
+  --wash:
+    radial-gradient(1100px 640px at 80% -10%, rgba(95,179,172,.20), transparent 62%),
+    radial-gradient(1000px 720px at 8% 110%, rgba(224,183,94,.18), transparent 58%),
+    radial-gradient(820px 560px at 60% 34%, rgba(138,169,214,.16), transparent 66%),
+    radial-gradient(900px 640px at 40% 8%, rgba(214,150,140,.10), transparent 60%),
+    linear-gradient(180deg,#f7f2e7,#f3ecdc 60%,#efe6d3);
+  --grid:rgba(20,50,76,.05);
+  --ink:#22333f; --ink-soft:#5f7686; --heading:#12293c;
+  --panel:rgba(255,255,255,.62); --panel-hi:rgba(255,255,255,.82); --panel-line:rgba(20,50,76,.14);
+  --topbar:linear-gradient(180deg,rgba(247,242,231,.9),rgba(247,242,231,.6));
+  --chip:#ffffff;
+  --gold:#bf8a2f; --teal:#3f8f88; --peri:#5d79b0; --green:#5fa76a;
+  --search-bg:rgba(255,255,255,.7);
+  --band-overlay:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.12));
+  --band-bright:1;
+  --shadow-card:0 22px 44px -26px rgba(30,50,70,.4);
+  --glow:0 0 60px -14px rgba(191,138,47,.4);
+}
+
+body{font-family:var(--sans);color:var(--ink);font-size:15px;line-height:1.6;background:var(--bg);
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;transition:background .3s,color .3s}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:8px}
+.bg-wash{position:fixed;inset:0;z-index:-2;background:var(--wash)}
+.bg-grid{position:fixed;inset:0;z-index:-1;
+  background-image:radial-gradient(var(--grid) 1px,transparent 1px);background-size:34px 34px;
+  mask-image:radial-gradient(1200px 700px at 50% 12%,#000,transparent 78%)}
+
+/* ---- top bar ---- */
+header.top{position:sticky;top:0;z-index:40;backdrop-filter:blur(12px);background:var(--topbar);border-bottom:1px solid var(--panel-line)}
+.top-inner{max-width:1120px;margin:0 auto;display:flex;align-items:center;gap:14px;padding:13px 22px}
+.brand{display:flex;align-items:center;gap:11px}
+.brand .glyph{width:30px;height:30px;flex:none}
+.brand .wm{font-weight:300;font-size:18px;letter-spacing:.02em;line-height:1;color:var(--heading)}
+.brand .wm b{font-weight:800}
+.brand .wm .accent{background:linear-gradient(92deg,var(--gold),var(--teal));-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:800}
+.top-right{margin-left:auto;display:flex;gap:9px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:9px 17px;font-size:11.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;transition:.18s ease;cursor:pointer;border:1px solid transparent;font-family:inherit}
+.btn-primary{background:linear-gradient(100deg,var(--gold),var(--fnd-gold-deep));color:#20140a;box-shadow:0 10px 26px -12px rgba(200,147,58,.6)}
+.btn-primary:hover{transform:translateY(-1px)}
+.btn-ghost{border-color:var(--panel-line);color:var(--ink);background:var(--panel)}
+.btn-ghost:hover{background:var(--panel-hi);border-color:color-mix(in srgb,var(--gold) 55%,transparent)}
+/* theme toggle */
+.theme-tog{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--panel-line);background:var(--panel);color:var(--ink);
+  border-radius:999px;padding:8px 13px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;font-family:inherit;transition:.18s}
+.theme-tog:hover{background:var(--panel-hi);border-color:color-mix(in srgb,var(--teal) 55%,transparent)}
+.theme-tog .dot{width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff7de,var(--teal) 60%,var(--peri));box-shadow:0 0 8px -1px var(--teal)}
+.theme-tog .lbl-dark{display:none}
+:root[data-theme="dark"] .theme-tog .lbl-dark{display:inline}
+:root[data-theme="dark"] .theme-tog .lbl-light{display:none}
+
+/* ---- hero ---- */
+.hero{position:relative;max-width:1120px;margin:0 auto;padding:60px 22px 12px;display:grid;grid-template-columns:1.1fr .9fr;gap:26px;align-items:center}
+.eyebrow{display:inline-flex;align-items:center;gap:9px;font-size:10.5px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);border:1px solid color-mix(in srgb,var(--gold) 34%,transparent);background:color-mix(in srgb,var(--gold) 8%,transparent);padding:7px 13px;border-radius:999px}
+.hero h1{font-family:var(--sans);font-weight:300;letter-spacing:-.015em;font-size:clamp(38px,5.4vw,62px);line-height:1.04;margin:20px 0 0;color:var(--heading)}
+.hero h1 .grad{font-weight:700}
+.hero h1 .grad{background:linear-gradient(96deg,var(--heading) 0%,var(--gold) 48%,var(--teal) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p.sub{color:var(--ink-soft);font-size:16px;max-width:480px;margin:18px 0 0}
+
+/* ---- animated atom ---- */
+.atom-stage{position:relative;display:flex;align-items:center;justify-content:center;min-height:340px}
+.atom-stage::before{content:"";position:absolute;width:66%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,rgba(95,179,172,.3),rgba(224,183,94,.13) 45%,transparent 70%);filter:blur(20px)}
+.atom{width:clamp(260px,30vw,400px);height:auto;position:relative}
+.atom .ring{fill:none;stroke-width:1.4;opacity:.62}
+.atom .spin{transform-box:view-box;transform-origin:110px 110px}
+.sp1{animation:spin 18s linear infinite}.sp2{animation:spin 24s linear infinite reverse}.sp3{animation:spin 21s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.el{filter:drop-shadow(0 0 5px currentColor)}
+.core{animation:pulse 4.4s ease-in-out infinite;transform-box:view-box;transform-origin:110px 110px}
+@keyframes pulse{0%,100%{opacity:.94}50%{opacity:1;transform:scale(1.05)}}
+
+/* ---- destination cards (the core) ---- */
+.dest-wrap{max-width:1120px;margin:26px auto 0;padding:0 22px}
+.dest{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.dcard{position:relative;display:flex;flex-direction:column;border-radius:20px;padding:26px 24px 22px;min-height:230px;
+  background:linear-gradient(180deg,var(--panel-hi),var(--panel));border:1px solid var(--panel-line);overflow:hidden;
+  transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
+.dcard::before{content:"";position:absolute;left:0;top:0;width:100%;height:4px;background:linear-gradient(90deg,var(--accent),transparent)}
+.dcard::after{content:"";position:absolute;inset:0;opacity:0;transition:opacity .25s;background:radial-gradient(460px 220px at 24% -12%,color-mix(in srgb,var(--accent) 22%,transparent),transparent 70%)}
+.dcard:hover{transform:translateY(-5px);border-color:color-mix(in srgb,var(--accent) 55%,var(--panel-line));box-shadow:var(--shadow-card)}
+.dcard:hover::after{opacity:1}
+.dcard .ico{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;position:relative;
+  background:color-mix(in srgb,var(--accent) 18%,transparent);border:1px solid var(--panel-line);color:var(--accent)}
+.dcard .ico svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.9}
+.dcard h2{font-family:var(--sans);font-weight:700;letter-spacing:-.01em;font-size:22px;margin:16px 0 0;color:var(--heading);position:relative}
+.dcard .kick{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-top:14px;position:relative}
+.dcard p{font-size:13.5px;color:var(--ink-soft);margin-top:7px;flex:1;position:relative}
+.dcard .go{display:inline-flex;align-items:center;gap:7px;margin-top:16px;font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--accent);position:relative}
+.dcard .go .arrow{transition:transform .2s}
+.dcard:hover .go .arrow{transform:translateX(4px)}
+.dcard .ext{position:absolute;top:20px;right:20px;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);display:inline-flex;align-items:center;gap:4px}
+.dcard .ext svg{width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:2.4}
+.soon{position:absolute;top:18px;right:18px;font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#20140a;background:var(--gold);border-radius:999px;padding:3px 9px}
+
+/* ---- staff tools row ---- */
+.tools-sec{max-width:1120px;margin:40px auto 0;padding:0 22px}
+.tools-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.tools-head .sec-label{margin:0}
+.tools-head .sec-h{font-size:20px}
+.tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(238px,1fr));gap:14px}
+.tool{position:relative;display:flex;gap:14px;align-items:flex-start;border-radius:16px;padding:17px 18px;
+  background:linear-gradient(180deg,var(--panel-hi),var(--panel));border:1px solid var(--panel-line);
+  transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.tool:hover{transform:translateY(-3px);border-color:color-mix(in srgb,var(--accent) 55%,var(--panel-line));box-shadow:var(--shadow-card)}
+.tool.locked{cursor:default}
+.tool.locked:hover{transform:none;box-shadow:none;border-color:var(--panel-line)}
+.tool .tico{width:42px;height:42px;flex:none;border-radius:12px;display:flex;align-items:center;justify-content:center;
+  background:color-mix(in srgb,var(--accent) 16%,transparent);border:1px solid var(--panel-line);color:var(--accent)}
+.tool .tico svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.9}
+.tool .tbody{min-width:0}
+.tool h3{font-family:var(--sans);font-weight:700;font-size:15.5px;color:var(--heading);letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+.tool .tag{font-size:8.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;border-radius:999px;padding:2px 7px;color:#20140a;background:var(--teal)}
+.tool .tag.soon{background:var(--gold)}
+.tool p{font-size:12.5px;color:var(--ink-soft);margin-top:4px;line-height:1.5}
+.tool .go{display:inline-flex;align-items:center;gap:6px;margin-top:9px;font-size:11.5px;font-weight:700;letter-spacing:.05em;color:var(--accent)}
+.tool .go .arrow{transition:transform .2s}
+.tool:hover .go .arrow{transform:translateX(3px)}
+
+/* ---- tagline band ---- */
+.band{max-width:1120px;margin:44px auto 0;padding:0 22px}
+.band-inner{border:1px solid var(--panel-line);border-radius:20px;overflow:hidden;position:relative;background:linear-gradient(180deg,var(--panel),transparent)}
+.band-inner img{width:100%;display:block;opacity:.92;filter:brightness(var(--band-bright))}
+.band-inner::after{content:"";position:absolute;inset:0;background:var(--band-overlay)}
+
+/* ---- family strip ---- */
+.section{max-width:1120px;margin:0 auto;padding:52px 22px 0}
+.sec-label{font-size:10.5px;font-weight:700;letter-spacing:.26em;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
+.sec-h{font-family:var(--sans);font-weight:700;letter-spacing:-.01em;font-size:23px;color:var(--heading)}
+.sec-lede{color:var(--ink-soft);font-size:13.5px;margin:4px 0 20px}
+.family{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
+.fam{background:var(--chip);border:1px solid var(--panel-line);border-radius:16px;padding:16px;height:116px;display:flex;align-items:center;justify-content:center;transition:.2s ease;overflow:hidden}
+.fam:hover{transform:translateY(-3px);box-shadow:var(--shadow-card),var(--glow)}
+.fam.dark{background:#0c1f2e}
+.fam img{max-width:100%;max-height:80px;object-fit:contain}
+
+/* ---- footer ---- */
+footer{max-width:1120px;margin:60px auto 0;padding:26px 22px 60px;border-top:1px solid var(--panel-line)}
+.foot-grid{display:flex;flex-wrap:wrap;gap:20px 40px;align-items:center}
+.foot-brand{display:flex;align-items:center;gap:14px}
+.foot-brand img{height:64px;width:auto;border-radius:10px}
+.foot-brand img.f-dark{display:none}
+:root[data-theme="dark"] .foot-brand img.f-dark{display:block}
+:root[data-theme="dark"] .foot-brand img.f-light{display:none}
+.foot-brand .t{font-size:12.5px;color:var(--ink-soft);max-width:250px}
+.foot-brand .t b{color:var(--heading);font-weight:700}
+.foot-links{margin-left:auto;display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12.5px;color:var(--ink-soft)}
+.foot-links a{color:var(--teal);font-weight:600}
+.foot-meta{margin-top:18px;font-size:11.5px;color:var(--ink-soft);opacity:.8}
+
+@media (max-width:900px){.dest{grid-template-columns:1fr}}
+@media (max-width:860px){.hero{grid-template-columns:1fr;padding-top:38px}.atom-stage{order:-1;min-height:260px}.foot-links{margin-left:0;width:100%}}
+</style>
+</head>
+<body>
+<div class="bg-wash"></div>
+<div class="bg-grid"></div>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="brand">
+      <svg class="glyph" viewBox="0 0 220 220" aria-hidden="true">
+        <circle cx="110" cy="110" r="17" fill="#7fc98a"/>
+        <ellipse cx="110" cy="110" rx="92" ry="34" fill="none" stroke="#e0b75e" stroke-width="6" transform="rotate(0 110 110)"/>
+        <ellipse cx="110" cy="110" rx="92" ry="34" fill="none" stroke="#5fb3ac" stroke-width="6" transform="rotate(60 110 110)"/>
+        <ellipse cx="110" cy="110" rx="92" ry="34" fill="none" stroke="#8aa9d6" stroke-width="6" transform="rotate(120 110 110)"/>
+      </svg>
+      <div class="wm">BHW <span class="accent">HQ</span></div>
+    </div>
+    <div class="top-right">
+      <button class="theme-tog" id="themeBtn" type="button" aria-label="Switch theme">
+        <span class="dot"></span><span class="lbl-dark">Black Opal</span><span class="lbl-light">Light Opal</span>
+      </button>
+      <a class="btn btn-primary" href="/">Sign in →</a>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div>
+    <span class="eyebrow">BHW Medical Group · A program of The Foundation</span>
+    <h1>Everything,<br><span class="grad">one tap away.</span></h1>
+    <p class="sub">The home base for the whole crew. Three doors — your ops hub, the billing platform, and where every new teammate starts — plus the tools that live between them.</p>
+  </div>
+  <div class="atom-stage">
+    <svg class="atom" viewBox="0 0 220 220" role="img" aria-label="The Foundation atom mark">
+      <defs><radialGradient id="core" cx="40%" cy="36%" r="68%">
+        <stop offset="0%" stop-color="#fff7de"/><stop offset="34%" stop-color="#bfe6a8"/>
+        <stop offset="68%" stop-color="#5fb3ac"/><stop offset="100%" stop-color="#2c6b8b"/>
+      </radialGradient></defs>
+      <g transform="rotate(0 110 110)"><g class="spin sp1"><ellipse cx="110" cy="110" rx="96" ry="35" class="ring" stroke="#e0b75e"/><circle cx="206" cy="110" r="5.5" class="el" fill="#e0b75e" color="#e0b75e"/></g></g>
+      <g transform="rotate(60 110 110)"><g class="spin sp2"><ellipse cx="110" cy="110" rx="96" ry="35" class="ring" stroke="#5fb3ac"/><circle cx="206" cy="110" r="5.5" class="el" fill="#5fb3ac" color="#5fb3ac"/></g></g>
+      <g transform="rotate(120 110 110)"><g class="spin sp3"><ellipse cx="110" cy="110" rx="96" ry="35" class="ring" stroke="#8aa9d6"/><circle cx="206" cy="110" r="5.5" class="el" fill="#8aa9d6" color="#8aa9d6"/></g></g>
+      <circle cx="110" cy="110" r="20" fill="url(#core)" class="core" style="filter:drop-shadow(0 0 16px rgba(127,201,138,.6))"/>
+      <circle cx="110" cy="110" r="20" fill="none" stroke="#e0b75e" stroke-width="1.3" opacity=".85"/>
+    </svg>
+  </div>
+</section>
+
+<!-- THREE DESTINATIONS -->
+<div class="dest-wrap">
+  <div class="dest">
+
+    <a class="dcard" style="--accent:var(--peri)" href="/">
+      <div class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></div>
+      <div class="kick">Operations</div>
+      <h2>BHWcrewOS</h2>
+      <p>The daily operations hub — front desk, panel, care plans, clinical tools, and the whole crew. Sign in with your name and PIN.</p>
+      <span class="go">Open crewOS <span class="arrow">→</span></span>
+    </a>
+
+    <a class="dcard" style="--accent:var(--gold)" href="https://bhw-rcm.netlify.app/" target="_blank" rel="noopener">
+      <span class="ext"><svg viewBox="0 0 24 24"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>External</span>
+      <div class="ico"><svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><line x1="2.5" y1="10" x2="21.5" y2="10"/><line x1="6" y1="15" x2="10" y2="15"/></svg></div>
+      <div class="kick">Revenue &amp; Billing</div>
+      <h2>RCM Command Center</h2>
+      <p>The revenue-cycle platform — claims, eligibility, ERA &amp; payments, and the billing tracker. Everything money moves through.</p>
+      <span class="go">Open RCM <span class="arrow">→</span></span>
+    </a>
+
+    <!-- NOTE: welcometoBHW is its own React/Netlify site (repo: murraydotcom/welcometobhw).
+         Confirm the deployed URL below if it differs from the repo-name default. -->
+    <a class="dcard" style="--accent:var(--green)" href="https://welcometobhw.netlify.app/" target="_blank" rel="noopener">
+      <span class="ext"><svg viewBox="0 0 24 24"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>External</span>
+      <div class="ico"><svg viewBox="0 0 24 24"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5"/></svg></div>
+      <div class="kick">Onboarding &amp; Training</div>
+      <h2>welcometoBHW</h2>
+      <p>The onboarding portal — per-person logins, first-week checklist, credentialing gate, training, and certificate uploads. Where every new teammate starts.</p>
+      <span class="go">Open the portal <span class="arrow">→</span></span>
+    </a>
+
+  </div>
+</div>
+
+<!-- STAFF TOOLS -->
+<section class="tools-sec">
+  <div class="tools-head">
+    <span class="sec-label">Staff tools</span>
+    <h2 class="sec-h">Apps that live between the doors</h2>
+  </div>
+  <div class="tools" id="tools"></div>
+</section>
+
+<!-- TAGLINE BAND -->
+<div class="band">
+  <div class="band-inner">
+    <img src="/assets/brand/skyline.png" alt="For the City. For My Health. In Real Life. — Baltimore skyline" onerror="this.closest('.band').style.display='none'">
+  </div>
+</div>
+
+<!-- THE FAMILY -->
+<section class="section">
+  <div class="sec-label">One roof</div>
+  <h2 class="sec-h">The BHW family of programs</h2>
+  <p class="sec-lede">Same crew, same standard of care — under The Foundation.</p>
+  <div class="family" id="family"></div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="foot-grid">
+    <div class="foot-brand">
+      <img class="f-dark" src="/assets/brand/foundation-dark.png" alt="The Foundation — Baltimore, MD" onerror="this.style.display='none'">
+      <img class="f-light" src="/assets/brand/foundation-light.png" alt="The Foundation — Baltimore, MD" onerror="this.style.display='none'">
+      <div class="t"><b>The Foundation</b> · Baltimore, MD · Est. 2026<br>BHW Medical Group is a program of The Foundation.</div>
+    </div>
+    <div class="foot-links">
+      <a href="/">Sign in to crewOS</a>
+      <a href="https://welcometobhw.netlify.app/" target="_blank" rel="noopener">welcometoBHW</a>
+      <span>Main line (443) 762-5343</span>
+      <span>info@bhwmedical.org</span>
+    </div>
+  </div>
+  <div class="foot-meta">For the City. For My Health. In Real Life.</div>
+</footer>
+
+<script>
+/* theme toggle */
+document.getElementById('themeBtn').addEventListener('click',function(){
+  var cur=document.documentElement.getAttribute('data-theme')==='light'?'light':'dark';
+  var next=cur==='light'?'dark':'light';
+  document.documentElement.setAttribute('data-theme',next);
+  try{localStorage.setItem('bhw-theme',next);}catch(e){}
+  document.querySelector('meta[name=theme-color]').setAttribute('content',next==='light'?'#f4eede':'#0e2233');
+});
+
+/* staff tools row — add an app by adding a row here (config-driven).
+   href:null renders a locked "soon" tile until the app has a URL. */
+const TOOLS=[
+  {name:'Paperwork Studio',accent:'var(--teal)',tag:'Live',href:'/bhw-paperwork.html',
+   desc:'Chart pulls, prior auth, disability, FMLA & MTA — pre-written explanations, real PDF fill, and AI prefill.',
+   icon:'<path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-3"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M8 11h8M8 15h6"/>'},
+  {name:'Care Plan Studio',accent:'var(--green)',tag:'Live',href:'/bhw-careplan.html',
+   desc:'Branded, patient-ready annual care plans for every program — pull the patient, tailor the plan, print to PDF, and save to Notion.',
+   icon:'<path d="M9 12l2 2 4-4"/><path d="M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M14 3v5h5"/>'},
+  {name:'Claim Laundering',accent:'var(--gold)',tag:'Soon',href:null,
+   desc:'The provider claims app — where clinicians scrub, submit, and track their own claims. Standalone login, coming soon.',
+   icon:'<path d="M3 9h18M7 15h2m4 0h4"/><rect x="3" y="4" width="18" height="16" rx="2.5"/>'},
+];
+document.getElementById('tools').innerHTML=TOOLS.map(function(t){
+  var inner='<div class="tico" style="--accent:'+t.accent+'"><svg viewBox="0 0 24 24">'+t.icon+'</svg></div>'+
+    '<div class="tbody"><h3>'+t.name+' <span class="tag'+(t.tag==='Soon'?' soon':'')+'">'+t.tag+'</span></h3>'+
+    '<p>'+t.desc+'</p>'+
+    (t.href?'<span class="go">Open <span class="arrow">→</span></span>':'<span class="go" style="opacity:.7">Not yet live</span>')+'</div>';
+  return t.href
+    ? '<a class="tool" style="--accent:'+t.accent+'" href="'+t.href+'">'+inner+'</a>'
+    : '<div class="tool locked" style="--accent:'+t.accent+'">'+inner+'</div>';
+}).join('');
+
+/* brand family strip */
+const FAMILY=[
+  {name:'The Foundation',logo:'/assets/brand/foundation-dark.png',dark:true},
+  {name:'BHW Medical',logo:'/assets/brand/bhw-medical.png'},
+  {name:'Baltimore Healthcare & Wellness',logo:'/assets/brand/bhw-wellness.png'},
+  {name:'CharmEd Minds',logo:'/assets/brand/charmed-minds.png',dark:true},
+  {name:'Flow — Vascular Stabilization',logo:'/assets/brand/flow.png'},
+  {name:'Mind & Mood Recovery',logo:'/assets/brand/mind-mood.png'},
+];
+document.getElementById('family').innerHTML=FAMILY.map(f=>
+  `<div class="fam${f.dark?' dark':''}" title="${f.name}"><img src="${f.logo}" alt="${f.name}" loading="lazy" onerror="this.parentElement.innerHTML='<span style=&quot;color:var(--ink-soft);font-size:12px;font-weight:600&quot;>${f.name}</span>'"></div>`
+).join('');
+</script>
+</body>
+</html>

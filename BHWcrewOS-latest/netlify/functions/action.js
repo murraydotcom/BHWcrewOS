@@ -96,6 +96,23 @@ exports.handler = async (event) => {
         await updatePage(b.id, props);
         return json(200, { ok: true });
       }
+      case "referral-template-save": {
+        // Save the current referral wording as a reusable template in Notion.
+        if (!b.destination || !DIVISIONS.includes(b.destination)) return json(400, { error: "Pick a destination program" });
+        if (!b.name) return json(400, { error: "Give the template a short name" });
+        if (!b.body) return json(400, { error: "The template needs some referral text" });
+        const props = {
+          "Name": W.title(b.name),
+          "Destination": W.sel(b.destination),
+          "Body": W.text(b.body),
+          "Active": W.check(true),
+        };
+        if (b.type) props["Type"] = W.sel(b.type);
+        if (b.priority) props["Priority"] = W.sel(b.priority);
+        if (b.neededBy) props["Needed By"] = W.sel(b.neededBy);
+        const page = await createPage(DB.referralTemplates, props);
+        return json(200, { ok: true, id: page.id });
+      }
 
       /* ---------------- Warm handoffs ---------------- */
       case "handoff-create": {

@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>BHW Care Plan Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/bhw-tokens.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+body{font-family:var(--sans);color:var(--ink);font-size:14px;line-height:1.55;background:var(--page-wash),var(--bg);min-height:100vh}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--clay);outline-offset:2px;border-radius:6px}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:13.5px;color:var(--ink)}
+
+header.top{background:var(--deep-grad,linear-gradient(120deg,#33505e,#2f4551 65%));color:#eef3f4}
+.top-inner{max-width:1320px;margin:0 auto;display:flex;align-items:center;gap:14px;padding:14px 22px}
+.wm{font-weight:300;font-size:18px;letter-spacing:.02em}
+.wm b{font-weight:800}.wm .k{color:var(--sand);font-weight:800}
+.wm small{display:block;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#a9c2cc;font-weight:600;margin-top:2px}
+.top-right{margin-left:auto;display:flex;gap:9px;align-items:center}
+.ghost{background:rgba(244,247,247,.08);border:1px solid rgba(220,200,177,.4);color:#e9eef0;padding:8px 15px;border-radius:999px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;text-decoration:none}
+.ghost:hover{background:rgba(220,200,177,.22)}
+.gold-rule{height:2px;background:linear-gradient(90deg,#c68e63,#8f5c3d 190px,rgba(220,200,177,.5) 190px,rgba(220,200,177,0) 100%)}
+
+.wrap{max-width:1320px;margin:0 auto;padding:20px 22px 70px;display:grid;grid-template-columns:minmax(0,440px) 1fr;gap:22px;align-items:start}
+.panel{background:var(--card);border:1px solid rgba(220,200,177,.6);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 22px}
+.eyebrow{font-size:10px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--clay-deep)}
+h2.sec{font-size:17px;font-weight:700;letter-spacing:-.01em;margin:2px 0 12px}
+.step-lede{color:var(--ink-soft);font-size:12.5px;margin:-6px 0 14px}
+
+.progs{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:14px}
+.prog{border:1.5px solid var(--line);border-radius:11px;background:#fff;padding:10px 11px;text-align:left;border-left-width:4px;border-left-color:var(--pc,var(--blue));transition:.15s}
+.prog:hover{transform:translateY(-1px);border-color:var(--sand)}
+.prog.on{border-color:var(--pc,var(--blue));background:color-mix(in srgb,var(--pc,var(--blue)) 9%,#fff);box-shadow:var(--shadow)}
+.prog b{display:block;font-size:12.5px;font-weight:700}
+.prog span{display:block;font-size:10.5px;color:var(--ink-soft);margin-top:1px}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+.f{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.f.full{grid-column:1/-1}
+label{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft)}
+input[type=text],input[type=date],select,textarea{width:100%;padding:9px 11px;border:1.5px solid var(--line);border-radius:9px;background:#fff}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue)}
+textarea{resize:vertical;min-height:74px;line-height:1.5;font-size:13px}
+.hint{font-size:11px;color:var(--ink-soft)}
+.subhead{display:flex;align-items:center;gap:10px;margin:16px 0 9px}
+.subhead h3{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--deep)}
+.subhead .line{height:1px;background:var(--line);flex:1}
+
+.pick{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.pick input{flex:1}
+.btn{background:var(--clay-grad);color:#fff;border:none;border-radius:999px;padding:9px 16px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;box-shadow:0 8px 18px -9px rgba(143,92,61,.6)}
+.btn:hover{transform:translateY(-1px)}
+.btn.sm{padding:7px 13px}
+.btn.ghost2{background:#fff;color:var(--clay-deep);border:1.5px solid var(--sand);box-shadow:none}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.note{font-size:11.5px;color:var(--ink-soft);margin-top:7px}
+.saveok{color:var(--ok);font-weight:600}
+.saveno{color:var(--alert);font-weight:600}
+
+/* ---------- the branded, patient-ready document ---------- */
+.doc-panel{position:sticky;top:16px}
+.pv-bar{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.pv-bar .eyebrow{margin-right:auto}
+.doc{background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);color:#232b30;font-size:13px;line-height:1.6;
+  padding:46px 50px;max-width:820px;margin:0 auto}
+.doc .lh{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;border-bottom:3px solid var(--pc,#80abbd);padding-bottom:16px}
+.doc .lh .brand{display:flex;align-items:center;gap:13px}
+.doc .lh .logo{width:58px;height:58px;object-fit:contain;border-radius:8px}
+.doc .lh .logo-fallback{width:58px;height:58px;border-radius:12px;display:none;align-items:center;justify-content:center;background:color-mix(in srgb,var(--pc,#80abbd) 16%,#fff);color:var(--pc,#80abbd);font-weight:800;font-size:20px;border:1px solid color-mix(in srgb,var(--pc,#80abbd) 34%,#fff)}
+.doc .lh .org{font-weight:800;font-size:16px;color:#22333f;letter-spacing:-.01em}
+.doc .lh .org small{display:block;font-weight:600;font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--pc,#80abbd);margin-top:2px}
+.doc .lh .org .tl{display:block;font-weight:500;font-size:10.5px;color:#6b757b;margin-top:4px;letter-spacing:0;text-transform:none}
+.doc .lh .meta{text-align:right;font-size:10.5px;color:#5f6b72;line-height:1.5;white-space:nowrap}
+.doc h1{font-size:20px;font-weight:800;letter-spacing:-.01em;margin:20px 0 3px;color:#22333f}
+.doc .subtitle{font-size:12px;color:var(--pc,#80abbd);font-weight:700;letter-spacing:.04em;margin-bottom:16px}
+.doc .kv{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:5px 14px;font-size:12px;background:color-mix(in srgb,var(--pc,#80abbd) 7%,#fff);border:1px solid color-mix(in srgb,var(--pc,#80abbd) 20%,#fff);border-radius:9px;padding:12px 15px;margin-bottom:18px}
+.doc .kv dt{color:#6b757b;font-weight:600}.doc .kv dd{font-weight:700;color:#26333b}
+.doc h4{font-size:10.5px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--pc,#80abbd);margin:18px 0 6px;display:flex;align-items:center;gap:8px}
+.doc h4::before{content:"";width:16px;height:16px;border-radius:5px;background:color-mix(in srgb,var(--pc,#80abbd) 22%,#fff);flex:none}
+.doc .body{white-space:pre-wrap;font-size:12.5px;color:#2c363c;margin-bottom:4px}
+.doc .body.empty{color:#b7bec3;font-style:italic}
+.doc .crisis{margin:14px 0;padding:11px 14px;border-radius:9px;background:#fbeee9;border:1px solid #e6c3b6;font-size:11.5px;color:#8a4633}
+.doc .crisis b{color:#a85846}
+.doc .sign{margin-top:26px;border-top:1px solid #e2e6e8;padding-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:26px}
+.doc .sig-line{border-bottom:1px solid #333;height:30px;margin-bottom:4px}
+.doc .sig-cap{font-size:10px;color:#6b757b}
+.doc .foot{margin-top:22px;border-top:2px solid var(--pc,#80abbd);padding-top:11px;display:flex;justify-content:space-between;gap:12px;font-size:10px;color:#7a848a}
+.doc .foot .tag{font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--pc,#80abbd)}
+
+/* ---------- sign-in modal ---------- */
+.modal{position:fixed;inset:0;background:rgba(20,30,36,.55);display:none;align-items:center;justify-content:center;z-index:100;padding:22px}
+.modal.on{display:flex}
+.mcard{background:#fff;border-radius:16px;box-shadow:0 30px 70px -30px rgba(0,0,0,.6);padding:24px 26px;width:100%;max-width:360px}
+.mcard h3{font-size:16px;margin-bottom:4px;color:var(--deep)}
+.mcard .sub{font-size:12px;color:var(--ink-soft);margin-bottom:14px}
+.mcard .macts{display:flex;gap:9px;justify-content:flex-end;margin-top:16px}
+.merr{background:#fdf1ef;color:var(--alert);border:1px solid #f0cfc9;border-radius:9px;padding:8px 11px;font-size:12px;display:none;margin-top:10px}
+
+@media (max-width:1040px){.wrap{grid-template-columns:1fr}.doc-panel{position:static}}
+
+/* ---------- print: only the document, patient-ready ---------- */
+@media print{
+  @page{size:letter;margin:0.6in}
+  body{background:#fff}
+  header.top,.gold-rule,.panel,.pv-bar,.modal{display:none!important}
+  .wrap{display:block;max-width:none;padding:0}
+  .doc-panel{position:static}
+  .doc{border:none;box-shadow:none;border-radius:0;padding:0;max-width:none}
+  .doc,.doc *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-inner">
+  <div class="wm"><b>BHW</b> <span class="k">Care Plan Studio</span><small>Annual care plans · patient-ready</small></div>
+  <div class="top-right">
+    <a class="ghost" href="/hq.html">BHW HQ</a>
+    <a class="ghost" href="/">crewOS</a>
+    <button class="ghost" id="connBtn" type="button">Connect</button>
+  </div>
+</div></header>
+<div class="gold-rule"></div>
+
+<div class="wrap">
+  <!-- FORM -->
+  <div class="panel">
+    <div class="eyebrow">Step 1 · Program</div>
+    <h2 class="sec">Build an annual care plan</h2>
+    <p class="step-lede">Pick the program, pull the patient, and the plan below fills with brand-ready starter language you can tailor. Then print to PDF and save it to Notion.</p>
+    <div class="progs" id="progs"></div>
+
+    <div class="subhead"><h3>Patient</h3><div class="line"></div></div>
+    <div class="pick" id="patientPickWrap" style="display:none">
+      <input type="text" id="patientSearch" placeholder="Search patients by name…" list="patientOptions">
+      <datalist id="patientOptions"></datalist>
+      <button class="btn sm ghost2" type="button" id="patientPickBtn">Pull</button>
+    </div>
+    <div class="hint" id="patientHint" style="margin:-2px 0 10px">Connect to pull from the Master Patient List — or just type the details below.</div>
+    <div class="grid2">
+      <div class="f"><label>Patient name</label><input type="text" id="f-patient"></div>
+      <div class="f"><label>Date of birth</label><input type="date" id="f-dob"></div>
+      <div class="f"><label>BHW ID</label><input type="text" id="f-bhwid"></div>
+      <div class="f"><label>Prepared by</label><input type="text" id="f-prep"></div>
+      <div class="f"><label>Plan date</label><input type="date" id="f-date"></div>
+      <div class="f"><label>Annual review</label><input type="date" id="f-review"></div>
+    </div>
+
+    <div class="subhead"><h3>The plan</h3><div class="line"></div></div>
+    <div class="f full"><label id="lbl-focus">Focus / conditions</label><textarea id="f-focus"></textarea></div>
+    <div class="f full"><label>Goals — “what matters to me”</label><textarea id="f-goals"></textarea></div>
+    <div class="f full"><label>What your care team will do</label><textarea id="f-interventions"></textarea></div>
+    <div class="f full"><label>What you can do</label><textarea id="f-patientRole"></textarea></div>
+    <div class="f full"><label>Your care team</label><textarea id="f-team" style="min-height:52px"></textarea></div>
+
+    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:6px">
+      <button class="btn" id="printBtn" type="button">Print / Save PDF</button>
+      <button class="btn ghost2" id="saveBtn" type="button">Save to Notion</button>
+    </div>
+    <div class="note" id="saveNote"></div>
+  </div>
+
+  <!-- DOCUMENT -->
+  <div class="doc-panel">
+    <div class="pv-bar"><span class="eyebrow">Patient-ready preview</span><span class="hint">Prints on BHW letterhead — nothing else on the page.</span></div>
+    <div class="doc" id="doc"></div>
+  </div>
+</div>
+
+<!-- SIGN-IN -->
+<div class="modal" id="signin">
+  <div class="mcard">
+    <h3>Connect to crewOS</h3>
+    <div class="sub">Sign in with your name and PIN to pull patients and save plans to Notion.</div>
+    <div class="f"><label>Name</label><select id="siStaff"></select></div>
+    <div class="f"><label>PIN</label><input type="password" id="siPin" inputmode="numeric" autocomplete="off"></div>
+    <div class="merr" id="siErr"><span id="siErrTxt"></span></div>
+    <div class="macts"><button class="btn ghost2 sm" id="siCancel" type="button">Cancel</button><button class="btn sm" id="siGo" type="button">Sign in</button></div>
+  </div>
+</div>
+
+<script>
+const $ = (id)=>document.getElementById(id);
+const esc = (s)=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const ORG = { name:"BHW Medical Group", tag:"Baltimore Healthcare & Wellness", addr:"2131 Maryland Ave, Baltimore, MD 21218", phone:"(443) 762-5343", fax:"(833) 258-3941", email:"info@bhwmedical.org" };
+
+/* Config-driven programs — accent, logo, tagline, and brand-ready starter text.
+   Add or edit a program here; everything else follows. */
+const PROGRAMS = {
+  "Care Management": { pc:"#7d8f6e", logo:"/assets/brand/bhw-medical.png", mark:"CM", tagline:"Coordinated care, one plan.",
+    focusLabel:"Chronic conditions this plan addresses",
+    seed:{
+      focus:"List your ongoing conditions here (for example: Type 2 diabetes, high blood pressure, high cholesterol).",
+      goals:"• Keep my blood pressure and blood sugar in a healthy range\n• Take my medications safely and on time\n• Know who to call when I have a question or don't feel well",
+      interventions:"• A monthly check-in from your care coordinator\n• Medication review and refills coordinated with your providers\n• Help scheduling appointments, labs, and specialists\n• A shared care plan we update with you at least once a year",
+      patientRole:"• Take your medications as prescribed\n• Keep your appointments and lab work\n• Call us with new symptoms or questions — we're here between visits",
+      team:"BHW Care Management team · Your primary care provider · Your pharmacy" } },
+  "Primary Care": { pc:"#5f8ba0", logo:"/assets/brand/bhw-medical.png", mark:"PC", tagline:"Whole-person primary care.",
+    focusLabel:"What this plan focuses on",
+    seed:{
+      focus:"Your main health goals and any conditions we're managing together.",
+      goals:"• Stay up to date on preventive care and screenings\n• Manage any ongoing conditions\n• Have a provider who knows me and my history",
+      interventions:"• Annual wellness visit and recommended screenings\n• Coordination of referrals and follow-up\n• Review of your medications and results",
+      patientRole:"• Keep your visits and recommended screenings\n• Bring your medication list to appointments\n• Reach out with new concerns",
+      team:"Your primary care provider · BHW front desk · Care coordination" } },
+  "CharmEd Minds": { pc:"#c69a3c", logo:"/assets/brand/charmed-minds.png", mark:"CE", tagline:"Confidence through cognition.",
+    focusLabel:"Areas we're supporting",
+    seed:{
+      focus:"The areas we're supporting (attention, learning, memory, social, or emotional).",
+      goals:"• Build strategies that fit how your brain works\n• Feel more confident at school, work, or home\n• Understand your strengths and the supports that help",
+      interventions:"• Assessment and a personalized strategy plan\n• Coaching and skill-building sessions\n• School or workplace recommendations when helpful",
+      patientRole:"• Practice the strategies between sessions\n• Share what's working and what isn't\n• Keep your appointments",
+      team:"Your CharmEd Minds clinician · Your family or support person · School or workplace contact (as needed)" } },
+  "Mind & Mood Recovery": { pc:"#a06a48", logo:"/assets/brand/mind-mood.png", mark:"MM", tagline:"Pathway to the sunrise.", crisis:true,
+    focusLabel:"What this plan focuses on",
+    seed:{
+      focus:"What brought you in and what you'd like to feel better about.",
+      goals:"• Feel more steady day to day\n• Have coping tools that work for me\n• A safety plan I can rely on",
+      interventions:"• Regular therapy and/or medication support\n• A crisis and safety plan built with you\n• Coordination with your other providers",
+      patientRole:"• Attend your sessions\n• Use your coping and safety plan\n• Tell us right away if things get harder",
+      team:"Your Mind & Mood clinician · Prescriber (if applicable) · Your support person" } },
+  "The Porter House": { pc:"#8a6d5c", logo:"/assets/brand/bhw-wellness.png", mark:"PH", tagline:"Lifeskills for independent living.",
+    focusLabel:"What this plan focuses on",
+    seed:{
+      focus:"The daily-living skills and supports you want to work on.",
+      goals:"• Build the daily-living skills I want\n• Move toward the independence that fits me\n• Feel supported and safe",
+      interventions:"• A personalized lifeskills plan\n• Regular skill-building sessions and check-ins\n• Wraparound support and referrals as needed",
+      patientRole:"• Take part in the skill-building sessions\n• Share your goals and preferences\n• Let the team know when you need help",
+      team:"Porter House support staff · Your case coordinator · Your chosen supports" } },
+  "Flow": { pc:"#4f948f", logo:"/assets/brand/flow.png", mark:"FL", tagline:"Vascular stabilization.",
+    focusLabel:"Vascular concerns this plan addresses",
+    seed:{
+      focus:"The vascular or circulation concerns this plan addresses.",
+      goals:"• Support healthy circulation\n• Track and understand my measures\n• Lower my vascular risk",
+      interventions:"• The Room 4 vascular stabilization pathway\n• Baseline and follow-up measurements\n• Device support if recommended",
+      patientRole:"• Keep your pathway appointments\n• Follow the at-home guidance\n• Report any changes in symptoms",
+      team:"Your Flow clinician · Your primary care provider · BHW Care Management (if enrolled)" } },
+};
+const PROG_KEYS = Object.keys(PROGRAMS);
+
+let TOKEN = sessionStorage.getItem("crewos_token") || "";
+let PATIENTS = [];
+const state = { program:"Care Management", fields:{} };
+
+function fmtDate(d){ if(!d) return ""; const [y,m,dd]=String(d).slice(0,10).split("-"); if(!y) return d; return new Date(+y,+m-1,+dd).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}); }
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function plusYearISO(iso){ const d=iso?new Date(iso):new Date(); d.setFullYear(d.getFullYear()+1); return d.toISOString().slice(0,10); }
+
+/* ---- program picker ---- */
+function renderProgs(){
+  $("progs").innerHTML = PROG_KEYS.map(k=>{
+    const p=PROGRAMS[k];
+    return `<button type="button" class="prog${state.program===k?" on":""}" data-k="${esc(k)}" style="--pc:${p.pc}"><b>${esc(k)}</b><span>${esc(p.tagline)}</span></button>`;
+  }).join("");
+  $("progs").querySelectorAll(".prog").forEach(b=>b.onclick=()=>selectProgram(b.dataset.k));
+}
+function selectProgram(k, keepEdits){
+  state.program=k;
+  const seed=PROGRAMS[k].seed;
+  // load brand-ready starter text into the section fields (fresh plan on switch)
+  if(!keepEdits){
+    ["focus","goals","interventions","patientRole","team"].forEach(f=>{
+      const id = f==="team"?"f-team":("f-"+f);
+      $(id).value = f==="team"?seed.team:seed[f];
+    });
+  }
+  $("lbl-focus").textContent = PROGRAMS[k].focusLabel;
+  document.documentElement.style.setProperty("--pc", PROGRAMS[k].pc);
+  renderProgs(); syncFromInputs(); renderDoc();
+}
+
+/* ---- form <-> state ---- */
+const FIELD_IDS = { patient:"f-patient", dob:"f-dob", bhwId:"f-bhwid", preparedBy:"f-prep", planDate:"f-date", reviewDate:"f-review", focus:"f-focus", goals:"f-goals", interventions:"f-interventions", patientRole:"f-patientRole", team:"f-team" };
+function syncFromInputs(){ for(const [k,id] of Object.entries(FIELD_IDS)) state.fields[k]=$(id).value; }
+function wireInputs(){
+  Object.values(FIELD_IDS).forEach(id=>$(id).addEventListener("input",()=>{ syncFromInputs(); renderDoc(); }));
+  $("f-date").addEventListener("change",()=>{ if(!$("f-review").value || $("f-review").dataset.auto!=="0"){ $("f-review").value=plusYearISO($("f-date").value); } syncFromInputs(); renderDoc(); });
+  $("f-review").addEventListener("input",()=>{ $("f-review").dataset.auto="0"; });
+}
+
+/* ---- the branded document ---- */
+function bodyBlock(text){ const t=(text||"").trim(); return t?`<div class="body">${esc(t)}</div>`:`<div class="body empty">—</div>`; }
+function renderDoc(){
+  const f=state.fields, P=PROGRAMS[state.program];
+  const initials=(f.patient||"").split(/\s+/).map(s=>s[0]).filter(Boolean).slice(0,2).join("").toUpperCase();
+  const doc = `
+  <div class="lh">
+    <div class="brand">
+      <img class="logo" src="${P.logo}" alt="${esc(state.program)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div class="logo-fallback">${esc(P.mark)}</div>
+      <div class="org">${ORG.name}<small>${esc(state.program)}</small><span class="tl">${esc(ORG.tag)}</span></div>
+    </div>
+    <div class="meta">${ORG.addr}<br>Tel ${ORG.phone} · Fax ${ORG.fax}<br>${ORG.email}</div>
+  </div>
+  <h1>Your Care Plan</h1>
+  <div class="subtitle">${esc(state.program)} · ${f.planDate?("Plan year "+String(f.planDate).slice(0,4)):"Annual plan"}</div>
+  <dl class="kv">
+    <dt>Patient</dt><dd>${esc(f.patient)||"—"}</dd>
+    <dt>Date of birth</dt><dd>${fmtDate(f.dob)||"—"}</dd>
+    <dt>BHW ID</dt><dd>${esc(f.bhwId)||"—"}</dd>
+    <dt>Plan date</dt><dd>${fmtDate(f.planDate)||"—"}</dd>
+    <dt>Prepared by</dt><dd>${esc(f.preparedBy)||"—"}</dd>
+    <dt>Next review</dt><dd>${fmtDate(f.reviewDate)||"—"}</dd>
+  </dl>
+  <h4>${esc(P.focusLabel)}</h4>${bodyBlock(f.focus)}
+  <h4>My goals — what matters to me</h4>${bodyBlock(f.goals)}
+  <h4>What your care team will do</h4>${bodyBlock(f.interventions)}
+  <h4>What you can do</h4>${bodyBlock(f.patientRole)}
+  ${P.crisis?`<div class="crisis">If you are ever in crisis or thinking about harming yourself, you are not alone. Call or text <b>988</b> (Suicide &amp; Crisis Lifeline) any time, or call <b>911</b> if you are in immediate danger.</div>`:""}
+  <h4>Your care team</h4>${bodyBlock(f.team)}
+  <div class="sign">
+    <div><div class="sig-line"></div><div class="sig-cap">Patient signature &amp; date</div></div>
+    <div><div class="sig-line"></div><div class="sig-cap">${esc(ORG.name)} · ${esc(f.preparedBy)||"Care team"} &amp; date</div></div>
+  </div>
+  <div class="foot"><span class="tag">${esc(P.tagline)}</span><span>This plan is yours — bring it to every visit. ${esc(ORG.name)} · ${ORG.phone}</span></div>`;
+  $("doc").innerHTML = doc;
+}
+
+/* plain-text snapshot for Notion */
+function snapshot(){
+  const f=state.fields;
+  return [`${state.program} Care Plan`,
+    `Patient: ${f.patient||""}  DOB: ${fmtDate(f.dob)}  BHW ID: ${f.bhwId||""}`,
+    `Plan date: ${fmtDate(f.planDate)}  Review: ${fmtDate(f.reviewDate)}  Prepared by: ${f.preparedBy||""}`,
+    ``,`${PROGRAMS[state.program].focusLabel}:\n${f.focus||""}`,
+    ``,`Goals:\n${f.goals||""}`,
+    ``,`Care team will:\n${f.interventions||""}`,
+    ``,`Patient will:\n${f.patientRole||""}`,
+    ``,`Care team: ${f.team||""}`].join("\n").slice(0,1900);
+}
+
+/* ---- connect + patients (reuses crewOS PIN, like Paperwork Studio) ---- */
+async function post(fn, body){
+  const r = await fetch(`/.netlify/functions/${fn}`,{ method:"POST", headers:{ "Content-Type":"application/json", ...(TOKEN?{Authorization:`Bearer ${TOKEN}`}:{}) }, body: JSON.stringify(body) });
+  const d = await r.json().catch(()=>({})); return { ok:r.ok, status:r.status, d };
+}
+function setConnected(name){
+  const b=$("connBtn");
+  if(TOKEN){ b.textContent = name?`✓ ${String(name).split(" ")[0]}`:"✓ Connected"; b.title="Connected — click to disconnect"; $("patientPickWrap").style.display=""; if(!$("f-prep").value&&name) { $("f-prep").value=name; syncFromInputs(); renderDoc(); } loadPatients(); }
+  else { b.textContent="Connect"; b.title="Sign in to pull patients & save to Notion"; $("patientPickWrap").style.display="none"; }
+}
+$("connBtn").addEventListener("click",()=>{ if(TOKEN){ if(confirm("Disconnect this session?")){ TOKEN=""; sessionStorage.removeItem("crewos_token"); setConnected(); } } else openSignin(); });
+async function openSignin(){ const { d }=await post("auth",{action:"roster"}); $("siStaff").innerHTML=(d.staff||[]).map(s=>`<option value="${s.id}">${esc(s.name)}${s.role?` — ${esc(s.role)}`:""}</option>`).join(""); $("siErr").style.display="none"; $("siPin").value=""; $("signin").classList.add("on"); setTimeout(()=>$("siPin").focus(),50); }
+$("siCancel").addEventListener("click",()=>$("signin").classList.remove("on"));
+$("siGo").addEventListener("click",doLogin);
+$("siPin").addEventListener("keydown",e=>{ if(e.key==="Enter") doLogin(); });
+async function doLogin(){ const staffId=$("siStaff").value, pin=$("siPin").value.trim(); if(!staffId||!pin) return; const { ok, d }=await post("auth",{action:"login",staffId,pin}); if(ok&&d.token){ TOKEN=d.token; sessionStorage.setItem("crewos_token",TOKEN); $("signin").classList.remove("on"); setConnected(d.user?.name||d.name); } else { $("siErr").style.display="flex"; $("siErrTxt").textContent=d.error||"Sign-in failed."; } }
+async function loadPatients(){ const { ok, status, d }=await post("patients",{action:"list"}); if(status===401){ TOKEN=""; sessionStorage.removeItem("crewos_token"); setConnected(); return; } if(ok&&d.patients){ PATIENTS=d.patients; $("patientOptions").innerHTML=PATIENTS.map(p=>`<option value="${esc(p.name)}${p.dob?` (${fmtDate(p.dob)})`:""}">`).join(""); } }
+$("patientPickBtn").addEventListener("click",()=>{
+  const raw=$("patientSearch").value.trim(); if(!raw) return;
+  const q=raw.split(" (")[0].toLowerCase();
+  const p=PATIENTS.find(x=>x.name.toLowerCase()===q)||PATIENTS.find(x=>x.name.toLowerCase().includes(q));
+  if(!p){ $("patientHint").textContent="No match — check the name."; return; }
+  $("f-patient").value=p.name; if(p.dob)$("f-dob").value=String(p.dob).slice(0,10); if(p.bhwId)$("f-bhwid").value=p.bhwId;
+  if(Array.isArray(p.icds)&&p.icds.length){ const lines=p.icds.map(i=>`${i.code}${i.label?` — ${i.label}`:""}`).join("\n"); $("f-focus").value=lines; }
+  $("patientHint").textContent=`Loaded ${p.name}${p.bhwId?` (${p.bhwId})`:""}`+(p.icds&&p.icds.length?` · ${p.icds.length} condition(s) from the chart.`:"");
+  syncFromInputs(); renderDoc();
+});
+
+/* ---- actions ---- */
+$("printBtn").addEventListener("click",()=>window.print());
+$("saveBtn").addEventListener("click",async()=>{
+  syncFromInputs();
+  const note=$("saveNote"); note.className="note"; note.textContent="";
+  if(!TOKEN){ note.innerHTML='<span class="saveno">Connect to crewOS first to save to Notion.</span>'; return; }
+  if(!state.fields.patient.trim()){ note.innerHTML='<span class="saveno">Add a patient name first.</span>'; return; }
+  $("saveBtn").disabled=true;
+  const f=state.fields;
+  const { ok, status, d }=await post("careplan-save",{ program:state.program, patientName:f.patient, bhwId:f.bhwId, dob:f.dob, planYear:f.planDate?Number(String(f.planDate).slice(0,4)):new Date().getFullYear(), planDate:f.planDate, reviewDate:f.reviewDate, focus:f.focus, goals:f.goals, interventions:f.interventions, patientRole:f.patientRole, careTeam:f.team, preparedBy:f.preparedBy, snapshot:snapshot(), status:"Active" });
+  $("saveBtn").disabled=false;
+  if(status===401){ TOKEN=""; sessionStorage.removeItem("crewos_token"); setConnected(); note.innerHTML='<span class="saveno">Session expired — reconnect.</span>'; return; }
+  if(ok&&d.ok) note.innerHTML='<span class="saveok">✓ Saved to the Care Plans database in Notion.</span>';
+  else note.innerHTML=`<span class="saveno">${esc(d.error||"Couldn't save.")}</span>`;
+});
+
+/* ---- boot ---- */
+renderProgs();
+$("f-date").value=todayISO(); $("f-review").value=plusYearISO(todayISO());
+const qProgram = new URLSearchParams(location.search).get("program");
+selectProgram(PROG_KEYS.includes(qProgram) ? qProgram : "Care Management");
+wireInputs();
+setConnected(TOKEN?"":undefined);
+</script>
+</body>
+</html>

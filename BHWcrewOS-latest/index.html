@@ -233,18 +233,20 @@ a.res .star{color:var(--clay);margin-right:6px}
 const API_AUTH = "/.netlify/functions/auth";
 const API_DATA = "/.netlify/functions/ops-data";
 const API_ACT  = "/.netlify/functions/action";
+const API_REFTPL = "/.netlify/functions/referral-templates";
+let REF_TEMPLATES = null; // lazy-loaded cache of destination referral templates
 
 const DIV_COLORS = {
   "Primary Care":"var(--pc-primary)", "CharmEd Minds":"var(--pc-charmed)",
   "Mind & Mood Recovery":"var(--pc-mind)", "The Porter House":"var(--pc-porter)",
-  "Chronic Care":"var(--pc-chronic)", "Flow":"var(--pc-flow)", "Admin Master":"var(--pc-admin)"
+  "Care Management":"var(--pc-chronic)", "Flow":"var(--pc-flow)", "Admin Master":"var(--pc-admin)"
 };
 const DIV_BLURBS = {
   "Primary Care":"Panel care, referrals out, and warm handoffs across BHW.",
   "CharmEd Minds":"Lifespan cognition and brain health — confidence through cognition and education.",
   "Mind & Mood Recovery":"Behavioral health and the Pathway to the Sunrise program.",
   "The Porter House":"Behavioral health transition housing — 2nd floor residents and coordination.",
-  "Chronic Care":"APCM, CCM, RPM, BHI, CoCM, and care coordination.",
+  "Care Management":"APCM, CCM, RPM, BHI, CoCM, and care coordination.",
   "Flow":"Vascular stabilization referral pathway (Room 4).",
   "Admin Master":"Whole-circle view: every division, every referral, the full schedule."
 };
@@ -373,7 +375,6 @@ function buildRail(){
   html += `<button class="tab" data-view="pg-ana" style="--spine:var(--river-deep, #4f7f92)">Positive ANA?</button>`;
   html += `<button class="tab" data-view="pg-hormref" style="--spine:var(--sage)">Hormone Reference</button>`;
   html += `<button class="tab" data-view="pg-hormpt" style="--spine:var(--clay)">Hormones Explained (patient)</button>`;
-  html += `<button class="tab" data-view="pg-billing" style="--spine:var(--ok, #1F6961)">Billing Toolkit</button>`;
   html += `<button class="tab" data-view="pg-crewcare" style="--spine:var(--clay-deep)">BHWCrewCare Portal</button>`;
   html += `<div class="rail-label">Patient page previews</div>`;
   html += `<button class="tab" data-view="pg-portal" style="--spine:var(--sage)">Primary Care Portal</button>`;
@@ -416,6 +417,8 @@ function divisionView(div){
   return `<section class="view" id="view-${id}" style="--pc:${DIV_COLORS[div]}">
     <div class="prog-head"><div class="bar"></div><div><h1>${esc(div)}</h1><p>${DIV_BLURBS[div]||""}</p></div>${div==="Primary Care"?`<img src="/assets/bhw-logo-full.png" alt="BHW" style="height:84px;width:auto;margin-left:auto" onerror="this.style.display='none'">`:""}</div>
     ${div==="Primary Care"?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:-8px 0 18px"><button class="btn sm warn" onclick="activate('front-desk')">Front Desk OS — lookup &amp; referrals</button></div>`:""}
+    ${div==="Care Management"?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:-8px 0 18px"><button class="btn sm" style="background:var(--ok,#1F6961)" onclick="activate('pg-billing')">Billing Toolkit — care management &amp; billing codes</button><button class="btn sm" style="background:var(--blue,#80abbd)" onclick="activate('pg-discharges')">Hospital Discharges &amp; TCM</button></div>`:""}
+    ${div!=="Admin Master"?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:-8px 0 18px"><a class="btn sm" style="text-decoration:none;background:var(--pc);color:#fff" href="/bhw-careplan.html?program=${encodeURIComponent(div)}" target="_blank" rel="noopener">📄 Start a care plan — branded &amp; patient-ready</a></div>`:""}
     ${PATIENT_PAGES[div]?`<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:-4px 0 18px;padding:12px 14px;background:var(--card,#fff);border-radius:12px"><span style="font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;opacity:.65">Patient pages</span><a class="btn sm sec" style="text-decoration:none" href="${PATIENT_PAGES[div]}" target="_blank" rel="noopener">View patient page</a><a class="btn sm sec" style="text-decoration:none" href="https://app.notion.com/p/3a1580758d3081c48b90fdab7b442fcb" target="_blank" rel="noopener">Manage content ↗</a><a class="btn sm sec" style="text-decoration:none" href="https://app.notion.com/p/3a1580758d3081c48b90fdab7b442fcb" target="_blank" rel="noopener">Sign-up steps</a></div>`:""}
     <div class="kpis">
       <div class="kpi" style="--kc:var(--alert)"><div class="n">${c.rIn}</div><div class="l">Incoming referrals open</div></div>
@@ -423,6 +426,28 @@ function divisionView(div){
       <div class="kpi" style="--kc:${DIV_COLORS[div]}"><div class="n">${sent.filter(r=>r.status!=="Completed").length}</div><div class="l">Referrals we sent, pending</div></div>
       <div class="kpi" style="--kc:var(--sage)"><div class="n">${sched.length}</div><div class="l">Upcoming bookings</div></div>
     </div>
+
+    ${div==="Mind & Mood Recovery" ? `<div style="display:flex;align-items:center;gap:14px;margin:2px 0 14px"><img src="assets/mind-mood-logo.png" alt="BHW Mind and Mood Recovery" style="width:64px;height:64px;object-fit:cover;object-position:top;border-radius:50%"><div><div style="font-family:Montserrat,sans-serif;font-weight:800;letter-spacing:.5px;color:#2f4551">BHW MIND & MOOD RECOVERY</div><div style="font-style:italic;font-size:12.5px;color:#b07a55">Depth restores clarity.</div></div></div>` : ""}
+
+    ${(div==="Care Management"||div==="Mind & Mood Recovery") ? todayCard(div) : ""}
+
+    ${div==="Care Management" ? ccNeedsCard() : ""}
+
+    ${isPorter && D.phPlans ? phGrowthCard() : ""}
+
+    ${isPorter && D.porterhouse ? porterCensus() : ""}
+
+    ${(div==="Care Management"||div==="Primary Care") ? prevCard() : ""}
+
+    ${(div==="Care Management"||div==="Primary Care") ? awvCard(div) : ""}
+
+    ${div==="CharmEd Minds" ? `<div style="display:flex;align-items:center;gap:14px;margin:2px 0 14px"><img src="assets/charmed-minds-logo.png" alt="CharmEd Minds" style="width:56px;height:56px;border-radius:50%"><div><div style="font-family:Montserrat,sans-serif;font-weight:800;letter-spacing:.5px;color:#0B1228">CHARMED MINDS</div><div style="font-style:italic;font-size:12.5px;color:#2CA7A6">Bright minds supported with strategy.</div></div></div>` : ""}
+
+    ${div==="CharmEd Minds" ? cmCard() : ""}
+
+    ${div==="CharmEd Minds" ? cmaCard() : ""}
+
+    ${div==="CharmEd Minds" ? cpCard() : ""}
 
     <div class="card">
       <h2>Warm handoff inbox <span class="grow"></span><button class="btn sm" onclick="openHandoffForm('${esc(div)}')">+ New warm handoff</button></h2>
@@ -449,28 +474,6 @@ function divisionView(div){
       </tbody></table></div>
     </div>
 
-    ${div==="Mind & Mood Recovery" ? `<div style="display:flex;align-items:center;gap:14px;margin:2px 0 14px"><img src="assets/mind-mood-logo.png" alt="BHW Mind and Mood Recovery" style="width:64px;height:64px;object-fit:cover;object-position:top;border-radius:50%"><div><div style="font-family:Montserrat,sans-serif;font-weight:800;letter-spacing:.5px;color:#2f4551">BHW MIND & MOOD RECOVERY</div><div style="font-style:italic;font-size:12.5px;color:#b07a55">Depth restores clarity.</div></div></div>` : ""}
-
-    ${div==="Chronic Care" ? ccNeedsCard() : ""}
-
-    ${(div==="Chronic Care"||div==="Mind & Mood Recovery") ? todayCard(div) : ""}
-
-    ${isPorter && D.phPlans ? phGrowthCard() : ""}
-
-    ${isPorter && D.porterhouse ? porterCensus() : ""}
-
-    ${(div==="Chronic Care"||div==="Primary Care") ? prevCard() : ""}
-
-    ${(div==="Chronic Care"||div==="Primary Care") ? awvCard(div) : ""}
-
-    ${div==="CharmEd Minds" ? `<div style="display:flex;align-items:center;gap:14px;margin:2px 0 14px"><img src="assets/charmed-minds-logo.png" alt="CharmEd Minds" style="width:56px;height:56px;border-radius:50%"><div><div style="font-family:Montserrat,sans-serif;font-weight:800;letter-spacing:.5px;color:#0B1228">CHARMED MINDS</div><div style="font-style:italic;font-size:12.5px;color:#2CA7A6">Bright minds supported with strategy.</div></div></div>` : ""}
-
-    ${div==="CharmEd Minds" ? cmCard() : ""}
-
-    ${div==="CharmEd Minds" ? cmaCard() : ""}
-
-    ${div==="CharmEd Minds" ? cpCard() : ""}
-
     ${resourcesCard(div)}
 
     <div class="card">
@@ -494,7 +497,7 @@ const CC_NEEDS = [
 function ccNeedsCard(){
   return `<div class="card" style="border-left:4px solid var(--pc-chronic)">
     <h2>Request care coordination <span class="grow"></span></h2>
-    <p class="lede">Tap the reason — it opens a referral addressed to Chronic Care with the type already set, so the coordinator gets a specific ask instead of "please help."</p>
+    <p class="lede">Tap the reason — it opens a referral addressed to Care Management with the type already set, so the coordinator gets a specific ask instead of "please help."</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       ${CC_NEEDS.map((n,i)=>`<button class="btn sm sec" onclick="ccRequest(${i})">${esc(n[1])}</button>`).join("")}
     </div>
@@ -504,7 +507,7 @@ function ccRequest(i){
   const n = CC_NEEDS[i]; if(!n) return;
   openReferralForm("");
   setTimeout(function(){
-    const to=document.getElementById("f-to"); if(to) to.value="Chronic Care";
+    const to=document.getElementById("f-to"); if(to) to.value="Care Management";
     const t=document.getElementById("f-type");
     if(t){
       if(![...t.options].some(o=>o.text===n[0])){ const o=document.createElement("option"); o.textContent=n[0]; t.appendChild(o); }
@@ -525,7 +528,7 @@ function resourcesCard(div){
     <h2>Resources &amp; workflows</h2>
     <p class="lede">The division's documentation, workflows, and assessments — straight from Notion. Add a row to the Resource Library in Notion and it appears here.</p>
     ${groups.map(g=>`
-      <div class="res-cat">${esc(g.c)}${g.c==="Assessment" && div==="Chronic Care" ? " · AWV steps in order" : ""}</div>
+      <div class="res-cat">${esc(g.c)}${g.c==="Assessment" && div==="Care Management" ? " · AWV steps in order" : ""}</div>
       <div class="res-grid">${g.list.map(r=>`
         <a class="res ${r.pinned?"pin":""}" href="${esc(r.link)}" target="_blank" rel="noopener">
           ${r.pinned?'<span class="star">★</span>':''}${esc(r.title)}<span>${esc(r.notes)}</span>
@@ -543,6 +546,21 @@ function handoffCard(h){
       ${h.status==="New"?`<button class="btn sm" onclick="act({action:'handoff-status',id:'${h.id}',status:'Acknowledged'},'Acknowledged')">Acknowledge</button>`:""}
       ${h.status!=="Completed"?`<button class="btn sm sec" onclick="promptSchedule('${h.id}')">Set visit date</button>
       <button class="btn sm sec" onclick="act({action:'handoff-status',id:'${h.id}',status:'Completed'},'Handoff completed')">Complete</button>`:""}
+    </div></div>`;
+}
+
+// Front-Desk handoff card — shows the destination division and leads with the
+// appointment action, so the front desk can book & confirm across every division.
+function fdHandoffCard(h){
+  const cls = h.status==="Acknowledged"?"ack":(h.status==="Scheduled"?"sched":"");
+  return `<div class="hcard ${cls}">
+    <div class="h-top"><b>${esc(patLabel(h.patient))}</b><span class="meta">${esc(h.from)} → <b>${esc(h.to)}</b> · ${esc(staffLabel(h.fromStaff))}</span>${statusPill(h.status)}${h.needs.map(n=>pill(n,"info")).join(" ")}</div>
+    <div class="sum">${esc(h.summary)}</div>
+    <div class="meta">${h.scheduledDate?`Appt booked: ${esc(h.scheduledDate)}`:"No appointment booked yet"}</div>
+    <div class="acts">
+      ${h.status==="New"?`<button class="btn sm sec" onclick="act({action:'handoff-status',id:'${h.id}',status:'Acknowledged'},'Acknowledged')">Acknowledge</button>`:""}
+      ${h.status!=="Completed"?`<button class="btn sm" onclick="promptSchedule('${h.id}')">${h.scheduledDate?"Update appt date":"Confirm appointment / set date"}</button>
+      <button class="btn sm sec" onclick="act({action:'handoff-status',id:'${h.id}',status:'Completed'},'Handoff completed')">Done</button>`:""}
     </div></div>`;
 }
 
@@ -568,7 +586,7 @@ function adminView(){
   const upcoming = D.schedule.filter(b=>b.status==="Scheduled" && b.date>=todayStr).slice(0,20);
   const aging = openR.map(r=>({...r, days: r.sentDate? Math.floor((Date.now()-new Date(r.sentDate))/86400000):0})).sort((a,b)=>b.days-a.days);
   const rollup = D.adminRollup||{};
-  const divs = ["Primary Care","CharmEd Minds","Mind & Mood Recovery","The Porter House","Chronic Care","Flow"];
+  const divs = ["Primary Care","CharmEd Minds","Mind & Mood Recovery","The Porter House","Care Management","Flow"];
   return `<section class="view" id="view-admin-master" style="--pc:var(--pc-admin)">
     <div class="prog-head"><div class="bar"></div><div><h1>Admin Master</h1><p>${DIV_BLURBS["Admin Master"]}</p></div></div>
     <div class="kpis">
@@ -601,6 +619,11 @@ function adminView(){
 function frontDeskView(){
   return `<section class="view" id="view-front-desk" style="--pc:var(--blue)">
     <div class="prog-head"><div class="bar"></div><div><h1>Front Desk OS</h1><p>Live inbox, patient lookup, referral finder &amp; generator — SLA colors show what's next.</p></div></div>
+    <div class="card">
+      <h2>All warm handoffs — book &amp; confirm <span class="grow"></span><button class="btn sm" onclick="openHandoffForm()">+ New warm handoff</button></h2>
+      <p class="lede">Every division's open handoffs land here so the front desk can book the appointment (set the visit date) and mark it done.</p>
+      <div class="inbox">${(()=>{ const open=D.handoffs.filter(h=>h.status!=="Completed"); return open.length?open.map(fdHandoffCard).join(""):`<div class="empty">No open handoffs across the practice.</div>`; })()}</div>
+    </div>
     <div class="card" style="padding:8px">
       <div id="fb-front-desk" style="display:none;padding:44px 26px;text-align:center">
         <div style="font-size:14.5px;font-weight:600;margin-bottom:8px">The front desk can't display inside the app yet.</div>
@@ -621,6 +644,7 @@ const PAGE_EMBEDS = [
   {id:"pg-hormref",  title:"Hormone Reference",    src:"/bhw-hormone-reference.html",        blurb:"Staff resource — hormone feedback systems explained."},
   {id:"pg-hormpt",   title:"Hormones Explained",   src:"/bhw-hormones-explained.html",       blurb:"Patient-facing — open it with a patient to explain how hormones work."},
   {id:"pg-billing",  title:"Billing Toolkit",      src:"/BHW_Care_Management_Toolkit.html",  blurb:"Care management and primary care billing codes."},
+  {id:"pg-discharges", title:"Hospital Discharges & TCM", src:"/bhw-discharges.html",         blurb:"CRISP ADT feed — admissions, discharges, ED visits, and the TCM clock (99495/99496)."},
   {id:"pg-crewcare", title:"BHWCrewCare Portal",   src:"/bhw-crewcare-portal.html",          blurb:"Provider side — inbox, care plan builder, results, panel."},
   {id:"pg-portal",   title:"Primary Care Portal",  src:"/bhw-patient-portal-mockup.html",    blurb:"Patient-side design preview — sample data."},
   {id:"pg-charmed",  title:"CharmEd Minds",        src:"/bhw-charmed-patient-mockup.html",   blurb:"My Strategy Hub — patient-side preview."},
@@ -974,6 +998,7 @@ async function awvBegin(){
     const res = await api(API_ACT, {action:"awv-save", patientId:pid, step:1, stepStatus:"In Progress", answers:{}});
     AWV = { id: res.id, patientId: pid, answers: [{},{},{},{},{}], step: 0 };
     awvRender();
+    toast("AWV started — print/obtain: MOLST, MD Advance Directive, clock-draw sheet, and dx-relevant health education.");
   }catch(e){ document.getElementById("f-err").textContent = e.message; }
 }
 function awvResume(id){
@@ -983,6 +1008,31 @@ function awvResume(id){
   awvRender();
 }
 
+// Reminder shown when an AWV is started — documents to print or obtain.
+function awvPrepCard(){
+  return `<div style="background:#fdf6ec;border:1px solid #e6d3b0;border-left:4px solid var(--clay-deep,#8f5c3d);border-radius:12px;padding:12px 14px;margin:2px 0 14px">
+    <div style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--clay-deep,#8f5c3d);margin-bottom:7px">🖨️ Print or obtain before the visit</div>
+    <div style="display:grid;gap:6px;font-size:13px">
+      <label style="display:flex;gap:8px;align-items:center"><input type="checkbox"> MOLST form</label>
+      <label style="display:flex;gap:8px;align-items:center"><input type="checkbox"> Maryland Advance Directive form</label>
+      <label style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input type="checkbox"> Clock-draw sheet (cognitive screening) <button class="btn sm sec" style="margin-left:auto" onclick="printClockSheet()">🖨 Print clock sheet</button></label>
+      <label style="display:flex;gap:8px;align-items:center"><input type="checkbox"> Health education handouts for the patient's diagnoses</label>
+    </div>
+  </div>`;
+}
+function printClockSheet(){
+  const pn = patLabel(AWV.patientId);
+  const w = window.open("", "_blank"); if(!w) return;
+  w.document.write(`<!doctype html><meta charset="utf-8"><title>Clock Drawing Test</title>`+
+  `<style>body{font-family:Montserrat,system-ui,sans-serif;margin:44px;color:#2e3d45}h1{font-size:20px;margin:0 0 4px}p{font-size:14px;color:#555;margin:6px 0}svg{display:block;margin:26px auto}@media print{.noprint{display:none}}</style>`+
+  `<h1>Clock Drawing Test — Cognitive Screening</h1>`+
+  `<p><b>Patient:</b> ${esc(pn)} &nbsp;&nbsp; <b>Date:</b> ______________</p>`+
+  `<p>Instruction: &ldquo;Draw a clock. Put in all the numbers, and set the hands to <b>ten past eleven</b> (11:10).&rdquo;</p>`+
+  `<svg width="360" height="360" viewBox="0 0 360 360"><circle cx="180" cy="180" r="170" fill="none" stroke="#2e3d45" stroke-width="2"/></svg>`+
+  `<p style="margin-top:22px">Score: ______ &nbsp;&nbsp;&nbsp; Reviewed by: __________________________</p>`+
+  `<button class="noprint" onclick="window.print()" style="margin-top:16px;padding:10px 18px;border:0;border-radius:8px;background:#8f5c3d;color:#fff;font-size:13px">Print</button>`);
+  w.document.close();
+}
 function awvRender(){
   const s = AWV_FLOW[AWV.step];
   const A = AWV.answers[AWV.step];
@@ -1000,6 +1050,7 @@ function awvRender(){
   openModal(`<h3>${s.icon} Step ${AWV.step+1} of 5 — ${esc(s.t)}</h3>
   <div class="msub">${esc(patLabel(AWV.patientId))} · saves when you tap Next</div>
   <div class="awv-bar">${bar}</div>
+  ${AWV.step===0?awvPrepCard():""}
   <div class="f awv-body">${items}</div>
   ${computed}
   <div class="ferr" id="f-err"></div>
@@ -1074,9 +1125,9 @@ function awvSummary(){
   if(flags.includes("Depression screen positive")||flags.includes("Anxiety screen positive"))
     acts.push(`<button class="btn sm warn" onclick="closeModal();openHandoffForm('Primary Care');setTimeout(()=>{document.getElementById('f-to').value='Mind & Mood Recovery';document.getElementById('f-pat').value='${AWV.patientId}';},50)">→ Warm handoff to Mind & Mood</button>`);
   if(flags.includes("CCM enrollment yes")||flags.includes("RPM enrollment yes"))
-    acts.push(`<button class="btn sm" onclick="awvEnrollReferral()">→ Send enrollment referral to Chronic Care</button>`);
+    acts.push(`<button class="btn sm" onclick="awvEnrollReferral()">→ Send enrollment referral to Care Management</button>`);
   if(flags.includes("Fall risk")||flags.includes("Med access barrier")||flags.includes("HRSN screening agreed"))
-    acts.push(`<button class="btn sm sec" onclick="closeModal();openReferralForm('Primary Care');setTimeout(()=>{document.getElementById('f-to').value='Chronic Care';document.getElementById('f-type').value='SDH';document.getElementById('f-pat').value='${AWV.patientId}';},50)">→ SDH referral to care management</button>`);
+    acts.push(`<button class="btn sm sec" onclick="closeModal();openReferralForm('Primary Care');setTimeout(()=>{document.getElementById('f-to').value='Care Management';document.getElementById('f-type').value='SDH';document.getElementById('f-pat').value='${AWV.patientId}';},50)">→ SDH referral to care management</button>`);
   openModal(`<h3>✅ AWV Summary</h3><div class="msub">${esc(patLabel(AWV.patientId))} — review flags, fire the next steps, then mark complete.</div>
   <div class="f">
     <div class="awv-q"><div class="awv-l">Flags</div>${flags.length?flags.map(f=>`<span class="pill ${/positive|Cognitive/.test(f)?"alert":/risk|barrier|apnea/.test(f)?"warn":"ok"}">${esc(f)}</span> `).join(""):'<span class="pill ok">None</span>'}</div>
@@ -1112,8 +1163,8 @@ async function awvEnrollReferral(){
   const a1 = AWV.answers[0];
   const what = [a1.ccm==="Yes, enroll"?"CCM":null, a1.rpm==="Yes, enroll"?"RPM":null].filter(Boolean).join(" + ");
   try{
-    await api(API_ACT, {action:"referral-create", patientId:AWV.patientId, from:"Primary Care", to:"Chronic Care", type:"Division Referral", details:`AWV enrollment decision: patient agreed to ${what}. Enroll and begin monthly cycle.`, priority:"Routine"});
-    toast("Enrollment referral sent to Chronic Care");
+    await api(API_ACT, {action:"referral-create", patientId:AWV.patientId, from:"Primary Care", to:"Care Management", type:"Division Referral", details:`AWV enrollment decision: patient agreed to ${what}. Enroll and begin monthly cycle.`, priority:"Routine"});
+    toast("Enrollment referral sent to Care Management");
   }catch(e){ toast("⚠ "+e.message); }
 }
 async function awvComplete(){
@@ -1665,7 +1716,7 @@ function cpNote(id){
 
 /* ============ Patient registration (everyone) + duplicate guard ============ */
 const NP_INS = ["Medicare","Medicaid","Medicare + Medicaid","Aetna","CareFirst BCBS","Cigna","UnitedHealthcare","Johns Hopkins EHP","Tricare","Self-Pay","Other"];
-const NP_PROGS = ["Primary Care","CharmEd Minds","Mind & Mood Recovery","Chronic Care","Flow","The Porter House","BHI","RPM","12-Week Program"];
+const NP_PROGS = ["Primary Care","CharmEd Minds","Mind & Mood Recovery","Care Management","Flow","The Porter House","BHI","RPM","12-Week Program"];
 
 function npEnsureOverlay(){
   if(document.getElementById("np-overlay")) return;
@@ -2097,9 +2148,9 @@ async function cmSendGo(assessmentId, kind){
 }
 
 
-/* ============ Today's Tasks (top of Chronic Care + Mind & Mood pages) ============ */
+/* ============ Today's Tasks (top of Care Management + Mind & Mood pages) ============ */
 const TODAY_TASKS = {
- "Chronic Care": {
+ "Care Management": {
   owner: "Care Manager",
   anchors: [
    "8:00 — Review & prioritize task list",
@@ -2120,7 +2171,7 @@ const TODAY_TASKS = {
     "Flag patients who hit threshold today",
     "By 5:00 — Documentation supports every code billed",
     "By 5:00 — Below-threshold list + action plan for each"]},
-   3: {t:"RPM + Chronic Care Deep Work", items:[
+   3: {t:"RPM + Care Management Deep Work", items:[
     "9:00–12:00 — Full RPM dashboard review: trends, not just alerts",
     "By 2:00 — Escalate abnormal readings to Amaris with context",
     "12:00–4:00 — Chronic condition follow-ups (DM · HTN · CHF · COPD · CKD)",
@@ -2255,16 +2306,61 @@ function openReferralForm(from){
   <div class="f">
     <label>Patient</label><select id="f-pat"><option value="">Select patient…</option>${patientOptions()}</select>
     <div class="row"><div><label>From</label><select id="f-from">${divisionOptions(froms)}</select></div>
-    <div><label>To</label><select id="f-to">${divisionOptions(["Primary Care","CharmEd Minds","Mind & Mood Recovery","The Porter House","Chronic Care","Flow"])}</select></div></div>
+    <div><label>To</label><select id="f-to">${divisionOptions(["Primary Care","CharmEd Minds","Mind & Mood Recovery","The Porter House","Care Management","Flow"])}</select></div></div>
+    <label>Template <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink-soft)">— pre-written, filtered by destination</span></label>
+    <select id="f-tpl"><option value="">— write my own —</option></select>
     <div class="row"><div><label>Type</label><select id="f-type"><option>Division Referral</option><option>SDH</option><option>Acute follow-up</option><option>Chronic follow-up</option><option>Specialist coordination</option><option>Care plan support</option><option>Visit spacing / more time</option><option>Monitoring equipment</option><option>Device Order</option><option>Flow Pathway</option><option>Lab/Imaging Follow-up</option><option>Other</option></select></div>
     <div><label>Device (if device order)</label><select id="f-dev"><option value="">—</option>${DEVICES.map(d=>`<option>${d}</option>`).join("")}</select></div></div>
     <label>Details — what's needed</label><textarea id="f-det"></textarea>
     <div class="row"><div><label>Priority</label><select id="f-pri"><option>Routine</option><option>Urgent</option></select></div>
     <div><label>Needed by</label><select id="f-when"><option value="">—</option><option>24–48 hours</option><option>Within 1 week</option><option>Within 2 weeks</option><option>Within 30 days</option></select></div></div>
     <div class="ferr" id="f-err"></div>
-    <div class="macts"><button class="btn sec" onclick="closeModal()">Cancel</button><button class="btn" onclick="submitReferral()">Send referral</button></div>
+    <div class="macts"><button class="btn sec" onclick="closeModal()">Cancel</button><button class="btn sec" type="button" onclick="saveRefTemplate()">Save as template</button><button class="btn" onclick="submitReferral()">Send referral</button></div>
   </div>`);
   if(from) document.getElementById("f-from").value = from;
+  refSetupTemplates();
+}
+// Referral templates by destination — lazy-loaded from Notion, filtered by "To".
+async function refSetupTemplates(){
+  const tpl=document.getElementById("f-tpl"), to=document.getElementById("f-to");
+  if(!tpl||!to) return;
+  to.addEventListener("change", refFillTemplateOptions);
+  tpl.addEventListener("change", refApplyTemplate);
+  try{ if(!REF_TEMPLATES){ const r=await api(API_REFTPL); REF_TEMPLATES=r.templates||[]; } }
+  catch(e){ REF_TEMPLATES=[]; }
+  refFillTemplateOptions();
+}
+function refCurrentList(){
+  const to=document.getElementById("f-to");
+  const dest=to?to.value:"";
+  return (REF_TEMPLATES||[]).filter(t=>t.destination===dest);
+}
+function refFillTemplateOptions(){
+  const tpl=document.getElementById("f-tpl"); if(!tpl) return;
+  const list=refCurrentList();
+  tpl.innerHTML = `<option value="">${list.length?"— write my own —":"— no templates for this destination yet —"}</option>` +
+    list.map((t,i)=>`<option value="${i}">${esc(t.name)}</option>`).join("");
+}
+function refApplyTemplate(){
+  const tpl=document.getElementById("f-tpl"); if(!tpl||tpl.value==="") return;
+  const t=refCurrentList()[Number(tpl.value)]; if(!t) return;
+  if(t.type){ const ty=document.getElementById("f-type"); if(ty) ty.value=t.type; }
+  const det=document.getElementById("f-det"); if(det) det.value=t.body||"";
+  if(t.priority){ const pr=document.getElementById("f-pri"); if(pr) pr.value=t.priority; }
+  if(t.neededBy){ const wn=document.getElementById("f-when"); if(wn) wn.value=t.neededBy; }
+}
+async function saveRefTemplate(){
+  const err=document.getElementById("f-err"); if(err) err.textContent="";
+  const to=val("f-to"), body=val("f-det");
+  if(!to){ if(err) err.textContent="Pick a destination first."; return; }
+  if(!body.trim()){ if(err) err.textContent="Write the referral text before saving it as a template."; return; }
+  const name=prompt("Name this template — staff will see it under "+to+"'s templates:", "");
+  if(!name) return;
+  try{
+    await api(API_ACT, {action:"referral-template-save", destination:to, name, body, type:val("f-type"), priority:val("f-pri"), neededBy:val("f-when")});
+    REF_TEMPLATES=null; // force refresh next time the form opens
+    toast("✓ Saved as a template for "+to);
+  }catch(e){ if(err) err.textContent=e.message; }
 }
 async function submitReferral(){
   try{
@@ -2279,7 +2375,7 @@ function openHandoffForm(from){
   <div class="f">
     <label>Patient</label><select id="f-pat"><option value="">Select patient…</option>${patientOptions()}</select>
     <div class="row"><div><label>From</label><select id="f-from">${divisionOptions(D.visibleDivisions)}</select></div>
-    <div><label>To</label><select id="f-to">${divisionOptions(["Primary Care","CharmEd Minds","Mind & Mood Recovery","The Porter House","Chronic Care","Flow"])}</select></div></div>
+    <div><label>To</label><select id="f-to">${divisionOptions(["Primary Care","CharmEd Minds","Mind & Mood Recovery","The Porter House","Care Management","Flow"])}</select></div></div>
     <label>Warm handoff summary — reason, context, what they need to know</label><textarea id="f-sum"></textarea>
     <label>Needs</label><div class="needs" id="f-needs">${NEEDS.map(n=>`<button class="chip" type="button" onclick="this.classList.toggle('on')" data-n="${n}">${n}</button>`).join("")}</div>
     <label>First visit date (if known)</label><input type="date" id="f-date">
@@ -2320,7 +2416,7 @@ function openBookingForm(){
     <label>Room</label><select id="f-room" onchange="filterServices()"><option value="">Select room…</option>${D.rooms.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join("")}</select>
     <label>Service</label><select id="f-svc">${SERVICES.map(s=>`<option>${s}</option>`).join("")}</select>
     <label>Staff (hold Ctrl/Cmd for multiple)</label><select id="f-staff" multiple size="4">${D.staff.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join("")}</select>
-    <div class="row"><div><label>Date</label><input type="date" id="f-date"></div><div><label>Division</label><select id="f-div">${divisionOptions(["Primary Care","CharmEd Minds","Mind & Mood Recovery","The Porter House","Chronic Care","Flow","Shared"])}</select></div></div>
+    <div class="row"><div><label>Date</label><input type="date" id="f-date"></div><div><label>Division</label><select id="f-div">${divisionOptions(["Primary Care","CharmEd Minds","Mind & Mood Recovery","The Porter House","Care Management","Flow","Shared"])}</select></div></div>
     <div class="row"><div><label>Start</label><input type="time" id="f-start"></div><div><label>End</label><input type="time" id="f-end"></div></div>
     <label>Notes (no patient identifiers needed)</label><input type="text" id="f-note">
     <div class="ferr" id="f-err"></div>

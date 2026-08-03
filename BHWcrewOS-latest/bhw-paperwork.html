@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>BHW Paperwork Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/bhw-tokens.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+body{font-family:var(--sans);color:var(--ink);font-size:14px;line-height:1.55;
+  background:var(--page-wash),var(--bg);min-height:100vh}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--clay);outline-offset:2px;border-radius:6px}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:13.5px;color:var(--ink)}
+
+/* ---- header ---- */
+header.top{background:var(--deep-grad,linear-gradient(120deg,#33505e,#2f4551 65%));color:#eef3f4}
+.top-inner{max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:14px;padding:14px 22px}
+.wm{font-weight:300;font-size:18px;letter-spacing:.02em}
+.wm b{font-weight:800}.wm .k{color:var(--sand);font-weight:800}
+.wm small{display:block;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#a9c2cc;font-weight:600;margin-top:2px}
+.top-right{margin-left:auto;display:flex;gap:9px}
+.ghost{background:rgba(244,247,247,.08);border:1px solid rgba(220,200,177,.4);color:#e9eef0;padding:8px 15px;border-radius:999px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;text-decoration:none}
+.ghost:hover{background:rgba(220,200,177,.22)}
+.gold-rule{height:2px;background:linear-gradient(90deg,#c68e63,#8f5c3d 190px,rgba(220,200,177,.5) 190px,rgba(220,200,177,0) 100%)}
+
+/* ---- layout ---- */
+.wrap{max-width:1280px;margin:0 auto;padding:20px 22px 70px;display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+.panel{background:var(--card);border:1px solid rgba(220,200,177,.6);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 22px}
+.eyebrow{font-size:10px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--clay-deep)}
+h2.sec{font-size:17px;font-weight:700;letter-spacing:-.01em;margin:2px 0 14px}
+.step-lede{color:var(--ink-soft);font-size:12.5px;margin:-8px 0 14px}
+
+/* packet type picker */
+.types{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:9px;margin-bottom:6px}
+.type{border:1.5px solid var(--line);border-radius:12px;background:#fff;padding:12px 13px;text-align:left;transition:.15s;border-left-width:4px;border-left-color:var(--tc,var(--blue))}
+.type:hover{border-color:var(--sand);transform:translateY(-1px)}
+.type.active{border-color:var(--tc,var(--blue));background:color-mix(in srgb,var(--tc,var(--blue)) 8%,#fff);box-shadow:var(--shadow)}
+.type b{display:block;font-size:13px;font-weight:700}
+.type span{display:block;font-size:11px;color:var(--ink-soft);margin-top:2px}
+
+/* fields */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+.f{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.f.full{grid-column:1/-1}
+label{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft)}
+input[type=text],input[type=date],select,textarea{width:100%;padding:9px 11px;border:1.5px solid var(--line);border-radius:9px;background:#fff}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue)}
+textarea{resize:vertical;min-height:60px;line-height:1.5}
+.hint{font-size:11px;color:var(--ink-soft)}
+
+.subhead{display:flex;align-items:center;gap:10px;margin:18px 0 10px}
+.subhead h3{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--deep)}
+.subhead .line{height:1px;background:var(--line);flex:1}
+
+/* smart prefill */
+.prefill{border:1px dashed rgba(128,171,189,.6);background:color-mix(in srgb,var(--blue) 6%,#fff);border-radius:11px;padding:12px 13px;margin-bottom:14px}
+.prefill .row{display:flex;gap:8px;align-items:center;margin-top:8px}
+.btn{background:var(--clay-grad);color:#fff;border:none;border-radius:999px;padding:9px 16px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;box-shadow:0 8px 18px -9px rgba(143,92,61,.6)}
+.btn:hover{transform:translateY(-1px)}
+.btn.sm{padding:7px 13px}
+.btn.ghost2{background:#fff;color:var(--clay-deep);border:1.5px solid var(--sand);box-shadow:none}
+.pill-note{font-size:11px;color:var(--ink-soft);margin-top:7px}
+
+/* icd rows */
+.icd{border:1px solid var(--line);border-radius:11px;padding:11px 12px;margin-bottom:9px;background:#fffdf9}
+.icd .top{display:flex;gap:9px;align-items:center}
+.icd .code{font-weight:800;font-size:13px;color:var(--clay-deep);background:color-mix(in srgb,var(--clay) 12%,#fff);border:1px solid color-mix(in srgb,var(--clay) 30%,#fff);border-radius:7px;padding:3px 9px;white-space:nowrap}
+.icd .label{font-size:12.5px;font-weight:600;flex:1}
+.icd .x{margin-left:auto;background:none;border:none;color:var(--alert);font-size:16px;line-height:1}
+.icd textarea{margin-top:8px;font-size:12.5px}
+.addicd{display:flex;gap:8px;margin-top:4px}
+.addicd input{flex:1}
+
+/* checklist */
+.check{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line-soft)}
+.check:last-child{border-bottom:none}
+.check input{margin-top:2px;width:16px;height:16px;accent-color:var(--ok);flex:none}
+.check .t{font-size:12.5px}
+.check .t small{display:block;color:var(--ink-soft);font-size:11px}
+
+/* status */
+.status{display:flex;align-items:center;gap:10px;margin-top:12px;padding:11px 13px;border-radius:11px;font-size:12.5px;font-weight:600}
+.status.ok{background:#eef4f0;color:var(--ok);border:1px solid #cfe3d5}
+.status.no{background:#fdf1ef;color:var(--alert);border:1px solid #f0cfc9}
+.status .dot{width:9px;height:9px;border-radius:50%;background:currentColor;flex:none}
+
+/* ---- preview ---- */
+.preview-panel{position:sticky;top:16px}
+.pv-bar{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.pv-bar .eyebrow{margin-right:auto}
+.doc{background:#fff;border:1px solid var(--line);border-radius:8px;padding:40px 44px;box-shadow:var(--shadow);font-size:12.5px;color:#26333b;line-height:1.6;min-height:400px}
+.doc .letterhead{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid var(--clay);padding-bottom:12px;margin-bottom:18px}
+.doc .letterhead .org{font-weight:800;font-size:16px;color:var(--deep);letter-spacing:-.01em}
+.doc .letterhead .org small{display:block;font-weight:600;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--clay-deep);margin-top:2px}
+.doc .letterhead .meta{text-align:right;font-size:10.5px;color:#5f6b72}
+.doc h1{font-size:15px;font-weight:800;letter-spacing:-.01em;margin:2px 0 14px;color:var(--deep)}
+.doc h4{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--clay-deep);margin:16px 0 5px}
+.doc p{margin:0 0 9px}
+.doc .kv{display:grid;grid-template-columns:150px 1fr;gap:2px 10px;margin:0 0 12px;font-size:12px}
+.doc .kv dt{color:#6b757b;font-weight:600}
+.doc .kv dd{font-weight:600;color:#26333b}
+.doc ul{margin:0 0 10px 18px}.doc li{margin-bottom:3px}
+.doc .idx{width:100%;border-collapse:collapse;font-size:11.5px;margin:4px 0 12px}
+.doc .idx th{text-align:left;border-bottom:1.5px solid var(--sand);padding:5px 6px;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#6b757b}
+.doc .idx td{border-bottom:1px solid #eee;padding:5px 6px;vertical-align:top}
+.doc .sign{margin-top:26px;border-top:1px solid #ddd;padding-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.doc .sig-line{border-bottom:1px solid #333;height:26px;margin-bottom:3px}
+.doc .sig-cap{font-size:10px;color:#6b757b}
+.doc .stamp{margin-top:14px;font-size:10px;color:#8a949a;border:1px dashed #ccc;border-radius:6px;padding:8px 10px}
+.muted-fill{color:#b7bec3;font-style:italic}
+
+@media (max-width:960px){.wrap{grid-template-columns:1fr}.preview-panel{position:static}}
+
+/* ---- print: only the document ---- */
+@media print{
+  body{background:#fff}
+  header.top,.controls,.pv-bar,.top-right{display:none!important}
+  .wrap{display:block;padding:0;max-width:none}
+  .preview-panel{position:static}
+  .doc{border:none;box-shadow:none;border-radius:0;padding:0.4in 0.5in;min-height:auto}
+  @page{margin:0.5in}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <div class="wm">BHW <b>Paperwork</b> <span class="k">Studio</span><small>Chart pulls · Prior auth · Disability · FMLA · MTA</small></div>
+    <div class="top-right">
+      <button class="ghost" id="connBtn" type="button">Connect</button>
+      <a class="ghost" href="/hq.html">BHW HQ</a>
+      <a class="ghost" href="/">crewOS</a>
+    </div>
+  </div>
+  <div class="gold-rule"></div>
+</header>
+
+<div class="wrap">
+  <!-- ================= CONTROLS ================= -->
+  <div class="controls">
+    <div class="panel">
+      <div class="eyebrow">Step 1</div>
+      <h2 class="sec">What are you preparing?</h2>
+      <div class="types" id="types"></div>
+    </div>
+
+    <div class="panel" style="margin-top:16px">
+      <div class="eyebrow" id="step2eyebrow">Step 2 · Local scan stays in your browser</div>
+      <h2 class="sec">Patient &amp; request</h2>
+
+      <div class="f full" id="patientPickWrap" style="display:none">
+        <label>Pull from Master Patient List</label>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="patientSearch" placeholder="Search patients by name…" list="patientOptions" style="flex:1">
+          <datalist id="patientOptions"></datalist>
+          <button class="btn ghost2 sm" id="patientPickBtn">Load</button>
+        </div>
+        <span class="hint" id="patientHint">Fills demographics, insurance, and any ICD-10s on the chart. Codes not yet on file come from the note or manual entry.</span>
+      </div>
+
+      <div class="prefill">
+        <label>Smart prefill — paste a note or the request</label>
+        <textarea id="noteText" placeholder="Paste a progress note, records request, or referral here. 'Local scan' extracts ICD-10 codes and dates in your browser. 'AI read' (once connected) sends it to OpenAI server-side for a fuller prefill."></textarea>
+        <div class="row">
+          <button class="btn sm" id="aiBtn">AI read note</button>
+          <button class="btn ghost2 sm" id="prefillBtn">Local scan</button>
+          <span class="pill-note" id="prefillNote">Local scan stays offline. AI read needs a connected session + OpenAI key.</span>
+        </div>
+      </div>
+
+      <div class="grid2" id="reqFields"></div>
+    </div>
+
+    <div class="panel" style="margin-top:16px">
+      <div class="eyebrow">Step 3</div>
+      <h2 class="sec">Diagnoses &amp; medical-necessity language</h2>
+      <div class="step-lede">Add ICD-10 codes. Known codes load pre-written, editable explanations. (Later: pull straight from the Master Patient List.)</div>
+      <div id="icdList"></div>
+      <div class="addicd">
+        <input type="text" id="icdInput" placeholder="Add ICD-10 (e.g. E11.9) or search a term…" list="icdOptions">
+        <datalist id="icdOptions"></datalist>
+        <button class="btn ghost2 sm" id="addIcdBtn">Add</button>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:16px">
+      <div class="eyebrow">Step 4</div>
+      <h2 class="sec" id="bodyTitle">Letter body</h2>
+      <div class="f full">
+        <label>Editable body — pre-written, adjust as needed</label>
+        <textarea id="bodyText" style="min-height:150px"></textarea>
+        <span class="hint">Leave blank to auto-compose from the fields and diagnoses above.</span>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:16px">
+      <div class="eyebrow">Step 5</div>
+      <h2 class="sec" id="checkTitle">Complete &amp; compliant?</h2>
+      <div class="step-lede" id="checkLede"></div>
+      <div id="checklist"></div>
+      <div class="subhead"><h3>Auditor / preparer</h3><div class="line"></div></div>
+      <div class="grid2">
+        <div class="f"><label>Prepared / audited by</label><input type="text" id="auditor" placeholder="Your name & credential"></div>
+        <div class="f"><label>Date</label><input type="date" id="auditDate"></div>
+      </div>
+      <div class="status no" id="status"><span class="dot"></span><span id="statusText">Complete the checklist to mark ready.</span></div>
+    </div>
+  </div>
+
+  <!-- ================= PREVIEW ================= -->
+  <div class="preview-panel">
+    <div class="pv-bar">
+      <div class="eyebrow">Live document</div>
+      <span id="officialWrap" style="display:none;gap:6px;align-items:center">
+        <select id="officialSel" style="padding:8px 10px;border:1.5px solid var(--line);border-radius:9px;background:#fff;font-size:12px"></select>
+        <button class="btn ghost2" id="officialBtn" title="Fill the real agency/payer PDF and download it">Fill official form</button>
+      </span>
+      <button class="btn" id="printBtn" style="margin-left:8px">Print / Save PDF</button>
+    </div>
+    <div class="doc" id="doc"></div>
+  </div>
+</div>
+
+<!-- crewOS sign-in (for patient pull + AI prefill) -->
+<div id="signin" style="display:none;position:fixed;inset:0;background:rgba(20,32,38,.55);z-index:100;align-items:center;justify-content:center;padding:20px">
+  <div class="panel" style="max-width:360px;width:100%">
+    <div class="eyebrow">crewOS sign-in</div>
+    <h2 class="sec">Connect to pull patients &amp; use AI</h2>
+    <div class="f"><label>Your name</label><select id="siStaff"></select></div>
+    <div class="f"><label>PIN</label><input type="password" id="siPin" inputmode="numeric" autocomplete="off"></div>
+    <div class="status no" id="siErr" style="display:none"><span class="dot"></span><span id="siErrTxt"></span></div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn" id="siGo">Sign in</button>
+      <button class="btn ghost2" id="siCancel">Cancel</button>
+    </div>
+    <p class="hint" style="margin-top:10px">Uses your crewOS PIN. Patient pull &amp; AI prefill handle PHI, so a signed-in session is required. Manual entry works without it.</p>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   PAPERWORK STUDIO — Phase 1 (client-side; no PHI leaves the page)
+   Everything is config-driven. To add/adjust a packet type, edit
+   PACKETS. To add pre-written diagnosis language, edit ICD10.
+   ============================================================ */
+
+const ORG = { name:"BHW Medical Group", tag:"Baltimore Healthcare & Wellness", addr:"2131 Maryland Ave, Baltimore, MD 21218", street:"2131 Maryland Ave", city:"Baltimore", state:"MD", zip:"21218", phone:"(443) 762-5343", fax:"(833) 258-3941", email:"info@bhwmedical.org" };
+
+// ---- ICD-10 starter library (editable boilerplate). Add freely. ----
+const ICD10 = {
+  "E11.9":  { label:"Type 2 diabetes mellitus without complications", text:"The patient carries a diagnosis of type 2 diabetes mellitus requiring ongoing management of glycemic control, periodic HbA1c monitoring, medication management, and screening for micro- and macrovascular complications." },
+  "I10":    { label:"Essential (primary) hypertension", text:"The patient has essential hypertension requiring ongoing blood-pressure monitoring, medication titration, and cardiovascular risk-reduction management." },
+  "E78.5":  { label:"Hyperlipidemia, unspecified", text:"The patient has hyperlipidemia requiring lipid monitoring and lipid-lowering therapy as part of cardiovascular risk reduction." },
+  "F33.1":  { label:"Major depressive disorder, recurrent, moderate", text:"The patient has recurrent major depressive disorder of moderate severity requiring ongoing psychiatric management, medication oversight, and psychotherapeutic support to maintain function and prevent relapse." },
+  "F41.1":  { label:"Generalized anxiety disorder", text:"The patient has generalized anxiety disorder producing functional impairment and requiring ongoing behavioral-health treatment and medication management." },
+  "F43.10": { label:"Post-traumatic stress disorder, unspecified", text:"The patient has post-traumatic stress disorder with symptoms that materially limit daily functioning and require ongoing trauma-informed treatment." },
+  "M54.50": { label:"Low back pain, unspecified", text:"The patient has chronic low back pain that limits mobility, standing, and lifting tolerance and requires ongoing management." },
+  "G47.33": { label:"Obstructive sleep apnea (adult)", text:"The patient has obstructive sleep apnea requiring PAP therapy and adherence monitoring; untreated disease carries cardiovascular and daytime-safety risk." },
+  "J45.909":{ label:"Unspecified asthma, uncomplicated", text:"The patient has asthma requiring controller therapy, monitoring, and an action plan to prevent exacerbations." },
+  "E66.9":  { label:"Obesity, unspecified", text:"The patient has obesity contributing to metabolic and mobility risk and requiring ongoing weight-management intervention." },
+  "M17.9":  { label:"Osteoarthritis of knee, unspecified", text:"The patient has knee osteoarthritis producing pain and mobility limitation that restricts ambulation and weight-bearing activity." },
+  "N18.3":  { label:"Chronic kidney disease, stage 3 (moderate)", text:"The patient has stage 3 chronic kidney disease requiring renal-function monitoring, medication adjustment, and nephroprotective management." },
+};
+
+// ---- shared field defs ----
+const F = {
+  patient:  { id:"patient", label:"Patient name", w:1 },
+  dob:      { id:"dob", label:"Date of birth", type:"date", w:1 },
+  mrn:      { id:"mrn", label:"MRN / chart #", w:1 },
+  member:   { id:"member", label:"Insurance member ID", w:1 },
+  payer:    { id:"payer", label:"Insurance / payer", type:"select", options:["", "Aetna","CareFirst BCBS","Cigna","Maryland Medicaid (Carelon)","Medicare","UnitedHealthcare","Priority Partners","Other"], w:1 },
+  provider: { id:"provider", label:"Rendering / attesting provider", w:1 },
+  requester:{ id:"requester", label:"Requesting party / attn.", w:1 },
+  refno:    { id:"refno", label:"Their reference / claim #", w:1 },
+  dateFrom: { id:"dateFrom", label:"Records date range — from", type:"date", w:1 },
+  dateTo:   { id:"dateTo", label:"Records date range — to", type:"date", w:1 },
+  sentTo:   { id:"sentTo", label:"Send to (destination)", w:1 },
+  method:   { id:"method", label:"Transmission method", type:"select", options:["","Secure fax (iFax)","Secure email","Payer portal upload","Mail","Hand-delivered"], w:1 },
+  medication:{ id:"medication", label:"Medication / service requested", w:1 },
+  triedFailed:{ id:"triedFailed", label:"Tried & failed / step therapy", type:"textarea", w:2 },
+  employer: { id:"employer", label:"Employer", w:1 },
+  leaveFrom:{ id:"leaveFrom", label:"Incapacity — from", type:"date", w:1 },
+  leaveTo:  { id:"leaveTo", label:"Incapacity — to (or ongoing)", type:"date", w:1 },
+  duration: { id:"duration", label:"Expected duration", w:1 },
+  limitations:{ id:"limitations", label:"Functional limitations", type:"textarea", w:2 },
+};
+
+// ---- packet types ----
+const PACKETS = [
+  {
+    id:"chart", name:"Chart Pull / Records", blurb:"Records request for insurers, disability, audits", color:"var(--blue)",
+    fields:["patient","dob","mrn","requester","refno","payer","dateFrom","dateTo","sentTo","method"],
+    bodyTitle:"Cover letter body",
+    checkTitle:"Complete & compliant (records release)",
+    checkLede:"Verify each before releasing — this is your audit trail.",
+    checklist:[
+      {t:"Patient identity verified", s:"Name + DOB match the request and the chart"},
+      {t:"Authorization / ROI on file", s:"Signed release or a permitted TPO purpose documented"},
+      {t:"Date range matches the request", s:"Only the requested span is included"},
+      {t:"Minimum necessary applied", s:"Only requested record types released"},
+      {t:"Records index attached", s:"Each item enclosed is listed below"},
+      {t:"Disclosure logged", s:"Entry added to the accounting-of-disclosures log"},
+      {t:"Sent by an approved secure method", s:"Fax/secure email/portal — destination confirmed"},
+    ],
+    doc: renderChart,
+  },
+  {
+    id:"priorauth", name:"Prior Authorization", blurb:"Medication / service auth — by indication & payer", color:"var(--clay)",
+    fields:["patient","dob","member","payer","provider","medication","triedFailed","sentTo","method"],
+    bodyTitle:"Medical-necessity narrative",
+    checkTitle:"Complete (prior authorization)",
+    checkLede:"",
+    checklist:[
+      {t:"Correct payer form / indication selected", s:"Matches the drug and diagnosis"},
+      {t:"Diagnosis supports the indication", s:"ICD-10 justifies the requested therapy"},
+      {t:"Step therapy / tried-failed documented", s:"If the payer requires it"},
+      {t:"Prescriber NPI & signature ready", s:"Attesting provider identified"},
+    ],
+    doc: renderPriorAuth,
+  },
+  {
+    id:"disability", name:"Disability", blurb:"Attestation / records to support disability", color:"var(--sage)",
+    fields:["patient","dob","provider","duration","limitations","sentTo","method"],
+    bodyTitle:"Attestation body",
+    checkTitle:"Complete (disability attestation)",
+    checkLede:"",
+    checklist:[
+      {t:"Conditions & ICD-10 listed", s:"Supporting diagnoses included"},
+      {t:"Functional limitations described", s:"Concrete, work/ADL-relevant terms"},
+      {t:"Onset & prognosis stated", s:"Duration / permanency addressed"},
+      {t:"Provider signature ready", s:"Attesting clinician identified"},
+    ],
+    doc: renderAttestation,
+  },
+  {
+    id:"fmla", name:"FMLA", blurb:"Certification support statement", color:"var(--teal)",
+    fields:["patient","dob","employer","provider","leaveFrom","leaveTo","duration","limitations"],
+    bodyTitle:"FMLA support body",
+    checkTitle:"Complete (FMLA support)",
+    checkLede:"",
+    checklist:[
+      {t:"Serious health condition documented", s:"Meets FMLA definition"},
+      {t:"Incapacity dates specified", s:"Continuous or intermittent noted"},
+      {t:"Provider signature ready", s:"Health-care provider identified"},
+    ],
+    doc: renderAttestation,
+  },
+  {
+    id:"mta", name:"MTA Mobility", blurb:"Paratransit / Mobility support letter", color:"var(--clay-deep)",
+    fields:["patient","dob","provider","duration","limitations","sentTo","method"],
+    bodyTitle:"Mobility support body",
+    checkTitle:"Complete (mobility support)",
+    checkLede:"",
+    checklist:[
+      {t:"Mobility limitation documented", s:"Why fixed-route transit isn't feasible"},
+      {t:"Supporting conditions & ICD-10 listed", s:"Diagnoses included"},
+      {t:"Duration stated", s:"Temporary or permanent"},
+      {t:"Provider signature ready", s:"Attesting clinician identified"},
+    ],
+    doc: renderAttestation,
+  },
+];
+
+// ---- state ----
+const state = { packet:"chart", fields:{}, icds:[], bodyOverride:"", checks:{} };
+
+// ---- helpers ----
+const $ = id => document.getElementById(id);
+const val = id => (state.fields[id] || "").trim();
+const esc = s => (s||"").replace(/[&<>]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;" }[c]));
+const fmtDate = s => { if(!s) return ""; const [y,m,d]=s.split("-"); return d ? `${m}/${d}/${y}` : s; };
+const or = (v, ph) => v ? esc(v) : `<span class="muted-fill">${ph}</span>`;
+const packet = () => PACKETS.find(p => p.id === state.packet);
+
+/* ---------- render: type picker ---------- */
+$("types").innerHTML = PACKETS.map(p =>
+  `<button class="type${p.id===state.packet?' active':''}" style="--tc:${p.color}" data-id="${p.id}"><b>${p.name}</b><span>${p.blurb}</span></button>`
+).join("");
+$("types").addEventListener("click", e => {
+  const b = e.target.closest(".type"); if(!b) return;
+  state.packet = b.dataset.id; state.bodyOverride=""; state.checks={};
+  buildForm(); renderAll(); updateOfficial();
+});
+
+/* ---------- render: request fields ---------- */
+function buildForm(){
+  const p = packet();
+  document.querySelectorAll(".type").forEach(t => t.classList.toggle("active", t.dataset.id===p.id));
+  $("bodyTitle").textContent = p.bodyTitle;
+  $("checkTitle").textContent = p.checkTitle;
+  $("checkLede").textContent = p.checkLede || "";
+  $("reqFields").innerHTML = p.fields.map(fid => {
+    const f = F[fid]; if(!f) return "";
+    const cls = (f.type==="textarea"||f.w===2) ? "f full" : "f";
+    let ctl;
+    if(f.type==="select") ctl = `<select data-fid="${f.id}">${f.options.map(o=>`<option${state.fields[f.id]===o?' selected':''}>${o}</option>`).join("")}</select>`;
+    else if(f.type==="textarea") ctl = `<textarea data-fid="${f.id}">${esc(state.fields[f.id]||"")}</textarea>`;
+    else ctl = `<input type="${f.type||'text'}" data-fid="${f.id}" value="${esc(state.fields[f.id]||"")}">`;
+    return `<div class="${cls}"><label>${f.label}</label>${ctl}</div>`;
+  }).join("");
+  $("reqFields").querySelectorAll("[data-fid]").forEach(el => {
+    el.addEventListener("input", e => { state.fields[e.target.dataset.fid] = e.target.value; renderDoc(); });
+  });
+  // checklist
+  $("checklist").innerHTML = p.checklist.map((c,i) =>
+    `<label class="check"><input type="checkbox" data-ck="${i}"${state.checks[i]?' checked':''}><span class="t">${c.t}<small>${c.s}</small></span></label>`
+  ).join("");
+  $("checklist").querySelectorAll("[data-ck]").forEach(el => {
+    el.addEventListener("change", e => { state.checks[e.target.dataset.ck] = e.target.checked; renderStatus(); renderDoc(); });
+  });
+  $("bodyText").value = state.bodyOverride;
+}
+
+/* ---------- ICD-10 ---------- */
+$("icdOptions").innerHTML = Object.entries(ICD10).map(([c,v]) => `<option value="${c}">${c} — ${v.label}</option>`).join("");
+$("addIcdBtn").addEventListener("click", addIcd);
+$("icdInput").addEventListener("keydown", e => { if(e.key==="Enter"){ e.preventDefault(); addIcd(); }});
+function addIcd(){
+  let raw = $("icdInput").value.trim(); if(!raw) return;
+  let code = raw.split(/[\s—-]/)[0].toUpperCase();
+  // let a term match a library entry
+  if(!ICD10[code]){ const hit = Object.entries(ICD10).find(([c,v]) => (c+" "+v.label).toLowerCase().includes(raw.toLowerCase())); if(hit) code = hit[0]; }
+  if(state.icds.some(i => i.code===code)){ $("icdInput").value=""; return; }
+  const lib = ICD10[code];
+  state.icds.push({ code, label: lib?lib.label:"(enter description)", text: lib?lib.text:"" });
+  $("icdInput").value=""; renderIcds(); renderDoc();
+}
+function renderIcds(){
+  $("icdList").innerHTML = state.icds.map((it,i) =>
+    `<div class="icd"><div class="top"><span class="code">${esc(it.code)}</span><span class="label">${esc(it.label)}</span><button class="x" data-del="${i}" title="Remove">×</button></div>`+
+    `<textarea data-txt="${i}" placeholder="Medical-necessity / explanation text…">${esc(it.text)}</textarea></div>`
+  ).join("");
+  $("icdList").querySelectorAll("[data-del]").forEach(el=>el.addEventListener("click",e=>{ state.icds.splice(+e.target.dataset.del,1); renderIcds(); renderDoc(); }));
+  $("icdList").querySelectorAll("[data-txt]").forEach(el=>el.addEventListener("input",e=>{ state.icds[+e.target.dataset.txt].text=e.target.value; renderDoc(); }));
+}
+
+/* ---------- smart prefill (local regex, no upload) ---------- */
+function localScan(){
+  const t = $("noteText").value; if(!t.trim()){ return; }
+  // ICD-10 codes
+  const codes = [...new Set((t.match(/\b[A-TV-Z][0-9][0-9AB](?:\.[0-9A-Z]{1,4})?\b/g)||[]))];
+  let added=0;
+  codes.forEach(c => { const code=c.toUpperCase(); if(!state.icds.some(i=>i.code===code)){ const lib=ICD10[code]; state.icds.push({code,label:lib?lib.label:"(enter description)",text:lib?lib.text:""}); added++; } });
+  // dates → fill first empty date range
+  const dates = (t.match(/\b(0?[1-9]|1[0-2])\/(0?[1-9]|[12][0-9]|3[01])\/(19|20)\d\d\b/g)||[]);
+  const toISO = d => { const [m,dd,y]=d.split("/"); return `${y}-${String(m).padStart(2,"0")}-${String(dd).padStart(2,"0")}`; };
+  if(dates.length && packet().fields.includes("dateFrom") && !val("dateFrom")){ state.fields.dateFrom=toISO(dates[0]); }
+  if(dates.length>1 && packet().fields.includes("dateTo") && !val("dateTo")){ state.fields.dateTo=toISO(dates[dates.length-1]); }
+  // member id-ish
+  const mem = t.match(/\b(member|policy|id)\s*#?:?\s*([A-Z0-9]{6,})/i);
+  if(mem && packet().fields.includes("member") && !val("member")) state.fields.member=mem[2];
+  renderIcds(); buildForm(); renderAll();
+  $("prefillNote").textContent = `Local scan: ${codes.length} code(s), ${dates.length} date(s) — added ${added} new. Review before printing.`;
+}
+$("prefillBtn").addEventListener("click", localScan);
+
+/* ---------- connect to crewOS (session) + patient pull + AI extract ---------- */
+let TOKEN = sessionStorage.getItem("crewos_token") || "";
+let PATIENTS = [];
+
+async function post(fn, body){
+  const r = await fetch(`/.netlify/functions/${fn}`, { method:"POST",
+    headers:{ "Content-Type":"application/json", ...(TOKEN?{Authorization:`Bearer ${TOKEN}`}:{}) },
+    body: JSON.stringify(body) });
+  const d = await r.json().catch(()=>({}));
+  return { ok:r.ok, status:r.status, d };
+}
+function payerMatch(v){ if(!v) return ""; const s=String(v).toLowerCase(); const hit=F.payer.options.find(o=>o && (o.toLowerCase().includes(s)||s.includes(o.toLowerCase()))); return hit || "Other"; }
+
+function setConnected(name){
+  const b=$("connBtn");
+  if(TOKEN){
+    b.textContent = name ? `✓ ${String(name).split(" ")[0]}` : "✓ Connected";
+    b.title="Connected to crewOS — click to disconnect";
+    $("patientPickWrap").style.display="";
+    $("step2eyebrow").textContent="Step 2 · Connected — patient pull & AI available";
+    loadPatients();
+  } else {
+    b.textContent="Connect"; b.title="Sign in to pull patients & use AI prefill";
+    $("patientPickWrap").style.display="none";
+    $("step2eyebrow").textContent="Step 2 · Local scan stays in your browser";
+  }
+}
+$("connBtn").addEventListener("click", ()=>{
+  if(TOKEN){ if(confirm("Disconnect this session?")){ TOKEN=""; sessionStorage.removeItem("crewos_token"); setConnected(); } }
+  else openSignin();
+});
+function expire(msg){ TOKEN=""; sessionStorage.removeItem("crewos_token"); setConnected(); if(msg) $("prefillNote").textContent=msg; }
+
+async function openSignin(){
+  const { d } = await post("auth",{action:"roster"});
+  $("siStaff").innerHTML = (d.staff||[]).map(s=>`<option value="${s.id}">${esc(s.name)}${s.role?` — ${esc(s.role)}`:""}</option>`).join("");
+  $("siErr").style.display="none"; $("siPin").value=""; $("signin").style.display="flex"; setTimeout(()=>$("siPin").focus(),50);
+}
+$("siCancel").addEventListener("click",()=>$("signin").style.display="none");
+$("siGo").addEventListener("click", doLogin);
+$("siPin").addEventListener("keydown", e=>{ if(e.key==="Enter") doLogin(); });
+async function doLogin(){
+  const staffId=$("siStaff").value, pin=$("siPin").value.trim();
+  if(!staffId||!pin) return;
+  const { ok, d } = await post("auth",{action:"login",staffId,pin});
+  if(ok && d.token){ TOKEN=d.token; sessionStorage.setItem("crewos_token",TOKEN); $("signin").style.display="none"; setConnected(d.user?.name||d.name); }
+  else { $("siErr").style.display="flex"; $("siErrTxt").textContent=d.error||"Sign-in failed."; }
+}
+
+async function loadPatients(){
+  const { ok, status, d } = await post("patients",{action:"list"});
+  if(status===401) return expire("Session expired — reconnect.");
+  if(ok && d.patients){ PATIENTS=d.patients;
+    $("patientOptions").innerHTML = PATIENTS.map(p=>`<option value="${esc(p.name)}${p.dob?` (${fmtDate(p.dob)})`:""}">`).join(""); }
+}
+$("patientPickBtn").addEventListener("click", ()=>{
+  const raw=$("patientSearch").value.trim(); if(!raw) return;
+  const q=raw.split(" (")[0].toLowerCase();
+  const p = PATIENTS.find(x=>x.name.toLowerCase()===q) || PATIENTS.find(x=>x.name.toLowerCase().includes(q));
+  if(!p){ $("patientHint").textContent="No match — check the name."; return; }
+  state.fields.patient=p.name;
+  if(p.dob) state.fields.dob=p.dob;
+  if(p.chart && packet().fields.includes("mrn")) state.fields.mrn=p.chart;
+  if(p.memberId && packet().fields.includes("member")) state.fields.member=p.memberId;
+  if(p.insurance && packet().fields.includes("payer")) state.fields.payer=payerMatch(p.insurance);
+  // ICD-10s from the patient's chart (once the Master Patient List carries them)
+  let added=0;
+  if(Array.isArray(p.icds)) p.icds.forEach(it=>{ const code=(it.code||"").toUpperCase(); if(!code||state.icds.some(i=>i.code===code)) return; const lib=ICD10[code]; state.icds.push({ code, label: lib?lib.label:(it.label||"(enter description)"), text: lib?lib.text:"" }); added++; });
+  buildForm(); renderAll();
+  $("patientHint").textContent=`Loaded ${p.name}${p.bhwId?` (${p.bhwId})`:""}`+(added?` · ${added} ICD-10 code(s) from the chart.`:` · no ICD-10 on file yet — add from the note or manually.`);
+});
+
+$("aiBtn").addEventListener("click", aiExtract);
+async function aiExtract(){
+  const t=$("noteText").value.trim(); if(!t) return;
+  if(!TOKEN){ openSignin(); return; }
+  $("prefillNote").textContent="Reading note with AI…";
+  const { ok, status, d } = await post("note-extract",{note:t});
+  if(status===401) return expire("Session expired — reconnect, then try AI read.");
+  if(!ok){ $("prefillNote").textContent = d.error || "AI unavailable."; if(d.needsKey) localScan(); return; }
+  applyExtract(d.fields||{}, d.icds||[]);
+  $("prefillNote").textContent=`AI prefilled ${Object.keys(d.fields||{}).length} field(s) and ${(d.icds||[]).length} code(s). Review before printing.`;
+}
+function applyExtract(fields, icds){
+  const map={patient:"patient",dob:"dob",mrn:"mrn",memberId:"member",insurer:"payer",dateFrom:"dateFrom",dateTo:"dateTo",medication:"medication",triedFailed:"triedFailed",limitations:"limitations"};
+  Object.entries(fields).forEach(([k,v])=>{ const fid=map[k]; if(!fid||!v) return; if(fid!=="patient" && fid!=="dob" && !packet().fields.includes(fid)) return; state.fields[fid] = (fid==="payer")?payerMatch(v):v; });
+  icds.forEach(it=>{ const code=(it.code||"").toUpperCase(); if(!code||state.icds.some(i=>i.code===code)) return; const lib=ICD10[code]; state.icds.push({ code, label: lib?lib.label:(it.label||"(enter description)"), text: lib?lib.text:"" }); });
+  renderIcds(); buildForm(); renderAll();
+}
+
+/* ---------- status ---------- */
+function renderStatus(){
+  const p = packet(); const total=p.checklist.length;
+  const done = p.checklist.filter((_,i)=>state.checks[i]).length;
+  const ready = done===total && val("auditor");
+  const el=$("status"), tx=$("statusText");
+  el.className = "status "+(ready?"ok":"no");
+  tx.textContent = ready ? "Ready to sign & send — all checks complete."
+    : `${done}/${total} checks done${val("auditor")?"":" · add preparer name"} before marking ready.`;
+}
+
+/* ============================================================
+   DOCUMENT RENDERERS
+   ============================================================ */
+function letterhead(){
+  return `<div class="letterhead"><div class="org">${ORG.name}<small>${ORG.tag}</small></div>`+
+    `<div class="meta">${ORG.addr}<br>Tel ${ORG.phone} · Fax ${ORG.fax}<br>${val("auditDate")?fmtDate(val("auditDate")):new Date().toLocaleDateString()}</div></div>`;
+}
+function dxBlock(){
+  if(!state.icds.length) return `<h4>Supporting diagnoses</h4><p class="muted-fill">Add ICD-10 codes to populate medical-necessity language.</p>`;
+  return `<h4>Supporting diagnoses & medical necessity</h4>`+
+    state.icds.map(i=>`<p><b>${esc(i.code)}</b> — ${esc(i.label)}. ${esc(i.text)}</p>`).join("");
+}
+function signBlock(role){
+  return `<div class="sign"><div><div class="sig-line"></div><div class="sig-cap">${role||"Provider"} signature</div></div>`+
+    `<div><div class="sig-line"></div><div class="sig-cap">${or(val("auditor"),"Prepared / audited by")} · ${val("auditDate")?fmtDate(val("auditDate")):"Date"}</div></div></div>`;
+}
+function body(defaultText){ return esc(state.bodyOverride || defaultText); }
+
+function renderChart(){
+  const dr = (val("dateFrom")||val("dateTo")) ? `${fmtDate(val("dateFrom"))||"—"} through ${fmtDate(val("dateTo"))||"—"}` : "";
+  const def = `In response to your request${val("refno")?` (ref. ${val("refno")})`:""}, please find enclosed the requested medical records for the patient identified below. Records are limited to the date range and record types requested, consistent with the minimum-necessary standard.`;
+  return letterhead()+
+    `<h1>Medical Records — Cover &amp; Release</h1>`+
+    `<dl class="kv">`+
+      `<dt>Patient</dt><dd>${or(val("patient"),"Patient name")}</dd>`+
+      `<dt>DOB</dt><dd>${or(fmtDate(val("dob")),"DOB")}</dd>`+
+      `<dt>MRN</dt><dd>${or(val("mrn"),"chart #")}</dd>`+
+      `<dt>Requested by</dt><dd>${or(val("requester"),"requesting party")}</dd>`+
+      `<dt>Reference / claim #</dt><dd>${or(val("refno"),"—")}</dd>`+
+      `<dt>Date range released</dt><dd>${dr?esc(dr):`<span class="muted-fill">from – to</span>`}</dd>`+
+      `<dt>Sent to</dt><dd>${or(val("sentTo"),"destination")} ${val("method")?`· <b>${esc(val("method"))}</b>`:""}</dd>`+
+    `</dl>`+
+    `<p>${body(def)}</p>`+
+    `<h4>Records index (enclosed)</h4>`+
+    `<table class="idx"><tr><th>#</th><th>Record type</th><th>Dates</th><th>Pages</th></tr>`+
+      `<tr><td>1</td><td class="muted-fill">e.g. Progress notes</td><td>${dr?esc(dr):'—'}</td><td>___</td></tr>`+
+      `<tr><td>2</td><td class="muted-fill">e.g. Labs / imaging</td><td>—</td><td>___</td></tr>`+
+      `<tr><td>3</td><td class="muted-fill">e.g. Medication list</td><td>—</td><td>___</td></tr>`+
+    `</table>`+
+    dxBlock()+
+    `<div class="stamp">Auditor attestation: I verified patient identity, that a valid authorization or permitted purpose is on file, that the enclosed records match the request and the minimum-necessary standard, and I logged this disclosure.</div>`+
+    signBlock("Records custodian");
+}
+function renderPriorAuth(){
+  const def = `On behalf of the patient below, I am requesting prior authorization for ${val("medication")||"the requested therapy"}. Based on the documented diagnosis and clinical course, this therapy is medically necessary and appropriate.`;
+  return letterhead()+
+    `<h1>Prior Authorization Request</h1>`+
+    `<dl class="kv">`+
+      `<dt>Patient</dt><dd>${or(val("patient"),"Patient name")}</dd>`+
+      `<dt>DOB</dt><dd>${or(fmtDate(val("dob")),"DOB")}</dd>`+
+      `<dt>Payer</dt><dd>${or(val("payer"),"insurance")}</dd>`+
+      `<dt>Member ID</dt><dd>${or(val("member"),"member #")}</dd>`+
+      `<dt>Requested</dt><dd>${or(val("medication"),"medication / service")}</dd>`+
+      `<dt>Prescriber</dt><dd>${or(val("provider"),"provider")}</dd>`+
+    `</dl>`+
+    `<p>${body(def)}</p>`+
+    dxBlock()+
+    (val("triedFailed")?`<h4>Step therapy / tried &amp; failed</h4><p>${esc(val("triedFailed"))}</p>`:"")+
+    signBlock("Prescriber");
+}
+function renderAttestation(){
+  const p = packet();
+  const titles = { disability:"Disability Attestation", fmla:"FMLA Support Statement", mta:"Mobility / Paratransit Support" };
+  const def = `To whom it may concern: I am the treating provider for the patient identified below. Based on my clinical evaluation, the following diagnoses and functional limitations are documented and support this request.`;
+  const dates = (val("leaveFrom")||val("leaveTo")) ? `${fmtDate(val("leaveFrom"))||"—"} through ${fmtDate(val("leaveTo"))||"ongoing"}` : "";
+  return letterhead()+
+    `<h1>${titles[p.id]||"Provider Statement"}</h1>`+
+    `<dl class="kv">`+
+      `<dt>Patient</dt><dd>${or(val("patient"),"Patient name")}</dd>`+
+      `<dt>DOB</dt><dd>${or(fmtDate(val("dob")),"DOB")}</dd>`+
+      (p.fields.includes("employer")?`<dt>Employer</dt><dd>${or(val("employer"),"employer")}</dd>`:"")+
+      (dates?`<dt>Incapacity dates</dt><dd>${esc(dates)}</dd>`:"")+
+      (p.fields.includes("duration")?`<dt>Expected duration</dt><dd>${or(val("duration"),"duration / permanency")}</dd>`:"")+
+      `<dt>Provider</dt><dd>${or(val("provider"),"attesting provider")}</dd>`+
+    `</dl>`+
+    `<p>${body(def)}</p>`+
+    (val("limitations")?`<h4>Functional limitations</h4><p>${esc(val("limitations"))}</p>`:"")+
+    dxBlock()+
+    signBlock("Attesting provider");
+}
+
+/* ---------- wire body + auditor + print ---------- */
+$("bodyText").addEventListener("input", e => { state.bodyOverride = e.target.value; renderDoc(); });
+$("auditor").addEventListener("input", e => { state.fields.auditor = e.target.value; renderStatus(); renderDoc(); });
+$("auditDate").addEventListener("input", e => { state.fields.auditDate = e.target.value; renderDoc(); });
+$("printBtn").addEventListener("click", () => window.print());
+
+function renderDoc(){ $("doc").innerHTML = packet().doc(); }
+function renderAll(){ renderIcds(); renderStatus(); renderDoc(); }
+
+/* ============================================================
+   OFFICIAL FORM FILLING — fills the real agency/payer PDF (AcroForm)
+   client-side with pdf-lib. No PHI leaves the browser. Blank forms
+   live in /assets/forms/; pdf-lib is lazy-loaded on first use.
+   To add a form: drop the blank PDF in /assets/forms/, read its field
+   names, and add a { file, map } entry keyed by packet id.
+   ============================================================ */
+const mdy = iso => { if(!iso) return ""; const [y,m,d]=iso.split("-"); return d?`${m}/${d}/${y}`:iso; };
+function fillCtx(){
+  const f=state.fields, icds=state.icds;
+  const parts=(f.patient||"").trim().split(/\s+/);
+  const first=parts[0]||"", last=parts.length>1?parts[parts.length-1]:"", middle=parts.slice(1,-1).join(" ");
+  return {
+    first, middle, last, middle1:(middle||"").slice(0,1), full:f.patient||"",
+    dob:f.dob||"", dobMDY:mdy(f.dob),
+    employer:f.employer||"", provider:f.provider||`${ORG.name} provider`, providerTitle:"Provider",
+    specialty:"Primary care / Behavioral health",
+    onset:mdy(f.leaveFrom||f.dateFrom||""), duration:f.duration||"",
+    dxLabels:icds.map(i=>`${i.code} ${i.label}`).join("; "),
+    dxCodes:icds.map(i=>i.code).join(", "),
+    dxNarrative:[f.limitations, icds.map(i=>`${i.code} ${i.label}`).join("; ")].filter(Boolean).join(" — "),
+    orgName:ORG.name, orgStreet:ORG.street, orgCity:ORG.city, orgState:ORG.state, orgZip:ORG.zip,
+    orgAddr:ORG.addr, orgPhone:ORG.phone, orgFax:ORG.fax, orgEmail:ORG.email,
+    auditMDY:mdy(val("auditDate")),
+  };
+}
+const FMLA_MAP={
+  "Employee name First":"first","Employee name Middle":"middle","Employee name Last":"last",
+  "Employee Name":"full","Employer name":"employer",
+  "Health Care Providers name Print":"provider","Health Care Providers business address":"orgAddr",
+  "Type of practice  Medical specialty":"specialty","Telephone":"orgPhone","Fax":"orgFax","Email":"orgEmail",
+  "1 State the approximate date the condition started or will start":"onset",
+  "2 Provide your best estimate of how long the condition lasted or will last":"duration",
+  "If needed, briefly describe other appropriate medical facts related to the condition(s) for which the employee seeks FMLA leave. (e., use of nebulizer, dialysis)., use of nebulizer, dialysis)":"dxNarrative",
+  "Date":"auditMDY","Date_2":"auditMDY",
+};
+const MTA_CERT_MAP={
+  "Last Name":"last","First Name":"first","Middle Initial":"middle1","Date of Birth MMDDYYYY":"dobMDY",
+  "Applicant Last Name":"last","Applicant First Name":"first","Applicant Middle Initial":"middle1","Applicant Name":"full",
+  "Healthcare Professional Name":"provider","Title":"providerTitle","Facility Institution Agency":"orgName",
+  "State Issued":"orgState","Mailing Address":"orgStreet","City_3":"orgCity","State_3":"orgState","Zip Code_3":"orgZip",
+  "Phone":"orgPhone","Fax":"orgFax","Email Address_2":"orgEmail",
+  "Written Diagnosis List all":"dxLabels","ICD10  DSM Codes":"dxCodes","Date":"auditMDY","Date_2":"auditMDY",
+};
+const MTA_RECERT_MAP={
+  "Last Name":"last","First Name":"first","Middle Initial (2 characters)":"middle1","Date of Birth (MM/DD/YYYY)":"dobMDY",
+  "Applicant Last Name":"last","Applicant First Name":"first","Applicant Middle Initial (2 characters)":"middle1",
+  "What is the primary disability or health condition that prevents you from being able to use MTAs buses and trains Please be specific":"dxLabels",
+  "Date of Diagnosis or Onset":"onset","Date of Signature":"auditMDY",
+};
+const FORMS={
+  fmla:[{ id:"FMLA-WH380E", label:"FMLA WH-380-E (official DOL form)", file:"/assets/forms/fmla-wh380e.pdf", map:FMLA_MAP }],
+  mta:[
+    { id:"MTA-Certification", label:"MTA Mobility Certification (official)", file:"/assets/forms/mta-certification.pdf", map:MTA_CERT_MAP },
+    { id:"MTA-Recertification", label:"MTA Recertification (official)", file:"/assets/forms/mta-recertification.pdf", map:MTA_RECERT_MAP },
+  ],
+};
+function loadPdfLib(){ return new Promise((res,rej)=>{ if(window.PDFLib) return res(); const s=document.createElement("script"); s.src="/assets/vendor/pdf-lib.min.js"; s.onload=()=>res(); s.onerror=()=>rej(new Error("Couldn't load the PDF engine.")); document.head.appendChild(s); }); }
+function updateOfficial(){
+  const forms=FORMS[state.packet]; const wrap=$("officialWrap"), sel=$("officialSel");
+  if(!forms){ wrap.style.display="none"; return; }
+  wrap.style.display="flex";
+  sel.innerHTML=forms.map((f,i)=>`<option value="${i}">${f.label}</option>`).join("");
+}
+$("officialBtn").addEventListener("click", async () => {
+  const forms=FORMS[state.packet]; if(!forms) return;
+  const form=forms[+$("officialSel").value || 0];
+  const btn=$("officialBtn"); const label=btn.textContent; btn.textContent="Filling…"; btn.disabled=true;
+  try{
+    await loadPdfLib();
+    const bytes=await (await fetch(form.file)).arrayBuffer();
+    const doc=await PDFLib.PDFDocument.load(bytes);
+    const pdfForm=doc.getForm(); const ctx=fillCtx(); let filled=0;
+    for(const [fld,key] of Object.entries(form.map)){ const v=ctx[key]; if(v==null||v==="") continue; try{ pdfForm.getTextField(fld).setText(String(v)); filled++; }catch(e){} }
+    const out=await doc.save();
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(new Blob([out],{type:"application/pdf"}));
+    a.download=`${form.id}_${(val("patient")||"patient").replace(/[^a-z0-9]+/gi,"-")}.pdf`;
+    a.click(); URL.revokeObjectURL(a.href);
+    btn.textContent=`Filled ${filled} fields ✓`;
+    setTimeout(()=>{ btn.textContent=label; btn.disabled=false; }, 2200);
+  }catch(e){ btn.textContent="Error — retry"; btn.disabled=false; setTimeout(()=>btn.textContent=label,2200); }
+});
+
+// init
+$("auditDate").value = "";
+buildForm(); renderAll(); setConnected(); updateOfficial();
+</script>
+</body>
+</html>

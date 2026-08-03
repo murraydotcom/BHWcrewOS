@@ -1,0 +1,156 @@
+/* ============================================================
+   BHW Design Tokens — the single source of truth for every
+   BHW-branded resource site (crewOS, HQ, clinical tools, RCM).
+
+   Link it from any page:
+     <link rel="stylesheet" href="/assets/bhw-tokens.css">
+
+   Then build with the custom properties below (var(--clay),
+   var(--card), etc.). The palette is the canonical crewOS set,
+   lifted out of index.html so it lives in ONE place. Change a
+   colour here and it changes everywhere.
+   ============================================================ */
+
+:root{
+  /* ---- Surfaces ---- */
+  --bg:#f5f2ec;            /* app background (warm linen) */
+  --bg-alt:#f7f5f2;        /* lighter linen for lightweight pages */
+  --card:#fffdf9;          /* cards, panels, inputs */
+  --line:#e9e2d4;          /* hairline borders */
+  --line-soft:#f2ede4;     /* faint inner rules */
+
+  /* ---- Ink / type ---- */
+  --ink:#2e3d45;           /* primary text */
+  --ink-soft:#7a7f78;      /* secondary / labels */
+  --deep:#2f4551;          /* headers, dark chrome */
+
+  /* ---- Brand palette ---- */
+  --blue:#80abbd;          --blue-deep:#4f7f92;   /* "river" */
+  --clay:#b07a55;          --clay-deep:#8f5c3d;   /* accent / CTAs */
+  --sage:#a8b59a;
+  --sand:#dcc8b1;
+  --teal:#5fa9a6;
+
+  /* ---- Status ---- */
+  --ok:#6f8f6a;
+  --warn:#b07a55;
+  --alert:#a85846;
+
+  /* ---- Program / division colours (spines, tags, KPIs) ---- */
+  --pc-primary:#80abbd;    /* Primary Care  */
+  --pc-charmed:#d9b45f;    /* CharmEd Minds */
+  --pc-mind:#b07a55;       /* Mind & Mood   */
+  --pc-porter:#8a6d5c;     /* Porter House  */
+  --pc-chronic:#a8b59a;    /* Chronic Care  */
+  --pc-flow:#5fa9a6;       /* Flow          */
+  --pc-admin:#2f4551;      /* Admin / Ops   */
+
+  /* ---- Shape & depth ---- */
+  --radius:18px;
+  --radius-sm:12px;
+  --shadow:0 10px 34px -14px rgba(47,69,81,.22), 0 2px 8px rgba(47,69,81,.05);
+  --shadow-lg:0 30px 80px -20px rgba(20,32,38,.5);
+
+  /* ---- Gradients ---- */
+  --clay-grad:linear-gradient(120deg,#c68e63,#8f5c3d);
+  --deep-grad:linear-gradient(120deg,#33505e,#2f4551 65%);
+  --page-wash:
+    radial-gradient(1200px 500px at 85% -10%, rgba(128,171,189,.13), transparent 60%),
+    radial-gradient(900px 420px at -10% 110%, rgba(220,200,177,.28), transparent 55%);
+
+  /* ---- Type families ---- */
+  --sans:'Montserrat',system-ui,-apple-system,Segoe UI,sans-serif;
+  --serif:'Playfair Display',Georgia,serif;
+
+  /* ---- Foundation / dark surfaces ----
+     Dark, luminous palette drawn from The Foundation (the nonprofit)
+     mark. For HQ and any future dark-themed resource site. */
+  --fnd-navy:#0e2233;
+  --fnd-navy-deep:#091722;
+  --fnd-navy-soft:#14324c;
+  --fnd-panel:rgba(255,255,255,.045);
+  --fnd-panel-hi:rgba(255,255,255,.075);
+  --fnd-panel-line:rgba(255,255,255,.10);
+  --fnd-ink:#e9f0f2;
+  --fnd-ink-soft:#9db4c2;
+  --fnd-gold:#e0b75e;
+  --fnd-gold-deep:#c8933a;
+  --fnd-teal:#5fb3ac;
+  --fnd-peri:#8aa9d6;
+  --fnd-green:#8fce8f;
+  --fnd-cream:#f4eede;
+  --fnd-glow:0 0 60px -10px rgba(224,183,94,.45);
+}
+
+/* ============================================================
+   Optional primitives. These are opt-in helper classes — pure
+   tokens above are enough on their own, but linking this file
+   also gives a page a consistent baseline for free.
+   ============================================================ */
+
+.bhw-base{
+  font-family:var(--sans);
+  color:var(--ink);
+  background:var(--page-wash),var(--bg);
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.bhw-base *{box-sizing:border-box}
+
+@media (prefers-reduced-motion:reduce){
+  .bhw-base *{transition:none!important;animation:none!important}
+}
+
+/* Focus ring — consistent across every BHW site */
+.bhw-base :focus-visible{
+  outline:3px solid var(--sand);
+  outline-offset:2px;
+  border-radius:8px;
+}
+
+/* Card */
+.bhw-card{
+  background:var(--card);
+  border:1px solid rgba(220,200,177,.55);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:24px 26px;
+}
+
+/* Pill button — clay CTA */
+.bhw-btn{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--clay-grad);color:#fff;border:none;
+  border-radius:999px;padding:13px 22px;
+  font-family:var(--sans);font-weight:700;font-size:13px;
+  letter-spacing:.1em;text-transform:uppercase;cursor:pointer;
+  box-shadow:0 10px 24px -10px rgba(143,92,61,.65);
+  transition:transform .15s ease, box-shadow .15s ease;
+  text-decoration:none;
+}
+.bhw-btn:hover{transform:translateY(-1px);box-shadow:0 14px 28px -10px rgba(143,92,61,.7)}
+
+/* Ghost button — for dark chrome */
+.bhw-btn-ghost{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(244,247,247,.07);
+  border:1px solid rgba(220,200,177,.4);color:#e9eef0;
+  padding:8px 16px;border-radius:999px;
+  font-family:var(--sans);font-size:11.5px;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;cursor:pointer;
+  transition:background .15s ease,border-color .15s ease;
+  text-decoration:none;
+}
+.bhw-btn-ghost:hover{background:rgba(220,200,177,.22);border-color:var(--sand)}
+
+/* Small uppercase eyebrow label */
+.bhw-eyebrow{
+  font-size:10.5px;font-weight:700;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--clay-deep);
+}
+
+/* Gold accent rule */
+.bhw-gold-rule{
+  height:2px;
+  background:linear-gradient(90deg,#c68e63,#8f5c3d 190px,rgba(220,200,177,.5) 190px,rgba(220,200,177,0) 100%);
+}

@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>BHW Medical Group — Questionnaire</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/bhw-tokens.css">
+<script>try{var t=localStorage.getItem("bhw-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+body{font-family:var(--sans);color:var(--ink);font-size:15px;line-height:1.6;background:var(--page-wash),var(--bg);min-height:100vh;padding:0 0 60px}
+:focus-visible{outline:2px solid var(--clay);outline-offset:2px;border-radius:6px}
+button{font-family:inherit;cursor:pointer}
+
+header.top{background:var(--deep-grad,linear-gradient(120deg,#33505e,#2f4551 65%));color:#eef3f4}
+.top-inner{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:12px;padding:15px 22px}
+.wm{font-weight:300;font-size:17px;letter-spacing:.02em}
+.wm b{font-weight:800}.wm .k{color:var(--sand);font-weight:800}
+.wm small{display:block;font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:#a9c2cc;font-weight:600;margin-top:2px}
+.theme-btn{margin-left:auto;background:rgba(244,247,247,.08);border:1px solid rgba(220,200,177,.4);color:#e9eef0;padding:7px 13px;border-radius:999px;font-size:11px;font-weight:600;letter-spacing:.06em}
+.gold-rule{height:2px;background:linear-gradient(90deg,#c68e63,#8f5c3d 190px,rgba(220,200,177,.5) 190px,rgba(220,200,177,0) 100%)}
+.progress{position:sticky;top:0;height:4px;background:var(--line-soft);z-index:5}
+.progress .bar{height:100%;background:var(--acc,var(--clay-grad));width:0;transition:width .25s}
+
+.wrap{max-width:760px;margin:0 auto;padding:22px}
+.card{background:var(--card);border:1px solid rgba(220,200,177,.6);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px 26px;margin-bottom:18px}
+.eyebrow{font-size:10px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--acc,var(--clay-deep))}
+h1{font-size:22px;font-weight:800;letter-spacing:-.01em;margin:4px 0 6px;color:var(--deep)}
+.lede{color:var(--ink-soft);font-size:13.5px;margin-bottom:4px}
+.intro{background:color-mix(in srgb,var(--acc,#80abbd) 8%,transparent);border:1px solid color-mix(in srgb,var(--acc,#80abbd) 26%,transparent);border-radius:11px;padding:13px 15px;font-size:13.5px;color:var(--deep);margin:14px 0 6px}
+.who{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.who .lbl{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);width:100%}
+.who .opt{border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:7px 15px;font-size:12.5px;font-weight:600}
+.who .opt.on{border-color:var(--acc,#80abbd);background:color-mix(in srgb,var(--acc,#80abbd) 10%,var(--card));color:var(--deep)}
+.field{margin-top:12px}.field label{display:block;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:4px}
+.field input{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);font-size:14px}
+.field input:focus{outline:none;border-color:var(--acc,#80abbd)}
+
+.sec-h{margin:22px 0 4px;font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--acc,#80abbd);display:flex;align-items:center;gap:9px}
+.sec-h::after{content:"";height:1px;background:color-mix(in srgb,var(--acc,#80abbd) 30%,transparent);flex:1}
+.q{padding:14px 0;border-bottom:1px solid var(--line-soft)}
+.q:last-child{border-bottom:none}
+.q .stem{font-size:14.5px;font-weight:600;margin-bottom:10px;color:var(--ink)}
+.opts{display:flex;flex-direction:column;gap:7px}
+.opts.row{flex-direction:row;flex-wrap:wrap}
+.opts .o{display:flex;align-items:center;gap:10px;border:1.5px solid var(--line);border-radius:10px;padding:9px 13px;font-size:13.5px;background:var(--card);transition:.12s}
+.opts.row .o{flex:0 0 auto}
+.opts .o:hover{border-color:var(--sand)}
+.opts .o.sel{border-color:var(--acc,#80abbd);background:color-mix(in srgb,var(--acc,#80abbd) 9%,var(--card));font-weight:600}
+.opts .o input{width:17px;height:17px;accent-color:var(--acc,#80abbd);flex:none}
+.q textarea,.q .qtext{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);font-size:14px;font-family:inherit}
+.q textarea{min-height:70px;resize:vertical;line-height:1.5}
+.q textarea:focus,.q .qtext:focus{outline:none;border-color:var(--acc,#80abbd)}
+.follow{margin-top:8px;display:none}.follow.on{display:block}
+
+.consent{display:flex;gap:10px;align-items:flex-start;margin:18px 0 6px;font-size:12.5px;color:var(--ink-soft)}
+.consent input{margin-top:2px;width:17px;height:17px;accent-color:var(--ok);flex:none}
+.submit{background:var(--acc-grad,var(--clay-grad));color:#fff;border:none;border-radius:999px;padding:13px 26px;font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;box-shadow:0 10px 22px -10px rgba(80,80,80,.5);width:100%;margin-top:6px}
+.submit:disabled{opacity:.55;cursor:not-allowed}
+.err-line{color:var(--alert,#b4472e);font-size:12.5px;font-weight:600;margin-top:10px;min-height:16px}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.foot{text-align:center;color:var(--ink-soft);font-size:11px;margin-top:8px}
+.done{text-align:center;padding:30px 20px}.done .big{font-size:44px}
+.done h2{font-size:20px;font-weight:800;color:var(--deep);margin:8px 0 6px}
+.done .btnrow{display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+.done .pbtn{border:1.5px solid var(--acc,#80abbd);color:var(--acc,#80abbd);background:transparent;border-radius:999px;padding:11px 20px;font-size:12px;font-weight:700;letter-spacing:.06em}
+
+/* ---------- branded print summary (patient-ready) ---------- */
+#summary{display:none}
+.doc{background:#fff;color:#232b30;font-size:13px;line-height:1.6;padding:46px 50px;max-width:820px;margin:0 auto}
+.doc .lh{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;border-bottom:3px solid var(--acc,#80abbd);padding-bottom:16px}
+.doc .lh .brand{display:flex;align-items:center;gap:13px}
+.doc .lh img{width:56px;height:56px;object-fit:contain;border-radius:8px}
+.doc .lh .org{font-weight:800;font-size:16px;color:#22333f}
+.doc .lh .org small{display:block;font-weight:600;font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--acc,#80abbd);margin-top:2px}
+.doc .lh .meta{text-align:right;font-size:10.5px;color:#5f6b72;white-space:nowrap}
+.doc h1.dt{font-size:19px;font-weight:800;margin:18px 0 3px;color:#22333f}
+.doc .dsub{font-size:12px;color:var(--acc,#80abbd);font-weight:700;margin-bottom:14px}
+.doc .kv{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:5px 14px;font-size:12px;background:color-mix(in srgb,var(--acc,#80abbd) 7%,#fff);border:1px solid color-mix(in srgb,var(--acc,#80abbd) 20%,#fff);border-radius:9px;padding:12px 15px;margin-bottom:16px}
+.doc .kv dt{color:#6b757b;font-weight:600}.doc .kv dd{font-weight:700;color:#26333b}
+.doc .qa{margin:0 0 11px}.doc .qa .qq{font-size:11px;font-weight:700;color:#6b757b}.doc .qa .aa{font-size:13px;font-weight:600;color:#26333b;white-space:pre-wrap}
+.doc .sec{font-size:10.5px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--acc,#80abbd);margin:16px 0 8px;border-bottom:1px solid color-mix(in srgb,var(--acc,#80abbd) 24%,#fff);padding-bottom:3px}
+.doc .foot{margin-top:22px;border-top:2px solid var(--acc,#80abbd);padding-top:11px;font-size:10px;color:#7a848a;display:flex;justify-content:space-between;gap:12px}
+.doc .foot .tag{font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--acc,#80abbd)}
+
+@media print{
+  @page{size:letter;margin:0.6in}
+  body{background:#fff;padding:0}
+  header.top,.gold-rule,.progress,.wrap{display:none!important}
+  #summary{display:block!important}
+  .doc{padding:0;max-width:none}.doc,.doc *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<div class="progress"><div class="bar" id="bar"></div></div>
+<header class="top"><div class="top-inner">
+  <div class="wm"><b>BHW</b> <span class="k">Medical Group</span><small>Confidential Questionnaire</small></div>
+  <button class="theme-btn" id="themeBtn" type="button">◐ Theme</button>
+</div></header>
+<div class="gold-rule"></div>
+
+<div class="wrap" id="app"><div class="card"><p class="lede">Loading…</p></div></div>
+<div id="summary"></div>
+
+<script>
+const ORG = { name:"BHW Medical Group", tag:"Baltimore Healthcare & Wellness", addr:"2131 Maryland Ave, Baltimore, MD 21218", phone:"(443) 762-5343", fax:"(833) 258-3941", email:"info@bhwmedical.org" };
+const S03 = [{v:0,l:"Not at all"},{v:1,l:"Several days"},{v:2,l:"More than half the days"},{v:3,l:"Nearly every day"}];
+const YNA = ["Yes","No","N/A"];
+const FREQ4 = ["Not at all","Several days","More than half the days","Nearly every day","N/A"];
+const RATE5 = ["Excellent","Very good","Good","Fair","Poor","N/A"];
+const HIGH2 = ["More than half the days","Nearly every day"];
+
+/* Config-driven questionnaires. Question types: section, single, multi, yesno
+   (optional follow), scale, text, long. Server (questionnaire-submit.js) mirrors
+   the slugs + owning program; it trusts the transcript the page builds here. */
+const QUESTIONNAIRES = {
+  "awv-hra": { name:"Annual Wellness Visit — Health Risk Assessment", program:"Primary Care", acc:"#5f8ba0", accGrad:"linear-gradient(100deg,#5f8ba0,#3f6f84)", logo:"/assets/brand/bhw-medical.png", who:"Self",
+    intro:"This helps your care team prepare for your Annual Wellness Visit. Please answer what you can — you can skip anything that doesn't apply. There are no right or wrong answers.",
+    questions:[
+      {type:"section",label:"Medical history"},
+      {type:"long",id:"currentConditions",q:"What conditions have you been diagnosed with (current)?"},
+      {type:"long",id:"pastConditions",q:"Please list any past conditions."},
+      {type:"long",id:"addlHealth",q:"Is there anything else about your health conditions we should know?"},
+      {type:"multi",id:"familyHistory",q:"Which of these conditions have affected your family (parents, siblings, children)? Check all that apply.",options:["Abdominal Aortic Aneurysm (AAA)","Alzheimer's disease / dementia","Arthritis","Asthma / wheezing","Blood clots","Breast cancer","Colon cancer","Depression","Diabetes","Glaucoma","Heart disease","High cholesterol","High blood pressure","Kidney failure","Ovarian cancer","Prostate cancer","Stroke","Uterine cancer","Other","None of the above"]},
+      {type:"section",label:"Hospitalizations & surgeries"},
+      {type:"long",id:"surgical",q:"Please list your surgical history with approximate dates (or write “none”)."},
+      {type:"long",id:"hospitalizations",q:"Any other hospitalizations (reason + approximate date), or write “none”."},
+      {type:"section",label:"Your care team"},
+      {type:"long",id:"providers",q:"Please list everyone involved in your health — providers, support system, suppliers, and resources."},
+      {type:"section",label:"Medications & allergies"},
+      {type:"long",id:"meds",q:"Please list all medications you take routinely (prescriptions, supplements, over-the-counter)."},
+      {type:"long",id:"allergies",q:"Do you have any known allergies? List the type and reaction, or write “none”."},
+      {type:"single",id:"medProblems",q:"Do you have any problems taking medications as prescribed?",options:YNA},
+      {type:"single",id:"medAccess",q:"Do you have difficulty picking up your medications, such as paying for them or transportation?",options:YNA},
+      {type:"section",label:"Social history"},
+      {type:"single",id:"alcohol",q:"Do you drink alcohol?",options:YNA},
+      {type:"single",id:"smoke",q:"Do you smoke or use nicotine products?",options:YNA},
+      {type:"single",id:"drugs",q:"Do you use any recreational drugs?",options:YNA},
+      {type:"single",id:"rxNonMedical",q:"Do you use any prescription medications for non-medical reasons?",options:YNA},
+      {type:"single",id:"opioids",q:"Do you take any opioid medications?",options:YNA},
+      {type:"section",label:"Mental health"},
+      {type:"single",id:"mhDown",q:"Over the past 2 weeks, how often have you felt down, depressed, or hopeless?",options:FREQ4},
+      {type:"single",id:"mhInterest",q:"Over the past 2 weeks, how often have you felt little interest or pleasure in doing things?",options:FREQ4},
+      {type:"single",id:"mhNervous",q:"In the past 2 weeks, how often have you felt nervous, anxious, or on edge?",options:FREQ4},
+      {type:"single",id:"mhWorry",q:"In the past 2 weeks, how often were you not able to stop or control worrying?",options:FREQ4},
+      {type:"single",id:"emotSupport",q:"How often do you get the emotional support you need?",options:["Always","Usually","Sometimes","Rarely","Never","N/A"]},
+      {type:"single",id:"pain",q:"Do you have any problems with pain?",options:["Yes, my pain is currently unmanaged","Yes, my pain is currently adequately managed","No, I do not experience pain routinely","N/A"]},
+      {type:"section",label:"Lifestyle"},
+      {type:"single",id:"physHealth",q:"How would you rate your overall physical health?",options:RATE5},
+      {type:"single",id:"dental",q:"How would you describe the condition of your mouth and teeth (including dentures)?",options:RATE5},
+      {type:"single",id:"diet",q:"In a typical week, how many days do you eat a balanced diet of fruit, vegetables, protein, and whole grains?",options:["Everyday","5–6 days","3–4 days","1–2 days","Never","N/A"]},
+      {type:"single",id:"exercise",q:"On average, do you exercise at least 30 minutes a day, 5 days a week?",options:YNA},
+      {type:"single",id:"sleepHours",q:"On average, how many hours of sleep do you get each night?",options:["More than 10","9","8","7","6","5","4","3 or fewer","N/A"]},
+      {type:"multi",id:"sleepApnea",q:"Which of the following apply to you? (check all that apply)",options:["I snore","I feel significantly tired or sleepy during the day","I've been told I stop breathing or gasp for air while sleeping","I have high blood pressure","None of these"]},
+      {type:"single",id:"seatbelt",q:"Do you always use your seatbelt in the car?",options:YNA},
+      {type:"single",id:"sun",q:"Do you protect yourself from the sun outdoors (sunscreen, hat)?",options:YNA},
+      {type:"section",label:"Getting around & support"},
+      {type:"multi",id:"adl",q:"Which activities of daily living do you currently need assistance with?",options:["Dressing","Feeding","Walking","Bathing","Grooming","Toileting","N/A"]},
+      {type:"multi",id:"iadl",q:"Which instrumental activities do you currently need assistance with?",options:["Preparing meals","Managing finances","Housekeeping","Shopping","Transportation","Medication management","Using the phone","N/A"]},
+      {type:"single",id:"support",q:"Is your support system adequate and meeting your needs?",options:["Yes","No","I am independent and require no additional support","N/A"]},
+      {type:"single",id:"hearingAids",q:"Do you have hearing aids?",options:["Yes, but they are inadequate","Yes, and they are adequate","No, I do not use hearing aids"]},
+      {type:"single",id:"hearingDiff",q:"Do you have difficulty hearing or understanding people when they speak?",options:["Yes","Sometimes","No"]},
+      {type:"section",label:"Home safety"},
+      {type:"single",id:"fell",q:"Have you fallen in the past year?",options:YNA},
+      {type:"single",id:"unsteady",q:"Do you feel unsteady when standing or walking?",options:YNA},
+      {type:"single",id:"worryFall",q:"Do you worry about falling?",options:YNA},
+      {type:"single",id:"walkways",q:"Are the walkways in your home clear of cords, furniture, and clutter?",options:YNA},
+      {type:"single",id:"handrails",q:"Do your stairways have handrails?",options:YNA},
+      {type:"single",id:"callHelp",q:"If you were unable to get up after a fall, do you have a way to call for emergency help?",options:YNA},
+      {type:"single",id:"bathSafety",q:"Do you have difficulty or fear of falling getting in and out of the bath or shower?",options:YNA},
+      {type:"single",id:"lighting",q:"Do you have adequate lighting throughout the house, including hallways and stairways?",options:YNA},
+      {type:"single",id:"detectors",q:"Do you have functioning smoke and carbon-monoxide detectors that you maintain?",options:YNA},
+      {type:"section",label:"Planning ahead"},
+      {type:"multi",id:"lifePlanning",q:"Which life-planning documents do you have in place?",options:["I do not have life-planning documents in place","Medical Power of Attorney","Living Will or Advance Directive","POLST (Physician Orders for Life-Sustaining Treatment)","Do Not Resuscitate order","Organ and Tissue Donation","N/A"]},
+      {type:"single",id:"wantLifePlanning",q:"Medicare covers the chance to discuss and create life-planning documents. Would you like to create any?",options:YNA},
+      {type:"single",id:"caregiver",q:"Did a caregiver complete this questionnaire on behalf of the patient?",options:YNA},
+      {type:"section",label:"Care coordination"},
+      {type:"single",id:"ccm",q:"Would you like to enroll in the Chronic Care Management program?",options:["Yes, enroll","Decline","Not at this time"]},
+      {type:"single",id:"rpm",q:"Would you like to enroll in the Remote Patient Monitoring program?",options:["Yes, enroll","Decline","Not at this time"]},
+      {type:"single",id:"hrsn",q:"Do you agree to participate in the Health-Related Social Needs (AHC-HRSN) screening?",options:["Yes","No"]},
+      {type:"long",id:"other",q:"Anything else you'd like your care team to know?"}
+    ],
+    flags:(a)=>{ const f=[]; const has=(v,arr)=>arr.indexOf(v)>-1;
+      if(has(a.mhDown,HIGH2)||has(a.mhInterest,HIGH2)) f.push("Low mood — consider PHQ-9");
+      if(has(a.mhNervous,HIGH2)||has(a.mhWorry,HIGH2)) f.push("Anxiety — consider GAD-7");
+      if(a.pain==="Yes, my pain is currently unmanaged") f.push("Unmanaged pain");
+      if(a.fell==="Yes"||a.unsteady==="Yes"||a.worryFall==="Yes") f.push("Fall risk");
+      if(a.walkways==="No"||a.handrails==="No"||a.lighting==="No"||a.detectors==="No"||a.callHelp==="No"||a.bathSafety==="Yes") f.push("Home safety");
+      if(Array.isArray(a.sleepApnea)&&a.sleepApnea.filter(x=>x!=="None of these").length>=2) f.push("Screen for sleep apnea (STOP-BANG)");
+      if(a.medAccess==="Yes") f.push("Medication access barrier (SDH)");
+      if(a.support==="No") f.push("Support gap");
+      if((Array.isArray(a.adl)&&a.adl.filter(x=>x!=="N/A").length)||(Array.isArray(a.iadl)&&a.iadl.filter(x=>x!=="N/A").length)) f.push("Functional assistance needed");
+      if((Array.isArray(a.lifePlanning)&&a.lifePlanning.indexOf("I do not have life-planning documents in place")>-1)||a.wantLifePlanning==="Yes") f.push("Advance care planning");
+      if(a.smoke==="Yes") f.push("Tobacco cessation");
+      if(a.opioids==="Yes"||a.rxNonMedical==="Yes"||a.drugs==="Yes") f.push("Substance-use follow-up");
+      if(a.ccm==="Yes, enroll") f.push("Enroll: CCM");
+      if(a.rpm==="Yes, enroll") f.push("Enroll: RPM");
+      if(a.hrsn==="Yes") f.push("Complete AHC-HRSN screening");
+      return f; } },
+  "charmed-intake": { name:"CharmEd Minds — Intake", program:"CharmEd Minds", acc:"#c69a3c", accGrad:"linear-gradient(100deg,#d9b45f,#b3892f)", logo:"/assets/brand/charmed-minds.png", who:"Parent/Caregiver",
+    intro:"Tell us what brings you (or your child) to CharmEd Minds. This helps us prepare the right assessment and supports.",
+    questions:[
+      {type:"multi",id:"reason",q:"What brings you in? (check all that apply)",options:["Attention / focus","Learning or academics","Behavior","Social communication","Emotional regulation","Sensory","Memory / cognition","Late-diagnosis question","Other"]},
+      {type:"text",id:"age",q:"Patient's age (and grade, if a student)"},
+      {type:"long",id:"onset",q:"When did you first notice these concerns?"},
+      {type:"yesno",id:"prioreval",q:"Has there been any prior evaluation or diagnosis?",follow:"If yes, what was found?"},
+      {type:"yesno",id:"school",q:"Are there any school supports in place (IEP or 504)?",follow:"If yes, please describe"},
+      {type:"long",id:"hopes",q:"What are your hopes for this assessment?"}
+    ],
+    flags:(a)=>[] },
+  "porter-lifeskills": { name:"The Porter House — Growth & Lifeskills Intake", program:"The Porter House", acc:"#8a6d5c", accGrad:"linear-gradient(100deg,#8a6d5c,#6d5445)", logo:"/assets/brand/bhw-wellness.png", who:"Self",
+    intro:"Welcome to The Porter House. This is the start of your 3-month growth journey — Stabilize & Assess, Build Skills, then Launch Prep. Share as much or as little as you're comfortable with; it helps your case lead build a plan around you.",
+    questions:[
+      {type:"section",label:"Your goals"},
+      {type:"multi",id:"areas",q:"Which life skills would you like to build here? (check all that apply)",options:["Cooking / meals","Budgeting / money","Transportation","Job or school","Health & medications","Social connections","Housing stability","Personal care","Time management","Other"]},
+      {type:"long",id:"goals",q:"What growth goals matter most to you right now?"},
+      {type:"single",id:"readiness",q:"How ready do you feel to live independently right now?",options:["Not yet","Getting there","Mostly ready","Ready"]},
+      {type:"section",label:"Your story"},
+      {type:"multi",id:"drivers",q:"Which of these are part of your story? (optional — check any you're comfortable sharing)",options:["Substance use / in recovery","Mental illness (untreated or undertreated)","Trauma history","Housing instability","Family conflict / estrangement","Unemployment / income loss","Justice involvement","Medical condition","Domestic violence","Aging out of foster care","Other","Prefer not to say"]},
+      {type:"long",id:"supports",q:"Who or what supports do you have today?"},
+      {type:"section",label:"Safety & wellbeing"},
+      {type:"yesno",id:"safety",q:"Are there any safety concerns we should know about?",follow:"If yes, tell us more"},
+      {type:"long",id:"other",q:"Anything else you'd like your case lead to know?"}
+    ],
+    flags:(a)=>{ const f=[]; const drv=Array.isArray(a.drivers)?a.drivers:[];
+      if(a.safety==="Yes") f.push("Safety concern");
+      if(drv.some(d=>["Domestic violence","Trauma history","Substance use / in recovery","Mental illness (untreated or undertreated)"].indexOf(d)>-1)) f.push("Sensitive drivers — case-lead review");
+      if(a.readiness==="Not yet") f.push("Early stage — Stabilize & Assess");
+      return f; } }
+};
+
+const qp = new URLSearchParams(location.search);
+const slug = (qp.get("q")||"").toLowerCase();
+const Q = QUESTIONNAIRES[slug];
+const caseId = qp.get("case")||"", ptParam = qp.get("pt")||"";
+const app = document.getElementById("app");
+let state = { who:(Q&&Q.who)||"Self" };
+const esc = (s)=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function renderQ(item,i){
+  if(item.type==="section") return `<div class="sec-h">${esc(item.label)}</div>`;
+  const id=item.id, name="q_"+id;
+  let inner="";
+  if(item.type==="single"||item.type==="scale"){
+    const opts=item.type==="scale"?item.scale:item.options.map(o=>({v:o,l:o}));
+    inner=`<div class="opts${item.type==="scale"?" ":" "}">`+opts.map(o=>`<label class="o"><input type="radio" name="${name}" value="${esc(o.v)}"><span>${esc(o.l)}</span></label>`).join("")+`</div>`;
+  } else if(item.type==="multi"){
+    inner=`<div class="opts">`+item.options.map(o=>`<label class="o"><input type="checkbox" name="${name}" value="${esc(o)}"><span>${esc(o)}</span></label>`).join("")+`</div>`;
+  } else if(item.type==="yesno"){
+    inner=`<div class="opts row"><label class="o"><input type="radio" name="${name}" value="Yes"><span>Yes</span></label><label class="o"><input type="radio" name="${name}" value="No"><span>No</span></label></div>`+
+      (item.follow?`<div class="follow" id="follow_${id}"><input class="qtext" id="followtext_${id}" placeholder="${esc(item.follow)}"></div>`:"");
+  } else if(item.type==="text"){ inner=`<input class="qtext" name="${name}" placeholder="Type your answer">`; }
+  else if(item.type==="long"){ inner=`<textarea name="${name}" placeholder="Type your answer"></textarea>`; }
+  return `<div class="q" data-id="${id}" data-type="${item.type}"><div class="stem">${esc(item.q)}</div>${inner}</div>`;
+}
+
+function render(){
+  if(!Q){ app.innerHTML='<div class="card"><div class="done"><div class="big">🔍</div><h2>Questionnaire not found</h2><p class="lede">This link may be out of date — please contact the BHW office.</p></div></div>'; return; }
+  document.documentElement.style.setProperty("--acc",Q.acc);
+  document.documentElement.style.setProperty("--acc-grad",Q.accGrad);
+  const whoOpts=["Self","Parent/Caregiver","Staff"];
+  app.innerHTML=`<div class="card">
+    <div class="eyebrow">BHW Medical Group · ${esc(Q.program)}</div>
+    <h1>${esc(Q.name)}</h1>
+    <p class="lede">Confidential — your answers become part of your care record and help your team prepare.</p>
+    <div class="intro">${esc(Q.intro)}</div>
+    <div class="who"><span class="lbl">Who is filling this out?</span>${whoOpts.map(w=>`<button type="button" class="opt${state.who===w?" on":""}" data-who="${w}">${w}</button>`).join("")}</div>
+    <div class="field"><label>Name (optional — helps us match your answers)</label><input id="pt" type="text" value="${esc(ptParam)}" placeholder="First and last name" autocomplete="name"></div>
+    <div class="field"><label>BHW ID (optional)</label><input id="bhwid" type="text" placeholder="If you have it"></div>
+    <div id="items">${Q.questions.map(renderQ).join("")}</div>
+    <label class="consent"><input type="checkbox" id="consent"><span>I understand my answers become part of my confidential record at BHW Medical Group.</span></label>
+    <input class="hp" tabindex="-1" autocomplete="off" id="hp" aria-hidden="true" placeholder="Leave blank">
+    <button class="submit" id="go" disabled>Submit my answers</button>
+    <div class="err-line" id="err"></div>
+    <p class="foot">${esc(ORG.name)} · Your responses are transmitted securely.</p>
+  </div>`;
+  wire();
+}
+
+function wire(){
+  app.querySelectorAll("[data-who]").forEach(b=>b.onclick=()=>{ state.who=b.dataset.who; app.querySelectorAll("[data-who]").forEach(x=>x.classList.toggle("on",x.dataset.who===state.who)); });
+  app.querySelectorAll(".opts .o input").forEach(inp=>inp.onchange=()=>{
+    const grp=inp.closest(".opts");
+    if(inp.type==="radio") grp.querySelectorAll(".o").forEach(o=>o.classList.toggle("sel",o.querySelector("input").checked));
+    else inp.closest(".o").classList.toggle("sel",inp.checked);
+    // yes/no follow-up reveal
+    const qEl=inp.closest(".q"); const id=qEl&&qEl.dataset.id; const fol=id&&document.getElementById("follow_"+id);
+    if(fol) fol.classList.toggle("on", qEl.querySelector('input[value="Yes"]')?.checked);
+    updateProgress();
+  });
+  app.querySelectorAll(".q textarea, .q input.qtext").forEach(el=>el.addEventListener("input",updateProgress));
+  const consent=document.getElementById("consent"), go=document.getElementById("go");
+  consent.onchange=()=>go.disabled=!consent.checked;
+  go.onclick=submit;
+  updateProgress();
+}
+
+function answered(qEl){
+  const t=qEl.dataset.type;
+  if(t==="multi") return [...qEl.querySelectorAll('input:checked')].length>0;
+  if(t==="single"||t==="scale"||t==="yesno") return !!qEl.querySelector('input:checked');
+  if(t==="text") return !!qEl.querySelector('input.qtext')?.value.trim();
+  if(t==="long") return !!qEl.querySelector('textarea')?.value.trim();
+  return false;
+}
+function updateProgress(){
+  const qs=[...app.querySelectorAll(".q")]; const done=qs.filter(answered).length;
+  document.getElementById("bar").style.width=Math.round(done/Math.max(qs.length,1)*100)+"%";
+}
+
+function collect(){
+  const answers={}, pairs=[];
+  Q.questions.forEach(item=>{
+    if(item.type==="section") return;
+    const qEl=app.querySelector(`.q[data-id="${item.id}"]`); if(!qEl) return;
+    let val="";
+    if(item.type==="multi") val=[...qEl.querySelectorAll('input:checked')].map(i=>i.value);
+    else if(item.type==="single"||item.type==="scale"||item.type==="yesno"){ const s=qEl.querySelector('input:checked'); val=s?s.value:""; }
+    else if(item.type==="text") val=qEl.querySelector('input.qtext').value.trim();
+    else if(item.type==="long") val=qEl.querySelector('textarea').value.trim();
+    if(item.type==="scale" && val!=="") { const lab=(item.scale.find(o=>String(o.v)===String(val))||{}).l; answers[item.id]=Number(val); pairs.push([item.q, `${val} — ${lab||""}`]); return; }
+    if(item.follow){ const ft=document.getElementById("followtext_"+item.id); if(ft&&ft.value.trim()&&val==="Yes") { answers[item.id+"_detail"]=ft.value.trim(); } }
+    if(Array.isArray(val)){ if(val.length){ answers[item.id]=val; pairs.push([item.q, val.join(", ")]); } }
+    else if(val!==""){ answers[item.id]=val; let disp=val; if(item.follow && answers[item.id+"_detail"]) disp+=` — ${answers[item.id+"_detail"]}`; pairs.push([item.q, disp]); }
+  });
+  return {answers, pairs};
+}
+
+async function submit(){
+  const err=document.getElementById("err"); err.textContent="";
+  const {answers, pairs}=collect();
+  if(!pairs.length){ err.textContent="Please answer at least one question before submitting."; return; }
+  const go=document.getElementById("go"); go.disabled=true; go.textContent="Submitting…";
+  const patientLabel=(document.getElementById("pt").value||"").trim();
+  const bhwId=(document.getElementById("bhwid").value||"").trim();
+  const transcript=pairs.map(([q,a])=>`• ${q}\n   ${a}`).join("\n");
+  const flags=(Q.flags?Q.flags(answers):[]).join(", ");
+  try{
+    const r=await fetch("/.netlify/functions/questionnaire-submit",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({slug, patientLabel, bhwId, who:state.who, transcript, answers, flags, hp:document.getElementById("hp").value})});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok||!d.ok) throw new Error(d.error||"Something went wrong.");
+    buildSummary({patientLabel, bhwId, pairs});
+    app.innerHTML='<div class="card"><div class="done"><div class="big">✅</div><h2>Thank you — your answers are in.</h2>'+
+      '<p class="lede">Your care team at BHW Medical Group will review them before your visit. You can print a copy for your records.</p>'+
+      '<div class="btnrow"><button class="pbtn" onclick="window.print()">🖨️ Print my summary (PDF)</button></div></div></div>';
+    document.getElementById("bar").style.width="100%"; window.scrollTo({top:0,behavior:"smooth"});
+  }catch(e){ go.disabled=false; go.textContent="Submit my answers"; err.textContent=e.message||"Couldn't submit. Please try again."; }
+}
+
+function buildSummary({patientLabel, bhwId, pairs}){
+  const now=new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"});
+  const rows=pairs.map(([q,a])=>`<div class="qa"><div class="qq">${esc(q)}</div><div class="aa">${esc(a)}</div></div>`).join("");
+  document.getElementById("summary").innerHTML=`<div class="doc">
+    <div class="lh"><div class="brand"><img src="${Q.logo}" alt="${esc(Q.program)}" onerror="this.style.display='none'"><div class="org">${ORG.name}<small>${esc(Q.program)}</small></div></div>
+      <div class="meta">${ORG.addr}<br>Tel ${ORG.phone}<br>${ORG.email}</div></div>
+    <h1 class="dt">${esc(Q.name)}</h1><div class="dsub">Completed ${now}${state.who?` · by ${esc(state.who)}`:""}</div>
+    <dl class="kv"><dt>Patient</dt><dd>${esc(patientLabel)||"—"}</dd><dt>BHW ID</dt><dd>${esc(bhwId)||"—"}</dd></dl>
+    <div class="sec">Responses</div>${rows}
+    <div class="foot"><span class="tag">${esc(Q.program)}</span><span>Bring this to your visit · ${ORG.name} · ${ORG.phone}</span></div>
+  </div>`;
+}
+
+document.getElementById("themeBtn").onclick=()=>{ const cur=document.documentElement.getAttribute("data-theme")==="black-opal"?"":"black-opal"; if(cur)document.documentElement.setAttribute("data-theme",cur);else document.documentElement.removeAttribute("data-theme"); try{localStorage.setItem("bhw-theme",cur);}catch(e){} };
+render();
+</script>
+</body>
+</html>

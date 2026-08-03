@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Hospital Discharges &amp; TCM — Care Management</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/bhw-tokens.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);color:var(--ink);font-size:14px;line-height:1.55;background:var(--page-wash),var(--bg);min-height:100vh}
+.wrap{max-width:1180px;margin:0 auto;padding:22px 22px 70px}
+h1{font-size:22px;font-weight:700;letter-spacing:-.01em;color:var(--deep)}
+.sub{color:var(--ink-soft);font-size:13px;margin:4px 0 0;max-width:820px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.05em;border-radius:999px;padding:5px 11px;border:1px solid var(--line)}
+.pill.sample{background:#fdf6ec;color:var(--clay-deep);border-color:#e6d3b0}
+.pill.live{background:#eef4f0;color:var(--ok);border-color:#cfe3d5}
+.head{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+.head .r{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.note{background:var(--card);border:1px solid rgba(220,200,177,.55);border-left:4px solid var(--blue);border-radius:12px;padding:12px 15px;font-size:12.5px;color:var(--ink);margin-bottom:16px}
+.note b{color:var(--deep)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid rgba(220,200,177,.55);border-radius:var(--radius);box-shadow:var(--shadow);padding:15px 16px;position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:3px;background:var(--kc,var(--sand))}
+.kpi .n{font-size:26px;font-weight:300;line-height:1}
+.kpi .l{font-size:10px;color:var(--ink-soft);font-weight:700;letter-spacing:.13em;text-transform:uppercase;margin-top:6px}
+.card{background:var(--card);border:1px solid rgba(220,200,177,.55);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 20px}
+.card-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.card-head h3{font-size:15px;font-weight:700}
+.tag{margin-left:auto;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--blue-deep);background:color-mix(in srgb,var(--blue) 12%,#fff);border:1px solid color-mix(in srgb,var(--blue) 30%,#fff);border-radius:999px;padding:3px 9px}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:760px}
+th{text-align:left;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);padding:8px 9px;border-bottom:1.5px solid var(--sand);white-space:nowrap}
+td{padding:9px;border-bottom:1px solid var(--line-soft);vertical-align:top}
+td b{font-weight:700}
+.mini{font-size:11px;color:var(--ink-soft)}
+.badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px}
+.b-info{background:#eef2f6;color:var(--blue-deep)}
+.b-mon{background:#f2f0ea;color:var(--taupe,#7a7f78)}
+.overdue{color:var(--alert);font-weight:600}
+.cxtoggle{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.cxtoggle button{background:#fff;border:none;padding:5px 9px;font-size:11px;font-weight:600;cursor:pointer;color:var(--ink-soft);font-family:inherit}
+.cxtoggle button.on{background:var(--deep);color:#fff}
+.btn{background:var(--clay-grad);color:#fff;border:none;border-radius:999px;padding:8px 15px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-family:inherit}
+.btn.ghost{background:#fff;color:var(--clay-deep);border:1.5px solid var(--sand)}
+.empty{text-align:center;color:var(--ink-soft);padding:26px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div>
+      <h1>Hospital Visits &amp; Transitional Care</h1>
+      <p class="sub">Admissions, discharges, and ED visits across your panel (CRISP ADT feed), surfaced so no discharge slips past the <b>TCM</b> window. Post-discharge follow-up is better care <i>and</i> billable (99495 / 99496).</p>
+    </div>
+    <div class="r">
+      <span class="pill sample" id="mode">● CRISP · sample</span>
+      <button class="btn ghost" onclick="exportPanel()">⬇ CEND panel (.csv)</button>
+    </div>
+  </div>
+
+  <div class="note"><b>Where the data comes from.</b> Admit/discharge/transfer (ADT) events arrive from <b>CRISP</b> (Maryland's HIE) via its <b>CEND / ENS</b> service — CRISP matches the patient panel you submit against live hospital ADT. TCM billing requires interactive contact within <b>2 business days</b> of discharge and a face-to-face visit within <b>7 days</b> (99496, high complexity) or <b>14 days</b> (99495, moderate). The clock below is computed from each discharge date. Set <b>complexity per discharge</b> with the toggle in the Action column — it moves the visit deadline and the billed code, and the clock recomputes instantly.</div>
+
+  <div class="kpis">
+    <div class="kpi" style="--kc:var(--blue)"><div class="n" id="k-adm">—</div><div class="l">Admissions (open)</div></div>
+    <div class="kpi" style="--kc:var(--warn)"><div class="n" id="k-disch">—</div><div class="l">Discharges (7d)</div></div>
+    <div class="kpi" style="--kc:var(--alert)"><div class="n" id="k-open" style="color:var(--alert)">—</div><div class="l">TCM windows open</div></div>
+    <div class="kpi" style="--kc:var(--sage)"><div class="n" id="k-ed">—</div><div class="l">ED visits (7d)</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h3>ADT &amp; TCM Worklist</h3><span class="tag">CRISP CEND · TCM clock</span></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Patient</th><th>Event</th><th>Facility</th><th>Date</th><th>Disposition</th><th>TCM window (computed)</th><th>Action</th></tr></thead>
+      <tbody id="tb"></tbody>
+    </table></div>
+  </div>
+</div>
+
+<script>
+const TCM_RATE = { high: 281, moderate: 209 };
+// Representative sample board — used until a signed-in session returns live CRISP rows.
+const SAMPLE = [
+  { patient:"Ellison, J.",  type:"discharge", event:"Discharge (inpatient)", facility:"Johns Hopkins Hospital", daysAgo:1, dispo:"Home", complexity:"moderate" },
+  { patient:"Ruiz, M.",     type:"discharge", event:"Discharge (inpatient)", facility:"MedStar Union Memorial", daysAgo:3, dispo:"Home w/ home health", complexity:"high" },
+  { patient:"Chen, D.",     type:"discharge", event:"Discharge (observation)", facility:"Sinai Hospital", daysAgo:6, dispo:"Home", complexity:"moderate" },
+  { patient:"Okoro, A.",    type:"discharge", event:"Discharge (inpatient)", facility:"University of Maryland MC", daysAgo:12, dispo:"SNF", complexity:"moderate" },
+  { patient:"Patel, R.",    type:"ed",        event:"ED visit", facility:"GBMC", daysAgo:2, dispo:"Discharged from ED", complexity:null },
+  { patient:"Nguyen, T.",   type:"admit",     event:"Admission (inpatient)", facility:"Johns Hopkins Bayview", daysAgo:1, dispo:"Admitted", complexity:null },
+  { patient:"Williams, S.", type:"discharge", event:"Discharge (inpatient)", facility:"Mercy Medical Center", daysAgo:16, dispo:"Home", complexity:"moderate" },
+];
+let HOSP = SAMPLE.map(x=>({...x}));
+
+const startOfToday=()=>{const d=new Date();d.setHours(0,0,0,0);return d;};
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x;};
+const daysBetween=(a,b)=>Math.round((b-a)/86400000);
+function addBusinessDays(d,n){const x=new Date(d);let added=0;while(added<n){x.setDate(x.getDate()+1);const dow=x.getDay();if(dow!==0&&dow!==6)added++;}return x;}
+const md=d=>new Date(d).toLocaleDateString("en-US",{month:"short",day:"numeric"});
+
+function render(){
+  const tb=document.getElementById("tb"); const today=startOfToday();
+  let open=0, disch7=0, ed7=0, adm=0;
+  const rows = HOSP.map((h,i)=>{
+    const dDate = h.date ? new Date(h.date) : addDays(today, -(h.daysAgo||0));
+    let windowCell, actionCell, sortKey=50;
+    if(h.type==="admit"){ adm++; windowCell='<span class="mini">Inpatient — TCM clock starts at discharge</span>'; actionCell='<span class="badge b-mon">Monitor</span>'; sortKey=60; }
+    else if(h.type==="ed"){ if(daysBetween(dDate,today)<=7) ed7++; windowCell='<span class="mini">ED visit — 7-day PCP follow-up advised (not TCM-eligible)</span>'; actionCell='<span class="badge b-info">PCP follow-up</span>'; sortKey=daysBetween(dDate,today)<=7?8:55; }
+    else { // discharge
+      if(daysBetween(dDate,today)<=7) disch7++;
+      const isHigh=h.complexity==="high";
+      const contactBy=addBusinessDays(dDate,2), visitBy=addDays(dDate,isHigh?7:14);
+      const contactOpen=today<=contactBy, visitOpen=today<=visitBy;
+      if(!visitOpen){ windowCell='<span class="overdue"><b>Window closed</b> — TCM not billable</span>'; sortKey=90; }
+      else if(!contactOpen){ windowCell='<span class="overdue"><b>Contact overdue</b> · visit by '+md(visitBy)+'</span>'; open++; sortKey=1; }
+      else { const dleft=daysBetween(today,contactBy); const col=dleft<=1?"var(--alert)":"var(--blue-deep)"; windowCell='<span style="color:'+col+'">Contact by '+md(contactBy)+' <b>('+dleft+'d)</b> · visit by '+md(visitBy)+'</span>'; open++; sortKey=2+dleft; }
+      actionCell='<div class="cxtoggle" title="Set TCM complexity — clinical determination">'+
+        '<button class="'+(!isHigh?"on":"")+'" onclick="setCx('+i+',&#39;moderate&#39;)">99495 · 14d</button>'+
+        '<button class="'+(isHigh?"on":"")+'" onclick="setCx('+i+',&#39;high&#39;)">99496 · 7d</button>'+
+        '</div> <span class="mini">~$'+TCM_RATE[isHigh?"high":"moderate"]+(visitOpen?"":" · missed")+'</span>';
+    }
+    return {h, dtxt:md(dDate), windowCell, actionCell, sortKey};
+  }).sort((a,b)=>a.sortKey-b.sortKey);
+  tb.innerHTML = rows.length ? rows.map(r=>`<tr><td><b>${r.h.patient}</b></td><td>${r.h.event}</td><td>${r.h.facility}</td><td>${r.dtxt}</td><td>${r.h.dispo||""}</td><td>${r.windowCell}</td><td>${r.actionCell}</td></tr>`).join("") : `<tr><td colspan="7" class="empty">No hospital events in the feed.</td></tr>`;
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  set("k-adm",adm); set("k-disch",disch7); set("k-open",open); set("k-ed",ed7);
+}
+function setCx(i,level){ if(HOSP[i]){ HOSP[i].complexity=level; render(); } }
+function exportPanel(){ window.open("/.netlify/functions/crisp?action=panel","_blank"); }
+
+async function load(){
+  render();
+  try{
+    let token=""; try{ token=sessionStorage.getItem("crewos_token")||""; }catch(e){}
+    const res=await fetch("/.netlify/functions/crisp?feed=adt",{headers: token?{Authorization:`Bearer ${token}`}:{}});
+    const d=await res.json();
+    const mode=document.getElementById("mode");
+    if(d && !d.sampleMode && Array.isArray(d.rows) && d.rows.length){
+      HOSP=d.rows.map(x=>({...x, complexity:x.complexity||"moderate"}));
+      mode.className="pill live"; mode.textContent="● CRISP · live";
+      render();
+    } else {
+      mode.className="pill sample"; mode.textContent="● CRISP · sample";
+    }
+  }catch(e){ /* keep sample board */ }
+}
+load();
+</script>
+</body>
+</html>

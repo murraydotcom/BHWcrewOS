@@ -140,7 +140,7 @@ exports.handler = async (event) => {
     }
  
     let awv = null;
-    if (isAdmin || vis.includes("Chronic Care") || vis.includes("Primary Care")) {
+    if (isAdmin || vis.includes("Care Management") || vis.includes("Primary Care")) {
       const awvPages = await queryDb(DB.awv);
       awv = awvPages.map((pg) => {
         const p = pg.properties;
@@ -242,7 +242,7 @@ exports.handler = async (event) => {
     }
  
     let prevention = null;
-    if (isAdmin || vis.includes("Primary Care") || vis.includes("Chronic Care")) {
+    if (isAdmin || vis.includes("Primary Care") || vis.includes("Care Management")) {
       const prevPages = await queryDb("14204ec7428d4813b158966356cbec51");
       prevention = prevPages.map((pg) => {
         const p = pg.properties;
