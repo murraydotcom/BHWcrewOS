@@ -38,30 +38,44 @@ exports.handler = async (event) => {
     const subject = String(body.subject || "");
     const text = String(body.text || "") || stripHtml(body.html);
     const hay = `${subject}\n${text}`;
-    const provider = /ifaxapp\.com|ifax/.test(sender) || /ifax/i.test(subject) ? "ifax"
-      : /dialpad\.com/.test(sender) || /dialpad/i.test(subject) ? "dialpad"
+    const html = String(body.html || "");
+    // Provider detection (real senders: no-reply@ifaxapp.com, voicemail@dialpad.com).
+    const provider = /ifaxapp\.com|ifax/i.test(sender) || /ifax|new fax|fax received|fax was just received/i.test(hay) ? "ifax"
+      : /dialpad\.com/i.test(sender) || /dialpad|voicemail|missed a? ?call/i.test(hay) ? "dialpad"
       : String(body.provider || "").toLowerCase();
 
-    let source, summary, link, from = firstPhone(hay);
+    let source, summary, link, from = "";
 
     if (provider === "ifax") {
-      const inbound = /received|incoming|new fax|you.?ve got a fax|inbound/i.test(hay);
-      const outboundConfirm = /\b(sent|delivered|ocr complete|fax confirmation|transmission)\b/i.test(hay);
+      // iFax inbound email (real format): "A new fax was just received on +1 (833)…",
+      // "From: +1 (612) 216-5093", "Pages: 3", PDF attached, "OPEN FAX" button.
+      const inbound = /a new fax was just received|new fax|fax received|received on|inbound/i.test(hay);
+      const outboundConfirm = /\b(ocr complete|successfully sent|delivery (?:confirmation|report)|your fax to)\b/i.test(hay);
       if (!inbound && outboundConfirm) return { statusCode: 200, body: "ignored: outbound iFax confirmation" };
-      link = firstUrl(hay, /https?:\/\/[^\s>"]*ifaxapp\.com\/open-fax\/[^\s>"]+/);
-      const pages = (hay.match(/(\d+)\s*page/i) || [])[1];
+      // The sender's fax is on the "From:" line — NOT the "received on" line (that's BHW's own number).
+      const caller = (text.match(/From:\s*(\+?1?[\s().\-]*\d{3}[\s().\-]*\d{3}[\s.\-]*\d{4})/i) || [])[1] || "";
+      const pages = (text.match(/Pages?:\s*(\d+)/i) || [])[1];
+      from = (caller || "").trim();
+      const openLink = firstUrl(html + "\n" + hay, /https?:\/\/[^\s>"']*ifaxapp\.com[^\s>"']*/i);
       source = "Fax";
-      summary = `Inbound fax${pages ? ` · ${pages} page(s)` : " received"}`;
-      link = link ? `Fax: ${link}` : undefined;
+      summary = `Inbound fax${from ? ` from ${from}` : ""}${pages ? ` · ${pages} page(s)` : ""}${/attach/i.test(hay) ? " (PDF attached to the source email)" : ""}`;
+      link = openLink ? `Open fax: ${openLink}` : undefined;
     } else if (provider === "dialpad") {
       if (/voicemail/i.test(hay)) {
         source = "Voicemail";
-        // iFax/Dialpad voicemail emails usually include a transcript block.
-        const t = (hay.match(/transcript(?:ion)?[:\s]+([\s\S]{0,600})/i) || [])[1];
-        summary = t ? `Voicemail: ${t.trim().replace(/\s+/g, " ").slice(0, 400)}` : "New voicemail";
-        link = firstUrl(hay, /https?:\/\/[^\s>"]+/) ? `Recording: ${firstUrl(hay, /https?:\/\/[^\s>"]+/)}` : undefined;
+        // Subject: "…has a new voicemail from <Caller> - 0:53"; transcript is inline in the body.
+        const caller = (subject.match(/voicemail from\s+(.+?)\s*(?:[-–]\s*\d+:\d+\s*)?$/i) || [])[1] || "";
+        const dur = (subject.match(/(\d+:\d+)\s*$/) || [])[1] || "";
+        const beforeFooter = text.split(/Listen to voicemail|You are receiving this email/i)[0] || text;
+        let tr = beforeFooter.replace(/^[\s\S]*?\d{1,2}:\d{2}\s*(?:AM|PM)/i, "").replace(/\s+/g, " ").trim();
+        if (tr.length < 8) tr = "";
+        from = firstPhone(beforeFooter); // caller's number appears in the header before the transcript
+        summary = `Voicemail from ${caller || "caller"}${dur ? ` (${dur})` : ""}${tr ? `: ${tr}` : ""}`;
+        const rec = firstUrl(html + "\n" + hay, /https?:\/\/[^\s>"']*dialpad[^\s>"']*/i);
+        link = rec ? `Recording: ${rec}` : undefined;
       } else if (/missed call|missed a call|no answer/i.test(hay)) {
         source = "Missed Call (Phone)";
+        from = firstPhone(text) || firstPhone(hay);
         summary = "Missed call — no message left";
       } else {
         return { statusCode: 200, body: "ignored: non-actionable Dialpad email" };
