@@ -1,4 +1,4 @@
-Morning huddle · JS
+// Morning huddle · JS
 // netlify/functions/morning-huddle.js — The Morning Huddle
 // A daily announcement feed on everyone's first page. Amaris or Shadé (Admin
 // access) post the day's huddle message; every signed-in staff member reads
