@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>BHW · Medicare (DPC) Connection</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/bhw-tokens.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);color:var(--ink);font-size:14px;line-height:1.55;background:var(--page-wash),var(--bg);min-height:100vh}
+button{font-family:inherit;cursor:pointer}
+header.top{background:var(--deep-grad,linear-gradient(120deg,#33505e,#2f4551 65%));color:#eef3f4}
+.top-inner{max-width:900px;margin:0 auto;display:flex;align-items:center;gap:14px;padding:14px 22px}
+.wm{font-weight:300;font-size:18px}.wm b{font-weight:800}.wm .k{color:var(--sand);font-weight:800}
+.wm small{display:block;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#a9c2cc;font-weight:600;margin-top:2px}
+.top-right{margin-left:auto;display:flex;gap:9px;align-items:center}
+.ghost{background:rgba(244,247,247,.08);border:1px solid rgba(220,200,177,.4);color:#e9eef0;padding:8px 15px;border-radius:999px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;text-decoration:none}
+.gold-rule{height:2px;background:linear-gradient(90deg,#c68e63,#8f5c3d 190px,rgba(220,200,177,.5) 190px,rgba(220,200,177,0) 100%)}
+.wrap{max-width:900px;margin:0 auto;padding:22px}
+.panel{background:var(--card);border:1px solid rgba(220,200,177,.6);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 22px;margin-bottom:16px}
+.eyebrow{font-size:10px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--clay-deep)}
+h2{font-size:16px;font-weight:700;margin:3px 0 10px}
+.lede{color:var(--ink-soft);font-size:12.5px;margin-bottom:12px}
+.btn{background:var(--clay-grad);color:#fff;border:none;border-radius:999px;padding:9px 16px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;box-shadow:0 8px 18px -9px rgba(143,92,61,.6)}
+.btn.sec{background:#fff;color:var(--clay-deep);border:1.5px solid var(--sand);box-shadow:none}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+.badge{display:inline-block;font-size:11px;font-weight:700;border-radius:999px;padding:3px 10px}
+.badge.ok{background:#eef4f0;color:var(--ok);border:1px solid #cfe3d5}
+.badge.no{background:#fdf1ef;color:var(--alert);border:1px solid #f0cfc9}
+pre{background:#0e1b22;color:#cfe3e8;border-radius:10px;padding:12px 14px;font-size:12px;overflow:auto;margin-top:10px;max-height:320px;white-space:pre-wrap;word-break:break-word}
+table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+th{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft)}
+input{padding:9px 11px;border:1.5px solid var(--line);border-radius:9px;background:#fff;font-size:13px;width:100%}
+label{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft)}
+.step{font-size:10px;font-weight:800;color:#fff;background:var(--blue,#80abbd);border-radius:999px;padding:2px 9px;margin-right:8px}
+.modal{position:fixed;inset:0;background:rgba(20,30,36,.55);display:none;align-items:center;justify-content:center;z-index:100;padding:22px}
+.modal.on{display:flex}
+.mcard{background:#fff;border-radius:16px;box-shadow:0 30px 70px -30px rgba(0,0,0,.6);padding:24px 26px;width:100%;max-width:360px}
+.mcard h3{font-size:16px;margin-bottom:4px;color:var(--deep)}.mcard .sub{font-size:12px;color:var(--ink-soft);margin-bottom:14px}
+.mcard .f{margin-bottom:10px}.mcard select,.mcard input{width:100%;margin-top:4px}
+.macts{display:flex;gap:9px;justify-content:flex-end;margin-top:14px}
+.merr{background:#fdf1ef;color:var(--alert);border:1px solid #f0cfc9;border-radius:9px;padding:8px 11px;font-size:12px;display:none;margin-top:10px}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-inner">
+  <div class="wm"><b>BHW</b> <span class="k">Medicare (DPC)</span><small>Connection & AWV check</small></div>
+  <div class="top-right"><a class="ghost" href="/hq.html">BHW HQ</a><button class="ghost" id="connBtn" type="button">Connect</button></div>
+</div></header>
+<div class="gold-rule"></div>
+
+<div class="wrap">
+  <div class="panel">
+    <div class="eyebrow">What this is</div>
+    <h2>CMS Data at the Point of Care</h2>
+    <p class="lede">DPC returns Medicare claims for your attributed patients — including each patient's last <b>Annual Wellness Visit</b> (from HCPCS G0438/G0439), which eligibility checks can't provide. Use the steps below to verify the connection once the <b>DPC_*</b> environment variables are set in Netlify. Sign in with your crewOS PIN first.</p>
+  </div>
+
+  <div class="panel">
+    <h2><span class="step">1</span>Check connection</h2>
+    <div class="row"><button class="btn" id="statusBtn" type="button">Check status</button><span id="statusBadge"></span></div>
+    <pre id="statusOut" style="display:none"></pre>
+  </div>
+
+  <div class="panel">
+    <h2><span class="step">2</span>Run a test export</h2>
+    <p class="lede">Starts a bulk export of Explanation-of-Benefit claims for your roster (the <b>DPC_GROUP_ID</b>), then poll until the files are ready. Bulk export is asynchronous — polling every few seconds is normal.</p>
+    <div class="row">
+      <button class="btn" id="startBtn" type="button" disabled>Start export</button>
+      <button class="btn sec" id="pollBtn" type="button" disabled>Poll job</button>
+    </div>
+    <pre id="jobOut" style="display:none"></pre>
+  </div>
+
+  <div class="panel">
+    <h2><span class="step">3</span>Read last AWV per patient</h2>
+    <div class="f"><label>Output file URL (from step 2)</label><input id="fileUrl" placeholder="https://…/Jobs/…/ExplanationOfBenefit.ndjson"></div>
+    <div class="row" style="margin-top:8px"><button class="btn" id="awvBtn" type="button" disabled>Get AWV dates</button></div>
+    <div id="awvWrap"></div>
+  </div>
+</div>
+
+<div class="modal" id="signin"><div class="mcard">
+  <h3>Connect to crewOS</h3><div class="sub">Sign in with your name and PIN.</div>
+  <div class="f"><label>Name</label><select id="siStaff"></select></div>
+  <div class="f"><label>PIN</label><input type="password" id="siPin" inputmode="numeric" autocomplete="off"></div>
+  <div class="merr" id="siErr"><span id="siErrTxt"></span></div>
+  <div class="macts"><button class="btn sec" id="siCancel" type="button">Cancel</button><button class="btn" id="siGo" type="button">Sign in</button></div>
+</div></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let TOKEN=sessionStorage.getItem("crewos_token")||"";
+let lastJob="";
+
+async function post(fn, body){
+  const r=await fetch(`/.netlify/functions/${fn}`,{method:"POST",headers:{"Content-Type":"application/json",...(TOKEN?{Authorization:`Bearer ${TOKEN}`}:{})},body:JSON.stringify(body)});
+  const d=await r.json().catch(()=>({})); return {ok:r.ok,status:r.status,d};
+}
+function setConnected(name){
+  const b=$("connBtn"); const on=!!TOKEN;
+  b.textContent=on?(name?`✓ ${String(name).split(" ")[0]}`:"✓ Connected"):"Connect";
+  ["statusBtn","startBtn","pollBtn","awvBtn"].forEach(id=>{ if(id==="statusBtn") $(id).disabled=!on; });
+  $("startBtn").disabled=!on; $("pollBtn").disabled=!on; $("awvBtn").disabled=!on;
+}
+$("connBtn").addEventListener("click",()=>{ if(TOKEN){ if(confirm("Disconnect?")){TOKEN="";sessionStorage.removeItem("crewos_token");setConnected();} } else openSignin(); });
+async function openSignin(){ const {d}=await post("auth",{action:"roster"}); $("siStaff").innerHTML=(d.staff||[]).map(s=>`<option value="${s.id}">${esc(s.name)}${s.role?` — ${esc(s.role)}`:""}</option>`).join(""); $("siErr").style.display="none"; $("siPin").value=""; $("signin").classList.add("on"); setTimeout(()=>$("siPin").focus(),50); }
+$("siCancel").addEventListener("click",()=>$("signin").classList.remove("on"));
+$("siGo").addEventListener("click",doLogin); $("siPin").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
+async function doLogin(){ const staffId=$("siStaff").value,pin=$("siPin").value.trim(); if(!staffId||!pin)return; const {ok,d}=await post("auth",{action:"login",staffId,pin}); if(ok&&d.token){TOKEN=d.token;sessionStorage.setItem("crewos_token",TOKEN);$("signin").classList.remove("on");setConnected(d.user?.name||d.name);} else {$("siErr").style.display="flex";$("siErrTxt").textContent=d.error||"Sign-in failed.";} }
+
+function show(el,obj){ el.style.display="block"; el.textContent=typeof obj==="string"?obj:JSON.stringify(obj,null,2); }
+
+$("statusBtn").addEventListener("click",async()=>{
+  if(!TOKEN)return openSignin();
+  const badge=$("statusBadge"); badge.innerHTML="…";
+  const {d,status}=await post("dpc",{action:"status"});
+  if(status===401){TOKEN="";sessionStorage.removeItem("crewos_token");setConnected();return openSignin();}
+  badge.innerHTML=d.configured?'<span class="badge ok">Configured ✓</span>':'<span class="badge no">Not configured</span>';
+  show($("statusOut"), d);
+});
+$("startBtn").addEventListener("click",async()=>{
+  const {d}=await post("dpc",{action:"start"}); if(d.job){lastJob=d.job;$("fileUrl").placeholder=d.job;} show($("jobOut"),d);
+});
+$("pollBtn").addEventListener("click",async()=>{
+  const job=lastJob||prompt("Job URL to poll:"); if(!job)return; lastJob=job;
+  const {d}=await post("dpc",{action:"poll",job}); if(d.files&&d.files[0])$("fileUrl").value=d.files[0]; show($("jobOut"),d);
+});
+$("awvBtn").addEventListener("click",async()=>{
+  const file=$("fileUrl").value.trim(); if(!file)return alert("Paste an output file URL from step 2.");
+  const {d}=await post("dpc",{action:"awv",file}); const wrap=$("awvWrap");
+  if(d.awvByPatient){ const rows=Object.entries(d.awvByPatient); wrap.innerHTML=rows.length?`<table><thead><tr><th>Patient (FHIR ref)</th><th>Last AWV</th></tr></thead><tbody>${rows.map(([k,v])=>`<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join("")}</tbody></table>`:'<p class="lede" style="margin-top:10px">No AWV claims found in this file.</p>'; }
+  else wrap.innerHTML=`<pre style="display:block">${esc(JSON.stringify(d,null,2))}</pre>`;
+});
+
+setConnected(TOKEN?"":undefined);
+</script>
+</body>
+</html>

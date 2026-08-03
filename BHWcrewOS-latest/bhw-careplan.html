@@ -161,6 +161,11 @@ textarea{resize:vertical;min-height:74px;line-height:1.5;font-size:13px}
     <div class="f full"><label>Your action steps — top priorities</label><textarea id="f-actions" placeholder="1. …&#10;2. …&#10;3. …"></textarea></div>
     <div class="f full"><label>Track these at home</label><textarea id="f-track" style="min-height:52px" placeholder="e.g. blood pressure, mood (1–10), sleep hours"></textarea></div>
 
+    <div class="subhead"><h3>Your 12-week plan</h3><div class="line"></div></div>
+    <div class="f full"><label>Weeks 1–4 · Foundation</label><textarea id="f-w14"></textarea></div>
+    <div class="f full"><label>Weeks 5–8 · Build</label><textarea id="f-w58"></textarea></div>
+    <div class="f full"><label>Weeks 9–12 · Optimize</label><textarea id="f-w912"></textarea></div>
+
     <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:6px">
       <button class="btn" id="printBtn" type="button">Print / Save PDF</button>
       <button class="btn ghost2" id="saveBtn" type="button">Save to Notion</button>
@@ -271,6 +276,10 @@ function selectProgram(k, keepEdits){
       const id = f==="team"?"f-team":("f-"+f);
       $(id).value = f==="team"?seed.team:seed[f];
     });
+    // brand-ready 12-week phased starter (generic, editable) — mirrors the Health Blueprint phases
+    $("f-w14").value  = "Weeks 1–2: start your top 1–2 changes and set your baseline (track your key numbers).\nWeeks 3–4: build the routine; keep medications, labs, and appointments on schedule. 4-week check-in.";
+    $("f-w58").value  = "Weeks 5–6: add the next layer (movement, nutrition, skills, or medication step).\nWeeks 7–8: deepen the habit and review what's working. Re-check labs/measures or re-screen if planned.";
+    $("f-w912").value = "Weeks 9–10: keep the habits that stuck; compare to where you started.\nWeeks 11–12: set your next goal and complete your 12-week review with the care team.";
   }
   $("lbl-focus").textContent = PROGRAMS[k].focusLabel;
   document.documentElement.style.setProperty("--pc", PROGRAMS[k].pc);
@@ -278,7 +287,7 @@ function selectProgram(k, keepEdits){
 }
 
 /* ---- form <-> state ---- */
-const FIELD_IDS = { patient:"f-patient", dob:"f-dob", bhwId:"f-bhwid", preparedBy:"f-prep", planDate:"f-date", reviewDate:"f-review", focus:"f-focus", goals:"f-goals", interventions:"f-interventions", patientRole:"f-patientRole", team:"f-team", actionSteps:"f-actions", trackHome:"f-track" };
+const FIELD_IDS = { patient:"f-patient", dob:"f-dob", bhwId:"f-bhwid", preparedBy:"f-prep", planDate:"f-date", reviewDate:"f-review", focus:"f-focus", goals:"f-goals", interventions:"f-interventions", patientRole:"f-patientRole", team:"f-team", actionSteps:"f-actions", trackHome:"f-track", week14:"f-w14", week58:"f-w58", week912:"f-w912" };
 function syncFromInputs(){ for(const [k,id] of Object.entries(FIELD_IDS)) state.fields[k]=$(id).value; }
 function wireInputs(){
   Object.values(FIELD_IDS).forEach(id=>$(id).addEventListener("input",()=>{ syncFromInputs(); renderDoc(); }));
@@ -318,6 +327,10 @@ function renderDoc(){
   <h4>Your care team</h4>${bodyBlock(f.team)}
   ${(f.actionSteps||"").trim()?`<h4>Your action steps</h4>${bodyBlock(f.actionSteps)}`:""}
   ${(f.trackHome||"").trim()?`<h4>Track these at home</h4>${bodyBlock(f.trackHome)}`:""}
+  ${((f.week14||"")+(f.week58||"")+(f.week912||"")).trim()?`<h4>Your 12-week plan</h4>
+    <div class="body"><b>Weeks 1–4 · Foundation</b><br>${esc(f.week14||"—")}</div>
+    <div class="body" style="margin-top:6px"><b>Weeks 5–8 · Build</b><br>${esc(f.week58||"—")}</div>
+    <div class="body" style="margin-top:6px"><b>Weeks 9–12 · Optimize</b><br>${esc(f.week912||"—")}</div>`:""}
   <div class="sign">
     <div><div class="sig-line"></div><div class="sig-cap">Patient signature &amp; date</div></div>
     <div><div class="sig-line"></div><div class="sig-cap">${esc(ORG.name)} · ${esc(f.preparedBy)||"Care team"} &amp; date</div></div>
@@ -338,7 +351,9 @@ function snapshot(){
     ``,`Patient will:\n${f.patientRole||""}`,
     ``,`Care team: ${f.team||""}`,
     ``,`Action steps:\n${f.actionSteps||""}`,
-    ``,`Track at home: ${f.trackHome||""}`].join("\n").slice(0,1900);
+    ``,`Track at home: ${f.trackHome||""}`,
+    ``,`12-week plan —`,
+    `Weeks 1–4: ${f.week14||""}`,`Weeks 5–8: ${f.week58||""}`,`Weeks 9–12: ${f.week912||""}`].join("\n").slice(0,1900);
 }
 
 /* ---- connect + patients (reuses crewOS PIN, like Paperwork Studio) ---- */
