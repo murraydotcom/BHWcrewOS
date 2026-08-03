@@ -214,16 +214,25 @@ const QUESTIONNAIRES = {
       {type:"long",id:"hopes",q:"What are your hopes for this assessment?"}
     ],
     flags:(a)=>[] },
-  "porter-lifeskills": { name:"The Porter House — Lifeskills Check-in", program:"The Porter House", acc:"#8a6d5c", accGrad:"linear-gradient(100deg,#8a6d5c,#6d5445)", logo:"/assets/brand/bhw-wellness.png", who:"Self",
-    intro:"This helps us build a lifeskills plan around what matters to you. Share as much or as little as you'd like.",
+  "porter-lifeskills": { name:"The Porter House — Growth & Lifeskills Intake", program:"The Porter House", acc:"#8a6d5c", accGrad:"linear-gradient(100deg,#8a6d5c,#6d5445)", logo:"/assets/brand/bhw-wellness.png", who:"Self",
+    intro:"Welcome to The Porter House. This is the start of your 3-month growth journey — Stabilize & Assess, Build Skills, then Launch Prep. Share as much or as little as you're comfortable with; it helps your case lead build a plan around you.",
     questions:[
-      {type:"multi",id:"areas",q:"Which areas would you like support with? (check all that apply)",options:["Cooking / meals","Budgeting / money","Transportation","Job or school","Health self-management","Social connections","Housing","Personal care","Other"]},
-      {type:"single",id:"living",q:"Your current living situation",options:["On my own","With family","Group / residential","Transitional","Other"]},
-      {type:"long",id:"goals",q:"What goals matter most to you right now?"},
+      {type:"section",label:"Your goals"},
+      {type:"multi",id:"areas",q:"Which life skills would you like to build here? (check all that apply)",options:["Cooking / meals","Budgeting / money","Transportation","Job or school","Health & medications","Social connections","Housing stability","Personal care","Time management","Other"]},
+      {type:"long",id:"goals",q:"What growth goals matter most to you right now?"},
+      {type:"single",id:"readiness",q:"How ready do you feel to live independently right now?",options:["Not yet","Getting there","Mostly ready","Ready"]},
+      {type:"section",label:"Your story"},
+      {type:"multi",id:"drivers",q:"Which of these are part of your story? (optional — check any you're comfortable sharing)",options:["Substance use / in recovery","Mental illness (untreated or undertreated)","Trauma history","Housing instability","Family conflict / estrangement","Unemployment / income loss","Justice involvement","Medical condition","Domestic violence","Aging out of foster care","Other","Prefer not to say"]},
       {type:"long",id:"supports",q:"Who or what supports do you have today?"},
-      {type:"yesno",id:"safety",q:"Are there any safety concerns we should know about?",follow:"If yes, tell us more"}
+      {type:"section",label:"Safety & wellbeing"},
+      {type:"yesno",id:"safety",q:"Are there any safety concerns we should know about?",follow:"If yes, tell us more"},
+      {type:"long",id:"other",q:"Anything else you'd like your case lead to know?"}
     ],
-    flags:(a)=>{ return a.safety==="Yes"?["Safety concern noted"]:[]; } }
+    flags:(a)=>{ const f=[]; const drv=Array.isArray(a.drivers)?a.drivers:[];
+      if(a.safety==="Yes") f.push("Safety concern");
+      if(drv.some(d=>["Domestic violence","Trauma history","Substance use / in recovery","Mental illness (untreated or undertreated)"].indexOf(d)>-1)) f.push("Sensitive drivers — case-lead review");
+      if(a.readiness==="Not yet") f.push("Early stage — Stabilize & Assess");
+      return f; } }
 };
 
 const qp = new URLSearchParams(location.search);
