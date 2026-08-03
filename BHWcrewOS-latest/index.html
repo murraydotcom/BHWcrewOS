@@ -234,6 +234,7 @@ const API_AUTH = "/.netlify/functions/auth";
 const API_DATA = "/.netlify/functions/ops-data";
 const API_ACT  = "/.netlify/functions/action";
 const API_REFTPL = "/.netlify/functions/referral-templates";
+const API_GAPS = "/.netlify/functions/care-gaps";
 let REF_TEMPLATES = null; // lazy-loaded cache of destination referral templates
 
 const DIV_COLORS = {
@@ -1132,10 +1133,36 @@ function awvSummary(){
   <div class="f">
     <div class="awv-q"><div class="awv-l">Flags</div>${flags.length?flags.map(f=>`<span class="pill ${/positive|Cognitive/.test(f)?"alert":/risk|barrier|apnea/.test(f)?"warn":"ok"}">${esc(f)}</span> `).join(""):'<span class="pill ok">None</span>'}</div>
     <div class="awv-q"><div class="awv-l">Scores</div>${c.miniCog!==undefined?`Mini-Cog ${c.miniCog}/5 · `:""}${c.diet!==undefined?`Diet ${c.diet}/16 · `:""}${c.exercise!==undefined?`Exercise ${c.exercise} min/wk`:""}</div>
+    <div class="awv-q" id="awv-gaps"><div class="awv-l">Open care gaps <span class="pill gray">payer report</span></div><div class="lede" style="margin:0">Checking the Medicare Wellness Report…</div></div>
     ${acts.length?`<div class="awv-q"><div class="awv-l">Suggested next steps</div><div class="acts" style="display:flex;gap:8px;flex-wrap:wrap">${acts.join("")}</div></div>`:""}
     <p class="lede">Remember: G0438 (initial) / G0439 (subsequent); 99497 if ACP hit 30 minutes. Document in CharmHealth. On completion this encounter moves to <b>Awaiting provider review</b> — Amaris or Yahaira signs it from the AWV card.</p>
     <div class="macts"><button class="btn sec" onclick="closeModal()">Close</button><button class="btn" onclick="awvComplete()">Mark AWV Completed</button></div>
   </div>`);
+  awvGapsLoad(AWV.patientId);
+}
+// Pull this patient's open preventive gaps from the payer Wellness Report and
+// render them into the AWV summary. Matched by Insurance Member ID (name as
+// fallback). Never blocks the summary — failures just show a quiet note.
+async function awvGapsLoad(patientId){
+  const box = document.getElementById("awv-gaps");
+  if(!box) return;
+  const p = (D.patients||[]).find(x=>x.id===patientId) || {};
+  try{
+    const r = await api(API_GAPS, {action:"for", memberId:p.memberId||"", name:p.name||""});
+    if(document.getElementById("awv-gaps")!==box) return; // modal moved on
+    if(!r.matched){
+      box.innerHTML = `<div class="awv-l">Open care gaps <span class="pill gray">payer report</span></div><div class="lede" style="margin:0">No matching row in the Medicare Wellness Report ${p.memberId?"for this Member ID":"by name"}. Upload this month's report to the Gaps in Care page if it's missing.</div>`;
+      return;
+    }
+    const open = r.gaps.filter(g=>g.open), other = r.gaps.filter(g=>!g.open);
+    const chip = g=>`<span class="pill ${g.open?"alert":"gray"}" title="${esc(g.state)}${g.hcpcs?" · "+esc(g.hcpcs):""}">${esc(g.label)}${g.hcpcs?` · ${esc(g.hcpcs)}`:""}</span>`;
+    box.innerHTML = `<div class="awv-l">Open care gaps <span class="pill ${open.length?"alert":"ok"}">${open.length} open</span> <span class="pill gray">payer report${r.patient.payer?" · "+esc(r.patient.payer):""}</span></div>`+
+      (open.length?`<div class="needs" style="margin-bottom:6px">${open.map(chip).join("")}</div>`:`<div class="lede" style="margin:0 0 6px">No open preventive gaps flagged this cycle.</div>`)+
+      (other.length?`<div class="lede" style="margin:0">Also on file (needs info / other plan): ${other.map(chip).join(" ")}</div>`:"");
+  }catch(e){
+    if(document.getElementById("awv-gaps")!==box) return;
+    box.innerHTML = `<div class="awv-l">Open care gaps <span class="pill gray">payer report</span></div><div class="lede" style="margin:0">Couldn't load gaps — ${esc(e.message)}</div>`;
+  }
 }
 function awvSignOpen(id){
   const e = D.awv.find(x=>x.id===id); if(!e) return;
@@ -2056,12 +2083,13 @@ function prevCard(){
   return `<div class="card">
     <h2>Medicare prevention — AWV work queue <span class="grow"></span>${due?`<span class="pill alert">${due} due now</span>`:""}<button class="btn sm" onclick="prevBatch()">⟳ Run batch check</button></h2>
     <p class="lede">Live from CMS (HETS) via Stedi: coverage, plan type, and AWV eligibility per Medicare patient. Due patients are one tap from the AWV wizard.</p>
-    ${rows.length ? `<div class="tbl-wrap"><table><thead><tr><th>Patient</th><th>Coverage</th><th>Plan</th><th>AWV</th><th>Checked</th><th></th></tr></thead><tbody>
+    ${rows.length ? `<div class="tbl-wrap"><table><thead><tr><th>Patient</th><th>Coverage</th><th>Plan</th><th>AWV</th><th>Gaps</th><th>Checked</th><th></th></tr></thead><tbody>
       ${rows.map(({p,r})=>`<tr>
         <td><b>${esc(p.name)}</b> ${!p.hasMbi?'<span class="pill warn">MBI needed</span>':""}</td>
         <td>${r?`<span class="pill ${r.coverage==="Active"?"ok":r.coverage==="Inactive"?"alert":"warn"}">${esc(r.coverage)}</span>`:'<span class="pill gray">Never checked</span>'}</td>
         <td>${r?esc(r.planType==="Medicare Advantage"?("MA"+(r.maName?" · "+r.maName:"")):r.planType):"—"}</td>
         <td>${r?`<span class="pill ${r.awvStatus==="Due now"?"alert":r.awvStatus==="Upcoming"?"warn":r.awvStatus==="Recently done"?"ok":"gray"}">${esc(r.awvStatus)}</span>${r.awvNext?` <span class="pill gray">next ${esc(r.awvNext)}</span>`:""}${r.awvLast?` <span class="pill gray">last ${esc(r.awvLast)}${r.doneInHub?" ✓ here":""}</span>`:""}`:"—"}</td>
+        <td>${gapsCell(p)}</td>
         <td style="font-size:11.5px;color:var(--ink-soft)">${r?esc(r.lastChecked||""):""}</td>
         <td style="white-space:nowrap">
           ${!p.hasMbi?`<button class="btn sm sec" onclick="prevMbi('${p.id}')">+ MBI</button>`:`<button class="btn sm sec" onclick="prevCheck('${p.id}')">Check</button>`}
@@ -2069,6 +2097,56 @@ function prevCard(){
         </td></tr>`).join("")}
     </tbody></table></div>` : `<div class="empty">No Medicare patients in the index yet — set Insurance to Medicare on registration and they appear here.</div>`}
   </div>`;
+}
+
+// ---- Care gaps from the payer Medicare Wellness Report (one cached list read) ----
+// CARE_GAPS: null = not yet loaded, "err" = load failed, else { byId, byName }.
+let CARE_GAPS = null, CARE_GAPS_LOADING = false;
+const gapKey = (s) => String(s||"").toLowerCase().split(",").reverse().join(" ").replace(/[^a-z0-9]/g,"");
+function gapsFor(p){
+  if(!CARE_GAPS || CARE_GAPS==="err") return null;
+  return (p.memberId && CARE_GAPS.byId[p.memberId.toLowerCase()]) || CARE_GAPS.byName[gapKey(p.name)] || null;
+}
+async function gapsEnsure(){
+  if(CARE_GAPS!==null || CARE_GAPS_LOADING) return;
+  CARE_GAPS_LOADING = true;
+  try{
+    const r = await api(API_GAPS, {action:"list"});
+    const byId = {}, byName = {};
+    for(const pt of (r.patients||[])){
+      const rec = { ...pt, open: pt.gaps.filter(g=>g.open) };
+      if(pt.memberId) byId[pt.memberId.toLowerCase()] = rec;
+      if(pt.name) byName[gapKey(pt.name)] = rec;
+    }
+    CARE_GAPS = { byId, byName };
+  }catch(e){ CARE_GAPS = "err"; }
+  CARE_GAPS_LOADING = false;
+  // Repaint the current view so the Gaps column fills in.
+  const active = document.querySelector(".tab.active")?.dataset.view;
+  try{ buildViews(); activate(active || cssId(D.user.landing)); }catch(_){}
+}
+function gapsCell(p){
+  if(CARE_GAPS===null){ gapsEnsure(); return '<span class="pill gray">…</span>'; }
+  if(CARE_GAPS==="err") return '<span class="pill gray">—</span>';
+  const rec = gapsFor(p);
+  if(!rec) return '<span class="pill gray">—</span>';
+  const open = rec.open.length;
+  return `<button class="btn sm ${open?"warn":"sec"}" onclick="gapsDetail('${p.id}')">${open?`${open} open`:"none open"}</button>`;
+}
+function gapsDetail(patientId){
+  const p = (D.patients||[]).find(x=>x.id===patientId) || {};
+  const rec = gapsFor(p);
+  if(!rec){ toast("No payer gap rows on file for this patient"); return; }
+  const open = rec.gaps.filter(g=>g.open), other = rec.gaps.filter(g=>!g.open);
+  const line = g=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)"><span>${esc(g.label)}${g.hcpcs?` <span class="pill gray">${esc(g.hcpcs)}</span>`:""}</span><span class="pill ${g.open?"alert":"gray"}">${esc(g.state)}</span></div>`;
+  openModal(`<h3>Care gaps — ${esc(p.name||rec.name)}</h3>
+  <div class="msub">Medicare Wellness Report${rec.payer?" · "+esc(rec.payer):""}${rec.memberId?" · Member "+esc(rec.memberId):""}</div>
+  <div class="f">
+    <div class="awv-q"><div class="awv-l">Open (${open.length})</div>${open.length?open.map(line).join(""):'<span class="pill ok">None flagged this cycle</span>'}</div>
+    ${other.length?`<div class="awv-q"><div class="awv-l">Needs info / other plan (${other.length})</div>${other.map(line).join("")}</div>`:""}
+    <p class="lede">Source: the payer Wellness Report uploaded to the Gaps in Care Management page. Close gaps at the visit, then next month's upload clears them.</p>
+    <div class="macts"><button class="btn sec" onclick="closeModal()">Close</button>${(D.awv&&["Medicare","Medicare + Medicaid"].includes(p.insurance))?`<button class="btn" onclick="closeModal();prevStartAwv('${p.id}')">▶ Start AWV</button>`:""}</div>
+  </div>`);
 }
 
 async function prevCheck(patientId){

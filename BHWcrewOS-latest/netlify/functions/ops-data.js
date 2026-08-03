@@ -94,6 +94,7 @@ exports.handler = async (event) => {
       chart: P.text(pg.properties["CharmHealth Chart #"]),
       dob: P.date(pg.properties["DOB"]),
       insurance: P.sel(pg.properties["Insurance"]),
+      memberId: P.text(pg.properties["Insurance Member ID"]),
       hasMbi: !!P.text(pg.properties["Medicare MBI"]),
       email: pg.properties["Email"]?.email || "",
       guardianEmail: pg.properties["Guardian Email"]?.email || "",
