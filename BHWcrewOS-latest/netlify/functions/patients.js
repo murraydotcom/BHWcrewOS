@@ -82,6 +82,7 @@ async function masterSearch(q) {
       insurance: mapInsurance(P.text(p["Payer Name"]), P.sel(p["Insurance Type"])),
       memberId: P.text(p["Insurance ID"]),
       mbi: P.text(p["MBI"]),
+      chart: P.text(p["CharmHealth Chart #"]),
       email: (contact.match(/[\w.+-]+@[\w-]+\.[\w.-]+/) || [])[0] || "",
     };
     const prev = byKey.get(key);
