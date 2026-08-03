@@ -64,7 +64,9 @@ function clientAssertion() {
   const header = { alg: "RS384", kid: process.env.DPC_PUBLIC_KEY_ID, typ: "JWT" };
   const payload = { iss: clientToken, sub: clientToken, aud: tokenUrl, jti: crypto.randomUUID(), iat: now, exp: now + 290 };
   const signingInput = `${b64url(JSON.stringify(header))}.${b64url(JSON.stringify(payload))}`;
-  const sig = crypto.sign("RSA-SHA384", Buffer.from(signingInput), process.env.DPC_PRIVATE_KEY);
+  // Netlify may store the PEM single-line with literal "\n" — normalize either form.
+  const privateKey = (process.env.DPC_PRIVATE_KEY || "").replace(/\\n/g, "\n");
+  const sig = crypto.sign("RSA-SHA384", Buffer.from(signingInput), privateKey);
   return `${signingInput}.${b64url(sig)}`;
 }
 
