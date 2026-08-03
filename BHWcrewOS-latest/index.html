@@ -424,6 +424,28 @@ function divisionView(div){
       <div class="kpi" style="--kc:var(--sage)"><div class="n">${sched.length}</div><div class="l">Upcoming bookings</div></div>
     </div>
 
+    ${div==="Mind & Mood Recovery" ? `<div style="display:flex;align-items:center;gap:14px;margin:2px 0 14px"><img src="assets/mind-mood-logo.png" alt="BHW Mind and Mood Recovery" style="width:64px;height:64px;object-fit:cover;object-position:top;border-radius:50%"><div><div style="font-family:Montserrat,sans-serif;font-weight:800;letter-spacing:.5px;color:#2f4551">BHW MIND & MOOD RECOVERY</div><div style="font-style:italic;font-size:12.5px;color:#b07a55">Depth restores clarity.</div></div></div>` : ""}
+
+    ${div==="Care Management" ? ccNeedsCard() : ""}
+
+    ${(div==="Care Management"||div==="Mind & Mood Recovery") ? todayCard(div) : ""}
+
+    ${isPorter && D.phPlans ? phGrowthCard() : ""}
+
+    ${isPorter && D.porterhouse ? porterCensus() : ""}
+
+    ${(div==="Care Management"||div==="Primary Care") ? prevCard() : ""}
+
+    ${(div==="Care Management"||div==="Primary Care") ? awvCard(div) : ""}
+
+    ${div==="CharmEd Minds" ? `<div style="display:flex;align-items:center;gap:14px;margin:2px 0 14px"><img src="assets/charmed-minds-logo.png" alt="CharmEd Minds" style="width:56px;height:56px;border-radius:50%"><div><div style="font-family:Montserrat,sans-serif;font-weight:800;letter-spacing:.5px;color:#0B1228">CHARMED MINDS</div><div style="font-style:italic;font-size:12.5px;color:#2CA7A6">Bright minds supported with strategy.</div></div></div>` : ""}
+
+    ${div==="CharmEd Minds" ? cmCard() : ""}
+
+    ${div==="CharmEd Minds" ? cmaCard() : ""}
+
+    ${div==="CharmEd Minds" ? cpCard() : ""}
+
     <div class="card">
       <h2>Warm handoff inbox <span class="grow"></span><button class="btn sm" onclick="openHandoffForm('${esc(div)}')">+ New warm handoff</button></h2>
       <p class="lede">Handoffs stay on this page until completed — nothing disappears unacknowledged.</p>
@@ -448,28 +470,6 @@ function divisionView(div){
       ${sent.length ? sent.map(r=>`<tr><td><b>${esc(patLabel(r.patient))}</b></td><td>${esc(r.to)}</td><td>${esc(r.type)}</td><td>${statusPill(r.status)}</td><td style="max-width:280px">${esc(r.completionNote)}</td></tr>`).join("") : `<tr><td colspan="5" class="empty">Nothing sent yet.</td></tr>`}
       </tbody></table></div>
     </div>
-
-    ${div==="Mind & Mood Recovery" ? `<div style="display:flex;align-items:center;gap:14px;margin:2px 0 14px"><img src="assets/mind-mood-logo.png" alt="BHW Mind and Mood Recovery" style="width:64px;height:64px;object-fit:cover;object-position:top;border-radius:50%"><div><div style="font-family:Montserrat,sans-serif;font-weight:800;letter-spacing:.5px;color:#2f4551">BHW MIND & MOOD RECOVERY</div><div style="font-style:italic;font-size:12.5px;color:#b07a55">Depth restores clarity.</div></div></div>` : ""}
-
-    ${div==="Care Management" ? ccNeedsCard() : ""}
-
-    ${(div==="Care Management"||div==="Mind & Mood Recovery") ? todayCard(div) : ""}
-
-    ${isPorter && D.phPlans ? phGrowthCard() : ""}
-
-    ${isPorter && D.porterhouse ? porterCensus() : ""}
-
-    ${(div==="Care Management"||div==="Primary Care") ? prevCard() : ""}
-
-    ${(div==="Care Management"||div==="Primary Care") ? awvCard(div) : ""}
-
-    ${div==="CharmEd Minds" ? `<div style="display:flex;align-items:center;gap:14px;margin:2px 0 14px"><img src="assets/charmed-minds-logo.png" alt="CharmEd Minds" style="width:56px;height:56px;border-radius:50%"><div><div style="font-family:Montserrat,sans-serif;font-weight:800;letter-spacing:.5px;color:#0B1228">CHARMED MINDS</div><div style="font-style:italic;font-size:12.5px;color:#2CA7A6">Bright minds supported with strategy.</div></div></div>` : ""}
-
-    ${div==="CharmEd Minds" ? cmCard() : ""}
-
-    ${div==="CharmEd Minds" ? cmaCard() : ""}
-
-    ${div==="CharmEd Minds" ? cpCard() : ""}
 
     ${resourcesCard(div)}
 
