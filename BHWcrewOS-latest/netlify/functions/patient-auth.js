@@ -48,8 +48,8 @@ function shapePatient(pg) {
     name: P.title(p["Patient Name"]) || "Patient",
     dob,
     age: ageFromDob(dob),
-    divisions: P.multi(p["Active Divisions"]),
-    status: P.sel(p["Status"]),
+    relationship: P.sel(p["Patient Relationship"]) || "",
+    programs: P.multi(p["Program Enrollment"]),
   };
 }
 function shapeMed(pg) {
@@ -63,18 +63,43 @@ function shapeMed(pg) {
     prescriber: P.text(p["Prescriber"]),
   };
 }
-// Match login email to the Patient Index; dependents = records whose Guardian
-// Email is this email. Returns null only when neither self nor dependents exist.
+// The Master List keeps a free-text meds snapshot ("chart is source of truth").
+// Parse it (one med per line or comma) into rows for display.
+function parseMedsText(text) {
+  return String(text || "")
+    .split(/[\n;,]+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((line) => ({ name: line, status: "Active" }));
+}
+// Structured Medications DB rows for a patient, else the Master List snapshot.
+async function medsFor(pg) {
+  try {
+    const rows = await queryDb(DB.medications, { property: "Patient", relation: { contains: pg.id } });
+    const structured = rows.map(shapeMed).filter((m) => m.status !== "Stopped");
+    if (structured.length) return structured;
+  } catch {
+    /* fall through to snapshot */
+  }
+  return parseMedsText(P.text((pg.properties || {})["Medications"]));
+}
+// Match login email to the Patients Master List; dependents = records whose
+// Guardian Email is this email. Each person carries their medications.
 async function loadFamily(email) {
   try {
-    const all = await queryDb(DB.patients);
-    const self = all.find((pg) => readEmail(pg, "Email") === email);
-    const deps = all.filter((pg) => readEmail(pg, "Guardian Email") === email);
-    if (!self && !deps.length) return null;
-    return {
-      patient: self ? shapePatient(self) : { name: email.split("@")[0], email },
-      dependents: deps.map(shapePatient),
+    const all = await queryDb(DB.masterList);
+    const selfPg = all.find((pg) => readEmail(pg, "Email") === email);
+    const depPgs = all.filter((pg) => readEmail(pg, "Guardian Email") === email);
+    if (!selfPg && !depPgs.length) return null;
+    const shape = async (pg) => {
+      const base = shapePatient(pg);
+      base.meds = await medsFor(pg);
+      return base;
     };
+    const patient = selfPg ? await shape(selfPg) : { name: email.split("@")[0], email, meds: [] };
+    const dependents = [];
+    for (const pg of depPgs) dependents.push(await shape(pg));
+    return { patient, dependents };
   } catch {
     return null;
   }
@@ -83,20 +108,25 @@ async function loadMeds(patientId) {
   const rows = await queryDb(DB.medications, { property: "Patient", relation: { contains: patientId } });
   return rows.map(shapeMed).filter((m) => m.status !== "Stopped");
 }
-// Shown on the preview (and any time the Patient Index has no match) so the
+// Shown on the preview (and any time the Master List has no match) so the
 // guardian switcher and medications section are demonstrable without live data.
-function demoFamily(email) {
-  return {
-    patient: { name: "Amaris (Am) Murray", relationship: "Self", email },
-    dependents: [{ name: "Amari Murray", age: 9, relationship: "Child" }],
-    demo: true,
-  };
-}
 function demoMeds() {
   return [
     { name: "Iron bisglycinate", dose: "25 mg", schedule: "Every other morning with vitamin C", status: "Active" },
     { name: "Vitamin D3", dose: "2,000 IU", schedule: "Daily with your largest meal", status: "Active" },
   ];
+}
+function demoFamily(email) {
+  return {
+    patient: { name: "Amaris (Am) Murray", relationship: "Self", email, meds: demoMeds() },
+    dependents: [
+      { name: "Amari Murray", age: 9, relationship: "Child", meds: [
+        { name: "Cetirizine", dose: "5 mg", schedule: "Once daily for allergies", status: "Active" },
+        { name: "Multivitamin (kids)", dose: "1 gummy", schedule: "Daily with breakfast", status: "Active" },
+      ] },
+    ],
+    demo: true,
+  };
 }
 
 const HAS_STYTCH = !!(process.env.STYTCH_PROJECT_ID && process.env.STYTCH_SECRET);

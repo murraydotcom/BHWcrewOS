@@ -1391,8 +1391,8 @@ function _initials(n){ var w=String(n||'').trim().split(/\s+/); return (((w[0]||
 function applyFamily(fam){
   if(!fam||!fam.patient) return;
   var self=fam.patient, deps=fam.dependents||[];
-  PEOPLE=[{id:self.id, name:self.name, sub:'You', self:true, age:self.age}]
-    .concat(deps.map(function(d){ return {id:d.id, name:d.name, sub:(d.relationship||'Dependent')+(d.age!=null?(' · age '+d.age):''), self:false, age:d.age}; }));
+  PEOPLE=[{id:self.id, name:self.name, sub:'You', self:true, age:self.age, meds:self.meds||[]}]
+    .concat(deps.map(function(d){ return {id:d.id, name:d.name, sub:(d.relationship||'Dependent')+(d.age!=null?(' · age '+d.age):''), self:false, age:d.age, meds:d.meds||[]}; }));
   var sel=document.getElementById('whoSelect'), meta=document.getElementById('whoMeta');
   if(deps.length){
     sel.innerHTML=PEOPLE.map(function(p,i){ return '<option value="'+i+'">'+(p.self?('You · '+p.name):p.name)+'</option>'; }).join('');
@@ -1431,13 +1431,9 @@ function renderMeds(meds){
   }).join('');
 }
 function fetchMeds(person){
-  var list=document.getElementById('medsList'); if(!list) return;
-  list.innerHTML='<p class="meds-empty">Loading medications…</p>';
-  var token=''; try{ token=sessionStorage.getItem('bhw_pt_session')||''; }catch(e){}
-  fetch('/.netlify/functions/patient-auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'meds', patientId:(person&&person.id)||null, token:token})})
-    .then(function(r){return r.json();})
-    .then(function(d){ renderMeds((d&&d.meds)||[]); })
-    .catch(function(){ list.innerHTML='<p class="meds-empty">Couldn’t load medications right now.</p>'; });
+  /* Meds travel with the family payload from patient-auth (Master List snapshot
+     or the structured Medications DB), so render straight from the person. */
+  renderMeds((person && person.meds) || []);
 }
 
 /* ===== Passwordless patient sign-in (Stytch Email OTP via /patient-auth) ===== */
