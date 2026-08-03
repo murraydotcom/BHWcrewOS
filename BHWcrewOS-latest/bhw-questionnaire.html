@@ -203,17 +203,49 @@ const QUESTIONNAIRES = {
       if(a.rpm==="Yes, enroll") f.push("Enroll: RPM");
       if(a.hrsn==="Yes") f.push("Complete AHC-HRSN screening");
       return f; } },
-  "charmed-intake": { name:"CharmEd Minds — Intake", program:"CharmEd Minds", acc:"#c69a3c", accGrad:"linear-gradient(100deg,#d9b45f,#b3892f)", logo:"/assets/brand/charmed-minds.png", who:"Parent/Caregiver",
-    intro:"Tell us what brings you (or your child) to CharmEd Minds. This helps us prepare the right assessment and supports.",
+  "charmed-intake": { name:"CharmEd Minds — Pediatric Intake", program:"CharmEd Minds", acc:"#c69a3c", accGrad:"linear-gradient(100deg,#d9b45f,#b3892f)", logo:"/assets/brand/charmed-minds.png", who:"Parent/Caregiver",
+    intro:"Tell us about your child so we can prepare the right assessment and supports. Answer what you can — there are no wrong answers, and you know your child best.",
     questions:[
-      {type:"multi",id:"reason",q:"What brings you in? (check all that apply)",options:["Attention / focus","Learning or academics","Behavior","Social communication","Emotional regulation","Sensory","Memory / cognition","Late-diagnosis question","Other"]},
-      {type:"text",id:"age",q:"Patient's age (and grade, if a student)"},
+      {type:"section",label:"About your child"},
+      {type:"single",id:"age",q:"Age group",options:["0–3 years","4–6 years","7–10 years","11–13 years","14–18 years"]},
+      {type:"multi",id:"concerns",q:"What brings you in? (check all that apply)",options:["Attention / focus difficulties","Academic struggles","Behavioral challenges","Social communication","Emotional regulation","Sensory processing","Other"]},
       {type:"long",id:"onset",q:"When did you first notice these concerns?"},
+      {type:"section",label:"School"},
+      {type:"text",id:"school",q:"Current school"},
+      {type:"text",id:"grade",q:"Grade"},
+      {type:"multi",id:"academic",q:"Academic concerns (check all that apply)",options:["Reading","Writing","Spelling","Math","Comprehension","Slow processing","Homework is difficult","Behind grade level","No concerns"]},
+      {type:"yesno",id:"iep",q:"Are there any school supports in place (IEP or 504)?",follow:"If yes, please describe"},
+      {type:"section",label:"Social & sensory"},
+      {type:"multi",id:"social",q:"Social behavior (check all that apply)",options:["Prefers to play alone","Trouble making friends","Trouble keeping friends","Limited back-and-forth conversation","Takes things literally","Doesn't notice social cues","Better with adults than peers","No social concerns"]},
+      {type:"multi",id:"sensory",q:"Sensory responses (check all that apply)",options:["Sensitive to noise","Sensitive to light","Clothing / texture sensitivities","Touch sensitivity","Strong reaction to smells","Food texture issues","Seeks deep pressure","Seeks movement (crashing / jumping)","Chews on objects","No sensory concerns"]},
+      {type:"multi",id:"sleep",q:"Sleep (check all that apply)",options:["Difficulty falling asleep","Difficulty staying asleep","Snoring / mouth breathing","Nightmares","Restless sleep","Very early waking","Sleeps well"]},
+      {type:"section",label:"Strengths & hopes"},
+      {type:"long",id:"strengths",q:"What are your child's strengths? What do they love?"},
       {type:"yesno",id:"prioreval",q:"Has there been any prior evaluation or diagnosis?",follow:"If yes, what was found?"},
-      {type:"yesno",id:"school",q:"Are there any school supports in place (IEP or 504)?",follow:"If yes, please describe"},
       {type:"long",id:"hopes",q:"What are your hopes for this assessment?"}
     ],
-    flags:(a)=>[] },
+    flags:(a)=>{ const f=[]; const s=Array.isArray(a.social)?a.social:[]; const sen=Array.isArray(a.sensory)?a.sensory:[];
+      if((Array.isArray(a.concerns)&&a.concerns.indexOf("Social communication")>-1)||s.filter(x=>x!=="No social concerns").length>=3) f.push("Social-communication screen");
+      if(sen.filter(x=>x!=="No sensory concerns").length>=3) f.push("Sensory profile");
+      if(Array.isArray(a.sleep)&&a.sleep.some(x=>/snoring|breathing/i.test(x))) f.push("Sleep / breathing follow-up");
+      return f; } },
+  "charmed-adult": { name:"CharmEd Minds — Adult Intake", program:"CharmEd Minds", acc:"#c69a3c", accGrad:"linear-gradient(100deg,#d9b45f,#b3892f)", logo:"/assets/brand/charmed-minds.png", who:"Self",
+    intro:"Tell us what brings you to CharmEd Minds. This helps us prepare the right assessment and supports for you. Share what feels true — you can skip anything.",
+    questions:[
+      {type:"multi",id:"referral",q:"What brings you in? (check all that apply)",options:["ADHD","Autism traits","Executive dysfunction","Anxiety / depression","Burnout","Academic or work struggles","Memory or cognitive concerns","Social difficulties","Late-diagnosis evaluation"]},
+      {type:"long",id:"onset",q:"When did you first notice these concerns?"},
+      {type:"multi",id:"social",q:"Social experiences (check all that apply)",options:["Difficulty reading social cues","Literal thinking","Masking / camouflaging","Social exhaustion","Difficulty with small talk","Few close relationships","Preference for solitude","No concerns"]},
+      {type:"multi",id:"sensory",q:"Sensory experiences (check all that apply)",options:["Noise sensitivity","Light sensitivity","Crowds overwhelming","Clothing or texture issues","Strong sensory seeking","Shutdowns","Emotional flooding"]},
+      {type:"yesno",id:"prioreval",q:"Any prior evaluation or diagnosis?",follow:"If yes, what was found?"},
+      {type:"long",id:"strengths",q:"What are your strengths? What are you good at or enjoy?"},
+      {type:"long",id:"hopes",q:"What are your hopes for this assessment?"}
+    ],
+    flags:(a)=>{ const f=[]; const r=Array.isArray(a.referral)?a.referral:[];
+      if(r.indexOf("Autism traits")>-1||r.indexOf("Late-diagnosis evaluation")>-1) f.push("Autism — full screen");
+      if(r.indexOf("ADHD")>-1||r.indexOf("Executive dysfunction")>-1) f.push("ADHD signals");
+      if(r.indexOf("Memory or cognitive concerns")>-1) f.push("Cognitive screen");
+      if(r.indexOf("Anxiety / depression")>-1) f.push("Mood screen — PHQ-9/GAD-7");
+      return f; } },
   "porter-lifeskills": { name:"The Porter House — Growth & Lifeskills Intake", program:"The Porter House", acc:"#8a6d5c", accGrad:"linear-gradient(100deg,#8a6d5c,#6d5445)", logo:"/assets/brand/bhw-wellness.png", who:"Self",
     intro:"Welcome to The Porter House. This is the start of your 3-month growth journey — Stabilize & Assess, Build Skills, then Launch Prep. Share as much or as little as you're comfortable with; it helps your case lead build a plan around you.",
     questions:[

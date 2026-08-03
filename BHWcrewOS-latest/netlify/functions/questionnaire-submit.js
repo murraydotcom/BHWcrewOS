@@ -17,6 +17,7 @@ const { DB, createPage, W, json } = require("./_lib");
 const REG = {
   "awv-hra": { qn: "AWV Health Risk Assessment", program: "Primary Care" },
   "charmed-intake": { qn: "CharmEd Minds Intake", program: "CharmEd Minds" },
+  "charmed-adult": { qn: "CharmEd Minds Intake", program: "CharmEd Minds" },
   "porter-lifeskills": { qn: "Porter House Lifeskills", program: "The Porter House" },
 };
 const WHO = new Set(["Self", "Parent/Caregiver", "Staff"]);
