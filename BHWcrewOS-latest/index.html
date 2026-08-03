@@ -546,6 +546,21 @@ function handoffCard(h){
     </div></div>`;
 }
 
+// Front-Desk handoff card — shows the destination division and leads with the
+// appointment action, so the front desk can book & confirm across every division.
+function fdHandoffCard(h){
+  const cls = h.status==="Acknowledged"?"ack":(h.status==="Scheduled"?"sched":"");
+  return `<div class="hcard ${cls}">
+    <div class="h-top"><b>${esc(patLabel(h.patient))}</b><span class="meta">${esc(h.from)} → <b>${esc(h.to)}</b> · ${esc(staffLabel(h.fromStaff))}</span>${statusPill(h.status)}${h.needs.map(n=>pill(n,"info")).join(" ")}</div>
+    <div class="sum">${esc(h.summary)}</div>
+    <div class="meta">${h.scheduledDate?`Appt booked: ${esc(h.scheduledDate)}`:"No appointment booked yet"}</div>
+    <div class="acts">
+      ${h.status==="New"?`<button class="btn sm sec" onclick="act({action:'handoff-status',id:'${h.id}',status:'Acknowledged'},'Acknowledged')">Acknowledge</button>`:""}
+      ${h.status!=="Completed"?`<button class="btn sm" onclick="promptSchedule('${h.id}')">${h.scheduledDate?"Update appt date":"Confirm appointment / set date"}</button>
+      <button class="btn sm sec" onclick="act({action:'handoff-status',id:'${h.id}',status:'Completed'},'Handoff completed')">Done</button>`:""}
+    </div></div>`;
+}
+
 function referralActions(r){
   if(r.status==="Sent") return `<button class="btn sm" onclick="act({action:'referral-status',id:'${r.id}',status:'Received'},'Marked received')">Receive</button>`;
   if(r.status==="Received") return `<button class="btn sm sec" onclick="act({action:'referral-status',id:'${r.id}',status:'In Progress'},'In progress')">Start</button> <button class="btn sm" onclick="promptComplete('${r.id}')">Complete</button>`;
@@ -601,6 +616,11 @@ function adminView(){
 function frontDeskView(){
   return `<section class="view" id="view-front-desk" style="--pc:var(--blue)">
     <div class="prog-head"><div class="bar"></div><div><h1>Front Desk OS</h1><p>Live inbox, patient lookup, referral finder &amp; generator — SLA colors show what's next.</p></div></div>
+    <div class="card">
+      <h2>All warm handoffs — book &amp; confirm <span class="grow"></span><button class="btn sm" onclick="openHandoffForm()">+ New warm handoff</button></h2>
+      <p class="lede">Every division's open handoffs land here so the front desk can book the appointment (set the visit date) and mark it done.</p>
+      <div class="inbox">${(()=>{ const open=D.handoffs.filter(h=>h.status!=="Completed"); return open.length?open.map(fdHandoffCard).join(""):`<div class="empty">No open handoffs across the practice.</div>`; })()}</div>
+    </div>
     <div class="card" style="padding:8px">
       <div id="fb-front-desk" style="display:none;padding:44px 26px;text-align:center">
         <div style="font-size:14.5px;font-weight:600;margin-bottom:8px">The front desk can't display inside the app yet.</div>
