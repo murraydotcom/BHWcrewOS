@@ -95,6 +95,9 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 .login-btn:hover{background:var(--bhw-warm-ivory); transform:translateY(-1px);}
 .login-fine{font-size:11.5px; color:rgba(247,243,234,0.45); margin-top:22px; line-height:1.65;}
 .login-fine a{color:rgba(247,243,234,0.7); text-decoration:underline;}
+.login-status{font-size:12.5px; color:var(--opal-glow); margin-top:16px; min-height:1.1em; line-height:1.55;}
+.signout{font-family:var(--font-sans); font-size:10px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:var(--bhw-mineral-taupe); background:none; border:1px solid rgba(22,36,51,0.14); border-radius:999px; padding:5px 11px; cursor:pointer; margin-left:14px;}
+.signout:hover{border-color:var(--bhw-ink-navy); color:var(--bhw-ink-navy);}
 
 /* ============================================================
    APP SHELL
@@ -562,14 +565,15 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
     <p class="login-sub">Sign in to see your care plan, this week's focus, and your nutrition plan — built for you by your BHW care team.</p>
     <div class="login-field">
       <label for="f-email">Email</label>
-      <input id="f-email" type="email" placeholder="you@email.com" autocomplete="off">
+      <input id="f-email" type="email" placeholder="you@email.com" autocomplete="email">
     </div>
-    <div class="login-field">
+    <div class="login-field" id="codeField" style="display:none;">
       <label for="f-code">One-time code</label>
-      <input id="f-code" inputmode="numeric" placeholder="6-digit code sent to your phone" autocomplete="off">
+      <input id="f-code" inputmode="numeric" maxlength="6" placeholder="6-digit code" autocomplete="one-time-code">
     </div>
-    <button class="login-btn" onclick="enterApp()">Enter your space →</button>
-    <p class="login-fine">Prototype only — the button opens a demo. In the real portal this is a secure login with a code sent to your phone. Need help? Call the office at 443.762.5343.</p>
+    <button class="login-btn" id="loginBtn" onclick="loginStep()">Email me a code →</button>
+    <div class="login-status" id="loginStatus" role="status" aria-live="polite"></div>
+    <p class="login-fine">Passwordless sign-in — we email you a 6-digit code, no password to remember. Code not arriving? Call the office at 443.762.5343.</p>
   </div>
 </section>
 
@@ -589,6 +593,7 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
           <div class="pid">Demo patient</div>
         </div>
         <div class="avatar">JT</div>
+        <button class="signout" type="button" onclick="signOut()">Sign out</button>
       </div>
     </div>
   </header>
@@ -1354,6 +1359,55 @@ function enterApp(){
     setTimeout(function(){ document.getElementById('veinFill').style.width='21%'; }, 150);
   });
 }
+
+/* ===== Passwordless patient sign-in (Stytch Email OTP via /patient-auth) ===== */
+var _ptAuth = { methodId:null, sent:false };
+async function loginStep(){
+  var btn=document.getElementById('loginBtn'), st=document.getElementById('loginStatus');
+  var email=(document.getElementById('f-email').value||'').trim();
+  if(!_ptAuth.sent){
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ st.textContent='Enter a valid email.'; return; }
+    btn.disabled=true; st.textContent='Sending your code…';
+    try{
+      var res=await fetch('/.netlify/functions/patient-auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'send',email:email})});
+      var d=await res.json();
+      if(!res.ok){ st.textContent=d.error||'Could not send the code — try again.'; btn.disabled=false; return; }
+      _ptAuth.methodId=d.methodId||null; _ptAuth.sent=true;
+      document.getElementById('codeField').style.display='flex';
+      document.getElementById('f-code').focus();
+      btn.textContent='Enter your space →'; btn.disabled=false;
+      st.textContent=d.demo ? 'Demo mode — enter any 6 digits to continue.' : ('We emailed a 6-digit code to '+email+'.');
+    }catch(e){ st.textContent='Network error — try again.'; btn.disabled=false; }
+    return;
+  }
+  var code=(document.getElementById('f-code').value||'').trim();
+  if(!/^\d{6}$/.test(code)){ st.textContent='Enter the 6-digit code.'; return; }
+  btn.disabled=true; st.textContent='Checking…';
+  try{
+    var res=await fetch('/.netlify/functions/patient-auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'verify',methodId:_ptAuth.methodId,code:code,email:email})});
+    var d=await res.json();
+    if(!res.ok || !d.ok){ st.textContent=d.error||'That code didn’t match.'; btn.disabled=false; return; }
+    if(d.token){ try{ sessionStorage.setItem('bhw_pt_session', d.token); }catch(e){} }
+    enterApp();
+  }catch(e){ st.textContent='Network error — try again.'; btn.disabled=false; }
+}
+function signOut(){
+  try{ sessionStorage.removeItem('bhw_pt_session'); }catch(e){}
+  location.reload();
+}
+/* Enter submits from either field; resume an unexpired session on load. */
+['f-email','f-code'].forEach(function(id){
+  var el=document.getElementById(id);
+  if(el) el.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); loginStep(); } });
+});
+(function(){
+  try{
+    var t=sessionStorage.getItem('bhw_pt_session');
+    if(!t) return;
+    var p=JSON.parse(atob(t.split('.')[0].replace(/-/g,'+').replace(/_/g,'/')));
+    if(p && p.exp && Date.now()<p.exp) enterApp();
+  }catch(e){}
+})();
 function go(pane, btn){
   document.querySelectorAll('.ptab').forEach(function(b){ b.classList.remove('active'); });
   btn.classList.add('active');
