@@ -40,6 +40,22 @@ function readEmail(pg, prop) {
   if (!e) return "";
   return String(e.email || P.text(e) || "").trim().toLowerCase();
 }
+const phoneDigits = (s) => String(s || "").replace(/\D/g, "");
+// Read a phone_number (or text) property off a Master List row as bare digits.
+function readPhone(pg, prop) {
+  const f = (pg.properties || {})[prop || "Phone"];
+  if (!f) return "";
+  return phoneDigits(f.phone_number || P.text(f) || "");
+}
+// Normalize a user-entered phone to E.164 for Stytch (US default). Returns "" if
+// it clearly isn't a phone so the caller can fall back to email.
+function normalizePhone(raw) {
+  const d = phoneDigits(raw);
+  if (d.length === 10) return "+1" + d;
+  if (d.length === 11 && d[0] === "1") return "+" + d;
+  if (String(raw || "").trim().startsWith("+") && d.length >= 8) return "+" + d;
+  return "";
+}
 function shapePatient(pg) {
   const p = pg.properties || {};
   const dob = p["DOB"]?.date?.start || "";
@@ -94,21 +110,31 @@ async function medsFor(pg) {
   }
   return parseMedsText(P.text((pg.properties || {})["Medications"]));
 }
-// Match login email to the Patients Master List; dependents = records whose
-// Guardian Email is this email. Each person carries their medications.
-async function loadFamily(email) {
+// Match the verified login (email OR phone) to the Patients Master List.
+// Dependents = records whose Guardian Email / Guardian Phone is this login, so a
+// patient with no email can still be reached by phone, and a child with neither
+// is reached through a caregiver by either channel.
+async function loadFamily({ email, phone }) {
   try {
+    const dig = phone ? phoneDigits(phone).slice(-10) : "";
+    const matchSelf = (pg) =>
+      email ? readEmail(pg, "Email") === email : !!dig && readPhone(pg, "Phone").slice(-10) === dig;
+    const matchDep = (pg) =>
+      email
+        ? readEmail(pg, "Guardian Email") === email
+        : !!dig && readPhone(pg, "Guardian Phone").slice(-10) === dig;
     // Same canonical DB the provider console (console-data.js) uses.
     const all = await queryDb(process.env.MASTER_DB_ID || DB.masterList);
-    const selfPg = all.find((pg) => readEmail(pg, "Email") === email);
-    const depPgs = all.filter((pg) => readEmail(pg, "Guardian Email") === email);
+    const selfPg = all.find(matchSelf);
+    const depPgs = all.filter(matchDep);
     if (!selfPg && !depPgs.length) return null;
     const shape = async (pg) => {
       const base = shapePatient(pg);
       base.meds = await medsFor(pg);
       return base;
     };
-    const patient = selfPg ? await shape(selfPg) : { name: email.split("@")[0], email, meds: [] };
+    const fallbackName = email ? email.split("@")[0] : phone || "Patient";
+    const patient = selfPg ? await shape(selfPg) : { name: fallbackName, email, phone, meds: [] };
     const dependents = [];
     for (const pg of depPgs) dependents.push(await shape(pg));
     return { patient, dependents };
@@ -181,16 +207,25 @@ exports.handler = async (event) => {
     return json(400, { error: "Bad JSON" });
   }
   const email = String(body.email || "").trim().toLowerCase();
+  // A phone login is used when no email is supplied (patients without email).
+  const phone = email ? "" : normalizePhone(body.phone);
 
   try {
-    // ---- send a code -------------------------------------------------------
+    // ---- send a code (email or SMS) ---------------------------------------
     if (body.action === "send") {
-      if (!isEmail(email)) return json(400, { error: "Enter a valid email." });
-      if (!HAS_STYTCH) return json(200, { ok: true, demo: true });
+      if (phone) {
+        if (!HAS_STYTCH) return json(200, { ok: true, demo: true, channel: "sms" });
+        const r = await stytch("/otps/sms/login_or_create", { phone_number: phone });
+        if (!r.ok)
+          return json(502, { error: r.data.error_message || "Could not text the code — try again." });
+        return json(200, { ok: true, methodId: r.data.phone_id, channel: "sms" });
+      }
+      if (!isEmail(email)) return json(400, { error: "Enter a valid email or phone number." });
+      if (!HAS_STYTCH) return json(200, { ok: true, demo: true, channel: "email" });
       const r = await stytch("/otps/email/login_or_create", { email });
       if (!r.ok)
         return json(502, { error: r.data.error_message || "Could not send the code — try again." });
-      return json(200, { ok: true, methodId: r.data.email_id });
+      return json(200, { ok: true, methodId: r.data.email_id, channel: "email" });
     }
 
     // ---- verify the code ---------------------------------------------------
@@ -200,18 +235,22 @@ exports.handler = async (event) => {
 
       if (HAS_STYTCH) {
         if (!body.methodId) return json(400, { error: "Start again — request a new code." });
+        // Stytch authenticates email and SMS OTP through the same endpoint by method_id.
         const r = await stytch("/otps/authenticate", { method_id: body.methodId, code });
         if (!r.ok)
           return json(401, { error: r.data.error_message || "That code didn't match or has expired." });
       }
       // (DEMO mode — no Stytch keys — accepts any 6-digit code above.)
 
-      // Resolve the family (self + dependents) from the Patients Master List.
-      let family = await loadFamily(email);
+      // Resolve the family (self + dependents) from the Patients Master List by
+      // whichever channel the patient used.
+      const idKey = phone ? { phone } : { email };
+      const idLabel = email || phone;
+      let family = await loadFamily(idKey);
       if (!family) {
         family = HAS_STYTCH
-          ? { patient: { name: email.split("@")[0], email }, dependents: [] }
-          : demoFamily(email);
+          ? { patient: { name: phone ? idLabel : email.split("@")[0], email, phone }, dependents: [] }
+          : demoFamily(idLabel);
       }
       const demo = !HAS_STYTCH || !!family.demo;
       const dependentIds = (family.dependents || []).map((d) => d.id).filter(Boolean);
@@ -221,6 +260,7 @@ exports.handler = async (event) => {
         token = sign({
           kind: "patient",
           email,
+          phone,
           patientId: family.patient.id || null,
           dependentIds,
           demo,
