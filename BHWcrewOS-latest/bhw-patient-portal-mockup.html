@@ -137,6 +137,17 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 .med-row .m-status.held{background:rgba(176,122,85,.18); color:#8f5c3d;}
 .meds-empty{font-size:12.5px; color:var(--fg-muted); margin:0;}
 @media(max-width:560px){.med-row{flex-wrap:wrap; gap:4px 10px;}}
+.profile-card[hidden]{display:none;}
+.profile-head{display:flex; justify-content:space-between; align-items:flex-start; gap:12px;}
+.profile-name{font-family:var(--font-serif); font-size:21px; color:var(--fg-strong);}
+.profile-sub{font-size:12.5px; color:var(--fg-muted); margin-top:3px; letter-spacing:.02em;}
+.profile-page{font-size:12px; font-weight:700; color:var(--accent-deep); white-space:nowrap; text-decoration:none;}
+.profile-page:hover{text-decoration:underline;}
+.profile-programs{display:flex; flex-wrap:wrap; gap:6px; margin-top:12px;}
+.pf-chip{font-size:11px; font-weight:700; letter-spacing:.04em; padding:3px 10px; border-radius:99px; background:rgba(38,109,122,.12); color:#266D7A;}
+.profile-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:13px 22px; margin-top:16px;}
+.pf-label{font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--fg-muted);}
+.pf-value{font-size:13.5px; color:var(--fg-strong); margin-top:2px; line-height:1.4;}
 
 /* tabs */
 .portal-tabs{position:sticky; top:55px; z-index:40; background:var(--bg);
@@ -640,6 +651,18 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
         <div class="clin-avatar">AM</div>
         <p><strong>This plan was built for you by Amaris &amp; your BHW care team.</strong> They read your check-ins each week and adjust as your labs and your life change — what you log here goes straight to them.</p>
         <button class="btn" type="button" onclick="document.querySelector('[data-pane=messages]').click(); return false;">Message the team</button>
+      </div>
+
+      <div class="card profile-card" id="profileCard" hidden>
+        <div class="profile-head">
+          <div>
+            <div class="profile-name" id="pf-name">—</div>
+            <div class="profile-sub" id="pf-sub"></div>
+          </div>
+          <a class="profile-page" id="pf-page" href="#" target="_blank" rel="noopener" hidden>Open my full page →</a>
+        </div>
+        <div class="profile-programs" id="pf-programs"></div>
+        <div class="profile-grid" id="pf-grid"></div>
       </div>
 
       <div class="checkin">
@@ -1391,8 +1414,10 @@ function _initials(n){ var w=String(n||'').trim().split(/\s+/); return (((w[0]||
 function applyFamily(fam){
   if(!fam||!fam.patient) return;
   var self=fam.patient, deps=fam.dependents||[];
-  PEOPLE=[{id:self.id, name:self.name, sub:'You', self:true, age:self.age, meds:self.meds||[]}]
-    .concat(deps.map(function(d){ return {id:d.id, name:d.name, sub:(d.relationship||'Dependent')+(d.age!=null?(' · age '+d.age):''), self:false, age:d.age, meds:d.meds||[]}; }));
+  PEOPLE=[Object.assign({}, self, {self:true, sub:'You'})]
+    .concat(deps.map(function(d){ return Object.assign({}, d, {self:false, sub:(d.relationship||'Dependent')+(d.age!=null?(' · age '+d.age):'')}); }));
+  var em=document.querySelector('#pane-home .home-greet h2 em');
+  if(em && PEOPLE[0]){ em.textContent=(String(PEOPLE[0].name||'').trim().split(/\s+/)[0]||'there')+'.'; }
   var sel=document.getElementById('whoSelect'), meta=document.getElementById('whoMeta');
   if(deps.length){
     sel.innerHTML=PEOPLE.map(function(p,i){ return '<option value="'+i+'">'+(p.self?('You · '+p.name):p.name)+'</option>'; }).join('');
@@ -1409,6 +1434,7 @@ function switchWho(i){
   document.getElementById('whoAvatar').textContent=_initials(p.name)||'·';
   var sel=document.getElementById('whoSelect'); if(sel) sel.value=String(i);
   fetchMeds(p);
+  renderProfile(p);
   var b=document.getElementById('guardianBanner');
   if(p.self){ b.hidden=true; b.innerHTML=''; return; }
   var note, cls='gb-note ok';
@@ -1434,6 +1460,24 @@ function fetchMeds(person){
   /* Meds travel with the family payload from patient-auth (Master List snapshot
      or the structured Medications DB), so render straight from the person. */
   renderMeds((person && person.meds) || []);
+}
+function renderProfile(p){
+  var card=document.getElementById('profileCard'); if(!card||!p) return;
+  card.hidden=false;
+  document.getElementById('pf-name').textContent=p.name||'—';
+  var sub=[]; if(p.age!=null) sub.push(p.age+' yrs'); if(p.gender) sub.push(p.gender); if(p.mrn) sub.push('MRN '+p.mrn);
+  document.getElementById('pf-sub').textContent=sub.join('  ·  ');
+  var pg=document.getElementById('pf-page');
+  if(p.patientPage){ pg.href=p.patientPage; pg.hidden=false; } else { pg.hidden=true; }
+  document.getElementById('pf-programs').innerHTML=(p.programs||[]).map(function(x){ return '<span class="pf-chip">'+medEsc(x)+'</span>'; }).join('');
+  var fields=[];
+  if(p.payer) fields.push(['Insurance', p.payer + (p.medicaidMco?(' · '+p.medicaidMco):'')]);
+  if(p.allergies) fields.push(['Allergies', p.allergies]);
+  if(p.chronicCount!=null && p.chronicCount!=='') fields.push(['Chronic conditions', String(p.chronicCount)]);
+  if(p.bhRisk) fields.push(['BH risk tier', p.bhRisk]);
+  if(p.lastVisit) fields.push(['Last visit', p.lastVisit]);
+  if(p.nextVisit) fields.push(['Next visit', p.nextVisit]);
+  document.getElementById('pf-grid').innerHTML=fields.map(function(f){ return '<div><div class="pf-label">'+f[0]+'</div><div class="pf-value">'+medEsc(f[1])+'</div></div>'; }).join('');
 }
 
 /* ===== Passwordless patient sign-in (Stytch Email OTP via /patient-auth) ===== */
