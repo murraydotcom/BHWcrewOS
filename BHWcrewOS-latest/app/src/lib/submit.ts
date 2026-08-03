@@ -76,3 +76,59 @@ export async function submitVisitNotice(notice: VisitNotice): Promise<void> {
   logForDevelopment('transition-of-care notice', notice)
   await settle(null)
 }
+
+export interface ReviewSubmission {
+  rating: number
+  comment: string
+  name?: string
+  contact?: string
+  /** Which surface the review came from. */
+  source: 'Care Connect' | 'Patient Portal'
+}
+
+export interface ReviewReceipt {
+  /** The practice's Google review link, to offer as a one-tap follow-up. */
+  googleUrl: string
+  /** Notion record id, so a Google-button tap can flag the record. */
+  reviewId: string | null
+}
+
+const REVIEW_ENDPOINT = '/.netlify/functions/submit-review'
+
+/**
+ * Send a patient rating + comment to the Patient Reviews store. Unlike the two
+ * stubs above, this posts to the real function when one is deployed; in the
+ * local dev demo (no function) it resolves with the built-in Google link so the
+ * flow can still be exercised.
+ */
+export async function submitReview(review: ReviewSubmission): Promise<ReviewReceipt> {
+  logForDevelopment('patient review', review)
+  try {
+    const res = await fetch(REVIEW_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(review),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      return { googleUrl: data.googleUrl, reviewId: data.reviewId ?? null }
+    }
+  } catch {
+    /* fall through to the demo receipt */
+  }
+  return settle({ googleUrl: 'https://share.google/cQNnl8gbsXqKB7oGM', reviewId: null })
+}
+
+/** Flag that the patient tapped through to Google (best-effort, non-blocking). */
+export function markRoutedToGoogle(reviewId: string): void {
+  try {
+    void fetch(REVIEW_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'routed', id: reviewId }),
+      keepalive: true,
+    })
+  } catch {
+    /* best-effort */
+  }
+}

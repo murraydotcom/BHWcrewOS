@@ -6,6 +6,7 @@ import { JustAsk } from '../components/JustAsk'
 import { Masthead } from '../components/Masthead'
 import { ProgramCards } from '../components/ProgramCards'
 import { ResourcesPromo } from '../components/ResourcesPromo'
+import { ShareYourExperience } from '../components/ShareYourExperience'
 import { TellUsYouWereSeen } from '../components/TellUsYouWereSeen'
 import { TriageForm } from '../components/TriageForm'
 import type { Triage } from '../components/useTriage'
@@ -30,6 +31,7 @@ export function HubPage({ triage, theme, askRef, onOpenResources }: HubPageProps
       <CrisisStrip variant="hub" />
       <ErOrUrgentCare />
       <TellUsYouWereSeen />
+      <ShareYourExperience />
       <ContactCards />
     </main>
   )

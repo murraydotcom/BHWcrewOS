@@ -1376,6 +1376,29 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
         </div>
         <p class="msg-fine">Not for emergencies. If this is urgent, call 911, or reach the after-hours line at 443.438.6437.</p>
       </div>
+
+      <!-- ===== Rate your care ===== -->
+      <div class="review-card card" style="margin-top:18px">
+        <div class="section-label"><span class="dot"></span><span class="txt">How is your care going?</span><span class="line"></span></div>
+        <div id="rv-form">
+          <p style="margin:0 0 12px;color:var(--ink-soft,#5b6b76);font-size:.9rem">We read every rating and comment — it's how we keep getting better for you. If we've earned it, you can share it on Google in one tap.</p>
+          <div id="rv-stars" role="group" aria-label="Your rating" style="display:flex;gap:4px;margin-bottom:12px">
+            <button type="button" data-n="1" aria-label="1 star" style="background:none;border:0;cursor:pointer;font-size:34px;line-height:1;padding:2px;color:#cfc7ba">☆</button>
+            <button type="button" data-n="2" aria-label="2 stars" style="background:none;border:0;cursor:pointer;font-size:34px;line-height:1;padding:2px;color:#cfc7ba">☆</button>
+            <button type="button" data-n="3" aria-label="3 stars" style="background:none;border:0;cursor:pointer;font-size:34px;line-height:1;padding:2px;color:#cfc7ba">☆</button>
+            <button type="button" data-n="4" aria-label="4 stars" style="background:none;border:0;cursor:pointer;font-size:34px;line-height:1;padding:2px;color:#cfc7ba">☆</button>
+            <button type="button" data-n="5" aria-label="5 stars" style="background:none;border:0;cursor:pointer;font-size:34px;line-height:1;padding:2px;color:#cfc7ba">☆</button>
+          </div>
+          <textarea id="rv-comment" rows="3" placeholder="What stood out? (optional)" aria-label="Your comment" style="width:100%;font:inherit;font-size:.9rem;padding:10px 12px;border:1px solid var(--line,#e6e0d8);border-radius:10px;background:var(--linen,#f7f5f2);resize:vertical;margin-bottom:12px"></textarea>
+          <button class="btn btn--gold" id="rv-send" type="button">Share with the team</button>
+          <p class="rv-status" id="rv-status" role="status" style="margin:10px 0 0;font-size:.78rem;color:var(--ink-soft,#5b6b76);min-height:1em"></p>
+        </div>
+        <div id="rv-thanks" hidden>
+          <h3 style="margin:0 0 8px;font-size:1.1rem">Thank you — we've got it.</h3>
+          <p id="rv-thanks-line" style="margin:0 0 14px;color:var(--ink-soft,#5b6b76);font-size:.9rem"></p>
+          <a id="rv-google" href="#" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:10px;text-decoration:none;background:#22303a;color:#fff;font-weight:700;font-size:.85rem;padding:12px 20px;border-radius:24px"><span style="font-weight:800;font-size:1rem" aria-hidden="true">G</span>Leave a Google review</a>
+        </div>
+      </div>
     </section>
 
     <footer class="portal-foot">
@@ -1572,6 +1595,53 @@ function toggleWeek(btn){
   if(wk.classList.contains('locked')) return;
   wk.classList.toggle('open');
 }
+
+/* ===== Rate your care (Patient Reviews) ===== */
+(function(){
+  var box=document.getElementById('rv-stars'); if(!box) return;
+  var rating=0;
+  function paint(n){
+    box.querySelectorAll('button').forEach(function(b){
+      var on = (+b.dataset.n)<=n;
+      b.textContent = on?'★':'☆';
+      b.style.color = on?'#c9a227':'#cfc7ba';
+    });
+  }
+  box.querySelectorAll('button').forEach(function(b){
+    b.addEventListener('mouseenter',function(){ paint(+b.dataset.n); });
+    b.addEventListener('click',function(){ rating=+b.dataset.n; paint(rating); document.getElementById('rv-status').textContent=''; });
+  });
+  box.addEventListener('mouseleave',function(){ paint(rating); });
+
+  var send=document.getElementById('rv-send');
+  send.addEventListener('click', async function(){
+    var comment=(document.getElementById('rv-comment').value||'').trim();
+    var st=document.getElementById('rv-status');
+    if(!rating && !comment){ st.textContent='Tap a star or write a line first.'; return; }
+    send.disabled=true; st.textContent='Sending…';
+    var me=null, token=null;
+    try{ me=JSON.parse(sessionStorage.getItem('bhw_pt_family')||'null'); }catch(e){}
+    try{ token=sessionStorage.getItem('bhw_pt_session'); }catch(e){}
+    var payload={ rating:rating, comment:comment, source:'Patient Portal' };
+    if(me && me.patient){ payload.name=me.patient.name||''; if(me.patient.id && token){ payload.patientId=me.patient.id; payload.token=token; } }
+    var googleUrl='https://share.google/cQNnl8gbsXqKB7oGM', reviewId=null;
+    try{
+      var res=await fetch('/.netlify/functions/submit-review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      var d=await res.json();
+      if(!res.ok){ st.textContent=d.error||'Could not save — try again.'; send.disabled=false; return; }
+      if(d.googleUrl) googleUrl=d.googleUrl; reviewId=d.reviewId||null;
+    }catch(e){ /* offline demo — still show the thank-you + Google link */ }
+    // thank-you state (Google offered to everyone; low ratings get a follow-up note)
+    document.getElementById('rv-form').hidden=true;
+    var line=document.getElementById('rv-thanks-line');
+    line.textContent = (rating>0 && rating<=3)
+      ? 'A member of the team will look at your note and reach out if it needs a follow-up. You can still share feedback on Google if you’d like:'
+      : 'A few words on Google helps another Baltimore family find care they can trust.';
+    var g=document.getElementById('rv-google'); g.href=googleUrl;
+    g.addEventListener('click',function(){ if(reviewId){ try{ fetch('/.netlify/functions/submit-review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'routed',id:reviewId}),keepalive:true}); }catch(e){} } });
+    document.getElementById('rv-thanks').hidden=false;
+  });
+})();
 </script>
 <script>
 /* ===== Blueprint tools ===== */
