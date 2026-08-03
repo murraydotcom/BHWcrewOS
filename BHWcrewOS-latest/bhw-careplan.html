@@ -158,6 +158,8 @@ textarea{resize:vertical;min-height:74px;line-height:1.5;font-size:13px}
     <div class="f full"><label>What your care team will do</label><textarea id="f-interventions"></textarea></div>
     <div class="f full"><label>What you can do</label><textarea id="f-patientRole"></textarea></div>
     <div class="f full"><label>Your care team</label><textarea id="f-team" style="min-height:52px"></textarea></div>
+    <div class="f full"><label>Your action steps — top priorities</label><textarea id="f-actions" placeholder="1. …&#10;2. …&#10;3. …"></textarea></div>
+    <div class="f full"><label>Track these at home</label><textarea id="f-track" style="min-height:52px" placeholder="e.g. blood pressure, mood (1–10), sleep hours"></textarea></div>
 
     <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:6px">
       <button class="btn" id="printBtn" type="button">Print / Save PDF</button>
@@ -276,7 +278,7 @@ function selectProgram(k, keepEdits){
 }
 
 /* ---- form <-> state ---- */
-const FIELD_IDS = { patient:"f-patient", dob:"f-dob", bhwId:"f-bhwid", preparedBy:"f-prep", planDate:"f-date", reviewDate:"f-review", focus:"f-focus", goals:"f-goals", interventions:"f-interventions", patientRole:"f-patientRole", team:"f-team" };
+const FIELD_IDS = { patient:"f-patient", dob:"f-dob", bhwId:"f-bhwid", preparedBy:"f-prep", planDate:"f-date", reviewDate:"f-review", focus:"f-focus", goals:"f-goals", interventions:"f-interventions", patientRole:"f-patientRole", team:"f-team", actionSteps:"f-actions", trackHome:"f-track" };
 function syncFromInputs(){ for(const [k,id] of Object.entries(FIELD_IDS)) state.fields[k]=$(id).value; }
 function wireInputs(){
   Object.values(FIELD_IDS).forEach(id=>$(id).addEventListener("input",()=>{ syncFromInputs(); renderDoc(); }));
@@ -314,6 +316,8 @@ function renderDoc(){
   <h4>What you can do</h4>${bodyBlock(f.patientRole)}
   ${P.crisis?`<div class="crisis">If you are ever in crisis or thinking about harming yourself, you are not alone. Call or text <b>988</b> (Suicide &amp; Crisis Lifeline) any time, or call <b>911</b> if you are in immediate danger.</div>`:""}
   <h4>Your care team</h4>${bodyBlock(f.team)}
+  ${(f.actionSteps||"").trim()?`<h4>Your action steps</h4>${bodyBlock(f.actionSteps)}`:""}
+  ${(f.trackHome||"").trim()?`<h4>Track these at home</h4>${bodyBlock(f.trackHome)}`:""}
   <div class="sign">
     <div><div class="sig-line"></div><div class="sig-cap">Patient signature &amp; date</div></div>
     <div><div class="sig-line"></div><div class="sig-cap">${esc(ORG.name)} · ${esc(f.preparedBy)||"Care team"} &amp; date</div></div>
@@ -332,7 +336,9 @@ function snapshot(){
     ``,`Goals:\n${f.goals||""}`,
     ``,`Care team will:\n${f.interventions||""}`,
     ``,`Patient will:\n${f.patientRole||""}`,
-    ``,`Care team: ${f.team||""}`].join("\n").slice(0,1900);
+    ``,`Care team: ${f.team||""}`,
+    ``,`Action steps:\n${f.actionSteps||""}`,
+    ``,`Track at home: ${f.trackHome||""}`].join("\n").slice(0,1900);
 }
 
 /* ---- connect + patients (reuses crewOS PIN, like Paperwork Studio) ---- */
