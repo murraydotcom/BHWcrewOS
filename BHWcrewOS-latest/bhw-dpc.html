@@ -79,9 +79,10 @@ label{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:upperca
   </div>
 
   <div class="panel">
-    <h2><span class="step">3</span>Read last AWV per patient</h2>
+    <h2><span class="step">3</span>Last AWV + gaps in care per patient</h2>
+    <p class="lede">Reads each patient's last Annual Wellness Visit and their <b>open care gaps</b> — preventive/quality services (screenings, vaccines, diabetes measures) with no recent Medicare claim. Claims-based screening aid; always confirm in the chart.</p>
     <div class="f"><label>Output file URL (from step 2)</label><input id="fileUrl" placeholder="https://…/Jobs/…/ExplanationOfBenefit.ndjson"></div>
-    <div class="row" style="margin-top:8px"><button class="btn" id="awvBtn" type="button" disabled>Get AWV dates</button></div>
+    <div class="row" style="margin-top:8px"><button class="btn" id="awvBtn" type="button" disabled>Get AWV + care gaps</button></div>
     <div id="awvWrap"></div>
   </div>
 </div>
@@ -136,7 +137,14 @@ $("pollBtn").addEventListener("click",async()=>{
 $("awvBtn").addEventListener("click",async()=>{
   const file=$("fileUrl").value.trim(); if(!file)return alert("Paste an output file URL from step 2.");
   const {d}=await post("dpc",{action:"awv",file}); const wrap=$("awvWrap");
-  if(d.awvByPatient){ const rows=Object.entries(d.awvByPatient); wrap.innerHTML=rows.length?`<table><thead><tr><th>Patient (FHIR ref)</th><th>Last AWV</th></tr></thead><tbody>${rows.map(([k,v])=>`<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join("")}</tbody></table>`:'<p class="lede" style="margin-top:10px">No AWV claims found in this file.</p>'; }
+  if(d.awvByPatient){
+    const gaps=d.gapsByPatient||{};
+    const refs=Object.keys(d.awvByPatient);
+    wrap.innerHTML=refs.length?`<table><thead><tr><th>Patient (FHIR ref)</th><th>Last AWV</th><th>Open care gaps</th></tr></thead><tbody>${refs.map(k=>{
+      const g=(gaps[k]||[]).map(x=>`${esc(x.measure)}${x.lastDone?` <span style="color:var(--ink-soft)">(last ${esc(x.lastDone)})</span>`:""}`);
+      return `<tr><td>${esc(k)}</td><td>${esc(d.awvByPatient[k]||"—")}</td><td>${g.length?`<span class="badge no">${g.length} open</span><br>`+g.join("<br>"):'<span class="badge ok">none flagged</span>'}</td></tr>`;
+    }).join("")}</tbody></table><p class="lede" style="margin-top:10px">Gaps are claims-based (Medicare FFS only) — services done elsewhere won't appear. Confirm in the chart. Edit the measure windows in <b>dpc.js</b> to match your quality program.</p>`:'<p class="lede" style="margin-top:10px">No claims found in this file.</p>';
+  }
   else wrap.innerHTML=`<pre style="display:block">${esc(JSON.stringify(d,null,2))}</pre>`;
 });
 
