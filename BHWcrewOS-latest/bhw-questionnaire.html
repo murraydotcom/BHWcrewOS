@@ -111,44 +111,97 @@ h1{font-size:22px;font-weight:800;letter-spacing:-.01em;margin:4px 0 6px;color:v
 <script>
 const ORG = { name:"BHW Medical Group", tag:"Baltimore Healthcare & Wellness", addr:"2131 Maryland Ave, Baltimore, MD 21218", phone:"(443) 762-5343", fax:"(833) 258-3941", email:"info@bhwmedical.org" };
 const S03 = [{v:0,l:"Not at all"},{v:1,l:"Several days"},{v:2,l:"More than half the days"},{v:3,l:"Nearly every day"}];
+const YNA = ["Yes","No","N/A"];
+const FREQ4 = ["Not at all","Several days","More than half the days","Nearly every day","N/A"];
+const RATE5 = ["Excellent","Very good","Good","Fair","Poor","N/A"];
+const HIGH2 = ["More than half the days","Nearly every day"];
 
 /* Config-driven questionnaires. Question types: section, single, multi, yesno
    (optional follow), scale, text, long. Server (questionnaire-submit.js) mirrors
    the slugs + owning program; it trusts the transcript the page builds here. */
 const QUESTIONNAIRES = {
   "awv-hra": { name:"Annual Wellness Visit — Health Risk Assessment", program:"Primary Care", acc:"#5f8ba0", accGrad:"linear-gradient(100deg,#5f8ba0,#3f6f84)", logo:"/assets/brand/bhw-medical.png", who:"Self",
-    intro:"This quick check-up helps your care team prepare for your Annual Wellness Visit. There are no right or wrong answers — just share what's true for you today.",
+    intro:"This helps your care team prepare for your Annual Wellness Visit. Please answer what you can — you can skip anything that doesn't apply. There are no right or wrong answers.",
     questions:[
-      {type:"section",label:"Your health"},
-      {type:"single",id:"genhealth",q:"In general, how would you say your health is?",options:["Excellent","Very good","Good","Fair","Poor"]},
-      {type:"single",id:"pain",q:"How would you rate your pain today?",options:["None","Mild","Moderate","Severe"]},
-      {type:"section",label:"Getting around & safety"},
-      {type:"multi",id:"adl",q:"Do you need help from another person with any of these?",options:["Bathing","Dressing","Eating","Getting around the home","Using the toilet","Shopping","Preparing meals","Managing money","Managing medications","None of these"]},
-      {type:"yesno",id:"falls",q:"Have you fallen in the past 12 months?"},
-      {type:"yesno",id:"unsteady",q:"Do you feel unsteady when standing or walking?"},
-      {type:"yesno",id:"safehome",q:"Do you feel safe where you live?"},
-      {type:"section",label:"Mood & memory"},
-      {type:"scale",id:"mood1",q:"Over the past 2 weeks, how often have you had little interest or pleasure in doing things?",scale:S03},
-      {type:"scale",id:"mood2",q:"Over the past 2 weeks, how often have you felt down, depressed, or hopeless?",scale:S03},
-      {type:"yesno",id:"memory",q:"Do you have any concerns about your memory?"},
-      {type:"yesno",id:"lonely",q:"Do you often feel lonely or isolated?"},
+      {type:"section",label:"Medical history"},
+      {type:"long",id:"currentConditions",q:"What conditions have you been diagnosed with (current)?"},
+      {type:"long",id:"pastConditions",q:"Please list any past conditions."},
+      {type:"long",id:"addlHealth",q:"Is there anything else about your health conditions we should know?"},
+      {type:"multi",id:"familyHistory",q:"Which of these conditions have affected your family (parents, siblings, children)? Check all that apply.",options:["Abdominal Aortic Aneurysm (AAA)","Alzheimer's disease / dementia","Arthritis","Asthma / wheezing","Blood clots","Breast cancer","Colon cancer","Depression","Diabetes","Glaucoma","Heart disease","High cholesterol","High blood pressure","Kidney failure","Ovarian cancer","Prostate cancer","Stroke","Uterine cancer","Other","None of the above"]},
+      {type:"section",label:"Hospitalizations & surgeries"},
+      {type:"long",id:"surgical",q:"Please list your surgical history with approximate dates (or write “none”)."},
+      {type:"long",id:"hospitalizations",q:"Any other hospitalizations (reason + approximate date), or write “none”."},
+      {type:"section",label:"Your care team"},
+      {type:"long",id:"providers",q:"Please list everyone involved in your health — providers, support system, suppliers, and resources."},
+      {type:"section",label:"Medications & allergies"},
+      {type:"long",id:"meds",q:"Please list all medications you take routinely (prescriptions, supplements, over-the-counter)."},
+      {type:"long",id:"allergies",q:"Do you have any known allergies? List the type and reaction, or write “none”."},
+      {type:"single",id:"medProblems",q:"Do you have any problems taking medications as prescribed?",options:YNA},
+      {type:"single",id:"medAccess",q:"Do you have difficulty picking up your medications, such as paying for them or transportation?",options:YNA},
+      {type:"section",label:"Social history"},
+      {type:"single",id:"alcohol",q:"Do you drink alcohol?",options:YNA},
+      {type:"single",id:"smoke",q:"Do you smoke or use nicotine products?",options:YNA},
+      {type:"single",id:"drugs",q:"Do you use any recreational drugs?",options:YNA},
+      {type:"single",id:"rxNonMedical",q:"Do you use any prescription medications for non-medical reasons?",options:YNA},
+      {type:"single",id:"opioids",q:"Do you take any opioid medications?",options:YNA},
+      {type:"section",label:"Mental health"},
+      {type:"single",id:"mhDown",q:"Over the past 2 weeks, how often have you felt down, depressed, or hopeless?",options:FREQ4},
+      {type:"single",id:"mhInterest",q:"Over the past 2 weeks, how often have you felt little interest or pleasure in doing things?",options:FREQ4},
+      {type:"single",id:"mhNervous",q:"In the past 2 weeks, how often have you felt nervous, anxious, or on edge?",options:FREQ4},
+      {type:"single",id:"mhWorry",q:"In the past 2 weeks, how often were you not able to stop or control worrying?",options:FREQ4},
+      {type:"single",id:"emotSupport",q:"How often do you get the emotional support you need?",options:["Always","Usually","Sometimes","Rarely","Never","N/A"]},
+      {type:"single",id:"pain",q:"Do you have any problems with pain?",options:["Yes, my pain is currently unmanaged","Yes, my pain is currently adequately managed","No, I do not experience pain routinely","N/A"]},
       {type:"section",label:"Lifestyle"},
-      {type:"single",id:"activity",q:"How many days a week are you physically active for 30+ minutes?",options:["0","1–2","3–4","5 or more"]},
-      {type:"yesno",id:"tobacco",q:"Do you currently use tobacco or vape?"},
-      {type:"single",id:"alcohol",q:"How often do you have a drink containing alcohol?",options:["Never","Monthly or less","2–4 times a month","2–3 times a week","4+ times a week"]},
+      {type:"single",id:"physHealth",q:"How would you rate your overall physical health?",options:RATE5},
+      {type:"single",id:"dental",q:"How would you describe the condition of your mouth and teeth (including dentures)?",options:RATE5},
+      {type:"single",id:"diet",q:"In a typical week, how many days do you eat a balanced diet of fruit, vegetables, protein, and whole grains?",options:["Everyday","5–6 days","3–4 days","1–2 days","Never","N/A"]},
+      {type:"single",id:"exercise",q:"On average, do you exercise at least 30 minutes a day, 5 days a week?",options:YNA},
+      {type:"single",id:"sleepHours",q:"On average, how many hours of sleep do you get each night?",options:["More than 10","9","8","7","6","5","4","3 or fewer","N/A"]},
+      {type:"multi",id:"sleepApnea",q:"Which of the following apply to you? (check all that apply)",options:["I snore","I feel significantly tired or sleepy during the day","I've been told I stop breathing or gasp for air while sleeping","I have high blood pressure","None of these"]},
+      {type:"single",id:"seatbelt",q:"Do you always use your seatbelt in the car?",options:YNA},
+      {type:"single",id:"sun",q:"Do you protect yourself from the sun outdoors (sunscreen, hat)?",options:YNA},
+      {type:"section",label:"Getting around & support"},
+      {type:"multi",id:"adl",q:"Which activities of daily living do you currently need assistance with?",options:["Dressing","Feeding","Walking","Bathing","Grooming","Toileting","N/A"]},
+      {type:"multi",id:"iadl",q:"Which instrumental activities do you currently need assistance with?",options:["Preparing meals","Managing finances","Housekeeping","Shopping","Transportation","Medication management","Using the phone","N/A"]},
+      {type:"single",id:"support",q:"Is your support system adequate and meeting your needs?",options:["Yes","No","I am independent and require no additional support","N/A"]},
+      {type:"single",id:"hearingAids",q:"Do you have hearing aids?",options:["Yes, but they are inadequate","Yes, and they are adequate","No, I do not use hearing aids"]},
+      {type:"single",id:"hearingDiff",q:"Do you have difficulty hearing or understanding people when they speak?",options:["Yes","Sometimes","No"]},
+      {type:"section",label:"Home safety"},
+      {type:"single",id:"fell",q:"Have you fallen in the past year?",options:YNA},
+      {type:"single",id:"unsteady",q:"Do you feel unsteady when standing or walking?",options:YNA},
+      {type:"single",id:"worryFall",q:"Do you worry about falling?",options:YNA},
+      {type:"single",id:"walkways",q:"Are the walkways in your home clear of cords, furniture, and clutter?",options:YNA},
+      {type:"single",id:"handrails",q:"Do your stairways have handrails?",options:YNA},
+      {type:"single",id:"callHelp",q:"If you were unable to get up after a fall, do you have a way to call for emergency help?",options:YNA},
+      {type:"single",id:"bathSafety",q:"Do you have difficulty or fear of falling getting in and out of the bath or shower?",options:YNA},
+      {type:"single",id:"lighting",q:"Do you have adequate lighting throughout the house, including hallways and stairways?",options:YNA},
+      {type:"single",id:"detectors",q:"Do you have functioning smoke and carbon-monoxide detectors that you maintain?",options:YNA},
       {type:"section",label:"Planning ahead"},
-      {type:"yesno",id:"advance",q:"Do you have an advance directive or MOLST form on file?"},
-      {type:"yesno",id:"support",q:"Do you have someone who can help you if you're sick?"},
+      {type:"multi",id:"lifePlanning",q:"Which life-planning documents do you have in place?",options:["I do not have life-planning documents in place","Medical Power of Attorney","Living Will or Advance Directive","POLST (Physician Orders for Life-Sustaining Treatment)","Do Not Resuscitate order","Organ and Tissue Donation","N/A"]},
+      {type:"single",id:"wantLifePlanning",q:"Medicare covers the chance to discuss and create life-planning documents. Would you like to create any?",options:YNA},
+      {type:"single",id:"caregiver",q:"Did a caregiver complete this questionnaire on behalf of the patient?",options:YNA},
+      {type:"section",label:"Care coordination"},
+      {type:"single",id:"ccm",q:"Would you like to enroll in the Chronic Care Management program?",options:["Yes, enroll","Decline","Not at this time"]},
+      {type:"single",id:"rpm",q:"Would you like to enroll in the Remote Patient Monitoring program?",options:["Yes, enroll","Decline","Not at this time"]},
+      {type:"single",id:"hrsn",q:"Do you agree to participate in the Health-Related Social Needs (AHC-HRSN) screening?",options:["Yes","No"]},
       {type:"long",id:"other",q:"Anything else you'd like your care team to know?"}
     ],
-    flags:(a)=>{ const f=[];
-      if(a.falls==="Yes"||a.unsteady==="Yes") f.push("Fall risk");
-      if(Number(a.mood1)>=2||Number(a.mood2)>=2) f.push("Low mood — consider PHQ-9");
-      if(a.memory==="Yes") f.push("Memory concern");
-      if(a.safehome==="No") f.push("Home safety");
-      if(a.advance==="No") f.push("Offer advance care planning");
-      if(a.tobacco==="Yes") f.push("Tobacco cessation");
-      if(a.lonely==="Yes") f.push("Social isolation");
+    flags:(a)=>{ const f=[]; const has=(v,arr)=>arr.indexOf(v)>-1;
+      if(has(a.mhDown,HIGH2)||has(a.mhInterest,HIGH2)) f.push("Low mood — consider PHQ-9");
+      if(has(a.mhNervous,HIGH2)||has(a.mhWorry,HIGH2)) f.push("Anxiety — consider GAD-7");
+      if(a.pain==="Yes, my pain is currently unmanaged") f.push("Unmanaged pain");
+      if(a.fell==="Yes"||a.unsteady==="Yes"||a.worryFall==="Yes") f.push("Fall risk");
+      if(a.walkways==="No"||a.handrails==="No"||a.lighting==="No"||a.detectors==="No"||a.callHelp==="No"||a.bathSafety==="Yes") f.push("Home safety");
+      if(Array.isArray(a.sleepApnea)&&a.sleepApnea.filter(x=>x!=="None of these").length>=2) f.push("Screen for sleep apnea (STOP-BANG)");
+      if(a.medAccess==="Yes") f.push("Medication access barrier (SDH)");
+      if(a.support==="No") f.push("Support gap");
+      if((Array.isArray(a.adl)&&a.adl.filter(x=>x!=="N/A").length)||(Array.isArray(a.iadl)&&a.iadl.filter(x=>x!=="N/A").length)) f.push("Functional assistance needed");
+      if((Array.isArray(a.lifePlanning)&&a.lifePlanning.indexOf("I do not have life-planning documents in place")>-1)||a.wantLifePlanning==="Yes") f.push("Advance care planning");
+      if(a.smoke==="Yes") f.push("Tobacco cessation");
+      if(a.opioids==="Yes"||a.rxNonMedical==="Yes"||a.drugs==="Yes") f.push("Substance-use follow-up");
+      if(a.ccm==="Yes, enroll") f.push("Enroll: CCM");
+      if(a.rpm==="Yes, enroll") f.push("Enroll: RPM");
+      if(a.hrsn==="Yes") f.push("Complete AHC-HRSN screening");
       return f; } },
   "charmed-intake": { name:"CharmEd Minds — Intake", program:"CharmEd Minds", acc:"#c69a3c", accGrad:"linear-gradient(100deg,#d9b45f,#b3892f)", logo:"/assets/brand/charmed-minds.png", who:"Parent/Caregiver",
     intro:"Tell us what brings you (or your child) to CharmEd Minds. This helps us prepare the right assessment and supports.",
