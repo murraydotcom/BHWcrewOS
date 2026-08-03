@@ -82,7 +82,9 @@ async function masterSearch(q) {
       insurance: mapInsurance(P.text(p["Payer Name"]), P.sel(p["Insurance Type"])),
       memberId: P.text(p["Insurance ID"]),
       mbi: P.text(p["MBI"]),
-      chart: P.text(p["Patient ID #"]),
+      // Prefer an explicit Patient ID # column; otherwise fall back to the
+      // [Patient ID] embedded in the roster title (e.g. "Jane Doe [BHW2117]").
+      chart: P.text(p["Patient ID #"]) || bhwId,
       email: (contact.match(/[\w.+-]+@[\w-]+\.[\w.-]+/) || [])[0] || "",
     };
     const prev = byKey.get(key);
