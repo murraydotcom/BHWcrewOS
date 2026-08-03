@@ -162,7 +162,7 @@ textarea{resize:vertical;min-height:60px;line-height:1.5}
           <datalist id="patientOptions"></datalist>
           <button class="btn ghost2 sm" id="patientPickBtn">Load</button>
         </div>
-        <span class="hint" id="patientHint">Fills demographics &amp; insurance from Notion. ICD-10s come from the note or manual entry.</span>
+        <span class="hint" id="patientHint">Fills demographics, insurance, and any ICD-10s on the chart. Codes not yet on file come from the note or manual entry.</span>
       </div>
 
       <div class="prefill">
@@ -526,8 +526,11 @@ $("patientPickBtn").addEventListener("click", ()=>{
   if(p.chart && packet().fields.includes("mrn")) state.fields.mrn=p.chart;
   if(p.memberId && packet().fields.includes("member")) state.fields.member=p.memberId;
   if(p.insurance && packet().fields.includes("payer")) state.fields.payer=payerMatch(p.insurance);
+  // ICD-10s from the patient's chart (once the Master Patient List carries them)
+  let added=0;
+  if(Array.isArray(p.icds)) p.icds.forEach(it=>{ const code=(it.code||"").toUpperCase(); if(!code||state.icds.some(i=>i.code===code)) return; const lib=ICD10[code]; state.icds.push({ code, label: lib?lib.label:(it.label||"(enter description)"), text: lib?lib.text:"" }); added++; });
   buildForm(); renderAll();
-  $("patientHint").textContent=`Loaded ${p.name}${p.bhwId?` (${p.bhwId})`:""}. Add ICD-10s from the note or manually.`;
+  $("patientHint").textContent=`Loaded ${p.name}${p.bhwId?` (${p.bhwId})`:""}`+(added?` · ${added} ICD-10 code(s) from the chart.`:` · no ICD-10 on file yet — add from the note or manually.`);
 });
 
 $("aiBtn").addEventListener("click", aiExtract);
