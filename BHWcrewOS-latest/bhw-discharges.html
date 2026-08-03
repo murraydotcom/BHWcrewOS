@@ -71,6 +71,18 @@ td b{font-weight:700}
     <div class="kpi" style="--kc:var(--sage)"><div class="n" id="k-ed">—</div><div class="l">ED visits (7d)</div></div>
   </div>
 
+  <details class="card" id="uploadCard">
+    <summary style="cursor:pointer;font-weight:800;font-size:.9rem;color:var(--deep,#2f4551)">⬆ Load discharge data manually <span class="tag">CSV or paste</span></summary>
+    <div class="note" style="margin-top:10px"><b>Best:</b> copy the rows straight from a spreadsheet or Notion table and paste — that keeps names like “Horton, S.” intact. (Typed CSV also works; put quotes around any name that has a comma.) Header row, any column order: <b>patient, event, facility, date, disposition, complexity</b>. <b>date</b> = a real date (2026-08-01) <i>or</i> a number of days ago. <b>complexity</b> = high / moderate (leave blank for ED/admissions). This stays in your browser — nothing is uploaded.</div>
+    <input type="file" id="csvFile" accept=".csv,text/csv" style="margin:10px 0 6px">
+    <textarea id="pasteBox" placeholder="patient, event, facility, date, disposition, complexity&#10;Doe, J., Discharge (inpatient), Sinai Hospital, 2026-08-01, Home, moderate&#10;Roe, M., ED visit, GBMC, 2, Discharged from ED," style="width:100%;min-height:96px;font-family:ui-monospace,monospace;font-size:12px;padding:9px;border:1px solid var(--line,#e2ddd2);border-radius:8px;background:var(--linen,#fff);color:var(--ink,#2e3d45)"></textarea>
+    <div style="display:flex;gap:8px;margin-top:9px;flex-wrap:wrap;align-items:center">
+      <button type="button" onclick="loadPasted()" style="background:var(--blue,#80abbd);color:#fff;border:none;border-radius:8px;padding:9px 15px;font:inherit;font-weight:700;font-size:.8rem;cursor:pointer">Load these rows</button>
+      <button type="button" onclick="load()" style="background:transparent;color:var(--clay,#b07a55);border:1.5px solid var(--clay,#b07a55);border-radius:8px;padding:8px 14px;font:inherit;font-weight:700;font-size:.8rem;cursor:pointer">Reload live feed</button>
+      <span class="mini" id="upNote"></span>
+    </div>
+  </details>
+
   <div class="card">
     <div class="card-head"><h3>ADT &amp; TCM Worklist</h3><span class="tag">CRISP CEND · TCM clock</span></div>
     <div class="tbl-wrap"><table>
@@ -128,6 +140,51 @@ function render(){
   set("k-adm",adm); set("k-disch",disch7); set("k-open",open); set("k-ed",ed7);
 }
 function setCx(i,level){ if(HOSP[i]){ HOSP[i].complexity=level; render(); } }
+
+/* ---- manual load: paste or CSV upload (for when CRISP/Notion format differs) ---- */
+function splitCSVLine(line, delim){ const out=[]; let cur="", q=false;
+  for(let i=0;i<line.length;i++){ const c=line[i];
+    if(c==='"'){ if(q&&line[i+1]==='"'){cur+='"';i++;} else q=!q; }
+    else if(c===delim && !q){ out.push(cur); cur=""; } else cur+=c; }
+  out.push(cur); return out; }
+function parseDischarges(text){
+  const lines=(text||"").trim().split(/\r?\n/).filter(l=>l.trim()); if(!lines.length) return [];
+  // Tab-separated (spreadsheet/Notion paste) is preferred — it keeps commas in names
+  // like "Horton, S." intact. Fall back to comma-separated for typed CSV.
+  const delim=lines[0].indexOf("\t")>-1 ? "\t" : ",";
+  const KNOWN=["patient","name","event","type","facility","hospital","date","daysago","days ago","disposition","dispo","complexity"];
+  const first=splitCSVLine(lines[0], delim).map(s=>s.toLowerCase().trim());
+  const hasHeader=first.some(h=>KNOWN.includes(h));
+  const cols=hasHeader?first:["patient","event","facility","date","disposition","complexity"];
+  const body=hasHeader?lines.slice(1):lines;
+  const gi=(a,names)=>{ for(const n of names){ const i=cols.indexOf(n); if(i>-1 && a[i]!=null) return String(a[i]).trim(); } return ""; };
+  return body.map(line=>{
+    const a=splitCSVLine(line, delim);
+    const patient=gi(a,["patient","name"]); if(!patient) return null;
+    const eventRaw=gi(a,["event","type"])||"Discharge (inpatient)";
+    const facility=gi(a,["facility","hospital"]);
+    const dateRaw=gi(a,["date","daysago","days ago"]);
+    const dispo=gi(a,["disposition","dispo"]);
+    let complexity=gi(a,["complexity"]).toLowerCase(); if(complexity!=="high"&&complexity!=="moderate") complexity=null;
+    const el=eventRaw.toLowerCase();
+    const type=/admit|admission/.test(el)?"admit":(/\bed\b|emergency/.test(el)?"ed":"discharge");
+    let date=null, daysAgo=0;
+    if(/^\d+$/.test(dateRaw)) daysAgo=Number(dateRaw);
+    else if(dateRaw){ const d=new Date(dateRaw); if(!isNaN(d.getTime())) date=d.toISOString().slice(0,10); }
+    if(type==="discharge"&&!complexity) complexity="moderate"; if(type!=="discharge") complexity=null;
+    return {patient, type, event:eventRaw, facility, date, daysAgo, dispo, complexity};
+  }).filter(Boolean);
+}
+function loadPasted(){
+  const rows=parseDischarges(document.getElementById("pasteBox").value);
+  const note=document.getElementById("upNote");
+  if(!rows.length){ note.textContent="Couldn't parse any rows — check the columns."; return; }
+  HOSP=rows; render(); note.textContent=`Loaded ${rows.length} row(s) from pasted data.`;
+}
+document.getElementById("csvFile").addEventListener("change", function(e){
+  const f=e.target.files&&e.target.files[0]; if(!f) return;
+  const r=new FileReader(); r.onload=()=>{ document.getElementById("pasteBox").value=String(r.result||""); loadPasted(); }; r.readAsText(f);
+});
 function exportPanel(){ window.open("/.netlify/functions/crisp?action=panel","_blank"); }
 
 async function load(){

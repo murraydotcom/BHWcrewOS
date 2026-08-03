@@ -2,6 +2,14 @@
   publish = "."
   functions = "netlify/functions"
 
+# Employee landing: the site root serves BHW HQ (the staff launchpad).
+# crewOS login stays at /index.html; HQ links point there. This only affects
+# the staff/employee side — it is not the public patient site.
+[[redirects]]
+  from = "/"
+  to = "/hq.html"
+  status = 200
+
 [[headers]]
   for = "/*"
   [headers.values]

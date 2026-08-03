@@ -28,6 +28,8 @@ const REG = {
   "gad-7": { name: "GAD-7", items: 7, min: 0, max: 3, who: ["Self"] },
   "gad-2": { name: "GAD-2", items: 2, min: 0, max: 3, who: ["Self"] },
   "audit-c": { name: "AUDIT-C", items: 3, min: 0, max: 4, who: ["Self"] },
+  "audit": { name: "AUDIT", items: 10, min: 0, max: 4, who: ["Self"] },
+  "pcl-5": { name: "PCL-5", items: 20, min: 0, max: 4, who: ["Self"] },
 };
 
 const WHO = new Set(["Parent", "Teacher", "Self", "Provider"]);

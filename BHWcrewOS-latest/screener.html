@@ -147,6 +147,49 @@ var SCREENERS = {
       { q:"How often do you have a drink containing alcohol?", scale:[{v:0,l:"Never"},{v:1,l:"Monthly or less"},{v:2,l:"2–4 times a month"},{v:3,l:"2–3 times a week"},{v:4,l:"4+ times a week"}] },
       { q:"How many standard drinks containing alcohol do you have on a typical day when you are drinking?", scale:[{v:0,l:"1 or 2"},{v:1,l:"3 or 4"},{v:2,l:"5 or 6"},{v:3,l:"7 to 9"},{v:4,l:"10 or more"}] },
       { q:"How often do you have six or more drinks on one occasion?", scale:[{v:0,l:"Never"},{v:1,l:"Less than monthly"},{v:2,l:"Monthly"},{v:3,l:"Weekly"},{v:4,l:"Daily or almost daily"}] }
+    ] },
+  "audit": { name:"AUDIT", full:"Alcohol Use Disorders Identification Test (AUDIT)", topic:"alcohol use over the past year",
+    who:"Self", intro:"Please answer the following questions about your use of alcohol during the past year. One standard drink ≈ one beer, one glass of wine, or one shot of spirits.", ages:["Young Adult","Adult"],
+    items:(function(){
+      var FREQ=[{v:0,l:"Never"},{v:1,l:"Less than monthly"},{v:2,l:"Monthly"},{v:3,l:"Weekly"},{v:4,l:"Daily or almost daily"}];
+      var YN=[{v:0,l:"No"},{v:2,l:"Yes, but not in the last year"},{v:4,l:"Yes, during the last year"}];
+      return [
+        { q:"How often do you have a drink containing alcohol?", scale:[{v:0,l:"Never"},{v:1,l:"Monthly or less"},{v:2,l:"2–4 times a month"},{v:3,l:"2–3 times a week"},{v:4,l:"4+ times a week"}] },
+        { q:"How many standard drinks do you have on a typical day when you are drinking?", scale:[{v:0,l:"1 or 2"},{v:1,l:"3 or 4"},{v:2,l:"5 or 6"},{v:3,l:"7 to 9"},{v:4,l:"10 or more"}] },
+        { q:"How often do you have six or more drinks on one occasion?", scale:FREQ },
+        { q:"How often during the last year have you found that you were not able to stop drinking once you had started?", scale:FREQ },
+        { q:"How often during the last year have you failed to do what was normally expected of you because of drinking?", scale:FREQ },
+        { q:"How often during the last year have you needed a first drink in the morning to get yourself going after a heavy drinking session?", scale:FREQ },
+        { q:"How often during the last year have you had a feeling of guilt or remorse after drinking?", scale:FREQ },
+        { q:"How often during the last year have you been unable to remember what happened the night before because of your drinking?", scale:FREQ },
+        { q:"Have you or someone else been injured because of your drinking?", scale:YN },
+        { q:"Has a relative, friend, doctor, or other health worker been concerned about your drinking or suggested you cut down?", scale:YN }
+      ];
+    })() },
+  "pcl-5": { name:"PCL-5", full:"PTSD Checklist for DSM-5 (PCL-5)", topic:"stress reactions in the past month",
+    who:"Self", intro:"Below is a list of problems that people sometimes have in response to a very stressful experience. Please read each one carefully, then choose how much you have been bothered by that problem in the past month.", crisis:true, ages:["High School","Young Adult","Adult"],
+    scale:[{v:0,l:"Not at all"},{v:1,l:"A little bit"},{v:2,l:"Moderately"},{v:3,l:"Quite a bit"},{v:4,l:"Extremely"}],
+    items:[
+      "Repeated, disturbing, and unwanted memories of the stressful experience",
+      "Repeated, disturbing dreams of the stressful experience",
+      "Suddenly feeling or acting as if the stressful experience were actually happening again",
+      "Feeling very upset when something reminded you of the stressful experience",
+      "Having strong physical reactions when something reminded you of the stressful experience (heart pounding, trouble breathing, sweating)",
+      "Avoiding memories, thoughts, or feelings related to the stressful experience",
+      "Avoiding external reminders of the stressful experience (people, places, conversations, activities, objects, or situations)",
+      "Trouble remembering important parts of the stressful experience",
+      "Having strong negative beliefs about yourself, other people, or the world",
+      "Blaming yourself or someone else for the stressful experience or what happened after it",
+      "Having strong negative feelings such as fear, horror, anger, guilt, or shame",
+      "Loss of interest in activities that you used to enjoy",
+      "Feeling distant or cut off from other people",
+      "Trouble experiencing positive feelings",
+      "Irritable behavior, angry outbursts, or acting aggressively",
+      "Taking too many risks or doing things that could cause you harm",
+      "Being “superalert” or watchful or on guard",
+      "Feeling jumpy or easily startled",
+      "Having difficulty concentrating",
+      "Trouble falling or staying asleep"
     ] }
 };
 
