@@ -98,7 +98,8 @@ async function medsFor(pg) {
 // Guardian Email is this email. Each person carries their medications.
 async function loadFamily(email) {
   try {
-    const all = await queryDb(DB.masterList);
+    // Same canonical DB the provider console (console-data.js) uses.
+    const all = await queryDb(process.env.MASTER_DB_ID || DB.masterList);
     const selfPg = all.find((pg) => readEmail(pg, "Email") === email);
     const depPgs = all.filter((pg) => readEmail(pg, "Guardian Email") === email);
     if (!selfPg && !depPgs.length) return null;
