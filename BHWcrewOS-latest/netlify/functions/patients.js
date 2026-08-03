@@ -70,6 +70,9 @@ async function masterSearch(q) {
     const key = bhwId || pg.id;
     const category = P.sel(p["Insurance Category"]); // PRIMARY / SECONDARY
     const self = P.sel(p["Patient Relationship"]) === "Self";
+    // Contact details are a single text blob, e.g.
+    //   "Mobile Phone : 4436836209, Email : amarism.np@gmail.com"
+    const contact = P.text(p["Patient Contact Details"]);
     const rec = {
       bhwId,
       name: nameFromTitle(title),
@@ -79,6 +82,7 @@ async function masterSearch(q) {
       insurance: mapInsurance(P.text(p["Payer Name"]), P.sel(p["Insurance Type"])),
       memberId: P.text(p["Insurance ID"]),
       mbi: P.text(p["MBI"]),
+      email: (contact.match(/[\w.+-]+@[\w-]+\.[\w.-]+/) || [])[0] || "",
     };
     const prev = byKey.get(key);
     if (!prev || (category === "PRIMARY")) byKey.set(key, rec);

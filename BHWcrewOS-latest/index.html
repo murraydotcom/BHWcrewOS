@@ -1823,14 +1823,14 @@ function npSearch(){
 function npBringIn(i){
   const p = (window.__npHits||[])[i]; if(!p) return;
   const set = (el,v)=>{ const n=document.getElementById(el); if(n) n.value = v||""; };
-  set("np-name", p.name); set("np-dob", p.dob); set("np-mem", p.memberId); set("np-mbi", p.mbi);
+  set("np-name", p.name); set("np-dob", p.dob); set("np-mem", p.memberId); set("np-mbi", p.mbi); set("np-email", p.email);
   const ins = document.getElementById("np-ins");
   if(ins) ins.value = [...ins.options].some(o=>o.value===p.insurance) ? p.insurance : "";
   npMatchedId = p.bhwId || null;
   document.getElementById("np-results").innerHTML = "";
   document.getElementById("np-search").value = "";
   document.getElementById("np-matched").innerHTML =
-    `<div class="res-cat" style="color:var(--sage)">✓ Brought in <b>${esc(p.name)}</b>${p.bhwId?` (${esc(p.bhwId)})`:""} from the Master Patient List — review below, then Register.${(p.payer&&!p.insurance)?` <span class="pill gray">Payer: ${esc(p.payer)}</span>`:""}${p.mbi?' <span class="pill gray">MBI on file</span>':''}</div>`;
+    `<div class="res-cat" style="color:var(--sage)">✓ Brought in <b>${esc(p.name)}</b>${p.bhwId?` (${esc(p.bhwId)})`:""} from the Master Patient List — review below, then Register.${(p.payer&&!p.insurance)?` <span class="pill gray">Payer: ${esc(p.payer)}</span>`:""}${p.mbi?' <span class="pill gray">MBI on file</span>':''} <span class="pill gray">Charm chart # isn’t in this list — add if known</span></div>`;
 }
 
 async function npSubmit(force){
