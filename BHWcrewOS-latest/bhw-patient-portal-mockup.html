@@ -121,6 +121,12 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 .patient-chip .pname{font-size:12.5px; font-weight:600; color:var(--fg-strong);}
 .patient-chip .pid{font-size:10px; color:var(--fg-muted); letter-spacing:0.06em;}
 @media (max-width:560px){ .patient-chip .pmeta{display:none;} .header-portal-tag{display:none;} }
+.who-select{font-family:var(--font-sans); font-size:12.5px; font-weight:600; color:var(--fg-strong); background:var(--bg-elevated,#fffdf9); border:1px solid var(--border); border-radius:8px; padding:7px 10px; cursor:pointer; max-width:190px;}
+.guardian-banner{background:color-mix(in srgb, var(--accent-deep,#266D7A) 12%, #fff); border-bottom:1px solid var(--border); color:var(--fg,#2A3A40); font-size:12.5px; padding:9px 22px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+.guardian-banner[hidden]{display:none;}
+.guardian-banner b{font-weight:700;}
+.guardian-banner .gb-note{color:var(--warn,#b07a55); font-weight:600;}
+.guardian-banner .gb-note.ok{color:var(--ok,#6f8f6a);}
 
 /* tabs */
 .portal-tabs{position:sticky; top:55px; z-index:40; background:var(--bg);
@@ -588,15 +594,17 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
         <span class="header-portal-tag">Patient Portal</span>
       </a>
       <div class="patient-chip">
-        <div class="pmeta" style="text-align:right;">
-          <div class="pname">Jordan T.</div>
-          <div class="pid">Demo patient</div>
+        <div class="pmeta" id="whoMeta" style="text-align:right;">
+          <div class="pname" id="whoName">Jordan T.</div>
+          <div class="pid" id="whoSub">Demo patient</div>
         </div>
-        <div class="avatar">JT</div>
+        <select id="whoSelect" class="who-select" onchange="switchWho(this.value)" style="display:none;" aria-label="Whose Blueprint to view"></select>
+        <div class="avatar" id="whoAvatar">JT</div>
         <button class="signout" type="button" onclick="signOut()">Sign out</button>
       </div>
     </div>
   </header>
+  <div class="guardian-banner" id="guardianBanner" hidden></div>
 
   <nav class="portal-tabs" aria-label="Portal sections">
     <div class="portal-tabs__inner">
@@ -1358,6 +1366,40 @@ function enterApp(){
   requestAnimationFrame(function(){
     setTimeout(function(){ document.getElementById('veinFill').style.width='21%'; }, 150);
   });
+  try{ var f=JSON.parse(sessionStorage.getItem('bhw_pt_family')||'null'); if(f) applyFamily(f); }catch(e){}
+}
+
+/* ===== Guardian / dependent profile switcher ===== */
+var PEOPLE=[];
+function _initials(n){ var w=String(n||'').trim().split(/\s+/); return (((w[0]||'')[0]||'')+((w[1]||'')[0]||'')).toUpperCase(); }
+function applyFamily(fam){
+  if(!fam||!fam.patient) return;
+  var self=fam.patient, deps=fam.dependents||[];
+  PEOPLE=[{name:self.name, sub:self.ctl?('Chart '+self.ctl):'You', self:true, age:self.age}]
+    .concat(deps.map(function(d){ return {name:d.name, sub:(d.relationship||'Dependent')+(d.age!=null?(' · age '+d.age):''), self:false, age:d.age}; }));
+  var sel=document.getElementById('whoSelect'), meta=document.getElementById('whoMeta');
+  if(deps.length){
+    sel.innerHTML=PEOPLE.map(function(p,i){ return '<option value="'+i+'">'+(p.self?('You · '+p.name):p.name)+'</option>'; }).join('');
+    sel.style.display=''; if(meta) meta.style.display='none';
+  } else {
+    sel.style.display='none'; if(meta) meta.style.display='';
+  }
+  switchWho(0);
+}
+function switchWho(i){
+  i=+i||0; var p=PEOPLE[i]; if(!p) return;
+  document.getElementById('whoName').textContent=p.name;
+  document.getElementById('whoSub').textContent=p.sub;
+  document.getElementById('whoAvatar').textContent=_initials(p.name)||'·';
+  var sel=document.getElementById('whoSelect'); if(sel) sel.value=String(i);
+  var b=document.getElementById('guardianBanner');
+  if(p.self){ b.hidden=true; b.innerHTML=''; return; }
+  var note, cls='gb-note ok';
+  if(p.age!=null && p.age>=12 && p.age<18){ note='Some sections are limited for teen confidentiality (Maryland).'; cls='gb-note'; }
+  else if(p.age!=null && p.age<12){ note='Full guardian access.'; }
+  else { note='Guardian access.'; }
+  b.innerHTML='<span>Viewing <b>'+p.name+'</b>’s Health Blueprint as guardian.</span><span class="'+cls+'">'+note+'</span>';
+  b.hidden=false;
 }
 
 /* ===== Passwordless patient sign-in (Stytch Email OTP via /patient-auth) ===== */
@@ -1388,6 +1430,7 @@ async function loginStep(){
     var d=await res.json();
     if(!res.ok || !d.ok){ st.textContent=d.error||'That code didn’t match.'; btn.disabled=false; return; }
     if(d.token){ try{ sessionStorage.setItem('bhw_pt_session', d.token); }catch(e){} }
+    try{ sessionStorage.setItem('bhw_pt_family', JSON.stringify({patient:d.patient||{name:email}, dependents:d.dependents||[]})); }catch(e){}
     enterApp();
   }catch(e){ st.textContent='Network error — try again.'; btn.disabled=false; }
 }
