@@ -14,6 +14,9 @@ exports.handler = async (event) => {
   try {
     if (event.httpMethod !== "POST") return { statusCode: 405, body: "method not allowed" };
 
+    // Fail closed: require the signing secret so this is never an open write.
+    if (!process.env.DIALPAD_WEBHOOK_SECRET) return { statusCode: 503, body: "DIALPAD_WEBHOOK_SECRET not set" };
+
     let payload;
     try { payload = parseDialpadBody(event.body || "", process.env.DIALPAD_WEBHOOK_SECRET); }
     catch { return { statusCode: 400, body: "bad payload" }; }

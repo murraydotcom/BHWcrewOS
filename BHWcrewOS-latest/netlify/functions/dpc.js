@@ -1,6 +1,7 @@
 // netlify/functions/dpc.js — CMS Data at the Point of Care (DPC) integration.
 // Pulls Medicare fee-for-service claims for your attributed patients and, most
 // usefully for BHW, computes each patient's last Annual Wellness Visit (AWV)
+// AND their open gaps in care (preventive/quality services overdue by claims)
 // from the claims — something HETS eligibility (Stedi 270/271) cannot return.
 //
 // Reference implementation: github.com/CMSgov/dpc-app. Production API docs:
@@ -31,7 +32,28 @@ const https = require("https");
 const { getSession, json } = require("./_lib");
 
 const DPC_BASE = (process.env.DPC_BASE || "https://api.dpc.cms.gov/api/v1").replace(/\/+$/, "");
-const AWV_CODES = new Set(["G0438", "G0439", "G0468", "99387", "99397", "99385", "99386", "99395", "99396"]);
+
+// Claims-based gaps-in-care. Each measure = the billing codes that satisfy it +
+// how recently one must appear (months). This is a screening aid derived from
+// Medicare FFS claims — NOT a substitute for the chart. Services done elsewhere
+// (or outside Medicare) won't appear, and windows are simplified to the dominant
+// modality. Edit this table to match BHW's quality program.
+const MEASURES = [
+  { name: "Annual Wellness Visit", awv: true, codes: ["G0438", "G0439", "G0468", "99387", "99397", "99385", "99386", "99395", "99396"], months: 12 },
+  { name: "Colorectal cancer screening", codes: ["45378", "45380", "45381", "45384", "45385", "45388", "G0105", "G0121", "82270", "G0328", "81528"], months: 120 },
+  { name: "Mammogram (breast)", codes: ["77065", "77066", "77067", "G0202"], months: 27 },
+  { name: "Bone density (DEXA)", codes: ["77080", "77081", "G0130"], months: 24 },
+  { name: "AAA screening (one-time)", codes: ["76706"], months: 1200 },
+  { name: "Cervical cancer screening", codes: ["88141", "88142", "88143", "88147", "88148", "88150", "88164", "88165", "88166", "88174", "88175", "87624", "87625"], months: 60 },
+  { name: "HbA1c (if diabetic)", codes: ["83036", "83037"], months: 12 },
+  { name: "Diabetic retinal eye exam", codes: ["92227", "92228", "92229", "92250", "2022F", "2023F", "2024F", "2026F", "2033F"], months: 12 },
+  { name: "Kidney (urine albumin)", codes: ["82043", "82044", "84156"], months: 12 },
+  { name: "Lipid panel", codes: ["80061", "83721", "82465", "84478"], months: 12 },
+  { name: "Influenza vaccine", codes: ["90630", "90653", "90654", "90655", "90656", "90658", "90661", "90662", "90672", "90673", "90674", "90682", "90685", "90686", "90687", "90688", "G0008"], months: 12 },
+  { name: "Pneumococcal vaccine (one-time)", codes: ["90670", "90671", "90732", "G0009"], months: 1200 },
+  { name: "Depression screening", codes: ["G0444", "96127"], months: 12 },
+];
+const CODE_TO_MEASURE = (() => { const m = {}; for (const meas of MEASURES) for (const c of meas.codes) m[c] = meas.name; return m; })();
 
 const configured = () =>
   !!(process.env.DPC_CLIENT_TOKEN && process.env.DPC_PRIVATE_KEY && process.env.DPC_PUBLIC_KEY_ID);
@@ -87,22 +109,44 @@ async function accessToken() {
 
 const authHeaders = (token, extra) => ({ Authorization: `Bearer ${token}`, Accept: "application/fhir+json", ...extra });
 
-// Parse EOB NDJSON → { "<patientRef>": "<latest AWV date>" }.
-function parseAwvFromNdjson(ndjson) {
-  const out = {};
+// Parse EOB NDJSON → per patient, the latest service date for each measure.
+//   { "<patientRef>": { "<measure name>": "YYYY-MM-DD", ... } }
+function parseClaims(ndjson) {
+  const byPatient = {};
   for (const line of ndjson.split(/\n+/)) {
     if (!line.trim()) continue;
     let eob; try { eob = JSON.parse(line); } catch { continue; }
     if (eob.resourceType !== "ExplanationOfBenefit") continue;
     const patient = eob.patient?.reference || "unknown";
     for (const item of eob.item || []) {
-      const codes = (item.productOrService?.coding || []).map((c) => (c.code || "").toUpperCase());
-      if (!codes.some((c) => AWV_CODES.has(c))) continue;
-      const date = item.servicedDate || item.servicedPeriod?.start || eob.billablePeriod?.end || eob.created || "";
-      if (date && (!out[patient] || date > out[patient])) out[patient] = date.slice(0, 10);
+      const date = (item.servicedDate || item.servicedPeriod?.start || eob.billablePeriod?.end || eob.created || "").slice(0, 10);
+      if (!date) continue;
+      for (const c of item.productOrService?.coding || []) {
+        const meas = CODE_TO_MEASURE[(c.code || "").toUpperCase()];
+        if (!meas) continue;
+        byPatient[patient] = byPatient[patient] || {};
+        if (!byPatient[patient][meas] || date > byPatient[patient][meas]) byPatient[patient][meas] = date;
+      }
     }
   }
-  return out;
+  return byPatient;
+}
+
+const monthsSince = (dateStr, now) => (now - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24 * 30.44);
+
+// From per-measure latest dates → last AWV + the list of OPEN care gaps.
+function summarize(byPatient) {
+  const now = Date.now();
+  const awvByPatient = {}, gapsByPatient = {};
+  for (const [ref, m] of Object.entries(byPatient)) {
+    awvByPatient[ref] = m["Annual Wellness Visit"] || null;
+    gapsByPatient[ref] = MEASURES.filter((meas) => !meas.awv).map((meas) => {
+      const last = m[meas.name];
+      const met = last && monthsSince(last, now) <= meas.months;
+      return met ? null : { measure: meas.name, lastDone: last || null };
+    }).filter(Boolean);
+  }
+  return { awvByPatient, gapsByPatient };
 }
 
 exports.handler = async (event) => {
@@ -146,7 +190,7 @@ exports.handler = async (event) => {
       const token = await accessToken();
       const res = await httpReq("GET", body.file, authHeaders(token, { Accept: "application/fhir+ndjson" }));
       if (res.status < 200 || res.status >= 300) return json(502, { error: `DPC file ${res.status}` });
-      return json(200, { awvByPatient: parseAwvFromNdjson(res.text) });
+      return json(200, summarize(parseClaims(res.text)));
     }
 
     return json(400, { error: "Unknown action" });
