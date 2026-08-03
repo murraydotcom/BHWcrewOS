@@ -1773,7 +1773,7 @@ function openNewPatient(){
     <label>Medicare MBI (Medicare patients — 11 characters from the red-white-blue card)</label><input type="text" id="np-mbi" placeholder="1EG4-TE5-MK73">
     <label>Patient email</label><input type="email" id="np-email" placeholder="name@email.com">
     <label>Parent/guardian email (peds)</label><input type="email" id="np-gemail" placeholder="parent@email.com">
-    <label>CharmHealth chart # (if already registered in Charm)</label><input type="text" id="np-chart">
+    <label>Patient ID # (if already registered in Charm)</label><input type="text" id="np-chart">
     <label>Program(s) they're entering</label>
     <div class="needs" id="np-progs">${NP_PROGS.map(p=>`<button class="chip" type="button" onclick="this.classList.toggle('on')" data-p="${p}">${p}</button>`).join("")}</div>
     <div id="np-dupes"></div>
@@ -1830,7 +1830,7 @@ function npBringIn(i){
   document.getElementById("np-results").innerHTML = "";
   document.getElementById("np-search").value = "";
   document.getElementById("np-matched").innerHTML =
-    `<div class="res-cat" style="color:var(--sage)">✓ Brought in <b>${esc(p.name)}</b>${p.bhwId?` (${esc(p.bhwId)})`:""} from the Master Patient List — review below, then Register.${(p.payer&&!p.insurance)?` <span class="pill gray">Payer: ${esc(p.payer)}</span>`:""}${p.mbi?' <span class="pill gray">MBI on file</span>':''}${p.chart?' <span class="pill gray">Charm chart # on file</span>':''}</div>`;
+    `<div class="res-cat" style="color:var(--sage)">✓ Brought in <b>${esc(p.name)}</b>${p.bhwId?` (${esc(p.bhwId)})`:""} from the Master Patient List — review below, then Register.${(p.payer&&!p.insurance)?` <span class="pill gray">Payer: ${esc(p.payer)}</span>`:""}${p.mbi?' <span class="pill gray">MBI on file</span>':''}${p.chart?' <span class="pill gray">Patient ID # on file</span>':''}</div>`;
 }
 
 async function npSubmit(force){

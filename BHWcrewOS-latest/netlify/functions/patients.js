@@ -82,7 +82,7 @@ async function masterSearch(q) {
       insurance: mapInsurance(P.text(p["Payer Name"]), P.sel(p["Insurance Type"])),
       memberId: P.text(p["Insurance ID"]),
       mbi: P.text(p["MBI"]),
-      chart: P.text(p["CharmHealth Chart #"]),
+      chart: P.text(p["Patient ID #"]),
       email: (contact.match(/[\w.+-]+@[\w-]+\.[\w.-]+/) || [])[0] || "",
     };
     const prev = byKey.get(key);
@@ -149,7 +149,7 @@ function shape(pg) {
     name: P.title(p["Patient Name"]),
     bhwId: P.uid(p["BHW ID"]),
     dob: P.date(p["DOB"]),
-    chart: P.text(p["CharmHealth Chart #"]),
+    chart: P.text(p["Patient ID #"]),
     insurance: P.sel(p["Insurance"]),
     memberId: P.text(p["Insurance Member ID"]),
     hasMbi: !!P.text(p["Medicare MBI"]),

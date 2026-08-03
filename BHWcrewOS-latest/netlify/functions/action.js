@@ -351,7 +351,7 @@ exports.handler = async (event) => {
           name: P.title(pg.properties["Patient Name"]),
           bhwId: P.uid(pg.properties["BHW ID"]),
           dob: P.date(pg.properties["DOB"]),
-          chart: P.text(pg.properties["CharmHealth Chart #"]),
+          chart: P.text(pg.properties["Patient ID #"]),
         }));
         const n = norm(name);
         const dupes = existing.filter((p) => {
@@ -359,7 +359,7 @@ exports.handler = async (event) => {
           if (pn === n) return true;                                   // same name (spacing/case-proof)
           if (p.dob && p.dob === b.dob && lastTok(p.name) === lastTok(name)) return true; // same DOB + last name
           if (dist(pn, n) <= 2) return true;                           // near-miss spelling
-          if (b.chart && p.chart && p.chart.trim() === b.chart.trim()) return true;       // same chart #
+          if (b.chart && p.chart && p.chart.trim() === b.chart.trim()) return true;       // same Patient ID #
           return false;
         });
         const exact = dupes.find((p) => norm(p.name) === n && p.dob === b.dob);
@@ -372,7 +372,7 @@ exports.handler = async (event) => {
         };
         if (b.insurance) props["Insurance"] = W.sel(b.insurance);
         if (b.memberId) props["Insurance Member ID"] = W.text(b.memberId);
-        if (b.chart) props["CharmHealth Chart #"] = W.text(b.chart);
+        if (b.chart) props["Patient ID #"] = W.text(b.chart);
         if (b.mbi) props["Medicare MBI"] = W.text(String(b.mbi).replace(/[^A-Za-z0-9]/g, "").toUpperCase());
         if (b.email) props["Email"] = { email: b.email };
         if (b.guardianEmail) props["Guardian Email"] = { email: b.guardianEmail };
