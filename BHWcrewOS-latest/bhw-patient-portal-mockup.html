@@ -127,6 +127,16 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
 .guardian-banner b{font-weight:700;}
 .guardian-banner .gb-note{color:var(--warn,#b07a55); font-weight:600;}
 .guardian-banner .gb-note.ok{color:var(--ok,#6f8f6a);}
+.meds-list{display:flex; flex-direction:column;}
+.med-row{display:flex; align-items:baseline; gap:10px; padding:11px 2px; border-bottom:1px solid var(--border);}
+.med-row:last-child{border-bottom:0;}
+.med-row .m-name{font-weight:700; color:var(--fg-strong); font-size:14px;}
+.med-row .m-dose{color:var(--fg-muted); font-size:12.5px;}
+.med-row .m-sched{color:var(--fg); opacity:.82; font-size:12.5px; flex:1; min-width:150px;}
+.med-row .m-status{font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:2px 8px; border-radius:99px; background:rgba(111,143,106,.16); color:#4d6f48; white-space:nowrap;}
+.med-row .m-status.held{background:rgba(176,122,85,.18); color:#8f5c3d;}
+.meds-empty{font-size:12.5px; color:var(--fg-muted); margin:0;}
+@media(max-width:560px){.med-row{flex-wrap:wrap; gap:4px 10px;}}
 
 /* tabs */
 .portal-tabs{position:sticky; top:55px; z-index:40; background:var(--bg);
@@ -1019,6 +1029,12 @@ h1,h2,h3,h4{margin:0; color:var(--fg-strong); text-wrap:balance;}
         </div>
       </div>
 
+      <!-- medications -->
+      <div class="bp-sech"><span class="t">Medications</span><span class="line"></span></div>
+      <div class="card">
+        <div class="meds-list" id="medsList"><p class="meds-empty">Loading medications…</p></div>
+      </div>
+
       <!-- this week's targets -->
       <div class="bp-sech"><span class="t">This week's targets</span><span class="line"></span></div>
       <section class="blueprint">
@@ -1375,8 +1391,8 @@ function _initials(n){ var w=String(n||'').trim().split(/\s+/); return (((w[0]||
 function applyFamily(fam){
   if(!fam||!fam.patient) return;
   var self=fam.patient, deps=fam.dependents||[];
-  PEOPLE=[{name:self.name, sub:self.ctl?('Chart '+self.ctl):'You', self:true, age:self.age}]
-    .concat(deps.map(function(d){ return {name:d.name, sub:(d.relationship||'Dependent')+(d.age!=null?(' · age '+d.age):''), self:false, age:d.age}; }));
+  PEOPLE=[{id:self.id, name:self.name, sub:'You', self:true, age:self.age}]
+    .concat(deps.map(function(d){ return {id:d.id, name:d.name, sub:(d.relationship||'Dependent')+(d.age!=null?(' · age '+d.age):''), self:false, age:d.age}; }));
   var sel=document.getElementById('whoSelect'), meta=document.getElementById('whoMeta');
   if(deps.length){
     sel.innerHTML=PEOPLE.map(function(p,i){ return '<option value="'+i+'">'+(p.self?('You · '+p.name):p.name)+'</option>'; }).join('');
@@ -1392,6 +1408,7 @@ function switchWho(i){
   document.getElementById('whoSub').textContent=p.sub;
   document.getElementById('whoAvatar').textContent=_initials(p.name)||'·';
   var sel=document.getElementById('whoSelect'); if(sel) sel.value=String(i);
+  fetchMeds(p);
   var b=document.getElementById('guardianBanner');
   if(p.self){ b.hidden=true; b.innerHTML=''; return; }
   var note, cls='gb-note ok';
@@ -1400,6 +1417,27 @@ function switchWho(i){
   else { note='Guardian access.'; }
   b.innerHTML='<span>Viewing <b>'+p.name+'</b>’s Health Blueprint as guardian.</span><span class="'+cls+'">'+note+'</span>';
   b.hidden=false;
+}
+function medEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function renderMeds(meds){
+  var list=document.getElementById('medsList'); if(!list) return;
+  if(!meds||!meds.length){ list.innerHTML='<p class="meds-empty">No medications on file.</p>'; return; }
+  list.innerHTML=meds.map(function(m){
+    var st=m.status||'Active', cls=(st.toLowerCase()==='held')?'m-status held':'m-status';
+    return '<div class="med-row"><span class="m-name">'+medEsc(m.name||'Medication')+'</span>'+
+      (m.dose?'<span class="m-dose">'+medEsc(m.dose)+'</span>':'')+
+      '<span class="m-sched">'+medEsc(m.schedule||'')+'</span>'+
+      '<span class="'+cls+'">'+medEsc(st)+'</span></div>';
+  }).join('');
+}
+function fetchMeds(person){
+  var list=document.getElementById('medsList'); if(!list) return;
+  list.innerHTML='<p class="meds-empty">Loading medications…</p>';
+  var token=''; try{ token=sessionStorage.getItem('bhw_pt_session')||''; }catch(e){}
+  fetch('/.netlify/functions/patient-auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'meds', patientId:(person&&person.id)||null, token:token})})
+    .then(function(r){return r.json();})
+    .then(function(d){ renderMeds((d&&d.meds)||[]); })
+    .catch(function(){ list.innerHTML='<p class="meds-empty">Couldn’t load medications right now.</p>'; });
 }
 
 /* ===== Passwordless patient sign-in (Stytch Email OTP via /patient-auth) ===== */

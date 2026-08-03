@@ -19,9 +19,12 @@
 //   { action:"send",   email }                 -> { ok, methodId?, demo? }
 //   { action:"verify", methodId, code, email } -> { ok, token, patient:{ name, email }, demo? }
 
-const { sign, json, queryDb, DB, P } = require("./_lib");
+const { sign, json, verify, queryDb, DB, P } = require("./_lib");
 
-// ---- Patients Master List helpers (guardian / dependent resolution) ----------
+// ---- Patient Index helpers (guardian / dependent resolution) -----------------
+// A child is linked to a parent by the child's "Guardian Email" (an existing
+// field on the Patient Index) matching the parent's login email — no separate
+// relation needed.
 function ageFromDob(dob) {
   if (!dob) return null;
   const d = new Date(dob);
@@ -32,58 +35,68 @@ function ageFromDob(dob) {
   if (m < 0 || (m === 0 && t.getDate() < d.getDate())) a--;
   return a;
 }
-function readEmail(pg) {
-  const p = pg.properties || {};
-  const e = p["Email"];
+function readEmail(pg, prop) {
+  const e = (pg.properties || {})[prop || "Email"];
   if (!e) return "";
   return String(e.email || P.text(e) || "").trim().toLowerCase();
 }
 function shapePatient(pg) {
   const p = pg.properties || {};
-  const dob = p["DOB"]?.date?.start || p["Insured Date of Birth"]?.date?.start || "";
+  const dob = p["DOB"]?.date?.start || "";
   return {
     id: pg.id,
-    name: P.title(p["Name"]) || P.title(p["Patient"]) || "Patient",
-    ctl: P.text(p["Patient Ctl No"]) || P.uid(p["Patient Ctl No"]) || "",
+    name: P.title(p["Patient Name"]) || "Patient",
     dob,
     age: ageFromDob(dob),
-    relationship: P.sel(p["Patient Relationship"]) || "",
+    divisions: P.multi(p["Active Divisions"]),
+    status: P.sel(p["Status"]),
   };
 }
-// Best-effort: match the login email to the Master List, resolve dependents from
-// a guardian relation (guardian→dependents or dependent→guardian). null on any miss.
+function shapeMed(pg) {
+  const p = pg.properties || {};
+  return {
+    name: P.title(p["Medication"]),
+    dose: P.text(p["Dose"]),
+    schedule: P.text(p["Schedule"]),
+    route: P.sel(p["Route"]),
+    status: P.sel(p["Status"]) || "Active",
+    prescriber: P.text(p["Prescriber"]),
+  };
+}
+// Match login email to the Patient Index; dependents = records whose Guardian
+// Email is this email. Returns null only when neither self nor dependents exist.
 async function loadFamily(email) {
   try {
     const all = await queryDb(DB.patients);
-    const self = all.find((pg) => readEmail(pg) === email);
-    if (!self) return null;
-    const sp = self.properties || {};
-    let depIds = [];
-    for (const key of ["Guardian Of", "Dependents", "Children"]) {
-      if (sp[key]?.relation?.length) { depIds = sp[key].relation.map((r) => r.id); break; }
-    }
-    if (!depIds.length) {
-      for (const pg of all) {
-        const pp = pg.properties || {};
-        for (const key of ["Guardian", "Parent/Guardian", "Parent"]) {
-          if (pp[key]?.relation?.some((r) => r.id === self.id)) { depIds.push(pg.id); break; }
-        }
-      }
-    }
-    const dependents = all.filter((pg) => depIds.includes(pg.id)).map(shapePatient);
-    return { patient: shapePatient(self), dependents };
+    const self = all.find((pg) => readEmail(pg, "Email") === email);
+    const deps = all.filter((pg) => readEmail(pg, "Guardian Email") === email);
+    if (!self && !deps.length) return null;
+    return {
+      patient: self ? shapePatient(self) : { name: email.split("@")[0], email },
+      dependents: deps.map(shapePatient),
+    };
   } catch {
     return null;
   }
 }
-// Shown on the preview (and any time the Master List has no match) so the
-// guardian switcher is demonstrable without live data.
+async function loadMeds(patientId) {
+  const rows = await queryDb(DB.medications, { property: "Patient", relation: { contains: patientId } });
+  return rows.map(shapeMed).filter((m) => m.status !== "Stopped");
+}
+// Shown on the preview (and any time the Patient Index has no match) so the
+// guardian switcher and medications section are demonstrable without live data.
 function demoFamily(email) {
   return {
-    patient: { name: "Amaris (Am) Murray", ctl: "BHW0001", relationship: "Self", email },
+    patient: { name: "Amaris (Am) Murray", relationship: "Self", email },
     dependents: [{ name: "Amari Murray", age: 9, relationship: "Child" }],
     demo: true,
   };
+}
+function demoMeds() {
+  return [
+    { name: "Iron bisglycinate", dose: "25 mg", schedule: "Every other morning with vitamin C", status: "Active" },
+    { name: "Vitamin D3", dose: "2,000 IU", schedule: "Daily with your largest meal", status: "Active" },
+  ];
 }
 
 const HAS_STYTCH = !!(process.env.STYTCH_PROJECT_ID && process.env.STYTCH_SECRET);
@@ -166,6 +179,21 @@ exports.handler = async (event) => {
         });
       }
       return json(200, { ok: true, token, patient: family.patient, dependents: family.dependents || [], demo });
+    }
+
+    // ---- medications for a patient (self or a linked dependent) -------------
+    if (body.action === "meds") {
+      const sess = body.token ? verify(body.token) : null;
+      const pid = body.patientId || (sess && sess.patientId) || null;
+      if (sess && pid && sess.patientId !== pid && !(sess.dependentIds || []).includes(pid)) {
+        return json(403, { error: "Not authorized for that record." });
+      }
+      if (!pid) return json(200, { ok: true, meds: demoMeds(), demo: true });
+      try {
+        return json(200, { ok: true, meds: await loadMeds(pid) });
+      } catch {
+        return json(200, { ok: true, meds: [] });
+      }
     }
 
     return json(400, { error: "Unknown action" });
