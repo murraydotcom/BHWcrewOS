@@ -2,8 +2,13 @@ import type { CSSProperties } from 'react'
 import { bhwLockup } from '../assets'
 import { config, type AnnouncementStyle } from '../config'
 import { CONTACT } from '../data/contact'
-import { NEWS } from '../data/news'
+import { NEWS, type Announcement } from '../data/news'
 import styles from './Masthead.module.css'
+
+interface MastheadProps {
+  /** Live announcements from Notion; falls back to the built-in defaults when empty. */
+  announcements?: Announcement[]
+}
 
 /** The five alternate treatments the practice reviewed, plus the sage default. */
 const NEWS_SKIN: Record<AnnouncementStyle, CSSProperties> = {
@@ -39,8 +44,9 @@ const NEWS_SKIN: Record<AnnouncementStyle, CSSProperties> = {
   },
 } as Record<AnnouncementStyle, CSSProperties>
 
-export function Masthead() {
+export function Masthead({ announcements }: MastheadProps = {}) {
   const skin = NEWS_SKIN[config.announcementStyle] ?? NEWS_SKIN.sage
+  const news = announcements && announcements.length ? announcements : NEWS
 
   return (
     <section className={styles.masthead} aria-labelledby="masthead-title">
@@ -67,7 +73,7 @@ export function Masthead() {
           <h2 className={styles.newsHeadLabel}>{CONTACT.newsUpdated}</h2>
         </div>
 
-        {NEWS.map((item) => (
+        {news.map((item) => (
           <article className={styles.item} key={`${item.date}-${item.title}`}>
             <div className={styles.itemMeta}>
               <p className={styles.itemTag} style={{ '--tag-tint': item.tint } as CSSProperties}>

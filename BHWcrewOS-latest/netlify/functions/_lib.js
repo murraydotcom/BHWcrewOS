@@ -59,6 +59,7 @@ const DB = {
   medications: "3bf3446ee6d143d7b4162af20a6b09e1",
   masterList: "2cf580758d3080f0825de4bbfb6c7528", // 🧑🏽‍⚕️ Patients Master List (canonical patient records)
   reviews: "5df92dd164174529a771f099e5db6f1d", // ⭐ Patient Reviews (ratings + comments from the site)
+  hubContent: "4880de2f764d4ccfb1061ca3790b2696", // 🗞️ Care Connect Hub Content (announcements + resources)
 };
  
 const DIVISIONS = ["Primary Care", "CharmEd Minds", "Mind & Mood Recovery", "The Porter House", "Chronic Care", "Flow"];
