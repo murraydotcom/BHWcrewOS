@@ -426,9 +426,9 @@ function divisionView(div){
 
     ${div==="Mind & Mood Recovery" ? `<div style="display:flex;align-items:center;gap:14px;margin:2px 0 14px"><img src="assets/mind-mood-logo.png" alt="BHW Mind and Mood Recovery" style="width:64px;height:64px;object-fit:cover;object-position:top;border-radius:50%"><div><div style="font-family:Montserrat,sans-serif;font-weight:800;letter-spacing:.5px;color:#2f4551">BHW MIND & MOOD RECOVERY</div><div style="font-style:italic;font-size:12.5px;color:#b07a55">Depth restores clarity.</div></div></div>` : ""}
 
-    ${div==="Care Management" ? ccNeedsCard() : ""}
-
     ${(div==="Care Management"||div==="Mind & Mood Recovery") ? todayCard(div) : ""}
+
+    ${div==="Care Management" ? ccNeedsCard() : ""}
 
     ${isPorter && D.phPlans ? phGrowthCard() : ""}
 
