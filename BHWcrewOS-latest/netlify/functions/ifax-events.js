@@ -18,9 +18,10 @@ exports.handler = async (event) => {
   try {
     if (event.httpMethod !== "POST") return { statusCode: 405, body: "method not allowed" };
 
-    // Optional shared-secret check.
+    // Fail closed: the shared secret is required so this is never an open write.
     const secret = process.env.IFAX_WEBHOOK_SECRET;
-    if (secret) {
+    if (!secret) return { statusCode: 503, body: "IFAX_WEBHOOK_SECRET not set" };
+    {
       const hdrs = event.headers || {};
       const given = (event.queryStringParameters || {}).token || hdrs["x-ifax-secret"] || hdrs["x-webhook-secret"] || "";
       if (given !== secret) return { statusCode: 401, body: "bad secret" };

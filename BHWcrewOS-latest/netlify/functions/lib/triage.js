@@ -76,20 +76,21 @@ async function createQueueEntry({ patientId, patientName, from, summary, source,
   return { ok: true, matched: !!patientId };
 }
 
-// Verify a Dialpad webhook body: raw JSON, or an HS256 JWT when a secret is set.
-// Returns the decoded payload, or null on a bad signature.
+// Verify a Dialpad webhook body. Requires an HS256 JWT signed with the shared
+// secret — a raw unsigned JSON body is REJECTED so the endpoint can't be spoofed
+// by anyone who knows the URL. Returns the decoded payload, or null when the
+// secret is missing or the signature is absent/invalid. (The handler 503s before
+// calling this when no secret is configured.)
 function parseDialpadBody(raw, secret) {
   const s = (raw || "").trim();
-  if (s.startsWith("{")) return JSON.parse(s);
-  if (secret) {
-    const crypto = require("crypto");
-    const [h, p, sig] = s.split(".");
-    if (!h || !p || !sig) return null;
-    const expected = crypto.createHmac("sha256", secret).update(`${h}.${p}`).digest("base64url");
-    if (sig !== expected) return null;
-    return JSON.parse(Buffer.from(p, "base64url").toString("utf8"));
-  }
-  return null;
+  if (!secret) return null;
+  const [h, p, sig] = s.split(".");
+  if (!h || !p || !sig) return null; // not a signed JWT (e.g. raw JSON) → reject
+  const crypto = require("crypto");
+  const expected = crypto.createHmac("sha256", secret).update(`${h}.${p}`).digest("base64url");
+  const a = Buffer.from(sig), b = Buffer.from(expected);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+  return JSON.parse(Buffer.from(p, "base64url").toString("utf8"));
 }
 
 module.exports = { digits, matchPatientByPhone, createQueueEntry, parseDialpadBody };
