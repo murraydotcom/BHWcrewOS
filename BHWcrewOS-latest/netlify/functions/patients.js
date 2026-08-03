@@ -74,6 +74,9 @@ function shape(pg) {
     chart: P.text(p["CharmHealth Chart #"]),
     insurance: P.sel(p["Insurance"]),
     memberId: P.text(p["Insurance Member ID"]),
+    hasMbi: !!P.text(p["Medicare MBI"]),
+    email: p["Email"]?.email || "",
+    guardianEmail: p["Guardian Email"]?.email || "",
     status: P.sel(p["Status"]),
     icds: icdFor(p),
   };
