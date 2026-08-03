@@ -11,7 +11,80 @@
 // whatever it's reasonably called (rich text, multi-select, or select). To
 // pin it to one exact name, put that name first in ICD_PROP_CANDIDATES.
 
-const { DB, queryDb, P, getSession, json } = require("./_lib");
+const { DB, queryDb, httpJson, P, getSession, json } = require("./_lib");
+
+// ---- Master Patient Insurance List (the full billing roster) ----------------
+// A different DB from the Ops-Hub patient index, with a billing-shaped schema:
+// the title is "First Last [BHWxxxx]" and demographics live on insurance rows
+// (one row per payer). We search it server-side by name/BHW ID and dedupe to one
+// record per patient so registration can pull a patient in without retyping.
+const MASTER_TITLE = "Patient First Name Last Name [Patient ID]";
+const bhwFromTitle = (t) => (String(t).match(/\[([^\]]+)\]\s*$/) || [])[1]?.trim() || "";
+const nameFromTitle = (t) => String(t).replace(/\s*\[[^\]]*\]\s*$/, "").trim();
+
+// "Oct 28, 1986" (or already-ISO) → "1986-10-28"; "" if unparseable.
+function isoDob(s) {
+  s = String(s || "").trim();
+  if (!s) return "";
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return "";
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+// Best-effort map of a free-text payer to the registration form's Insurance
+// options. Unknown payers return "" (left blank; the raw payer is shown instead).
+function mapInsurance(payer, type) {
+  const s = `${payer || ""} ${type || ""}`.toLowerCase();
+  if (/cigna/.test(s)) return "Cigna";
+  if (/aetna/.test(s)) return "Aetna";
+  if (/united|uhc|optum/.test(s)) return "UnitedHealthcare";
+  if (/tricare/.test(s)) return "Tricare";
+  if (/hopkins|ehp|priority partners/.test(s)) return "Johns Hopkins EHP";
+  if (/carefirst|bcbs|blue\s*cross|bluechoice/.test(s)) return "CareFirst BCBS";
+  if (/(medicare.*medicaid|dual)/.test(s)) return "Medicare + Medicaid";
+  if (/medicaid|physicians care|amerigroup|molina/.test(s)) return "Medicaid";
+  if (/medicare/.test(s)) return "Medicare";
+  if (/self.?pay|cash/.test(s)) return "Self-Pay";
+  return "";
+}
+
+async function masterSearch(q) {
+  const res = await httpJson("POST", `https://api.notion.com/v1/databases/${DB.masterPatients}/query`, {
+    filter: { property: MASTER_TITLE, title: { contains: q } },
+    page_size: 80,
+  });
+  if (!res.ok) {
+    const hint = res.status === 404
+      ? 'Share "Master Patient Insurance List" with the crewOS Notion integration.'
+      : `Notion ${res.status}`;
+    const err = new Error(hint); err.status = res.status; throw err;
+  }
+  // Dedupe to one record per patient (by BHW ID), preferring the PRIMARY payer row.
+  const byKey = new Map();
+  for (const pg of res.data.results || []) {
+    const p = pg.properties;
+    const title = P.title(p[MASTER_TITLE]);
+    const bhwId = bhwFromTitle(title);
+    const key = bhwId || pg.id;
+    const category = P.sel(p["Insurance Category"]); // PRIMARY / SECONDARY
+    const self = P.sel(p["Patient Relationship"]) === "Self";
+    const rec = {
+      bhwId,
+      name: nameFromTitle(title),
+      // Insured DOB is the patient's only when they are the insured (Self).
+      dob: self ? isoDob(P.text(p["Insured Date of Birth"])) : "",
+      payer: P.text(p["Payer Name"]),
+      insurance: mapInsurance(P.text(p["Payer Name"]), P.sel(p["Insurance Type"])),
+      memberId: P.text(p["Insurance ID"]),
+      mbi: P.text(p["MBI"]),
+    };
+    const prev = byKey.get(key);
+    if (!prev || (category === "PRIMARY")) byKey.set(key, rec);
+  }
+  return [...byKey.values()].sort((a, b) => a.name.localeCompare(b.name)).slice(0, 12);
+}
 
 const ICD_PROP_CANDIDATES = [
   "ICD-10 Codes", "ICD-10", "ICD10 Codes", "ICD10", "ICD Codes",
@@ -92,6 +165,16 @@ exports.handler = async (event) => {
   try { body = JSON.parse(event.body || "{}"); } catch { return json(400, { error: "Bad JSON" }); }
 
   try {
+    if (body.action === "master-search") {
+      const q = String(body.q || "").trim();
+      if (q.length < 2) return json(200, { patients: [] });
+      try {
+        return json(200, { patients: await masterSearch(q) });
+      } catch (e) {
+        return json(e.status === 404 ? 403 : 502, { error: String(e.message || e) });
+      }
+    }
+
     if (body.action === "list") {
       const patients = (await queryDb(DB.patients))
         .map(shape)

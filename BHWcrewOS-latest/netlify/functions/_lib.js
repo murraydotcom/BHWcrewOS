@@ -60,6 +60,7 @@ const DB = {
   carePlans: "ad8bcdfb4bd94385b39c67ef972d1fad", // Care Plans — Data (annual, per program)
   questionnaires: "eb20fcd416df4956b2a88e35de008410", // Questionnaires — Data (patient intake)
   careGaps: "32e580758d30806bac67e7deff25bc3c", // Medicare Wellness Report (payer gaps, monthly CSV uploads)
+  masterPatients: "335580758d3080e18cdff2a5375f094f", // Master Patient Insurance List (full billing roster — read-only search source)
   crewProjects: "386e620a9df545209a02207c4554c75b",
 };
 

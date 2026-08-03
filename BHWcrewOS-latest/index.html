@@ -237,7 +237,6 @@ const API_REFTPL = "/.netlify/functions/referral-templates";
 const API_GAPS = "/.netlify/functions/care-gaps";
 const API_PATIENTS = "/.netlify/functions/patients"; // Master Patient List (canonical picker source)
 let REF_TEMPLATES = null; // lazy-loaded cache of destination referral templates
-let MASTER_PATIENTS = null; // lazy-loaded cache of the full Master Patient List
 
 const DIV_COLORS = {
   "Primary Care":"var(--pc-primary)", "CharmEd Minds":"var(--pc-charmed)",
@@ -1761,10 +1760,10 @@ function openNewPatient(){
   npEnsureOverlay();
   document.getElementById("np-card").innerHTML = `
   <h3>Register a new patient</h3>
-  <div class="msub">Search the index first — pull an existing patient in with all their details, or register someone new. The duplicate guard still checks the whole index before anything is created.</div>
+  <div class="msub">Search the Master Patient List first — pull a patient in with their details, or register someone new. The duplicate guard still checks the crewOS index before anything is created.</div>
   <div class="f">
-    <label>🔎 Search the current patient index</label>
-    <input type="text" id="np-search" placeholder="Search by name, BHW ID, or DOB — then “Bring in”" autocomplete="off" oninput="npSearch()">
+    <label>🔎 Search the Master Patient List</label>
+    <input type="text" id="np-search" placeholder="Search by name or BHW ID — then “Bring in”" autocomplete="off" oninput="npSearch()">
     <div id="np-results"></div>
     <div id="np-matched"></div>
     <label>Full name *</label><input type="text" id="np-name" placeholder="First Last">
@@ -1782,65 +1781,56 @@ function openNewPatient(){
     <div class="macts" id="np-acts"><button class="btn sec" onclick="npClose()">Cancel</button><button class="btn" id="np-save" onclick="npSubmit(false)">Register patient</button></div>
   </div>`;
   npMatchedId = null;
+  window.__npHits = [];
   document.getElementById("np-overlay").classList.add("open");
-  npMasterEnsure(); // pull the Master Patient List so search is ready
   setTimeout(()=>{ const s=document.getElementById("np-search"); if(s) s.focus(); }, 30);
 }
 
-// The search reads the canonical Master Patient List (patients.js — active
-// patients, full record). Cached once per session; falls back to the in-memory
-// ops-data directory only if the master pull fails, so search never dead-ends.
-let npMatchedId = null;
-function npSource(){ return MASTER_PATIENTS || D.patients || []; }
-async function npMasterEnsure(){
-  if(MASTER_PATIENTS) return;
-  try{
-    const r = await api(API_PATIENTS, {action:"list"});
-    MASTER_PATIENTS = r.patients || [];
-  }catch(e){ /* keep D.patients fallback */ }
-  const s = document.getElementById("np-search");
-  if(s && s.value.trim().length>=2) npSearch(); // refresh once the list lands
-}
-// Search the Master Patient List. Matches on name (punctuation-insensitive),
-// BHW ID, or DOB. Results pull straight into the form.
+// The search reads the Master Patient Insurance List server-side (5k+ records)
+// via patients.js action:"master-search" — matched by name or BHW ID, deduped
+// to one row per patient. Debounced so it queries when typing pauses.
+let npMatchedId = null, npSearchT = null, npSearchSeq = 0;
 function npSearch(){
   const raw = (document.getElementById("np-search").value||"").trim();
   const box = document.getElementById("np-results");
+  clearTimeout(npSearchT);
   if(raw.length<2){ box.innerHTML=""; return; }
-  if(!MASTER_PATIENTS && !(D.patients||[]).length){ box.innerHTML = `<div class="lede" style="margin:2px 0 8px">Loading the Master Patient List…</div>`; return; }
-  const q = raw.toLowerCase(), nq = q.replace(/[^a-z0-9]/g,"");
-  const hits = npSource().filter(p=>{
-    const name = (p.name||"").toLowerCase();
-    return name.includes(q) || name.replace(/[^a-z0-9]/g,"").includes(nq)
-      || (p.bhwId||"").toLowerCase().includes(q) || (p.dob||"").includes(q);
-  }).slice(0,8);
-  if(!hits.length){ box.innerHTML = `<div class="lede" style="margin:2px 0 8px">No match in the Master Patient List — fill in the form below to register someone new.</div>`; return; }
-  box.innerHTML = hits.map(p=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 11px;border:1px solid var(--sand);border-radius:10px;margin:0 0 6px">
-    <div style="flex:1;min-width:0"><b>${esc(p.name)}</b> · ${esc(p.bhwId||"—")}${p.dob?` · DOB ${esc(p.dob)}`:""}${p.insurance?` · ${esc(p.insurance)}`:""}</div>
-    <button class="btn sm" type="button" onclick="npBringIn('${p.id}')">Bring in →</button>
-  </div>`).join("");
+  box.innerHTML = `<div class="lede" style="margin:2px 0 8px">Searching the Master Patient List…</div>`;
+  const seq = ++npSearchSeq;
+  npSearchT = setTimeout(async ()=>{
+    let hits = [];
+    try{
+      const r = await api(API_PATIENTS, {action:"master-search", q:raw});
+      hits = r.patients || [];
+    }catch(e){
+      if(seq!==npSearchSeq) return;
+      box.innerHTML = `<div class="lede" style="margin:2px 0 8px">Couldn’t reach the Master Patient List — ${esc(e.message)}</div>`;
+      return;
+    }
+    if(seq!==npSearchSeq) return; // a newer keystroke superseded this search
+    window.__npHits = hits;
+    if(!hits.length){ box.innerHTML = `<div class="lede" style="margin:2px 0 8px">No match in the Master Patient List — fill in the form below to register someone new.</div>`; return; }
+    box.innerHTML = hits.map((p,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 11px;border:1px solid var(--sand);border-radius:10px;margin:0 0 6px">
+      <div style="flex:1;min-width:0"><b>${esc(p.name)}</b>${p.bhwId?` · ${esc(p.bhwId)}`:""}${p.dob?` · DOB ${esc(p.dob)}`:""}${p.payer?` · ${esc(p.payer)}`:""}</div>
+      <button class="btn sm" type="button" onclick="npBringIn(${i})">Bring in →</button>
+    </div>`).join("");
+  }, 280);
 }
 
-// Pull an existing patient's record into the form (everything the Master Patient
-// List holds), mark it as a known patient, and make "Use this patient" the
-// primary action so we don't create a duplicate.
-function npBringIn(id){
-  const p = npSource().find(x=>x.id===id); if(!p) return;
+// Pull a Master-List record into the registration form. These patients aren't
+// crewOS records yet, so this prefills the form to register them in one step —
+// the duplicate guard still checks the crewOS index on submit.
+function npBringIn(i){
+  const p = (window.__npHits||[])[i]; if(!p) return;
   const set = (el,v)=>{ const n=document.getElementById(el); if(n) n.value = v||""; };
-  set("np-name", p.name); set("np-dob", p.dob); set("np-mem", p.memberId);
-  set("np-chart", p.chart); set("np-email", p.email); set("np-gemail", p.guardianEmail);
+  set("np-name", p.name); set("np-dob", p.dob); set("np-mem", p.memberId); set("np-mbi", p.mbi);
   const ins = document.getElementById("np-ins");
   if(ins) ins.value = [...ins.options].some(o=>o.value===p.insurance) ? p.insurance : "";
-  npMatchedId = id;
+  npMatchedId = p.bhwId || null;
   document.getElementById("np-results").innerHTML = "";
   document.getElementById("np-search").value = "";
   document.getElementById("np-matched").innerHTML =
-    `<div class="res-cat" style="color:var(--sage)">✓ Brought in <b>${esc(p.name)}</b> from the index — review below.${p.hasMbi?' <span class="pill gray">MBI on file</span>':''} This is an existing record; “Use this patient” won’t create a duplicate.</div>`;
-  const acts = document.getElementById("np-acts");
-  if(acts) acts.innerHTML =
-    `<button class="btn sec" onclick="npClose()">Cancel</button>
-     <button class="btn sec" onclick="npSubmit(false)">Register as new</button>
-     <button class="btn" onclick="npUseExisting('${id}')">Use this patient</button>`;
+    `<div class="res-cat" style="color:var(--sage)">✓ Brought in <b>${esc(p.name)}</b>${p.bhwId?` (${esc(p.bhwId)})`:""} from the Master Patient List — review below, then Register.${(p.payer&&!p.insurance)?` <span class="pill gray">Payer: ${esc(p.payer)}</span>`:""}${p.mbi?' <span class="pill gray">MBI on file</span>':''}</div>`;
 }
 
 async function npSubmit(force){
@@ -1884,7 +1874,7 @@ async function npSubmit(force){
   }
 }
 function npUseExisting(id){
-  const d = npSource().find(p=>p.id===id);
+  const d = (D.patients||[]).find(p=>p.id===id);
   npSelectInPicker(id, d ? `${d.name} — ${d.bhwId}` : "Selected patient");
   npClose();
   toast("Using the existing record — no duplicate created");
