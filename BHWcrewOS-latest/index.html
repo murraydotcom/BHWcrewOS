@@ -974,6 +974,7 @@ async function awvBegin(){
     const res = await api(API_ACT, {action:"awv-save", patientId:pid, step:1, stepStatus:"In Progress", answers:{}});
     AWV = { id: res.id, patientId: pid, answers: [{},{},{},{},{}], step: 0 };
     awvRender();
+    toast("AWV started — print/obtain: MOLST, MD Advance Directive, clock-draw sheet, and dx-relevant health education.");
   }catch(e){ document.getElementById("f-err").textContent = e.message; }
 }
 function awvResume(id){
@@ -983,6 +984,31 @@ function awvResume(id){
   awvRender();
 }
 
+// Reminder shown when an AWV is started — documents to print or obtain.
+function awvPrepCard(){
+  return `<div style="background:#fdf6ec;border:1px solid #e6d3b0;border-left:4px solid var(--clay-deep,#8f5c3d);border-radius:12px;padding:12px 14px;margin:2px 0 14px">
+    <div style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--clay-deep,#8f5c3d);margin-bottom:7px">🖨️ Print or obtain before the visit</div>
+    <div style="display:grid;gap:6px;font-size:13px">
+      <label style="display:flex;gap:8px;align-items:center"><input type="checkbox"> MOLST form</label>
+      <label style="display:flex;gap:8px;align-items:center"><input type="checkbox"> Maryland Advance Directive form</label>
+      <label style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input type="checkbox"> Clock-draw sheet (cognitive screening) <button class="btn sm sec" style="margin-left:auto" onclick="printClockSheet()">🖨 Print clock sheet</button></label>
+      <label style="display:flex;gap:8px;align-items:center"><input type="checkbox"> Health education handouts for the patient's diagnoses</label>
+    </div>
+  </div>`;
+}
+function printClockSheet(){
+  const pn = patLabel(AWV.patientId);
+  const w = window.open("", "_blank"); if(!w) return;
+  w.document.write(`<!doctype html><meta charset="utf-8"><title>Clock Drawing Test</title>`+
+  `<style>body{font-family:Montserrat,system-ui,sans-serif;margin:44px;color:#2e3d45}h1{font-size:20px;margin:0 0 4px}p{font-size:14px;color:#555;margin:6px 0}svg{display:block;margin:26px auto}@media print{.noprint{display:none}}</style>`+
+  `<h1>Clock Drawing Test — Cognitive Screening</h1>`+
+  `<p><b>Patient:</b> ${esc(pn)} &nbsp;&nbsp; <b>Date:</b> ______________</p>`+
+  `<p>Instruction: &ldquo;Draw a clock. Put in all the numbers, and set the hands to <b>ten past eleven</b> (11:10).&rdquo;</p>`+
+  `<svg width="360" height="360" viewBox="0 0 360 360"><circle cx="180" cy="180" r="170" fill="none" stroke="#2e3d45" stroke-width="2"/></svg>`+
+  `<p style="margin-top:22px">Score: ______ &nbsp;&nbsp;&nbsp; Reviewed by: __________________________</p>`+
+  `<button class="noprint" onclick="window.print()" style="margin-top:16px;padding:10px 18px;border:0;border-radius:8px;background:#8f5c3d;color:#fff;font-size:13px">Print</button>`);
+  w.document.close();
+}
 function awvRender(){
   const s = AWV_FLOW[AWV.step];
   const A = AWV.answers[AWV.step];
@@ -1000,6 +1026,7 @@ function awvRender(){
   openModal(`<h3>${s.icon} Step ${AWV.step+1} of 5 — ${esc(s.t)}</h3>
   <div class="msub">${esc(patLabel(AWV.patientId))} · saves when you tap Next</div>
   <div class="awv-bar">${bar}</div>
+  ${AWV.step===0?awvPrepCard():""}
   <div class="f awv-body">${items}</div>
   ${computed}
   <div class="ferr" id="f-err"></div>
