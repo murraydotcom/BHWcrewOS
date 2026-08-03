@@ -373,7 +373,6 @@ function buildRail(){
   html += `<button class="tab" data-view="pg-ana" style="--spine:var(--river-deep, #4f7f92)">Positive ANA?</button>`;
   html += `<button class="tab" data-view="pg-hormref" style="--spine:var(--sage)">Hormone Reference</button>`;
   html += `<button class="tab" data-view="pg-hormpt" style="--spine:var(--clay)">Hormones Explained (patient)</button>`;
-  html += `<button class="tab" data-view="pg-billing" style="--spine:var(--ok, #1F6961)">Billing Toolkit</button>`;
   html += `<button class="tab" data-view="pg-crewcare" style="--spine:var(--clay-deep)">BHWCrewCare Portal</button>`;
   html += `<div class="rail-label">Patient page previews</div>`;
   html += `<button class="tab" data-view="pg-portal" style="--spine:var(--sage)">Primary Care Portal</button>`;
@@ -416,6 +415,7 @@ function divisionView(div){
   return `<section class="view" id="view-${id}" style="--pc:${DIV_COLORS[div]}">
     <div class="prog-head"><div class="bar"></div><div><h1>${esc(div)}</h1><p>${DIV_BLURBS[div]||""}</p></div>${div==="Primary Care"?`<img src="/assets/bhw-logo-full.png" alt="BHW" style="height:84px;width:auto;margin-left:auto" onerror="this.style.display='none'">`:""}</div>
     ${div==="Primary Care"?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:-8px 0 18px"><button class="btn sm warn" onclick="activate('front-desk')">Front Desk OS — lookup &amp; referrals</button></div>`:""}
+    ${div==="Care Management"?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:-8px 0 18px"><button class="btn sm" style="background:var(--ok,#1F6961)" onclick="activate('pg-billing')">Billing Toolkit — care management &amp; billing codes</button></div>`:""}
     ${PATIENT_PAGES[div]?`<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:-4px 0 18px;padding:12px 14px;background:var(--card,#fff);border-radius:12px"><span style="font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;opacity:.65">Patient pages</span><a class="btn sm sec" style="text-decoration:none" href="${PATIENT_PAGES[div]}" target="_blank" rel="noopener">View patient page</a><a class="btn sm sec" style="text-decoration:none" href="https://app.notion.com/p/3a1580758d3081c48b90fdab7b442fcb" target="_blank" rel="noopener">Manage content ↗</a><a class="btn sm sec" style="text-decoration:none" href="https://app.notion.com/p/3a1580758d3081c48b90fdab7b442fcb" target="_blank" rel="noopener">Sign-up steps</a></div>`:""}
     <div class="kpis">
       <div class="kpi" style="--kc:var(--alert)"><div class="n">${c.rIn}</div><div class="l">Incoming referrals open</div></div>
