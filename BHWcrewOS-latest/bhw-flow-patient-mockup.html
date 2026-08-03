@@ -958,6 +958,72 @@ document.addEventListener('DOMContentLoaded',function(){
   </div>
 </div>
 
+
+<!-- ===== Rate your care (Patient Reviews) ===== -->
+<section class="rv-section" style="padding:0 0 8px">
+  <div class="container">
+    <div id="rvBlock" data-rv-source="Flow" style="max-width:640px;margin:8px auto 40px;background:#ffffff;border:1px solid #e6e0d8;border-radius:16px;box-shadow:0 2px 14px rgba(34,48,58,.07);padding:26px 24px">
+      <p style="margin:0 0 4px;font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;font-weight:700;color:#8a8172">Your experience</p>
+      <h3 style="margin:0 0 8px;font-size:1.35rem;font-weight:700;color:#22303a">How is your care with us going?</h3>
+      <div id="rvForm">
+        <p style="margin:0 0 14px;color:#5b6b76;font-size:.92rem;line-height:1.5">We read every rating and comment — it's how we keep getting better for you and your family. If we've earned it, you can share it on Google in one tap.</p>
+        <div id="rvStars" role="group" aria-label="Your rating" style="display:flex;gap:4px;margin-bottom:14px">
+          <button type="button" data-n="1" aria-label="1 star" style="background:none;border:0;cursor:pointer;font-size:34px;line-height:1;padding:2px;color:#cfc7ba">&#9734;</button><button type="button" data-n="2" aria-label="2 stars" style="background:none;border:0;cursor:pointer;font-size:34px;line-height:1;padding:2px;color:#cfc7ba">&#9734;</button><button type="button" data-n="3" aria-label="3 stars" style="background:none;border:0;cursor:pointer;font-size:34px;line-height:1;padding:2px;color:#cfc7ba">&#9734;</button><button type="button" data-n="4" aria-label="4 stars" style="background:none;border:0;cursor:pointer;font-size:34px;line-height:1;padding:2px;color:#cfc7ba">&#9734;</button><button type="button" data-n="5" aria-label="5 stars" style="background:none;border:0;cursor:pointer;font-size:34px;line-height:1;padding:2px;color:#cfc7ba">&#9734;</button>
+        </div>
+        <textarea id="rvComment" rows="3" placeholder="What stood out? (optional)" aria-label="Your comment" style="width:100%;font:inherit;font-size:.92rem;padding:11px 13px;border:1px solid #e6e0d8;border-radius:10px;background:#f7f5f2;resize:vertical;margin-bottom:12px"></textarea>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+          <input id="rvName" placeholder="Name (optional)" autocomplete="name" style="font:inherit;font-size:.92rem;padding:11px 13px;border:1px solid #e6e0d8;border-radius:10px;background:#f7f5f2">
+          <input id="rvContact" placeholder="Email or phone (optional)" autocomplete="email" style="font:inherit;font-size:.92rem;padding:11px 13px;border:1px solid #e6e0d8;border-radius:10px;background:#f7f5f2">
+        </div>
+        <button id="rvSend" type="button" style="background:#22303a;color:#fff;border:0;cursor:pointer;font:inherit;font-weight:700;font-size:.9rem;padding:12px 24px;border-radius:24px">Share with the team</button>
+        <p id="rvStatus" role="status" style="margin:10px 0 0;font-size:.78rem;color:#5b6b76;min-height:1em"></p>
+      </div>
+      <div id="rvThanks" hidden>
+        <h4 style="margin:0 0 8px;font-size:1.15rem;font-weight:700;color:#22303a">Thank you — we've got it.</h4>
+        <p id="rvThanksLine" style="margin:0 0 16px;color:#5b6b76;font-size:.92rem;line-height:1.5"></p>
+        <a id="rvGoogle" href="#" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:10px;text-decoration:none;background:#22303a;color:#fff;font-weight:700;font-size:.88rem;padding:12px 22px;border-radius:24px"><span style="font-weight:800;font-size:1rem" aria-hidden="true">G</span>Leave a Google review</a>
+      </div>
+    </div>
+  </div>
+</section>
+<script>
+(function(){
+  var wrap=document.getElementById('rvBlock'); if(!wrap) return;
+  var source=wrap.getAttribute('data-rv-source')||'Program Page';
+  var box=document.getElementById('rvStars'), rating=0;
+  function paint(n){ box.querySelectorAll('button').forEach(function(b){ var on=(+b.dataset.n)<=n; b.innerHTML=on?'&#9733;':'&#9734;'; b.style.color=on?'#c9a227':'#cfc7ba'; }); }
+  box.querySelectorAll('button').forEach(function(b){
+    b.addEventListener('mouseenter',function(){ paint(+b.dataset.n); });
+    b.addEventListener('click',function(){ rating=+b.dataset.n; paint(rating); document.getElementById('rvStatus').textContent=''; });
+  });
+  box.addEventListener('mouseleave',function(){ paint(rating); });
+  var send=document.getElementById('rvSend');
+  send.addEventListener('click', async function(){
+    var comment=(document.getElementById('rvComment').value||'').trim();
+    var st=document.getElementById('rvStatus');
+    if(!rating && !comment){ st.textContent='Tap a star or write a line first.'; return; }
+    send.disabled=true; st.textContent='Sending…';
+    var payload={ rating:rating, comment:comment, source:source,
+      name:(document.getElementById('rvName').value||'').trim(),
+      contact:(document.getElementById('rvContact').value||'').trim() };
+    var googleUrl='https://share.google/cQNnl8gbsXqKB7oGM', reviewId=null;
+    try{
+      var res=await fetch('/.netlify/functions/submit-review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      var d=await res.json();
+      if(!res.ok){ st.textContent=d.error||'Could not save — try again.'; send.disabled=false; return; }
+      if(d.googleUrl) googleUrl=d.googleUrl; reviewId=d.reviewId||null;
+    }catch(e){ /* offline demo — still show thank-you + Google link */ }
+    document.getElementById('rvForm').hidden=true;
+    document.getElementById('rvThanksLine').textContent = (rating>0 && rating<=3)
+      ? 'A member of the team will look at your note and reach out if it needs a follow-up. You can still share feedback on Google if you’d like:'
+      : 'A few words on Google helps another Baltimore family find care they can trust.';
+    var g=document.getElementById('rvGoogle'); g.href=googleUrl;
+    g.addEventListener('click',function(){ if(reviewId){ try{ fetch('/.netlify/functions/submit-review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'routed',id:reviewId}),keepalive:true}); }catch(e){} } });
+    document.getElementById('rvThanks').hidden=false;
+  });
+})();
+</script>
+
 <footer class="bhw-footer">
   <div class="container">
     <div class="bhw-footer__top">

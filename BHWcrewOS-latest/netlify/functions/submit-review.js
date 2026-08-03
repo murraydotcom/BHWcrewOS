@@ -63,7 +63,8 @@ exports.handler = async (event) => {
 
   const name = String(body.name || "").trim();
   const contact = String(body.contact || "").trim();
-  const source = body.source === "Patient Portal" ? "Patient Portal" : "Care Connect";
+  const SOURCES = ["Care Connect", "Patient Portal", "CharmEd Minds", "Mind & Mood", "Flow", "Program Page"];
+  const source = SOURCES.includes(body.source) ? body.source : "Care Connect";
 
   // Only link a patient record if the caller proves a matching session.
   let patientId = null;
