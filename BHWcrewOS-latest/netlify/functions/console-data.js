@@ -16,6 +16,7 @@ const H = () => ({
   'Notion-Version': '2022-06-28',
   'Content-Type': 'application/json',
 });
+const QUEUE_DB = process.env.QUEUE_DB_ID || 'de7906906a134b65bb0fc6966ba20b13';
 const J = (code, obj) => ({ statusCode: code, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj) });
 const text = f => (f?.rich_text?.[0]?.plain_text) || '';
 const pageIdFromUrl = u => {
@@ -168,7 +169,7 @@ exports.handler = async (event) => {
     }
 
     if (qs.mode === 'inbox') {
-      const res = await fetch(`${NOTION}/databases/${process.env.QUEUE_DB_ID}/query`, {
+      const res = await fetch(`${NOTION}/databases/${QUEUE_DB}/query`, {
         method: 'POST', headers: H(),
         body: JSON.stringify({ page_size: 30, sorts: [{ property: 'Received', direction: 'descending' }] }),
       });

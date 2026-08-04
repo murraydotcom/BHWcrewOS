@@ -11,6 +11,7 @@ const H = () => ({
   'Content-Type': 'application/json',
 });
 
+const QUEUE_DB = process.env.QUEUE_DB_ID || 'de7906906a134b65bb0fc6966ba20b13';
 const digits = s => (s || '').replace(/\D/g, '');
 const text = p => (p?.rich_text?.[0]?.plain_text) || (p?.title?.[0]?.plain_text) || '';
 const sel = p => p?.select?.name || p?.status?.name || '';
@@ -133,7 +134,7 @@ exports.handler = async (event) => {
 
     // ---- INBOX MODE: no q -> return the live activity feed ----
     if (!q) {
-      const ires = await fetch(`${NOTION}/databases/${process.env.QUEUE_DB_ID}/query`, {
+      const ires = await fetch(`${NOTION}/databases/${QUEUE_DB}/query`, {
         method: 'POST', headers: H(),
         body: JSON.stringify({
           sorts: [{ property: 'Received', direction: 'descending' }],
@@ -217,7 +218,7 @@ exports.handler = async (event) => {
     };
 
     // ---- 2. pull their requests from the triage queue (via Patient relation) ----
-    const qres = await fetch(`${NOTION}/databases/${process.env.QUEUE_DB_ID}/query`, {
+    const qres = await fetch(`${NOTION}/databases/${QUEUE_DB}/query`, {
       method: 'POST', headers: H(),
       body: JSON.stringify({
         filter: { property: 'Patient', relation: { contains: page.id } },
