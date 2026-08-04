@@ -16,18 +16,23 @@ exports.handler = async (event) => {
   try {
     if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'method not allowed' };
 
-    // Dialpad sends the payload as a JWT when a secret is set, else raw JSON.
+    // Dialpad sends the payload as a JWT (header.payload.signature); a plain
+    // JSON body is also accepted (e.g. for manual testing).
     let payload;
-    const raw = event.body || '';
-    if (raw.trim().startsWith('{')) {
+    const raw = (event.body || '').trim();
+    if (raw.startsWith('{')) {
       payload = JSON.parse(raw);
-    } else if (process.env.DIALPAD_WEBHOOK_SECRET) {
-      // JWT: header.payload.signature — verify signature (HS256) then decode
-      const crypto = require('crypto');
-      const [h, p, sig] = raw.trim().split('.');
-      const expected = crypto.createHmac('sha256', process.env.DIALPAD_WEBHOOK_SECRET)
-        .update(`${h}.${p}`).digest('base64url');
-      if (sig !== expected) return { statusCode: 401, body: 'bad signature' };
+    } else if (raw.includes('.')) {
+      const [h, p, sig] = raw.split('.');
+      // If a secret is configured, verify the HS256 signature. If not, decode
+      // the payload anyway so a missing env var doesn't silently drop every
+      // text — but set the secret in Netlify to authenticate these calls.
+      if (process.env.DIALPAD_WEBHOOK_SECRET) {
+        const crypto = require('crypto');
+        const expected = crypto.createHmac('sha256', process.env.DIALPAD_WEBHOOK_SECRET)
+          .update(`${h}.${p}`).digest('base64url');
+        if (sig !== expected) return { statusCode: 401, body: 'bad signature' };
+      }
       payload = JSON.parse(Buffer.from(p, 'base64url').toString('utf8'));
     } else {
       return { statusCode: 400, body: 'unrecognized payload' };
@@ -39,6 +44,8 @@ exports.handler = async (event) => {
 
     const from = payload.from_number || payload.contact?.phone || '';
     const text = payload.text || payload.text_content || '';
+    // A name Dialpad already knows for this number (used only if no chart match).
+    const contactName = payload.contact?.display_name || payload.contact?.name || '';
     if (!from && !text) return { statusCode: 200, body: 'no sms content' };
 
     // ---- try to match the sender to a patient on the master list ----
@@ -73,13 +80,17 @@ exports.handler = async (event) => {
 
     // ---- create the queue entry ----
     // Queue schema: title is "Request ID" (REQ-…); "Patient Name" is a text field.
-    const nowD = new Date();
-    const now = nowD.toISOString();
+    // Prefer Dialpad's own send time; fall back to when we received the webhook.
+    const rawTs = Number(payload.created_date || payload.event_timestamp || 0);
+    const nowD = rawTs ? new Date(rawTs < 1e12 ? rawTs * 1000 : rawTs) : new Date();
+    const now = (isNaN(nowD.getTime()) ? new Date() : nowD).toISOString();
+    const stamp = new Date(now);
     const pad = (n) => String(n).padStart(2, '0');
-    const requestId = `REQ-${nowD.getUTCFullYear()}${pad(nowD.getUTCMonth() + 1)}${pad(nowD.getUTCDate())}-${pad(nowD.getUTCHours())}${pad(nowD.getUTCMinutes())}${pad(nowD.getUTCSeconds())}`;
+    const requestId = `REQ-${stamp.getUTCFullYear()}${pad(stamp.getUTCMonth() + 1)}${pad(stamp.getUTCDate())}-${pad(stamp.getUTCHours())}${pad(stamp.getUTCMinutes())}${pad(stamp.getUTCSeconds())}`;
+    const displayName = patientName || contactName || `Text from ${from || 'unknown number'}`;
     const props = {
       'Request ID': { title: [{ text: { content: requestId } }] },
-      'Patient Name': { rich_text: [{ text: { content: patientName || `Text from ${from || 'unknown number'}` } }] },
+      'Patient Name': { rich_text: [{ text: { content: displayName } }] },
       'Callback Number': { phone_number: from || null },
       'Summary': { rich_text: [{ text: { content: (text || '(no text content)').slice(0, 1900) } }] },
       'Source': { select: { name: 'Text / SMS' } },
