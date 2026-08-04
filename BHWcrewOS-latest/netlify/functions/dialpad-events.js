@@ -72,9 +72,14 @@ exports.handler = async (event) => {
     }
 
     // ---- create the queue entry ----
-    const now = new Date().toISOString();
+    // Queue schema: title is "Request ID" (REQ-…); "Patient Name" is a text field.
+    const nowD = new Date();
+    const now = nowD.toISOString();
+    const pad = (n) => String(n).padStart(2, '0');
+    const requestId = `REQ-${nowD.getUTCFullYear()}${pad(nowD.getUTCMonth() + 1)}${pad(nowD.getUTCDate())}-${pad(nowD.getUTCHours())}${pad(nowD.getUTCMinutes())}${pad(nowD.getUTCSeconds())}`;
     const props = {
-      'Patient Name': { title: [{ text: { content: patientName || `Text from ${from || 'unknown number'}` } }] },
+      'Request ID': { title: [{ text: { content: requestId } }] },
+      'Patient Name': { rich_text: [{ text: { content: patientName || `Text from ${from || 'unknown number'}` } }] },
       'Callback Number': { phone_number: from || null },
       'Summary': { rich_text: [{ text: { content: (text || '(no text content)').slice(0, 1900) } }] },
       'Source': { select: { name: 'Text / SMS' } },

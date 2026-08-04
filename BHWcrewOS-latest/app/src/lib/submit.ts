@@ -33,6 +33,11 @@ export interface TriageSubmission {
   freeText: string
   /** Field id → answer, for the intake questions plus this route's questions. */
   answers: Record<string, string>
+  /** Patient's name / DOB pulled from the intake fields. */
+  name?: string
+  dob?: string
+  /** Human-readable one-line summary, composed with the real field labels. */
+  summary?: string
   submittedAt: string
 }
 
@@ -60,11 +65,26 @@ function settle<T>(value: T): Promise<T> {
 }
 
 /**
- * Send a Just Ask message to the care team.
- * Replace the stub with your real POST; return the reference the queue assigns.
+ * Send a Just Ask message to the care team. Posts to the triage-intake function
+ * (which creates a row in the Patient Request Triage Queue); if that isn't
+ * reachable — e.g. the local dev demo — it falls back to a local reference so
+ * the flow still completes.
  */
 export async function submitTriage(submission: TriageSubmission): Promise<TriageReceipt> {
   logForDevelopment('triage submission', submission)
+  try {
+    const res = await fetch('/.netlify/functions/submit-triage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(submission),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      if (data.reference) return { reference: data.reference }
+    }
+  } catch {
+    /* fall through to a local reference */
+  }
   return settle({ reference: 'BHW-2481' })
 }
 

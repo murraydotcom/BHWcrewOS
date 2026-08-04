@@ -77,12 +77,22 @@ export function useTriage() {
   const submit = useCallback(async () => {
     if (status === 'sending') return
     setStatus('sending')
+    // Compose a readable one-line summary with the real field labels, and pull
+    // out name / DOB so the queue row is actionable at a glance.
+    const skip = new Set(['name', 'dob', 'blueprint'])
+    const detail = fields
+      .filter((f) => !skip.has(f.id) && (answers[f.id] || '').trim())
+      .map((f) => `${f.label}: ${answers[f.id].trim()}`)
+    const summary = [route.label, ask.trim(), ...detail].filter(Boolean).join(' · ')
     try {
       const receipt = await submitTriage({
         route: route.key,
         routeLabel: route.label,
         freeText: ask,
         answers,
+        name: (answers.name || '').trim(),
+        dob: (answers.dob || '').trim(),
+        summary,
         submittedAt: new Date().toISOString(),
       })
       setReference(receipt.reference)
@@ -90,7 +100,7 @@ export function useTriage() {
     } catch {
       setStatus('error')
     }
-  }, [answers, ask, route.key, route.label, status])
+  }, [answers, ask, fields, route.key, route.label, status])
 
   return {
     ask,
