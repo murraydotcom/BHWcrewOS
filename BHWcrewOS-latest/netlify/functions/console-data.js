@@ -5,6 +5,8 @@
 // GET  ?mode=inbox               -> triage queue items (provider lens)
 // POST {action:'publishweek', pageId, week, title, body}   -> appends week to patient's page
 // POST {action:'postresult', pageId, lab, value, meaning, provider} -> appends result callout
+// POST {action:'publishblueprint', pageId, domain, rec, target, provider} -> appends Blueprint recommendation callout
+// POST {action:'publishcareplan', pageId, program, plan, fileName, provider} -> appends a program's 12-week care plan
 // POST {action:'start'|'done', id}                          -> queue status (same as front desk)
 // Env: NOTION_TOKEN, MASTER_DB_ID, QUEUE_DB_ID, DASH_KEY
 
@@ -14,6 +16,7 @@ const H = () => ({
   'Notion-Version': '2022-06-28',
   'Content-Type': 'application/json',
 });
+const QUEUE_DB = process.env.QUEUE_DB_ID || 'de7906906a134b65bb0fc6966ba20b13';
 const J = (code, obj) => ({ statusCode: code, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj) });
 const text = f => (f?.rich_text?.[0]?.plain_text) || '';
 const pageIdFromUrl = u => {
@@ -56,6 +59,44 @@ exports.handler = async (event) => {
           method: 'PATCH', headers: H(),
           body: JSON.stringify({ children: [{ object: 'block', type: 'callout', callout: { icon: { emoji: '🧪' }, color: 'blue_background', rich_text: [{ text: { content: content.slice(0, 1900) } }] } }] }),
         });
+        if (!res.ok) return J(502, { error: (await res.text()).slice(0, 300) });
+        return J(200, { ok: true });
+      }
+
+      if (b.action === 'publishblueprint') {
+        if (!b.pageId) return J(400, { error: 'no patient page linked — add the Patient Page URL on the Master List' });
+        const ICONS = { Exercise: '🏃', Sleep: '😴', Social: '🤝', Coping: '🧭', Nutrition: '🍎' };
+        const emoji = ICONS[b.domain] || '🧭';
+        const parts = [
+          `${emoji} ${b.domain || 'Blueprint'} — recommended by your care team`,
+          b.rec || '',
+        ];
+        if (b.target) parts.push(`Target: ${b.target}`);
+        parts.push(`— ${b.provider || 'your care team'}, ${new Date().toLocaleDateString('en-US')}`);
+        const content = parts.filter(Boolean).join('\n');
+        const res = await fetch(`${NOTION}/blocks/${b.pageId}/children`, {
+          method: 'PATCH', headers: H(),
+          body: JSON.stringify({ children: [{ object: 'block', type: 'callout', callout: { icon: { emoji }, color: 'green_background', rich_text: [{ text: { content: content.slice(0, 1900) } }] } }] }),
+        });
+        if (!res.ok) return J(502, { error: (await res.text()).slice(0, 300) });
+        return J(200, { ok: true });
+      }
+
+      if (b.action === 'publishcareplan') {
+        if (!b.pageId) return J(400, { error: 'no patient page linked — add the Patient Page URL on the Master List' });
+        const children = [
+          { object: 'block', type: 'divider', divider: {} },
+          { object: 'block', type: 'heading_2', heading_2: { rich_text: [{ text: { content: `📋 ${b.program || 'Program'} — 12-week care plan` } }] } },
+        ];
+        if (b.fileName) children.push({
+          object: 'block', type: 'callout',
+          callout: { icon: { emoji: '📎' }, rich_text: [{ text: { content: `Attached: ${String(b.fileName).slice(0, 200)}` } }] },
+        });
+        String(b.plan || '').split('\n').filter(l => l.trim()).slice(0, 90).forEach(line => {
+          children.push({ object: 'block', type: 'paragraph', paragraph: { rich_text: [{ text: { content: line.slice(0, 1900) } }] } });
+        });
+        children.push({ object: 'block', type: 'paragraph', paragraph: { rich_text: [{ text: { content: `— ${b.provider || 'your care team'}, ${new Date().toLocaleDateString('en-US')}` } }] } });
+        const res = await fetch(`${NOTION}/blocks/${b.pageId}/children`, { method: 'PATCH', headers: H(), body: JSON.stringify({ children }) });
         if (!res.ok) return J(502, { error: (await res.text()).slice(0, 300) });
         return J(200, { ok: true });
       }
@@ -128,7 +169,7 @@ exports.handler = async (event) => {
     }
 
     if (qs.mode === 'inbox') {
-      const res = await fetch(`${NOTION}/databases/${process.env.QUEUE_DB_ID}/query`, {
+      const res = await fetch(`${NOTION}/databases/${QUEUE_DB}/query`, {
         method: 'POST', headers: H(),
         body: JSON.stringify({ page_size: 30, sorts: [{ property: 'Received', direction: 'descending' }] }),
       });

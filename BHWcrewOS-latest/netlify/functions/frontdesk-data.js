@@ -11,6 +11,7 @@ const H = () => ({
   'Content-Type': 'application/json',
 });
 
+const QUEUE_DB = process.env.QUEUE_DB_ID || 'de7906906a134b65bb0fc6966ba20b13';
 const digits = s => (s || '').replace(/\D/g, '');
 const text = p => (p?.rich_text?.[0]?.plain_text) || (p?.title?.[0]?.plain_text) || '';
 const sel = p => p?.select?.name || p?.status?.name || '';
@@ -133,7 +134,7 @@ exports.handler = async (event) => {
 
     // ---- INBOX MODE: no q -> return the live activity feed ----
     if (!q) {
-      const ires = await fetch(`${NOTION}/databases/${process.env.QUEUE_DB_ID}/query`, {
+      const ires = await fetch(`${NOTION}/databases/${QUEUE_DB}/query`, {
         method: 'POST', headers: H(),
         body: JSON.stringify({
           sorts: [{ property: 'Received', direction: 'descending' }],
@@ -205,9 +206,10 @@ exports.handler = async (event) => {
       dob: P['DOB']?.date?.start || '',
       phone: P['Phone']?.phone_number || '',
       payer: sel(P['Payer']) || text(P['Payer']),
-      mco: sel(P['MCO']) || text(P['MCO']),
+      mco: sel(P['Medicaid MCO']) || sel(P['MCO']) || text(P['MCO']),
       member: text(P['MRN / Member ID']) || text(P['Member ID']),
-      status: sel(P['Status']) || sel(P['Patient Status']),
+      status: sel(P['Status']) || sel(P['Patient Status']) ||
+              (P['Program Enrollment']?.multi_select || []).map(m => m.name).join(', '),
       allergies: text(P['Allergies']),
       meds: text(P['Medications']),
       lastVisit: P['Last Visit']?.date?.start || P['Last Visit Date']?.date?.start || '',
@@ -216,7 +218,7 @@ exports.handler = async (event) => {
     };
 
     // ---- 2. pull their requests from the triage queue (via Patient relation) ----
-    const qres = await fetch(`${NOTION}/databases/${process.env.QUEUE_DB_ID}/query`, {
+    const qres = await fetch(`${NOTION}/databases/${QUEUE_DB}/query`, {
       method: 'POST', headers: H(),
       body: JSON.stringify({
         filter: { property: 'Patient', relation: { contains: page.id } },
