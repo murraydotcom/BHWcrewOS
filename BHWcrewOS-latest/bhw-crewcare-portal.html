@@ -47,6 +47,65 @@ td{padding:10px;border-bottom:1px solid #f0ebe2}
 td a{color:var(--clay-deep);font-weight:700;text-decoration:none}
 .warn{color:var(--urgent);font-weight:700;font-size:11px}
 .planbox{white-space:pre-wrap;background:var(--linen);border-radius:11px;padding:14px;font-size:12.5px;max-height:420px;overflow:auto}
+/* Blueprint pillar tracking */
+.bp-track{display:flex;flex-direction:column;gap:15px;margin-top:16px}
+.bp-row{display:grid;grid-template-columns:150px 1fr 150px;gap:16px;align-items:center}
+.bp-row .dom{font-weight:700;font-size:13px;display:flex;align-items:center;gap:9px;color:var(--ink)}
+.bp-row .dom .d{width:10px;height:10px;border-radius:50%;flex:none}
+.bp-row .dom .rx{font-size:10.5px;font-weight:500;color:var(--soft);letter-spacing:0}
+.bp-bar{height:10px;background:var(--linen);border-radius:99px;overflow:hidden;border:1px solid #e9e2d6}
+.bp-bar span{display:block;height:100%;border-radius:99px}
+.bp-row .val{font-size:12px;color:var(--soft);white-space:nowrap;font-weight:600;text-align:right}
+.bp-row .val b{color:var(--ink);font-weight:700}
+.bp-legend{font-size:11.5px;color:var(--soft);margin-top:14px}
+@media(max-width:640px){.bp-row{grid-template-columns:1fr auto}.bp-row .bp-bar{grid-column:1/-1;order:3}}
+/* per-program 12-week care plans */
+.cp-list{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+@media(max-width:820px){.cp-list{grid-template-columns:1fr}}
+.cp-prog{border:1px solid #eee8df;border-left:4px solid var(--pg,#80abbd);border-radius:11px;padding:15px 16px;background:#fff}
+.cp-prog__head{font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:9px;color:var(--ink);margin-bottom:6px}
+.cp-prog__head .d{width:10px;height:10px;border-radius:50%;background:var(--pg,#80abbd);flex:none}
+.cp-prog__head .tag{font-size:10px;font-weight:600;letter-spacing:.04em;color:var(--soft);margin-left:auto}
+.cp-file{padding:8px 10px;font-size:12px;background:#fff;margin-bottom:8px}
+.cp-row{display:flex;gap:10px;align-items:center;margin-top:10px}
+.cp-row .cp-sign{flex:1}
+.cp-row .btn{white-space:nowrap}
+/* client roster (Pro) + 12-week trends */
+.roster{width:100%;border-collapse:collapse;margin-top:12px}
+.roster th{text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--soft);padding:8px 10px;border-bottom:1px solid #e5e0d8;font-weight:700}
+.roster td{padding:11px 10px;border-bottom:1px solid #f0ebe2;vertical-align:middle}
+.roster tr:last-child td{border-bottom:0}
+.roster tr:hover td{background:#fbf9f5}
+.roster .nm{font-weight:700;color:var(--ink);font-size:13.5px}
+.roster .wk{font-size:11.5px;color:var(--soft)}
+.roster .progs{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
+.roster .pg{font-size:9px;font-weight:700;letter-spacing:.04em;padding:2px 7px;border-radius:99px;color:#fff}
+.roster .adh{display:flex;align-items:center;gap:9px;min-width:130px}
+.roster .adh .bar{flex:1;height:8px;background:var(--linen);border-radius:99px;overflow:hidden;border:1px solid #e9e2d6}
+.roster .adh .bar span{display:block;height:100%;border-radius:99px}
+.roster .adh b{font-size:12px;color:var(--ink);min-width:32px;text-align:right}
+.roster .spark{width:88px;height:26px;display:block}
+.roster .view{border:1px solid #ddd6cc;background:#fff;border-radius:99px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;color:var(--ink);font-family:var(--sans)}
+.roster .view:hover{border-color:var(--river);color:var(--clay-deep)}
+@media(max-width:720px){.roster .s{display:none}}
+.tr-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-top:14px}
+.tr-card{border:1px solid #eee8df;border-radius:11px;padding:14px}
+.tr-card .tl{font-size:12px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:7px}
+.tr-card .tl i{width:9px;height:9px;border-radius:3px}
+.tr-card .spark{width:100%;height:40px;display:block;margin:8px 0 6px}
+.tr-card .dl{font-size:11px;color:var(--soft)}
+.tr-card .dl b{color:var(--ok)}
+/* barriers & exceptions */
+.bx__row{display:flex; gap:12px; align-items:flex-start; padding:12px 2px; border-bottom:1px solid #f0ebe2;}
+.bx__row:last-child{border-bottom:0;}
+.bx__tag{flex-shrink:0; font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:3px 9px; border-radius:99px; color:#fff; margin-top:2px; white-space:nowrap;}
+.bx__b{flex:1; min-width:0;}
+.bx__who{font-size:13px; font-weight:700; color:var(--ink);}
+.bx__who span{font-weight:400; color:var(--soft);}
+.bx__said{font-size:12.5px; color:var(--ink); opacity:.82; margin-top:2px; font-style:italic;}
+.bx__do{flex-shrink:0; border:1px solid #ddd6cc; background:#fff; border-radius:99px; padding:7px 13px; font-size:11px; font-weight:700; cursor:pointer; color:var(--clay-deep); font-family:var(--sans); white-space:nowrap; margin-top:1px;}
+.bx__do:hover{border-color:var(--clay-deep);}
+@media(max-width:640px){.bx__row{flex-wrap:wrap;} .bx__do{margin-left:44px;}}
 </style>
 </head>
 <body>
@@ -55,7 +114,7 @@ td a{color:var(--clay-deep);font-weight:700;text-decoration:none}
   <div><h1>BHWCrewCare Portal</h1><div class="sub">provider side · care in motion</div></div>
   <nav>
     <button class="on" data-v="inbox">Inbox</button>
-    <button data-v="plan">Care plan builder</button>
+    <button data-v="blueprint">Blueprint</button>
     <button data-v="results">Post results</button>
     <button data-v="patients">Patients</button>
   </nav>
@@ -69,30 +128,186 @@ td a{color:var(--clay-deep);font-weight:700;text-decoration:none}
   <div id="inbox-list"><div class="card">Loading…</div></div>
 </section>
 
-<section class="view" id="v-plan">
-  <div class="card"><span class="eyebrow">From plan to pathway</span><h2>Care plan builder</h2>
-    <p style="font-size:12.5px;color:var(--soft)">Pulls the patient's existing care plan from Notion. Write each week in your voice, publish, and it appears on their patient page.</p>
-    <div class="grid2" style="margin-top:8px">
+<section class="view" id="v-blueprint">
+  <div class="card"><span class="eyebrow">Client roster</span><h2>Health Blueprint — Provider side</h2>
+    <p style="font-size:12.5px;color:var(--soft)">Every patient on a 12-week Health Blueprint, at a glance. Demo data — open a client to see and manage their Blueprint below.</p>
+    <table class="roster">
+      <tr><th>Client</th><th>Blueprint</th><th>Adherence · this week</th><th class="s">4-wk trend</th><th></th></tr>
+      <tr>
+        <td><div class="nm">Jordan T.</div><div class="progs"><span class="pg" style="background:#4f7f92">Primary Care</span></div></td>
+        <td class="wk">Week 3 / 12</td>
+        <td><div class="adh"><div class="bar"><span style="width:78%;background:#6f8f6a"></span></div><b>78%</b></div></td>
+        <td class="s"><svg class="spark" viewBox="0 0 88 26" preserveAspectRatio="none"><polyline points="0,20 22,18 44,17 66,13 88,10" fill="none" stroke="#6f8f6a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></td>
+        <td><button class="view" onclick="document.getElementById('bp-client').scrollIntoView({behavior:'smooth'})">View →</button></td>
+      </tr>
+      <tr>
+        <td><div class="nm">Sam R.</div><div class="progs"><span class="pg" style="background:#AF6763">Mind &amp; Mood</span><span class="pg" style="background:#4f7f92">Primary Care</span></div></td>
+        <td class="wk">Week 9 / 12</td>
+        <td><div class="adh"><div class="bar"><span style="width:71%;background:#6f8f6a"></span></div><b>71%</b></div></td>
+        <td class="s"><svg class="spark" viewBox="0 0 88 26" preserveAspectRatio="none"><polyline points="0,19 22,20 44,16 66,15 88,12" fill="none" stroke="#6f8f6a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></td>
+        <td><button class="view" onclick="document.getElementById('bp-client').scrollIntoView({behavior:'smooth'})">View →</button></td>
+      </tr>
+      <tr>
+        <td><div class="nm">Theo M.</div><div class="progs"><span class="pg" style="background:#2CA7A6">CharmEd Minds</span></div></td>
+        <td class="wk">Week 4 / 12</td>
+        <td><div class="adh"><div class="bar"><span style="width:66%;background:#b07a55"></span></div><b>66%</b></div></td>
+        <td class="s"><svg class="spark" viewBox="0 0 88 26" preserveAspectRatio="none"><polyline points="0,18 22,16 44,17 66,14 88,13" fill="none" stroke="#b07a55" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></td>
+        <td><button class="view" onclick="document.getElementById('bp-client').scrollIntoView({behavior:'smooth'})">View →</button></td>
+      </tr>
+      <tr>
+        <td><div class="nm">Jen L.</div><div class="progs"><span class="pg" style="background:#167A9A">Flow</span><span class="pg" style="background:#4f7f92">Primary Care</span></div></td>
+        <td class="wk">Week 8 / 12</td>
+        <td><div class="adh"><div class="bar"><span style="width:84%;background:#6f8f6a"></span></div><b>84%</b></div></td>
+        <td class="s"><svg class="spark" viewBox="0 0 88 26" preserveAspectRatio="none"><polyline points="0,17 22,14 44,15 66,11 88,8" fill="none" stroke="#6f8f6a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></td>
+        <td><button class="view" onclick="document.getElementById('bp-client').scrollIntoView({behavior:'smooth'})">View →</button></td>
+      </tr>
+      <tr>
+        <td><div class="nm">Maria G.</div><div class="progs"><span class="pg" style="background:#4f7f92">Primary Care</span></div></td>
+        <td class="wk">Week 1 / 12 · new</td>
+        <td><div class="adh"><div class="bar"><span style="width:41%;background:#a85846"></span></div><b>41%</b></div></td>
+        <td class="s"><svg class="spark" viewBox="0 0 88 26" preserveAspectRatio="none"><polyline points="0,19 22,18 44,20 66,17 88,16" fill="none" stroke="#a85846" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></td>
+        <td><button class="view" onclick="document.getElementById('bp-client').scrollIntoView({behavior:'smooth'})">View →</button></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card" id="bp-client"><span class="eyebrow">Whole-person tracking</span><h2 style="font-size:17px">Client Blueprint · <span style="color:var(--clay-deep)">Jordan T.</span></h2>
+    <p style="font-size:12.5px;color:var(--soft)">Track this patient across the five pillars and post a recommendation straight onto their Blueprint. Progress is demo data until patient logging connects; the recommendation composer writes to their live patient page now.</p>
+    <label>Patient</label><select id="bp-pat"></select>
+  </div>
+
+  <div class="card"><span class="eyebrow">This week · adherence</span><h2 style="font-size:17px">Pillar progress</h2>
+    <div class="bp-track">
+      <div class="bp-row"><div class="dom"><span class="d" style="background:#80abbd"></span>Exercise<br><span class="rx">2× 20-min walks after meals</span></div><div class="bp-bar"><span style="width:57%;background:#80abbd"></span></div><div class="val"><b>4 / 7</b> days · ↑ 1</div></div>
+      <div class="bp-row"><div class="dom"><span class="d" style="background:#8188c0"></span>Sleep<br><span class="rx">10:30p window, screens down</span></div><div class="bp-bar"><span style="width:71%;background:#8188c0"></span></div><div class="val"><b>7h 05m</b> avg · ↑</div></div>
+      <div class="bp-row"><div class="dom"><span class="d" style="background:#b07a55"></span>Social<br><span class="rx">1 real connection this week</span></div><div class="bp-bar"><span style="width:50%;background:#b07a55"></span></div><div class="val"><b>1 / 2</b> planned</div></div>
+      <div class="bp-row"><div class="dom"><span class="d" style="background:#5fa9a6"></span>Coping<br><span class="rx">3-min wind-down at the 3pm dip</span></div><div class="bp-bar"><span style="width:71%;background:#5fa9a6"></span></div><div class="val"><b>5 / 7</b> check-ins</div></div>
+      <div class="bp-row"><div class="dom"><span class="d" style="background:#6f8f6a"></span>Nutrition<br><span class="rx">AM protein anchor, focus foods</span></div><div class="bp-bar"><span style="width:86%;background:#6f8f6a"></span></div><div class="val"><b>6 / 7</b> days</div></div>
+    </div>
+    <div class="bp-legend">Bars show this week's adherence to each recommended pillar. This view mirrors what the patient sees on their Blueprint tab.</div>
+  </div>
+
+  <div class="card"><span class="eyebrow">Barriers &amp; exceptions</span><h2 style="font-size:17px">What patients flagged this week</h2>
+    <p style="font-size:12.5px;color:var(--soft)">Review exceptions, not every data point — only patients who hit a barrier on a recommended action show here, in their own words. Each has a next step tied to the barrier.</p>
+    <div class="bx">
+      <div class="bx__row">
+        <span class="bx__tag" style="background:#a85846">Cost</span>
+        <div class="bx__b"><div class="bx__who">Jordan T. <span>· Iron (Focus now)</span></div><div class="bx__said">"Copay was more than I expected this month."</div></div>
+        <button class="bx__do" type="button">Offer lower-cost option</button>
+      </div>
+      <div class="bx__row">
+        <span class="bx__tag" style="background:#a85846">Side effect</span>
+        <div class="bx__b"><div class="bx__who">Sam R. <span>· Sertraline (Focus now)</span></div><div class="bx__said">"Some nausea in the mornings."</div></div>
+        <button class="bx__do" type="button">Clinical review</button>
+      </div>
+      <div class="bx__row">
+        <span class="bx__tag" style="background:#2CA7A6">Didn't understand</span>
+        <div class="bx__b"><div class="bx__who">Theo M. <span>· Cognitive exercise (Building next)</span></div><div class="bx__said">"Wasn't sure what the exercise wanted me to do."</div></div>
+        <button class="bx__do" type="button">Send short explainer</button>
+      </div>
+      <div class="bx__row">
+        <span class="bx__tag" style="background:#4f7f92">No device</span>
+        <div class="bx__b"><div class="bx__who">Maria G. <span>· Blood-pressure checks (Watching)</span></div><div class="bx__said">"Don't have a cuff at home."</div></div>
+        <button class="bx__do" type="button">Arrange a cuff</button>
+      </div>
+      <div class="bx__row">
+        <span class="bx__tag" style="background:#b0863a">Too tired</span>
+        <div class="bx__b"><div class="bx__who">Jen L. <span>· Post-work walks (Maintaining)</span></div><div class="bx__said">"Wiped out after work most days."</div></div>
+        <button class="bx__do" type="button">Reduce the goal</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card"><span class="eyebrow">12-week trends</span><h2 style="font-size:17px">Blueprint trends · 12 weeks</h2>
+    <div class="tr-grid">
+      <div class="tr-card"><div class="tl"><i style="background:#80abbd"></i>Exercise</div><svg class="spark" viewBox="0 0 200 40" preserveAspectRatio="none"><polyline points="0,26 40,24 80,21 120,20 160,17 200,15" fill="none" stroke="#80abbd" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="dl"><b>▲ 32</b> vs week 1</div></div>
+      <div class="tr-card"><div class="tl"><i style="background:#8188c0"></i>Sleep</div><svg class="spark" viewBox="0 0 200 40" preserveAspectRatio="none"><polyline points="0,21 40,20 80,18 120,17 160,15 200,14" fill="none" stroke="#8188c0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="dl"><b>▲ 21</b> vs week 1</div></div>
+      <div class="tr-card"><div class="tl"><i style="background:#b07a55"></i>Social</div><svg class="spark" viewBox="0 0 200 40" preserveAspectRatio="none"><polyline points="0,30 40,27 80,25 120,24 160,22 200,21" fill="none" stroke="#b07a55" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="dl"><b>▲ 27</b> vs week 1</div></div>
+      <div class="tr-card"><div class="tl"><i style="background:#5fa9a6"></i>Coping</div><svg class="spark" viewBox="0 0 200 40" preserveAspectRatio="none"><polyline points="0,23 40,21 80,20 120,19 160,17 200,16" fill="none" stroke="#5fa9a6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="dl"><b>▲ 21</b> vs week 1</div></div>
+      <div class="tr-card"><div class="tl"><i style="background:#6f8f6a"></i>Nutrition</div><svg class="spark" viewBox="0 0 200 40" preserveAspectRatio="none"><polyline points="0,20 40,18 80,16 120,15 160,13 200,12" fill="none" stroke="#6f8f6a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="dl"><b>▲ 22</b> vs week 1</div></div>
+    </div>
+  </div>
+
+  <div class="card"><span class="eyebrow">Recommend &amp; upload</span><h2 style="font-size:17px">Post a Blueprint recommendation</h2>
+    <p style="font-size:12.5px;color:var(--soft)">Written in plain patient language — this lands on the patient's <b>Today</b> screen under the tier you assign, with the cadence, target, and duration you set. Attach just-in-time education so the "why" travels with the action.</p>
+    <div class="grid2">
       <div>
-        <label>Patient</label><select id="p-pat"></select>
-        <button class="btn ghost" style="margin-top:10px" onclick="loadPlan()">Load their care plan</button>
-        <div class="status" id="p-loadst"></div>
-        <div class="planbox" id="p-source">Care plan appears here…</div>
+        <label>Pillar</label>
+        <select id="bp-dom"><option>Exercise</option><option>Sleep</option><option>Social</option><option>Coping</option><option>Nutrition</option><option>Medication</option><option>Monitoring</option></select>
+        <label>Recommendation (patient language)</label>
+        <textarea id="bp-rx" rows="5" placeholder="Two 20-minute walks after your largest meals — they blunt the afternoon dip…"></textarea>
+        <label style="margin-top:12px">Attach just-in-time education (optional)</label>
+        <select id="bp-edu"><option>None</option><option>Iron repletion</option><option>Post-meal walks</option><option>Home blood-pressure checks</option><option>Protein anchor</option><option>Sleep window</option></select>
       </div>
       <div>
-        <label>Week #</label><input id="p-week" inputmode="numeric" placeholder="1–12">
-        <label>Week title</label><input id="p-title" placeholder="e.g., Protecting your mornings">
-        <label>This week's plan (one line per point — becomes their page content)</label>
-        <textarea id="p-body" rows="9" placeholder="What we're focusing on&#10;What to do each day&#10;What to notice"></textarea>
-        <label>Provider note — in your voice (optional, shows with 💛)</label>
-        <textarea id="p-note" rows="3" placeholder="A direct word to this patient…"></textarea>
+        <label>Priority tier</label>
+        <select id="bp-tier"><option>Focus now</option><option>Building next</option><option>Maintaining</option><option>Watching</option></select>
+        <label>Cadence</label>
+        <select id="bp-cad"><option>Daily</option><option>Selected days</option><option>Every other day</option><option>Weekly</option><option>As needed</option></select>
+        <label>Target</label>
+        <input id="bp-target" placeholder="e.g., 4 days this week · &lt;130 systolic">
+        <label>Duration</label>
+        <select id="bp-dur"><option>This week</option><option>2 weeks</option><option>Until next visit</option><option>Full 12-week plan</option><option>Ongoing</option></select>
         <label>Signed</label>
-        <select id="p-prov">
-          <option>Amaris, CRNP</option><option>Yahaira, CRNP</option><option>Tanya, PMHNP</option><option>Eleshiea, LCSW-C</option>
-        </select>
-        <button class="btn warm" style="margin-top:14px" onclick="publishWeek()">🌿 Publish week to patient page</button>
-        <div class="status" id="p-st"></div>
+        <select id="bp-prov"><option>Amaris, CRNP</option><option>Yahaira, CRNP</option><option>Tanya, PMHNP</option><option>Eleshiea, LCSW-C</option></select>
+        <button class="btn warm" style="margin-top:14px" onclick="postBlueprint()">🧭 Post to patient's Today</button>
+        <div class="status" id="bp-st"></div>
       </div>
+    </div>
+  </div>
+
+  <div class="card"><span class="eyebrow">12-week care plans</span><h2 style="font-size:17px">Program care plans</h2>
+    <p style="font-size:12.5px;color:var(--soft)">A patient can be enrolled in more than one program at once. Upload the full <b>12-week care plan</b> for each program they're in — it posts to their Blueprint as a whole plan, not broken out week by week. Choose the patient at the top first.</p>
+    <div class="cp-list">
+
+      <div class="cp-prog" style="--pg:#4f7f92;">
+        <div class="cp-prog__head"><span class="d"></span>Primary Care<span class="tag">BHW Medical</span></div>
+        <label>Attach 12-week plan (PDF, DOCX, or text) — or paste below</label>
+        <input type="file" class="cp-file" id="cpf-primary" accept=".pdf,.doc,.docx,.txt,.md" onchange="cpFile('primary')">
+        <textarea id="cp-primary" rows="3" placeholder="Paste the Primary Care 12-week plan…"></textarea>
+        <div class="cp-row">
+          <select id="cpp-primary" class="cp-sign"><option>Amaris, CRNP</option><option>Yahaira, CRNP</option><option>Tanya, PMHNP</option><option>Eleshiea, LCSW-C</option></select>
+          <button class="btn warm" onclick="uploadCarePlan('primary','Primary Care')">📋 Upload</button>
+        </div>
+        <div class="status" id="cps-primary"></div>
+      </div>
+
+      <div class="cp-prog" style="--pg:#2CA7A6;">
+        <div class="cp-prog__head"><span class="d"></span>CharmEd Minds<span class="tag">Executive function</span></div>
+        <label>Attach 12-week plan (PDF, DOCX, or text) — or paste below</label>
+        <input type="file" class="cp-file" id="cpf-charmed" accept=".pdf,.doc,.docx,.txt,.md" onchange="cpFile('charmed')">
+        <textarea id="cp-charmed" rows="3" placeholder="Paste CharmEd's 12-week plan…"></textarea>
+        <div class="cp-row">
+          <select id="cpp-charmed" class="cp-sign"><option>Amaris, CRNP</option><option>Yahaira, CRNP</option><option>Tanya, PMHNP</option><option>Eleshiea, LCSW-C</option></select>
+          <button class="btn warm" onclick="uploadCarePlan('charmed','CharmEd Minds')">📋 Upload</button>
+        </div>
+        <div class="status" id="cps-charmed"></div>
+      </div>
+
+      <div class="cp-prog" style="--pg:#AF6763;">
+        <div class="cp-prog__head"><span class="d"></span>Mind &amp; Mood Recovery<span class="tag">Behavioral · recovery</span></div>
+        <label>Attach 12-week plan (PDF, DOCX, or text) — or paste below</label>
+        <input type="file" class="cp-file" id="cpf-mindmood" accept=".pdf,.doc,.docx,.txt,.md" onchange="cpFile('mindmood')">
+        <textarea id="cp-mindmood" rows="3" placeholder="Paste the Mind &amp; Mood 12-week plan…"></textarea>
+        <div class="cp-row">
+          <select id="cpp-mindmood" class="cp-sign"><option>Tanya, PMHNP</option><option>Eleshiea, LCSW-C</option><option>Amaris, CRNP</option><option>Yahaira, CRNP</option></select>
+          <button class="btn warm" onclick="uploadCarePlan('mindmood','Mind &amp; Mood Recovery')">📋 Upload</button>
+        </div>
+        <div class="status" id="cps-mindmood"></div>
+      </div>
+
+      <div class="cp-prog" style="--pg:#167A9A;">
+        <div class="cp-prog__head"><span class="d"></span>Flow<span class="tag">Vascular stabilization</span></div>
+        <label>Attach 12-week plan (PDF, DOCX, or text) — or paste below</label>
+        <input type="file" class="cp-file" id="cpf-flow" accept=".pdf,.doc,.docx,.txt,.md" onchange="cpFile('flow')">
+        <textarea id="cp-flow" rows="3" placeholder="Paste Flow's 12-week plan…"></textarea>
+        <div class="cp-row">
+          <select id="cpp-flow" class="cp-sign"><option>Amaris, CRNP</option><option>Yahaira, CRNP</option><option>Tanya, PMHNP</option><option>Eleshiea, LCSW-C</option></select>
+          <button class="btn warm" onclick="uploadCarePlan('flow','Flow')">📋 Upload</button>
+        </div>
+        <div class="status" id="cps-flow"></div>
+      </div>
+
     </div>
   </div>
 </section>
@@ -145,7 +360,7 @@ async function boot(){
   try{
     const d=await api('mode=patients');
     PATIENTS=d.patients;
-    ['p-pat','r-pat'].forEach(id=>{
+    ['r-pat','bp-pat'].forEach(id=>{
       const s=$(id); s.innerHTML='<option value="">Choose patient…</option>';
       PATIENTS.forEach((p,i)=>{const o=document.createElement('option');o.value=i;
         o.textContent=`${p.name}${p.ctl?' · '+p.ctl:''}${p.pageId?'':' — ⚠ no page linked'}`;s.appendChild(o);});
@@ -185,32 +400,6 @@ async function loadInbox(){
 }
 async function act(a,id,btn){ btn.disabled=true; try{ await api('',{action:a,id}); loadInbox(); }catch(e){ btn.disabled=false; alert(e.message);} }
 
-async function loadPlan(){
-  const p=PATIENTS[$('p-pat').value]; const st=$('p-loadst');
-  if(!p){ st.textContent='Pick a patient first.'; return; }
-  st.textContent='Loading their care plan…';
-  try{
-    const d=await api(`mode=plan&pid=${p.id}`);
-    if(!d.plan){ st.textContent=d.note||'No plan linked.'; $('p-source').textContent='—'; return; }
-    st.textContent=`Loaded: ${d.plan.title}`;
-    $('p-source').textContent=d.plan.text||'(plan is empty)';
-  }catch(e){ st.textContent='Error: '+e.message; }
-}
-
-async function publishWeek(){
-  const p=PATIENTS[$('p-pat').value]; const st=$('p-st');
-  if(!p){ st.textContent='Pick a patient.'; return; }
-  if(!p.pageId){ st.textContent='⚠ This patient has no Patient Page URL on the Master List — add it there first.'; return; }
-  if(!$('p-body').value.trim()){ st.textContent='Write the week content first.'; return; }
-  st.textContent='Publishing…';
-  try{
-    await api('',{action:'publishweek',pageId:p.pageId,week:$('p-week').value,title:$('p-title').value,
-      body:$('p-body').value,providerNote:$('p-note').value,provider:$('p-prov').value});
-    st.textContent=`✓ Week ${$('p-week').value||''} published to ${p.name.split(',')[0]}'s page.`;
-    $('p-body').value='';$('p-note').value='';
-  }catch(e){ st.textContent='Error: '+e.message; }
-}
-
 async function postResult(){
   const p=PATIENTS[$('r-pat').value]; const st=$('r-st');
   if(!p){ st.textContent='Pick a patient.'; return; }
@@ -222,6 +411,42 @@ async function postResult(){
       meaning:$('r-mean').value,provider:$('r-prov').value});
     st.textContent=`✓ Posted to ${p.name.split(',')[0]}'s page with your interpretation.`;
     ['r-lab','r-val','r-mean'].forEach(id=>$(id).value='');
+  }catch(e){ st.textContent='Error: '+e.message; }
+}
+
+async function postBlueprint(){
+  const p=PATIENTS[$('bp-pat').value]; const st=$('bp-st');
+  if(!p){ st.textContent='Pick a patient.'; return; }
+  if(!p.pageId){ st.textContent='⚠ No Patient Page URL on the Master List for this patient.'; return; }
+  if(!$('bp-rx').value.trim()){ st.textContent='Write the recommendation first.'; return; }
+  st.textContent='Posting…';
+  try{
+    await api('',{action:'publishblueprint',pageId:p.pageId,domain:$('bp-dom').value,
+      rec:$('bp-rx').value,target:$('bp-target').value,provider:$('bp-prov').value,
+      tier:$('bp-tier').value,cadence:$('bp-cad').value,duration:$('bp-dur').value,education:$('bp-edu').value});
+    st.textContent=`✓ ${$('bp-dom').value} → “${$('bp-tier').value}” posted to ${p.name.split(',')[0]}'s Today · ${$('bp-cad').value}, ${$('bp-dur').value}.`;
+    $('bp-rx').value='';$('bp-target').value='';
+  }catch(e){ st.textContent='Error: '+e.message; }
+}
+
+const CP_FILES={};
+function cpFile(k){
+  const inp=document.getElementById('cpf-'+k); const st=document.getElementById('cps-'+k);
+  const f=inp.files&&inp.files[0]; if(!f) return;
+  CP_FILES[k]=f.name; st.textContent='Attached: '+f.name;
+  if(/\.(txt|md)$/i.test(f.name)){ const r=new FileReader(); r.onload=()=>{ document.getElementById('cp-'+k).value=String(r.result).slice(0,6000); }; r.readAsText(f); }
+}
+async function uploadCarePlan(k,label){
+  const p=PATIENTS[$('bp-pat').value]; const st=$('cps-'+k);
+  if(!p){ st.textContent='Pick a patient at the top first.'; return; }
+  if(!p.pageId){ st.textContent='⚠ No Patient Page URL on the Master List for this patient.'; return; }
+  const plan=$('cp-'+k).value.trim(); const fileName=CP_FILES[k]||'';
+  if(!plan && !fileName){ st.textContent='Attach a file or paste the plan first.'; return; }
+  st.textContent='Uploading…';
+  try{
+    await api('',{action:'publishcareplan',pageId:p.pageId,program:label.replace(/&amp;/g,'&'),
+      plan,fileName,provider:$('cpp-'+k).value});
+    st.textContent=`✓ ${label.replace(/&amp;/g,'&')} 12-week care plan uploaded to ${p.name.split(',')[0]}'s Blueprint.`;
   }catch(e){ st.textContent='Error: '+e.message; }
 }
 
