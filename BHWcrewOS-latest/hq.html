@@ -170,9 +170,8 @@ header.top{position:sticky;top:0;z-index:40;backdrop-filter:blur(12px);backgroun
 
 /* ---- tagline band ---- */
 .band{max-width:1120px;margin:44px auto 0;padding:0 22px}
-.band-inner{border:1px solid var(--panel-line);border-radius:20px;overflow:hidden;position:relative;background:linear-gradient(180deg,var(--panel),transparent)}
-.band-inner img{width:100%;display:block;opacity:.92;filter:brightness(var(--band-bright))}
-.band-inner::after{content:"";position:absolute;inset:0;background:var(--band-overlay)}
+.band-inner{position:relative}
+.band-inner img{width:100%;display:block;filter:brightness(var(--band-bright))}
 
 /* ---- family strip ---- */
 .section{max-width:1120px;margin:0 auto;padding:52px 22px 0}
