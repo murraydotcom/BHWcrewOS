@@ -91,7 +91,7 @@ exports.handler = async (event) => {
       id: pg.id,
       name: P.title(pg.properties["Patient Name"]),
       bhwId: P.uid(pg.properties["BHW ID"]),
-      chart: P.text(pg.properties["CharmHealth Chart #"]),
+      chart: P.text(pg.properties["Patient ID #"]),
       dob: P.date(pg.properties["DOB"]),
       insurance: P.sel(pg.properties["Insurance"]),
       memberId: P.text(pg.properties["Insurance Member ID"]),

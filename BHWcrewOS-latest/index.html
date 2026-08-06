@@ -235,6 +235,7 @@ const API_DATA = "/.netlify/functions/ops-data";
 const API_ACT  = "/.netlify/functions/action";
 const API_REFTPL = "/.netlify/functions/referral-templates";
 const API_GAPS = "/.netlify/functions/care-gaps";
+const API_PATIENTS = "/.netlify/functions/patients"; // Master Patient List (canonical picker source)
 let REF_TEMPLATES = null; // lazy-loaded cache of destination referral templates
 
 const DIV_COLORS = {
@@ -1759,8 +1760,12 @@ function openNewPatient(){
   npEnsureOverlay();
   document.getElementById("np-card").innerHTML = `
   <h3>Register a new patient</h3>
-  <div class="msub">Anyone can register a patient. The duplicate guard checks the whole index before anything is created.</div>
+  <div class="msub">Search the Master Patient List first — pull a patient in with their details, or register someone new. The duplicate guard still checks the crewOS index before anything is created.</div>
   <div class="f">
+    <label>🔎 Search the Master Patient List</label>
+    <input type="text" id="np-search" placeholder="Search by name or BHW ID — then “Bring in”" autocomplete="off" oninput="npSearch()">
+    <div id="np-results"></div>
+    <div id="np-matched"></div>
     <label>Full name *</label><input type="text" id="np-name" placeholder="First Last">
     <label>Date of birth *</label><input type="date" id="np-dob">
     <label>Insurance</label><select id="np-ins"><option value="">Select…</option>${NP_INS.map(i=>`<option>${i}</option>`).join("")}</select>
@@ -1768,14 +1773,64 @@ function openNewPatient(){
     <label>Medicare MBI (Medicare patients — 11 characters from the red-white-blue card)</label><input type="text" id="np-mbi" placeholder="1EG4-TE5-MK73">
     <label>Patient email</label><input type="email" id="np-email" placeholder="name@email.com">
     <label>Parent/guardian email (peds)</label><input type="email" id="np-gemail" placeholder="parent@email.com">
-    <label>CharmHealth chart # (if already registered in Charm)</label><input type="text" id="np-chart">
+    <label>Patient ID # (if already registered in Charm)</label><input type="text" id="np-chart">
     <label>Program(s) they're entering</label>
     <div class="needs" id="np-progs">${NP_PROGS.map(p=>`<button class="chip" type="button" onclick="this.classList.toggle('on')" data-p="${p}">${p}</button>`).join("")}</div>
     <div id="np-dupes"></div>
     <div class="ferr" id="np-err"></div>
-    <div class="macts"><button class="btn sec" onclick="npClose()">Cancel</button><button class="btn" id="np-save" onclick="npSubmit(false)">Register patient</button></div>
+    <div class="macts" id="np-acts"><button class="btn sec" onclick="npClose()">Cancel</button><button class="btn" id="np-save" onclick="npSubmit(false)">Register patient</button></div>
   </div>`;
+  npMatchedId = null;
+  window.__npHits = [];
   document.getElementById("np-overlay").classList.add("open");
+  setTimeout(()=>{ const s=document.getElementById("np-search"); if(s) s.focus(); }, 30);
+}
+
+// The search reads the Master Patient Insurance List server-side (5k+ records)
+// via patients.js action:"master-search" — matched by name or BHW ID, deduped
+// to one row per patient. Debounced so it queries when typing pauses.
+let npMatchedId = null, npSearchT = null, npSearchSeq = 0;
+function npSearch(){
+  const raw = (document.getElementById("np-search").value||"").trim();
+  const box = document.getElementById("np-results");
+  clearTimeout(npSearchT);
+  if(raw.length<2){ box.innerHTML=""; return; }
+  box.innerHTML = `<div class="lede" style="margin:2px 0 8px">Searching the Master Patient List…</div>`;
+  const seq = ++npSearchSeq;
+  npSearchT = setTimeout(async ()=>{
+    let hits = [];
+    try{
+      const r = await api(API_PATIENTS, {action:"master-search", q:raw});
+      hits = r.patients || [];
+    }catch(e){
+      if(seq!==npSearchSeq) return;
+      box.innerHTML = `<div class="lede" style="margin:2px 0 8px">Couldn’t reach the Master Patient List — ${esc(e.message)}</div>`;
+      return;
+    }
+    if(seq!==npSearchSeq) return; // a newer keystroke superseded this search
+    window.__npHits = hits;
+    if(!hits.length){ box.innerHTML = `<div class="lede" style="margin:2px 0 8px">No match in the Master Patient List — fill in the form below to register someone new.</div>`; return; }
+    box.innerHTML = hits.map((p,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 11px;border:1px solid var(--sand);border-radius:10px;margin:0 0 6px">
+      <div style="flex:1;min-width:0"><b>${esc(p.name)}</b>${p.bhwId?` · ${esc(p.bhwId)}`:""}${p.dob?` · DOB ${esc(p.dob)}`:""}${p.payer?` · ${esc(p.payer)}`:""}</div>
+      <button class="btn sm" type="button" onclick="npBringIn(${i})">Bring in →</button>
+    </div>`).join("");
+  }, 280);
+}
+
+// Pull a Master-List record into the registration form. These patients aren't
+// crewOS records yet, so this prefills the form to register them in one step —
+// the duplicate guard still checks the crewOS index on submit.
+function npBringIn(i){
+  const p = (window.__npHits||[])[i]; if(!p) return;
+  const set = (el,v)=>{ const n=document.getElementById(el); if(n) n.value = v||""; };
+  set("np-name", p.name); set("np-dob", p.dob); set("np-mem", p.memberId); set("np-mbi", p.mbi); set("np-email", p.email); set("np-chart", p.chart);
+  const ins = document.getElementById("np-ins");
+  if(ins) ins.value = [...ins.options].some(o=>o.value===p.insurance) ? p.insurance : "";
+  npMatchedId = p.bhwId || null;
+  document.getElementById("np-results").innerHTML = "";
+  document.getElementById("np-search").value = "";
+  document.getElementById("np-matched").innerHTML =
+    `<div class="res-cat" style="color:var(--sage)">✓ Brought in <b>${esc(p.name)}</b>${p.bhwId?` (${esc(p.bhwId)})`:""} from the Master Patient List — review below, then Register.${(p.payer&&!p.insurance)?` <span class="pill gray">Payer: ${esc(p.payer)}</span>`:""}${p.mbi?' <span class="pill gray">MBI on file</span>':''}${p.chart?' <span class="pill gray">Patient ID # on file</span>':''}</div>`;
 }
 
 async function npSubmit(force){
