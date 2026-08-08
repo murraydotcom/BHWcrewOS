@@ -338,6 +338,9 @@ document.getElementById('themeBtn').addEventListener('click',function(){
 /* staff tools row — add an app by adding a row here (config-driven).
    href:null renders a locked "soon" tile until the app has a URL. */
 const TOOLS=[
+  {name:'Patient Requests',accent:'var(--green)',tag:'Live',href:'/bhw-requests.html',
+   desc:'The shared request journey — every patient message, call, voicemail and fax in one timeline, who owns it, and where it is. Claim, work, and complete so nothing falls through.',
+   icon:'<path d="M4 5h16v11H8l-4 3z"/><path d="M8 9h8M8 12h5"/>'},
   {name:'Paperwork Studio',accent:'var(--teal)',tag:'Live',href:'/bhw-paperwork.html',
    desc:'Chart pulls, prior auth, disability, FMLA & MTA — pre-written explanations, real PDF fill, and AI prefill.',
    icon:'<path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-3"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M8 11h8M8 15h6"/>'},
