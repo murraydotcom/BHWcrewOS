@@ -91,6 +91,12 @@
   .btn:hover{border-color:var(--teal);color:var(--teal-deep)}
   .btn.p{background:var(--teal);border-color:var(--teal);color:#fff}.btn.p:hover{filter:brightness(.96);color:#fff}
   .btn.done{background:var(--ok);border-color:var(--ok);color:#fff}.btn.done:hover{filter:brightness(.96);color:#fff}
+  /* one-click complete box */
+  .chk{display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:.74rem;font-weight:800;color:var(--ink-soft);user-select:none}
+  .chk .box{width:24px;height:24px;border:2px solid #cdd6d3;border-radius:8px;display:grid;place-items:center;transition:.12s;background:#fff}
+  .chk .box svg{width:15px;height:15px;stroke:#fff;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:0}
+  .chk:hover .box{border-color:var(--ok)}
+  .chk.on{color:var(--ok)}.chk.on .box{background:var(--ok);border-color:var(--ok)}.chk.on .box svg{opacity:1}
 
   .feed .empty{background:var(--white);border:1px dashed var(--line);border-radius:14px;padding:40px;text-align:center;color:var(--ink-mute);font-weight:700;font-size:.82rem}
 
@@ -255,11 +261,12 @@ function cardHTML(it){
   const owner = it.assigned
     ? `<span class="owner"><span class="av sm">${initials(it.assigned)}</span>${it.assigned}</span>`
     : `<span class="owner un"><span class="av sm un">?</span>Unclaimed — needs an owner</span>`;
-  let acts='';
-  if(st==='new')  acts=`<button class="btn p" onclick="claim('${it.id}')">Claim</button><button class="btn done" onclick="advance('${it.id}','done')">Completed</button>`;
-  else if(st==='ack') acts=`<button class="btn p" onclick="advance('${it.id}','prog')">Start</button><button class="btn done" onclick="advance('${it.id}','done')">Completed</button>`;
-  else if(st==='prog') acts=`<button class="btn done" onclick="advance('${it.id}','done')">Completed</button>`;
-  else acts=`<button class="btn" onclick="advance('${it.id}','prog')">Reopen</button>`;
+  const isDone = st==='done';
+  const claimBtn = (!isDone && !it.assigned) ? `<button class="btn" onclick="claim('${it.id}')">Claim</button>` : '';
+  const acts = `${claimBtn}
+    <label class="chk ${isDone?'on':''}" title="${isDone?'Completed — click to reopen':'Mark this request complete'}" onclick="toggleDone('${it.id}',${isDone})">
+      <span class="box"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>${isDone?'Completed':'Complete'}
+    </label>`;
   const sum = it.summary && !(Array.isArray(it.journey)&&it.journey.length)
     ? `<div class="entry"><span class="dot update"></span><div class="ebody"><div class="etext">${(it.summary||'').replace(/</g,'&lt;')}</div></div></div>` : '';
   return `<div class="rcard ${hot?'urgent':''}">
@@ -296,6 +303,13 @@ async function post(action,body){
 function needAuth(){ const b=document.getElementById('banner'); b.className='banner err'; b.textContent='Sign in to crewOS first (open Front Desk and connect), then reload — claiming or completing a request records who did it.'; }
 async function claim(id){ if(!TOKEN){needAuth();return;} const {ok,status}=await post('request-status',{id,status:'In progress',claim:true}); if(status===401){TOKEN='';sessionStorage.removeItem('crewos_token');needAuth();return;} if(ok) load(); }
 async function advance(id,stage){ if(!TOKEN){needAuth();return;} const {ok,status}=await post('request-status',{id,status:STATUS_FOR[stage]}); if(status===401){TOKEN='';sessionStorage.removeItem('crewos_token');needAuth();return;} if(ok) load(); }
+// One-click complete box: check to resolve (stamps you as owner); uncheck to reopen.
+async function toggleDone(id,isDone){ if(!TOKEN){needAuth();return;}
+  const body=isDone?{id,status:STATUS_FOR.prog}:{id,status:STATUS_FOR.done,claim:true};
+  const {ok,status}=await post('request-status',body);
+  if(status===401){TOKEN='';sessionStorage.removeItem('crewos_token');needAuth();return;}
+  if(ok) load();
+}
 
 // ---- demo fallback (rich journeys to show the design) ----
 const H=t=>new Date(Date.now()-t*3600e3).toISOString();
