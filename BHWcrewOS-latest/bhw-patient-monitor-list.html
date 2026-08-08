@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Patient Monitor — crewOS</title>
+<style>
+@font-face{font-family:'Nunito';src:url('fonts/Nunito/Nunito-VariableFont_wght.ttf') format('truetype');font-weight:300 900;font-display:swap}
+@font-face{font-family:'OpenSans';src:url('fonts/Open_Sans/OpenSans-VariableFont_wdth,wght.ttf') format('truetype');font-weight:300 800;font-display:swap}
+:root{
+  --ink:#233942; --ink-soft:#6c7b74; --ink-mute:#9aa7a2; --line:#e7ece9; --line-2:#eef2f0;
+  --teal:#5fa9a6; --teal-lite:#84c9c4; --teal-deep:#4a8a87; --teal-ink:#356b68; --teal-quiet:#eaf4f2;
+  --panel:#233942; --panel-2:#2c4650;
+  --ok:#5f8a63; --ok-q:#e7efe4; --gold:#bf8a2f; --gold-q:#f7efd9; --clay:#b07a55; --clay-q:#f3e8df; --alert:#b0525a; --alert-q:#f6e2e2;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'OpenSans',system-ui,sans-serif;color:var(--ink);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased;background:#dfe7e4;padding:20px}
+.app{max-width:1240px;margin:0 auto;background:#fff;border-radius:22px;overflow:hidden;box-shadow:0 40px 90px -50px rgba(20,45,40,.6);border:1px solid #d8e0dd}
+
+.top{display:flex;align-items:center;gap:14px;padding:20px 24px;border-bottom:1px solid var(--line)}
+.top .mk{width:40px;height:40px;border-radius:11px;background:var(--panel);display:grid;place-items:center;flex-shrink:0}
+.top h1{font-family:'Nunito';font-weight:700;font-size:20px}
+.top .sub{font-size:11.5px;color:var(--ink-soft);margin-top:1px}
+.top .right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.chip{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:6px 11px;border-radius:20px;background:var(--teal-quiet);color:var(--teal-deep);display:inline-flex;align-items:center;gap:6px}
+.chip .pulse{width:7px;height:7px;border-radius:50%;background:var(--teal);animation:pl 1.6s infinite}
+@keyframes pl{0%,100%{opacity:.3}50%{opacity:1}}
+.back{font-size:12px;font-weight:700;color:var(--ink-soft);text-decoration:none;padding:8px 14px;border:1px solid var(--line);border-radius:10px}
+.back:hover{border-color:var(--teal)}
+
+.body{padding:18px 24px 26px}
+.sec-h{display:flex;align-items:center;gap:9px;margin:14px 2px 12px}
+.sec-h .t{font-family:'Nunito';font-weight:700;font-size:14px}
+.sec-h .n{font-size:10.5px;font-weight:800;color:#fff;background:var(--teal);min-width:20px;height:20px;padding:0 6px;border-radius:20px;display:grid;place-items:center}
+.sec-h .live{margin-left:auto;font-size:10px;color:var(--ink-mute);font-weight:700}
+
+/* checking-in cards */
+.checkin{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:8px}
+.ci{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit;background:linear-gradient(120deg,var(--ok-q),#fff);border:1px solid #cfe0d3;border-radius:15px;padding:13px 15px;transition:transform .12s,box-shadow .12s}
+.ci:hover{transform:translateY(-2px);box-shadow:0 16px 30px -20px rgba(20,45,40,.5)}
+.ci .av{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-deep));display:grid;place-items:center;font-family:'Nunito';font-weight:700;font-size:15px;color:#fff;flex-shrink:0}
+.ci .nm{font-family:'Nunito';font-weight:700;font-size:14px}
+.ci .mt{font-size:11px;color:var(--ink-soft)}
+.ci .st{margin-left:auto;text-align:right;flex-shrink:0}
+.ci .st .b{font-size:9.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--ok);display:inline-flex;align-items:center;gap:5px}
+.ci .st .b .d{width:7px;height:7px;border-radius:50%;background:var(--ok);animation:pl 1.6s infinite}
+.ci .st .tm{font-size:10.5px;color:var(--ink-mute);margin-top:3px}
+
+/* roster list */
+.list{border:1px solid var(--line);border-radius:15px;overflow:hidden}
+.lrow{display:flex;align-items:center;gap:14px;padding:13px 16px;text-decoration:none;color:inherit;border-bottom:1px solid var(--line-2);transition:background .1s}
+.lrow:last-child{border-bottom:0}
+.lrow:hover{background:var(--teal-quiet)}
+.lrow .av{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--teal-lite),var(--teal));display:grid;place-items:center;font-family:'Nunito';font-weight:700;font-size:13px;color:#fff;flex-shrink:0}
+.lrow .who{min-width:190px}
+.lrow .who .nm{font-family:'Nunito';font-weight:700;font-size:13.5px}
+.lrow .who .id{font-size:11px;color:var(--ink-mute)}
+.prog{font-size:10px;font-weight:700;color:var(--teal-deep);background:var(--teal-quiet);border-radius:20px;padding:4px 10px}
+.pill{font-size:10px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;padding:5px 11px;border-radius:20px;white-space:nowrap}
+.pill.in{background:var(--ok-q);color:var(--ok)} .pill.room{background:var(--teal-quiet);color:var(--teal-deep)}
+.pill.wait{background:var(--gold-q);color:#8a6a1f} .pill.sched{background:#eef2f0;color:var(--ink-soft)} .pill.msg{background:var(--clay-q);color:var(--clay)}
+.lrow .act{margin-left:auto;display:flex;align-items:center;gap:14px}
+.lrow .last{font-size:11px;color:var(--ink-mute);text-align:right;min-width:80px}
+.unread{font-size:10px;font-weight:800;color:#fff;background:var(--alert);min-width:20px;height:20px;padding:0 6px;border-radius:20px;display:grid;place-items:center}
+.chev{color:var(--ink-mute);font-size:16px}
+@media(max-width:720px){.lrow .who{min-width:0}.lrow .prog,.lrow .last{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="top">
+    <div class="mk"><svg viewBox="0 0 48 48" width="24" height="24"><path d="M10 24h5l3-7 5 15 4-11 2 4h9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div>
+      <h1>Patient Monitor</h1>
+      <div class="sub">Live roster — patients checking in and active today. Click anyone to open their monitor.</div>
+    </div>
+    <div class="right">
+      <span class="chip"><span class="pulse"></span>Live</span>
+      <a class="back" href="/bhw-front-desk.html">← Front Desk</a>
+    </div>
+  </div>
+
+  <div class="body">
+    <div class="sec-h"><span class="t">Checking in now</span><span class="n" id="ciN">0</span><span class="live">updates as patients arrive</span></div>
+    <div class="checkin" id="checkin"></div>
+
+    <div class="sec-h"><span class="t">Today's patients</span><span class="live" id="rosterMeta"></span></div>
+    <div class="list" id="list"></div>
+  </div>
+
+</div>
+
+<script>
+function initials(n){return (n||'?').split(/[ ,]+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();}
+function href(p){ return '/bhw-patient-monitor.html?patient='+encodeURIComponent(p.id); }
+
+// Demo roster. On deploy this reads the live check-in / activity feed; each
+// row already links to the single-patient monitor (which will read ?patient=).
+const CHECKIN=[
+  {id:'10428',name:'Jordan Rivera',note:'Flow visit · NP Amaris',status:'Rooming',time:'8:19 AM · just now'},
+  {id:'20591',name:'Marcus Bell',note:'Follow-up · lab review',status:'Arrived',time:'8:32 AM'},
+];
+const ROSTER=[
+  {id:'10428',name:'Jordan Rivera',mrn:'#10428',prog:'Primary Care',status:'in',statusL:'Checked in',last:'now',unread:3},
+  {id:'20591',name:'Marcus Bell',mrn:'#20591',prog:'Flow',status:'wait',statusL:'Waiting room',last:'6m',unread:1},
+  {id:'20144',name:'Priya Nair',mrn:'#20144',prog:'Mind & Mood',status:'room',statusL:'In room 2',last:'12m',unread:0},
+  {id:'20777',name:'Dennis Cole',mrn:'#20777',prog:'CharmEd',status:'msg',statusL:'New message',last:'25m',unread:2},
+  {id:'20310',name:'Sofia Herrera',mrn:'#20310',prog:'Primary Care',status:'sched',statusL:'Scheduled 10:30',last:'—',unread:0},
+  {id:'20488',name:'Leo Park',mrn:'#20488',prog:'Flow',status:'sched',statusL:'Scheduled 11:15',last:'—',unread:0},
+];
+
+document.getElementById('ciN').textContent=CHECKIN.length;
+document.getElementById('checkin').innerHTML=CHECKIN.map(p=>`
+  <a class="ci" href="${href(p)}">
+    <span class="av">${initials(p.name)}</span>
+    <div><div class="nm">${p.name}</div><div class="mt">${p.note}</div></div>
+    <div class="st"><div class="b"><span class="d"></span>${p.status}</div><div class="tm">${p.time}</div></div>
+  </a>`).join('');
+
+document.getElementById('rosterMeta').textContent=ROSTER.length+' patients';
+document.getElementById('list').innerHTML=ROSTER.map(p=>`
+  <a class="lrow" href="${href(p)}">
+    <span class="av">${initials(p.name)}</span>
+    <div class="who"><div class="nm">${p.name}</div><div class="id">${p.mrn}</div></div>
+    <span class="prog">${p.prog}</span>
+    <span class="pill ${p.status}">${p.statusL}</span>
+    <div class="act">
+      ${p.unread?`<span class="unread">${p.unread}</span>`:''}
+      <span class="last">${p.last==='—'?'—':(p.last==='now'?'now':p.last+' ago')}</span>
+      <span class="chev">›</span>
+    </div>
+  </a>`).join('');
+</script>
+</body>
+</html>
