@@ -76,6 +76,32 @@ h1{font-size:22px;font-weight:800;letter-spacing:-.01em;margin:4px 0 6px;color:v
 .done h2{font-size:20px;font-weight:800;color:var(--deep);margin:8px 0 6px}
 .progress{position:sticky;top:0;height:4px;background:var(--line-soft);z-index:5}
 .progress .bar{height:100%;background:var(--clay-grad);width:0;transition:width .25s}
+
+/* ---------- branded print summary (patient-ready) ---------- */
+.done .pbtn{border:1.5px solid var(--acc,#5f8ba0);color:var(--acc,#5f8ba0);background:transparent;border-radius:999px;padding:11px 20px;font-size:12px;font-weight:700;letter-spacing:.06em;margin-top:14px}
+#summary{display:none}
+.doc{--acc:#5f8ba0;background:#fff;color:#232b30;font-size:13px;line-height:1.6;padding:46px 50px;max-width:820px;margin:0 auto}
+.doc .lh{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;border-bottom:3px solid var(--acc);padding-bottom:16px}
+.doc .lh .brand{display:flex;align-items:center;gap:13px}
+.doc .lh img{width:56px;height:56px;object-fit:contain;border-radius:8px}
+.doc .lh .org{font-weight:800;font-size:16px;color:#22333f}
+.doc .lh .org small{display:block;font-weight:600;font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--acc);margin-top:2px}
+.doc .lh .meta{text-align:right;font-size:10.5px;color:#5f6b72;white-space:nowrap}
+.doc h1.dt{font-size:19px;font-weight:800;margin:18px 0 3px;color:#22333f}
+.doc .dsub{font-size:12px;color:var(--acc);font-weight:700;margin-bottom:14px}
+.doc .kv{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:5px 14px;font-size:12px;background:color-mix(in srgb,var(--acc) 7%,#fff);border:1px solid color-mix(in srgb,var(--acc) 20%,#fff);border-radius:9px;padding:12px 15px;margin-bottom:16px}
+.doc .kv dt{color:#6b757b;font-weight:600}.doc .kv dd{font-weight:700;color:#26333b}
+.doc .qa{margin:0 0 11px}.doc .qa .qq{font-size:11px;font-weight:700;color:#6b757b}.doc .qa .aa{font-size:13px;font-weight:600;color:#26333b;white-space:pre-wrap}
+.doc .sec{font-size:10.5px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--acc);margin:16px 0 8px;border-bottom:1px solid color-mix(in srgb,var(--acc) 24%,#fff);padding-bottom:3px}
+.doc .foot{margin-top:22px;border-top:2px solid var(--acc);padding-top:11px;font-size:10px;color:#7a848a;display:flex;justify-content:space-between;gap:12px}
+.doc .foot .tag{font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--acc)}
+@media print{
+  @page{size:letter;margin:0.6in}
+  body{background:#fff;padding:0}
+  header.top,.gold-rule,.progress,.wrap{display:none!important}
+  #summary{display:block!important}
+  .doc{padding:0;max-width:none}.doc,.doc *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
 </style>
 </head>
 <body>
@@ -87,6 +113,7 @@ h1{font-size:22px;font-weight:800;letter-spacing:-.01em;margin:4px 0 6px;color:v
 <div class="gold-rule"></div>
 
 <div class="wrap" id="app"><div class="card"><p class="lede">Loading…</p></div></div>
+<div id="summary"></div>
 
 <script>
 /* ===== Screener registry — PUBLIC-DOMAIN instruments only =====
@@ -285,6 +312,35 @@ function collect(){
   return { answers: answers, extra: extra, missing: missing };
 }
 
+// ---- branded, patient-ready print summary (mirrors bhw-questionnaire.html) ----
+var ORG = { name:"BHW Medical Group", addr:"2131 Maryland Ave, Baltimore, MD 21218", phone:"(443) 762-5343", email:"info@bhwmedical.org" };
+function labelFor(scale, val){
+  for(var i=0;i<scale.length;i++){ if(scale[i].v===val) return scale[i].l; }
+  return String(val);
+}
+function buildSummary(c, patientLabel){
+  var now = new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"});
+  var total = 0, haveTotal = true;
+  var pairs = S.items.map(function(it,i){
+    var q = typeof it==="string"? it : it.q;
+    var scale = (typeof it==="object" && it.scale)? it.scale : S.scale;
+    var val = c.answers[i+1];
+    if(typeof val==="number") total += val; else haveTotal = false;
+    var lab = (val==null) ? "—" : labelFor(scale, val) + (typeof val==="number" ? " ("+val+")" : "");
+    return [ (i+1)+". "+q, lab ];
+  });
+  if(c.extra && c.extra.difficulty) pairs.push([DIFF_Q.q, c.extra.difficulty]);
+  var rows = pairs.map(function(p){ return '<div class="qa"><div class="qq">'+esc(p[0])+'</div><div class="aa">'+esc(p[1])+'</div></div>'; }).join("");
+  document.getElementById("summary").innerHTML = '<div class="doc">'+
+    '<div class="lh"><div class="brand"><img src="/assets/bhw-medical-logo.png" alt="" onerror="this.style.display=\'none\'"><div class="org">'+ORG.name+'<small>Confidential Screening</small></div></div>'+
+      '<div class="meta">'+ORG.addr+'<br>Tel '+ORG.phone+'<br>'+ORG.email+'</div></div>'+
+    '<h1 class="dt">'+esc(S.full)+'</h1><div class="dsub">Completed '+now+(state.who?" · by "+esc(state.who):"")+'</div>'+
+    '<dl class="kv"><dt>Name</dt><dd>'+(esc(patientLabel)||"—")+'</dd><dt>Screen total</dt><dd>'+(haveTotal?String(total):"—")+'</dd></dl>'+
+    '<div class="sec">Responses</div>'+rows+
+    '<div class="foot"><span class="tag">'+esc(S.name)+'</span><span>For your care team · '+ORG.name+' · '+ORG.phone+'</span></div>'+
+  '</div>';
+}
+
 async function submit(){
   var err = document.getElementById("err"); err.textContent = "";
   var c = collect();
@@ -307,8 +363,10 @@ async function submit(){
     });
     var data = await r.json().catch(function(){ return {}; });
     if(!r.ok || !data.ok){ throw new Error(data.error || "Something went wrong."); }
+    buildSummary(c, payload.patientLabel);
     app.innerHTML = '<div class="card"><div class="done"><div class="big">✅</div><h2>Thank you — your answers are in.</h2>'+
-      '<p class="lede">Your care team at BHW Medical Group will review them. You can close this window now.</p></div></div>';
+      '<p class="lede">Your care team at BHW Medical Group will review them. You can print or save a copy for your records.</p>'+
+      '<button class="pbtn" onclick="window.print()">🖨️ Print my summary (PDF)</button></div></div>';
     document.getElementById("bar").style.width = "100%";
     window.scrollTo({top:0,behavior:"smooth"});
   }catch(e){
