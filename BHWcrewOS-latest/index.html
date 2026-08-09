@@ -416,7 +416,7 @@ function divisionView(div){
   const isPorter = div==="The Porter House";
 
   return `<section class="view" id="view-${id}" style="--pc:${DIV_COLORS[div]}">
-    <div class="prog-head"><div class="bar"></div><div><h1>${esc(div)}</h1><p>${DIV_BLURBS[div]||""}</p></div>${div==="Primary Care"?`<img src="/assets/bhw-logo-full.png" alt="BHW" style="height:84px;width:auto;margin-left:auto" onerror="this.style.display='none'">`:""}</div>
+    <div class="prog-head"><div class="bar"></div><div><h1>${esc(div)}</h1><p>${DIV_BLURBS[div]||""}</p></div>${div==="Primary Care"?`<img src="/assets/bhw-medical-logo.png" alt="BHW" style="height:84px;width:auto;margin-left:auto" onerror="this.style.display='none'">`:""}</div>
     ${div==="Primary Care"?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:-8px 0 18px"><button class="btn sm warn" onclick="activate('front-desk')">Front Desk OS — lookup &amp; referrals</button></div>`:""}
     ${div==="Care Management"?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:-8px 0 18px"><button class="btn sm" style="background:var(--ok,#1F6961)" onclick="activate('pg-billing')">Billing Toolkit — care management &amp; billing codes</button><button class="btn sm" style="background:var(--blue,#80abbd)" onclick="activate('pg-discharges')">Hospital Discharges &amp; TCM</button></div>`:""}
     ${div!=="Admin Master"?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:-8px 0 18px"><a class="btn sm" style="text-decoration:none;background:var(--pc);color:#fff" href="/bhw-careplan.html?program=${encodeURIComponent(div)}" target="_blank" rel="noopener">📄 Start a care plan — branded &amp; patient-ready</a></div>`:""}
