@@ -96,6 +96,21 @@ exports.handler = async (event) => {
         await updatePage(b.id, props);
         return json(200, { ok: true });
       }
+      case "request-status": {
+        // Patient Request Triage Queue — journey status + ownership.
+        // Status is a Notion status-type property; Assigned To is read as a
+        // select by frontdesk-data, so we write the staff's display name.
+        if (!b.id) return json(400, { error: "Missing request id" });
+        const allowed = ["Not started", "Acknowledged", "In progress", "Done"];
+        if (!allowed.includes(b.status)) return json(400, { error: "Bad status" });
+        const props = { "Status": W.status(b.status) };
+        // Take ownership when claiming or moving into an active stage.
+        if (b.claim || b.status === "Acknowledged" || b.status === "In progress") {
+          props["Assigned To"] = W.sel(session.name);
+        }
+        await updatePage(b.id, props);
+        return json(200, { ok: true, assignedTo: session.name });
+      }
       case "referral-template-save": {
         // Save the current referral wording as a reusable template in Notion.
         if (!b.destination || !DIVISIONS.includes(b.destination)) return json(400, { error: "Pick a destination program" });

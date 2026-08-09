@@ -127,7 +127,31 @@
       <h1>Front Desk</h1>
       <div class="sub">BHW Medical Group · crewOS</div>
     </div>
-    <div class="right" id="todaystamp"></div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:12px">
+      <a class="btn" href="/bhw-requests.html" style="position:relative;text-decoration:none;display:inline-flex;align-items:center;gap:8px;background:var(--river)">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H8l-4 3z"/></svg>
+        Patient Requests
+        <span id="reqBadge" style="display:none;min-width:20px;height:20px;padding:0 6px;border-radius:20px;background:var(--urgent);color:#fff;font-size:.66rem;font-weight:800;display:none;align-items:center;justify-content:center"></span>
+      </a>
+      <a class="btn" href="/bhw-patient-monitor-list.html" style="text-decoration:none;display:inline-flex;align-items:center;gap:8px;background:var(--sage)">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4M6.5 10l2.5 2 2-4 2 5 1.5-3H18"/></svg>
+        Patient Monitor
+      </a>
+      <div class="right" id="todaystamp"></div>
+    </div>
+    <script>
+    // Live open-request count on the Patient Requests button — so the front desk
+    // always sees how many patient requests are waiting for an owner.
+    (function(){
+      fetch('/.netlify/functions/frontdesk-data').then(r=>r.ok?r.json():null).then(d=>{
+        if(!d||!Array.isArray(d.items)) return;
+        var open=d.items.filter(function(i){return !/done|resolved|complete|closed/i.test(i.status||'');}).length;
+        var b=document.getElementById('reqBadge');
+        try{localStorage.setItem('bhw_open_requests',String(open));}catch(e){}
+        if(open>0&&b){b.textContent=open;b.style.display='inline-flex';}
+      }).catch(function(){});
+    })();
+    </script>
   </header>
 
   <!-- REFERRAL CARDS -->

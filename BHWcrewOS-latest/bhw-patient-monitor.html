@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BHW Front Desk — Patient Monitor</title>
+<style>
+@font-face{font-family:'Nunito';src:url('fonts/Nunito/Nunito-VariableFont_wght.ttf') format('truetype');font-weight:300 900;font-display:swap}
+@font-face{font-family:'OpenSans';src:url('fonts/Open_Sans/OpenSans-VariableFont_wdth,wght.ttf') format('truetype');font-weight:300 800;font-display:swap}
+:root{
+  --ink:#233942; --ink-soft:#6c7b74; --ink-mute:#9aa7a2; --line:#e7ece9; --line-2:#eef2f0;
+  --teal:#5fa9a6; --teal-lite:#84c9c4; --teal-deep:#4a8a87; --teal-ink:#356b68; --teal-quiet:#eaf4f2;
+  --gold:#d1a84e; --ok:#6f8f6a; --ok-q:#e9f0e6; --alert:#c0685a; --alert-q:#f6e7e2;
+  --panel:#12262c; --panel-2:#1a343c; --panel-line:rgba(255,255,255,.09); --panel-soft:rgba(255,255,255,.06);
+  --r:16px; --r-sm:11px; --sh:0 10px 26px -18px rgba(30,55,50,.5); --sh-sm:0 6px 16px -12px rgba(30,55,50,.5);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'OpenSans',system-ui,sans-serif;color:var(--ink);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased;background:#dfe7e4;padding:20px}
+h1,h2,h3,h4,.nm,.vit .n,.sec-h b{font-family:'Nunito','OpenSans',sans-serif}
+.eb{font-size:9.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-mute)}
+.app{max-width:1500px;margin:0 auto;display:flex;background:#fff;border-radius:22px;overflow:hidden;box-shadow:0 40px 90px -50px rgba(20,45,40,.6);border:1px solid #d8e0dd}
+
+/* ============ LEFT PATIENT PANEL (dark) ============ */
+.patient{width:290px;flex:none;background:linear-gradient(180deg,var(--panel),var(--panel-2));color:#e8f1ef;display:flex;flex-direction:column}
+.brandrow{display:flex;align-items:center;gap:9px;padding:16px 18px;border-bottom:1px solid var(--panel-line)}
+.brandrow .mk{width:30px;height:30px;border-radius:9px;background:#fff;display:grid;place-items:center}
+.brandrow b{font-family:'Nunito';font-weight:700;font-size:14px}
+.brandrow span{display:block;font-size:9.5px;color:rgba(232,241,239,.55)}
+.pcard{padding:18px 18px 12px;text-align:center;border-bottom:1px solid var(--panel-line)}
+.pcard .av{width:78px;height:78px;border-radius:50%;margin:0 auto 10px;background:linear-gradient(135deg,var(--teal),var(--teal-deep));display:grid;place-items:center;font-family:'Nunito';font-weight:700;font-size:26px;color:#fff;box-shadow:0 0 0 4px rgba(255,255,255,.06)}
+.pcard .nm{font-family:'Nunito';font-weight:700;font-size:17px}
+.pcard .sub{font-size:11px;color:rgba(232,241,239,.6);margin-top:1px}
+.pcard .phone{display:inline-flex;align-items:center;gap:7px;margin-top:11px;background:var(--teal);color:#fff;border-radius:999px;padding:7px 15px;font-weight:700;font-size:12px}
+.pmeta{padding:14px 18px;display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;border-bottom:1px solid var(--panel-line)}
+.pmeta .k{font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;color:rgba(232,241,239,.45)}
+.pmeta .v{font-size:12px;font-weight:600;margin-top:2px;color:#eaf3f1}
+.pmeta .full{grid-column:1/-1}
+/* activity feed = staff-monitoring hook */
+.act{padding:14px 18px;border-bottom:1px solid var(--panel-line)}
+.act .t{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+.act .t b{font-size:11px;font-weight:700;letter-spacing:.04em;color:#eaf3f1}
+.act .t .pill{font-size:9.5px;font-weight:700;background:var(--alert);color:#fff;border-radius:999px;padding:2px 8px}
+.arow{display:flex;gap:9px;padding:7px 0}
+.arow .dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex:none}
+.arow .x b{font-size:11.5px;font-weight:700;color:#eef6f4}
+.arow .x p{font-size:10.5px;color:rgba(232,241,239,.6)}
+.arow .x .tm{font-size:9.5px;color:rgba(232,241,239,.4)}
+.pnav{margin-top:auto;padding:12px 12px 16px;display:flex;flex-direction:column;gap:2px}
+.pnav a{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;color:rgba(232,241,239,.72);text-decoration:none;font-size:12.5px;font-weight:600}
+.pnav a.on{background:var(--panel-soft);color:#fff}
+.pnav a:hover:not(.on){background:rgba(255,255,255,.04)}
+.pnav a .bd{margin-left:auto;background:var(--teal);color:#fff;font-size:9.5px;font-weight:700;border-radius:999px;padding:1px 7px}
+.pnav svg{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:1.6}
+
+/* ============ MAIN ============ */
+.main{flex:1;min-width:0;display:flex;flex-direction:column;background:#f7f9f8}
+.top{display:flex;align-items:center;gap:6px;padding:13px 22px;border-bottom:1px solid var(--line);background:#fff}
+.top .bk{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);display:grid;place-items:center;color:var(--ink-soft)}
+.tabz{display:flex;gap:4px;margin-left:6px}
+.tabz a{padding:9px 15px;border-radius:9px;text-decoration:none;color:var(--ink-soft);font-weight:600;font-size:12.5px}
+.tabz a.on{background:var(--teal-quiet);color:var(--teal-ink)}
+.top .r{margin-left:auto;display:flex;align-items:center;gap:10px}
+.top .srch{display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:999px;padding:8px 14px;color:var(--ink-mute);font-size:12px;min-width:180px}
+.top .who{display:flex;align-items:center;gap:8px}
+.top .who .a{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--teal-lite),var(--teal));color:#fff;display:grid;place-items:center;font-weight:700;font-size:11px}
+.top .who b{font-size:12px}.top .who span{font-size:10px;color:var(--ink-mute);display:block}
+.scroll{flex:1;overflow:auto;padding:18px 22px 24px}
+.grid{display:grid;grid-template-columns:1fr 1.05fr 1.15fr;gap:16px}
+.col{display:flex;flex-direction:column;gap:16px}
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh)}
+.pad{padding:15px 16px}
+.sec-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.sec-h b{font-size:14px;font-weight:700}
+.sec-h .mo{color:var(--ink-mute);font-size:16px;letter-spacing:1px}
+
+/* problems list */
+.plist .it{display:flex;gap:10px;padding:9px 0;border-top:1px solid var(--line-2)}
+.plist .it:first-child{border-top:0}
+.plist .ic{width:16px;height:16px;border-radius:50%;flex:none;margin-top:2px;display:grid;place-items:center}
+.plist .ic svg{width:11px;height:11px;stroke:#fff;fill:none;stroke-width:2.4}
+.plist b{font-size:12.5px;font-weight:700}
+.plist .d{font-size:10.5px;color:var(--ink-mute)}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--alert-q);color:var(--alert);border-radius:999px;padding:5px 11px;font-size:11.5px;font-weight:600}
+.chip .d{width:6px;height:6px;border-radius:50%;background:var(--alert)}
+.imm .it{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--line-2)}
+.imm .it:first-child{border-top:0}
+.imm b{font-size:12px;font-weight:700}.imm .d{font-size:10px;color:var(--ink-mute)}
+.imm .ok{width:18px;height:18px;border-radius:50%;background:var(--ok-q);display:grid;place-items:center}
+.imm .ok svg{width:11px;height:11px;stroke:var(--ok);fill:none;stroke-width:2.6}
+.med .it{padding:8px 0;border-top:1px solid var(--line-2)}
+.med .it:first-child{border-top:0}
+.med b{font-size:12.5px;font-weight:700}.med b span{color:var(--teal-deep);font-weight:700}
+.med .d{font-size:10.5px;color:var(--ink-mute)}
+
+/* investigations (list overview) */
+.inv{padding:11px 0;border-top:1px solid var(--line-2)}
+.inv:first-of-type{border-top:0}
+.inv .h{display:flex;align-items:center;justify-content:space-between}
+.inv .h b{font-size:12.5px;font-weight:700}
+.inv .h .st{font-size:9.5px;font-weight:700;color:var(--ok);background:var(--ok-q);border-radius:999px;padding:2px 8px}
+.inv .h .st.w{color:#a97e28;background:#f5ecd4}
+.inv p{font-size:11px;color:var(--ink-soft);margin:5px 0 7px}
+.inv .sub{display:flex;flex-direction:column;gap:5px}
+.inv .sub .s{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--ink-soft)}
+.inv .sub .s .b{width:14px;height:14px;border-radius:4px;border:1px solid var(--line);display:grid;place-items:center;flex:none}
+.inv .sub .s .b.y{background:var(--teal);border-color:var(--teal)}
+.inv .sub .s .b.y svg{width:9px;height:9px;stroke:#fff;fill:none;stroke-width:3}
+
+/* vitals */
+.vit{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--line-2)}
+.vit:first-of-type{border-top:0}
+.vit .ic{width:34px;height:34px;border-radius:9px;background:var(--teal-quiet);display:grid;place-items:center;flex:none}
+.vit .ic svg{width:17px;height:17px;stroke:var(--teal-deep);fill:none;stroke-width:1.7}
+.vit .n{font-size:17px;font-weight:800;line-height:1}
+.vit .n small{font-size:10px;color:var(--ink-mute);font-weight:600}
+.vit .lb{font-size:10.5px;color:var(--ink-mute)}
+.vit .spark{margin-left:auto;width:120px;height:34px;flex:none}
+.vit .dt{font-size:9.5px;color:var(--ink-mute);white-space:nowrap;align-self:flex-start;margin-top:2px}
+
+/* labs table with range bars */
+.labs{width:100%;border-collapse:collapse}
+.labs th{text-align:left;font-size:9.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-mute);font-weight:700;padding:0 8px 8px}
+.labs td{padding:7px 8px;border-top:1px solid var(--line-2);vertical-align:middle}
+.labs .mk{font-weight:700;font-size:12px}
+.labs .vl{font-weight:800;font-size:12.5px}
+.labs .rg{width:70px}
+.rgbar{height:5px;border-radius:99px;background:#eef1ef;position:relative}
+.rgbar i{position:absolute;top:-2px;width:8px;height:9px;border-radius:3px;transform:translateX(-50%)}
+.rgbar .band{position:absolute;top:0;height:5px;border-radius:99px;background:var(--ok-q)}
+.labs .nr{font-size:10px;color:var(--ink-mute);white-space:nowrap}
+.dot-ok{background:var(--ok)}.dot-w{background:var(--gold)}.dot-a{background:var(--alert)}
+
+/* pft table */
+.pft{width:100%;border-collapse:collapse;margin-top:2px}
+.pft th{text-align:left;font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-mute);font-weight:700;padding:0 6px 7px}
+.pft th.n,.pft td.n{text-align:right}
+.pft td{padding:6px;border-top:1px solid var(--line-2);font-size:11.5px}
+.pft td.mk{font-weight:700}
+.recheck{display:flex;align-items:center;gap:12px;padding:12px 15px;background:linear-gradient(120deg,var(--teal-quiet),#fff);border:1px solid var(--line)}
+.recheck .ic{width:34px;height:34px;border-radius:9px;background:#fff;border:1px solid var(--line);display:grid;place-items:center}
+.recheck .ic svg{width:17px;height:17px;stroke:var(--teal-deep);fill:none;stroke-width:1.7}
+.recheck b{font-size:12.5px;font-weight:700}.recheck p{font-size:10.5px;color:var(--ink-soft)}
+.recheck .due{margin-left:auto;text-align:right}
+.recheck .due .n{font-family:'Nunito';font-weight:800;font-size:15px;color:var(--teal-ink)}
+.recheck .due .l{font-size:9.5px;color:var(--ink-mute)}
+@media(max-width:1180px){.grid{grid-template-columns:1fr 1fr}.patient{width:250px}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- LEFT PATIENT PANEL -->
+  <aside class="patient">
+    <div class="brandrow">
+      <div class="mk"><svg viewBox="0 0 48 48" width="22" height="22"><path d="M9 24h6l3-8 5 16 4-8h12" fill="none" stroke="#4a8a87" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div><b>BHW Front Desk</b><span>Patient Monitor</span></div>
+    </div>
+    <a href="/bhw-patient-monitor-list.html" style="display:inline-flex;align-items:center;gap:7px;margin:0 20px 4px;padding:8px 12px;border-radius:9px;background:rgba(255,255,255,.08);color:#cfe0dc;text-decoration:none;font-size:11.5px;font-weight:700">‹ All patients</a>
+
+    <div class="pcard">
+      <div class="av" id="pAv">JR</div>
+      <div class="nm" id="pNm">Jordan Rivera</div>
+      <div class="sub" id="pSub">Female · 01.28.1968 · #10428</div>
+      <div class="phone" id="pPhone">📞 940-637-5470</div>
+    </div>
+
+    <div class="pmeta">
+      <div><div class="k">Insurance</div><div class="v" id="pIns">Aetna</div></div>
+      <div><div class="k">Member #</div><div class="v" id="pMem">W2325235</div></div>
+      <div class="full"><div class="k">Address</div><div class="v" id="pAddr">3517 Camden Pl, Baltimore MD</div></div>
+      <div><div class="k">Directive</div><div class="v" id="pDir">POLST · 07/15/24</div></div>
+      <div><div class="k">PCP</div><div class="v" id="pPcp">NP Amaris</div></div>
+    </div>
+
+    <div class="act">
+      <div class="t"><b>Patient activity</b><span class="pill" id="pActN">3 new</span></div>
+      <div id="pAct">
+      <div class="arow"><span class="dot dot-a"></span><div class="x"><b>New message</b><p>“My left knee is worse on stairs.”</p><span class="tm">8:32 AM · today</span></div></div>
+      <div class="arow"><span class="dot dot-ok"></span><div class="x"><b>Checked in — Flow visit</b><p>Arrived, rooming in progress</p><span class="tm">8:19 AM · today</span></div></div>
+      <div class="arow"><span class="dot dot-w"></span><div class="x"><b>Symptom check updated</b><p>Bloating ↑, energy 5/10</p><span class="tm">Yesterday · 6:10 PM</span></div></div>
+      </div>
+    </div>
+
+    <nav class="pnav">
+      <a class="on" href="#"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Dashboard</a>
+      <a href="/bhw-front-desk.html"><svg viewBox="0 0 24 24"><path d="M4 20V7l8-4 8 4v13"/><path d="M9 20v-6h6v6"/></svg>Front Desk</a>
+      <a href="#"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3.5 19c.4-3.3 2.8-5.3 5.5-5.3S14.1 15.7 14.5 19"/><circle cx="17.5" cy="9" r="2.3"/></svg>Staff</a>
+      <a href="#"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 3z"/></svg>Chat<span class="bd">2</span></a>
+      <a href="#"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Calendar</a>
+    </nav>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="top">
+      <div class="bk">‹</div>
+      <nav class="tabz"><a class="on" href="#">Overview</a><a href="#">Notes &amp; Graphs</a><a href="#">Investigations</a><a href="#">Invoices</a></nav>
+      <div class="r">
+        <div class="srch">⌕ Search patient record</div>
+        <div class="who"><div class="a">AM</div><div><b>NP Amaris</b><span>Front Desk · Provider</span></div></div>
+      </div>
+    </div>
+
+    <div class="scroll">
+      <!-- recheck box (staff cue) -->
+      <div class="card recheck" style="margin-bottom:16px">
+        <div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg></div>
+        <div><b>Next recheck due</b><p>Flow panel (Lp(a), triglycerides, ApoB) + ABI · ordered, home kit sent</p></div>
+        <div class="due"><div class="n">Sep 18</div><div class="l">in 6 weeks</div></div>
+      </div>
+
+      <div class="grid">
+        <!-- COL 1 · Problems / Allergies / Immunizations / Medications -->
+        <div class="col">
+          <div class="card pad">
+            <div class="sec-h"><b>Problems</b><span class="mo">···</span></div>
+            <div class="plist">
+              <div class="it"><span class="ic" style="background:var(--alert)"><svg viewBox="0 0 24 24"><path d="M12 8v5M12 16h.01"/></svg></span><div><b>Hypertension</b><div class="d">Since May 2019 · active</div></div></div>
+              <div class="it"><span class="ic" style="background:var(--alert)"><svg viewBox="0 0 24 24"><path d="M12 8v5M12 16h.01"/></svg></span><div><b>Mixed hyperlipidemia · high Lp(a)</b><div class="d">Since 2021 · active</div></div></div>
+              <div class="it"><span class="ic" style="background:var(--gold)"><svg viewBox="0 0 24 24"><path d="M12 8v5M12 16h.01"/></svg></span><div><b>Osteopenia</b><div class="d">DEXA 2025 · monitoring</div></div></div>
+              <div class="it"><span class="ic" style="background:var(--gold)"><svg viewBox="0 0 24 24"><path d="M12 8v5M12 16h.01"/></svg></span><div><b>IBS-mixed / reflux</b><div class="d">2024 · 5R plan</div></div></div>
+            </div>
+          </div>
+
+          <div class="card pad">
+            <div class="sec-h"><b>Allergies</b><span class="mo">···</span></div>
+            <div class="chips">
+              <span class="chip"><span class="d"></span>Penicillin</span>
+              <span class="chip"><span class="d"></span>Dairy / lactose</span>
+              <span class="chip"><span class="d"></span>Gluten (sensitivity)</span>
+            </div>
+          </div>
+
+          <div class="card pad">
+            <div class="sec-h"><b>Immunizations</b><span class="mo">···</span></div>
+            <div class="imm">
+              <div class="it"><div><b>Influenza</b><div class="d">Oct 2025</div></div><span class="ok"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span></div>
+              <div class="it"><div><b>Tdap</b><div class="d">Jun 2022</div></div><span class="ok"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span></div>
+              <div class="it"><div><b>Pneumococcal (PCV20)</b><div class="d">Due 2026</div></div><span class="ok" style="background:#f5ecd4"><svg viewBox="0 0 24 24" style="stroke:#a97e28"><path d="M12 7v6M12 16h.01"/></svg></span></div>
+            </div>
+          </div>
+
+          <div class="card pad">
+            <div class="sec-h"><b>Medications</b><span class="mo">···</span></div>
+            <div class="med">
+              <div class="it"><b>Rosuvastatin <span>10 mg</span></b><div class="d">Nightly · LDL / plaque</div></div>
+              <div class="it"><b>Icosapent ethyl <span>2 g</span></b><div class="d">Twice daily · triglycerides</div></div>
+              <div class="it"><b>Omeprazole <span>20 mg</span></b><div class="d">Morning · reflux (taper planned)</div></div>
+              <div class="it"><b>Vitamin D3 + K2 <span>5000 IU</span></b><div class="d">Daily · bone &amp; immune</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- COL 2 · List Overview (investigations by condition) -->
+        <div class="col">
+          <div class="card pad">
+            <div class="sec-h"><b>List Overview</b><span class="eb">Investigations</span></div>
+            <div class="inv">
+              <div class="h"><b>Cardiovascular risk</b><span class="st w">Watching</span></div>
+              <p>Elevated Lp(a) &amp; ApoB; BP trending down on therapy.</p>
+              <div class="sub">
+                <div class="s"><span class="b y"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>Lipid panel + ApoB · Aug 2026</div>
+                <div class="s"><span class="b y"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>Lp(a) · once, Aug 2026</div>
+                <div class="s"><span class="b"></span>ABI + carotid duplex · due Sep 18</div>
+              </div>
+            </div>
+            <div class="inv">
+              <div class="h"><b>Bone health</b><span class="st w">Watching</span></div>
+              <p>Osteopenia on DEXA; Vitamin D low, repleting.</p>
+              <div class="sub">
+                <div class="s"><span class="b y"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>DEXA T-score −1.4 · 2025</div>
+                <div class="s"><span class="b"></span>Vitamin D recheck · Sep 20</div>
+              </div>
+            </div>
+            <div class="inv">
+              <div class="h"><b>Digestive</b><span class="st">On plan</span></div>
+              <p>IBS-mixed + reflux; 5R protocol in Repair phase.</p>
+              <div class="sub">
+                <div class="s"><span class="b y"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>Calprotectin / hs-CRP · Aug 2026</div>
+                <div class="s"><span class="b"></span>GI-MAP stool + SIBO · home kit</div>
+              </div>
+            </div>
+            <div class="inv">
+              <div class="h"><b>Metabolic</b><span class="st">On track</span></div>
+              <p>A1c &amp; fasting insulin in range; maintain.</p>
+              <div class="sub">
+                <div class="s"><span class="b y"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>HbA1c 5.4% · Aug 2026</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- COL 3 · Vitals + Labs + PFT -->
+        <div class="col">
+          <div class="card pad">
+            <div class="sec-h"><b>Vitals</b><span class="eb">Last 30 days</span></div>
+            <div class="vit">
+              <div class="ic"><svg viewBox="0 0 24 24"><path d="M6 20V10M12 20V4M18 20v-7"/></svg></div>
+              <div><div class="n">165 <small>lbs</small></div><div class="lb">Weight</div></div>
+              <svg class="spark" viewBox="0 0 120 34"><polyline points="4,20 26,18 48,22 70,17 92,19 116,16" fill="none" stroke="var(--teal-deep)" stroke-width="2" stroke-linecap="round"/></svg>
+            </div>
+            <div class="vit">
+              <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.5-7 10-7 10z"/></svg></div>
+              <div><div class="n">72 <small>bpm</small></div><div class="lb">Heart rate</div></div>
+              <svg class="spark" viewBox="0 0 120 34"><polyline points="4,17 18,17 24,8 30,26 36,17 60,17 66,10 72,24 78,17 100,17 106,9 112,25 116,17" fill="none" stroke="var(--alert)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="vit">
+              <div class="ic"><svg viewBox="0 0 24 24"><path d="M4 14h4l2-6 3 12 2-6h5"/></svg></div>
+              <div><div class="n">124/80</div><div class="lb">Blood pressure</div></div>
+              <svg class="spark" viewBox="0 0 120 34"><polyline points="4,10 26,13 48,12 70,16 92,18 116,20" fill="none" stroke="var(--teal-deep)" stroke-width="2" stroke-linecap="round"/></svg>
+            </div>
+            <div class="vit">
+              <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3v9M12 12a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg></div>
+              <div><div class="n">98.4 <small>°F</small></div><div class="lb">Temp</div></div>
+              <div class="vit" style="border:0;padding:0;margin-left:auto"><div><div class="n">98 <small>%</small></div><div class="lb">O₂ sat</div></div></div>
+            </div>
+          </div>
+
+          <div class="card pad">
+            <div class="sec-h"><b>Labs</b><span class="eb">Aug 2026 · fasting</span></div>
+            <table class="labs">
+              <thead><tr><th>Marker</th><th>Value</th><th class="rg">Range</th><th>Normal</th></tr></thead>
+              <tbody>
+                <tr><td class="mk">Lp(a)</td><td class="vl">142</td><td class="rg"><div class="rgbar"><span class="band" style="left:0;width:45%"></span><i class="dot-a" style="left:92%"></i></div></td><td class="nr">&lt; 75 nmol/L</td></tr>
+                <tr><td class="mk">ApoB</td><td class="vl">108</td><td class="rg"><div class="rgbar"><span class="band" style="left:0;width:52%"></span><i class="dot-a" style="left:80%"></i></div></td><td class="nr">&lt; 80 mg/dL</td></tr>
+                <tr><td class="mk">Triglycerides</td><td class="vl">188</td><td class="rg"><div class="rgbar"><span class="band" style="left:0;width:60%"></span><i class="dot-w" style="left:72%"></i></div></td><td class="nr">&lt; 150 mg/dL</td></tr>
+                <tr><td class="mk">hs-CRP</td><td class="vl">2.4</td><td class="rg"><div class="rgbar"><span class="band" style="left:0;width:40%"></span><i class="dot-a" style="left:70%"></i></div></td><td class="nr">&lt; 1.0 mg/L</td></tr>
+                <tr><td class="mk">HbA1c</td><td class="vl">5.4</td><td class="rg"><div class="rgbar"><span class="band" style="left:20%;width:45%"></span><i class="dot-ok" style="left:40%"></i></div></td><td class="nr">&lt; 5.7 %</td></tr>
+                <tr><td class="mk">Vitamin D</td><td class="vl">24</td><td class="rg"><div class="rgbar"><span class="band" style="left:45%;width:45%"></span><i class="dot-w" style="left:30%"></i></div></td><td class="nr">40–60 ng/mL</td></tr>
+                <tr><td class="mk">Vitamin B12</td><td class="vl">310</td><td class="rg"><div class="rgbar"><span class="band" style="left:45%;width:45%"></span><i class="dot-w" style="left:34%"></i></div></td><td class="nr">&gt; 500 pg/mL</td></tr>
+                <tr><td class="mk">TSH</td><td class="vl">2.1</td><td class="rg"><div class="rgbar"><span class="band" style="left:20%;width:50%"></span><i class="dot-ok" style="left:42%"></i></div></td><td class="nr">0.4–4.0 mIU/L</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="card pad">
+            <div class="sec-h"><b>Pulmonary function</b><span class="eb">Screening</span></div>
+            <table class="pft">
+              <thead><tr><th>Test</th><th class="n">Actual</th><th class="n">Pred</th><th class="n">%Pred</th></tr></thead>
+              <tbody>
+                <tr><td class="mk">FVC (L)</td><td class="n">3.80</td><td class="n">3.94</td><td class="n">96</td></tr>
+                <tr><td class="mk">FEV1 (L)</td><td class="n">2.74</td><td class="n">3.10</td><td class="n">88</td></tr>
+                <tr><td class="mk">FEV1/FVC (%)</td><td class="n">72</td><td class="n">78</td><td class="n">—</td></tr>
+                <tr><td class="mk">FEF 25–75 (L/s)</td><td class="n">2.28</td><td class="n">3.05</td><td class="n">75</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Populate the patient identity from ?patient=<id>. On deploy this would fetch
+// the chart from the data layer; here a small demo map keyed to the roster ids
+// lets each Patient Monitor row open the right person. Labs/vitals below stay
+// as representative demo values until the live record is wired.
+const PATIENTS={
+  '10428':{name:'Jordan Rivera',sub:'Female · 01.28.1968 · #10428',phone:'940-637-5470',ins:'Aetna',mem:'W2325235',addr:'3517 Camden Pl, Baltimore MD',dir:'POLST · 07/15/24',pcp:'NP Amaris',
+    act:[['a','New message','“My left knee is worse on stairs.”','8:32 AM · today'],['ok','Checked in — Flow visit','Arrived, rooming in progress','8:19 AM · today'],['w','Symptom check updated','Bloating ↑, energy 5/10','Yesterday · 6:10 PM']]},
+  '20591':{name:'Marcus Bell',sub:'Male · 03.14.1961 · #20591',phone:'410-555-0148',ins:'CareFirst BCBS',mem:'C8841203',addr:'88 Linden Ave, Baltimore MD',dir:'— none on file',pcp:'NP Amaris',
+    act:[['a','Urgent text','Out of lisinopril — needs a refill before Monday.','8:40 AM · today'],['ok','Checked in — Follow-up','In the waiting room','8:32 AM · today'],['w','Lab review pending','Flow panel back, needs provider read','Yesterday']]},
+  '20144':{name:'Priya Nair',sub:'Female · 09.02.1979 · #20144',phone:'443-555-0192',ins:'UnitedHealthcare',mem:'U5560112',addr:'204 Maple Ct, Towson MD',dir:'— none on file',pcp:'NP Amaris',
+    act:[['ok','In room 2','Rooming complete, ready for provider','8:10 AM · today'],['a','Voicemail','Question about lab fasting instructions','Yesterday · 4:20 PM'],['w','Mood check-in','PHQ-9 trending down','2 days ago']]},
+  '20777':{name:'Dennis Cole',sub:'Male · 12.19.1955 · #20777',phone:'240-555-0166',ins:'Medicare',mem:'1EG4-TE5-MK72',addr:'19 Oak Hill Rd, Columbia MD',dir:'POLST · 02/03/25',pcp:'NP Amaris',
+    act:[['a','New message','Uploaded the cardiology records you asked for.','25m ago'],['a','New message','“Is my ApoE result back?”','Yesterday'],['ok','Care plan sent','CharmEd annual plan delivered','3 days ago']]},
+  '20310':{name:'Sofia Herrera',sub:'Female · 06.27.1988 · #20310',phone:'301-555-0175',ins:'Cigna',mem:'CG7781290',addr:'77 Bayview Dr, Annapolis MD',dir:'— none on file',pcp:'NP Amaris',
+    act:[['w','Scheduled 10:30','Annual Wellness Visit today','—'],['ok','Prior auth received','CareFirst response, sleep study','1h ago'],['ok','Screener complete','GAD-7 within range','Yesterday']]},
+  '20488':{name:'Leo Park',sub:'Male · 04.05.1972 · #20488',phone:'240-555-0133',ins:'Aetna',mem:'W9910042',addr:'451 Cedar St, Rockville MD',dir:'— none on file',pcp:'NP Amaris',
+    act:[['ok','Scheduled 11:15','Flow follow-up today','—'],['ok','Appt confirmed','Moved to Sep 24 last week','Yesterday'],['w','ABI ordered','Vascular testing pending','2 days ago']]},
+};
+function initials(n){return (n||'?').split(/[ ,]+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();}
+(function(){
+  const id=new URLSearchParams(location.search).get('patient');
+  const p=PATIENTS[id]; if(!p) return; // unknown/no id → keep default (Jordan)
+  const set=(el,v)=>{const e=document.getElementById(el); if(e) e.textContent=v;};
+  set('pAv',initials(p.name)); set('pNm',p.name); set('pSub',p.sub);
+  document.getElementById('pPhone').innerHTML='📞 '+p.phone;
+  set('pIns',p.ins); set('pMem',p.mem); set('pAddr',p.addr); set('pDir',p.dir); set('pPcp',p.pcp);
+  document.title=p.name+' — Patient Monitor · crewOS';
+  const rows=(p.act||[]).map(a=>`<div class="arow"><span class="dot dot-${a[0]}"></span><div class="x"><b>${a[1]}</b><p>${a[2]}</p><span class="tm">${a[3]}</span></div></div>`).join('');
+  if(rows) document.getElementById('pAct').innerHTML=rows;
+  const nNew=(p.act||[]).filter(a=>a[0]==='a').length;
+  document.getElementById('pActN').textContent=nNew?nNew+' new':'up to date';
+})();
+</script>
+</body>
+</html>
