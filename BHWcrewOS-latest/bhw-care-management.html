@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Care Management Log · BHW crewOS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/bhw-tokens.css">
+<style>
+:root{--river:#80abbd;--clay:#b07a55;--clay-deep:#8C5A3C;--sage:#a8b59a;--sand:#dcc8b1;--ink:#2b2b33;--soft:#6f6f7a;--ok:#1F6961;--urgent:#B4544B;--line:#e5e0d8;--linen:#f7f5f2}
+*{box-sizing:border-box}
+body{font-family:var(--sans);background:var(--linen);color:var(--ink);font-size:14px;line-height:1.5;margin:0}
+.wrap{max-width:1280px;margin:0 auto;padding:18px 16px 60px}
+header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:4px 0 14px;border-bottom:1px solid var(--line);margin-bottom:14px}
+header img{height:40px;width:auto}
+h1{font-family:var(--serif,Georgia);font-weight:600;font-size:21px;margin:0}
+.sub{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--clay-deep);font-weight:700}
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-left:auto}
+select,input[type=text],input[type=month],input[type=date],input[type=number]{font-family:inherit;font-size:13px;padding:7px 9px;border:1.5px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+input:focus,select:focus{outline:none;border-color:var(--river)}
+.btn{font-family:inherit;font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:99px;border:0;background:var(--clay);color:#fff;cursor:pointer}
+.btn.sec{background:#fff;border:1.5px solid var(--line);color:var(--ink)}
+.btn.sm{padding:5px 11px;font-size:11.5px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.kpis{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:11px;padding:10px 15px;min-width:120px}
+.kpi .n{font-size:22px;font-weight:800;line-height:1}
+.kpi .l{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--soft);margin-top:3px}
+.tablewrap{overflow-x:auto;background:#fff;border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;min-width:1050px;font-size:12.5px}
+th{text-align:left;font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--soft);font-weight:700;padding:9px 8px;border-bottom:2px solid var(--line);white-space:nowrap;position:sticky;top:0;background:#fff}
+td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:hover td{background:#faf8f5}
+.pt{font-weight:700}
+.pt small{display:block;font-weight:500;color:var(--soft);font-size:10.5px}
+.badge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px;background:var(--linen);border:1px solid var(--line);color:var(--clay-deep);white-space:nowrap}
+.icd{font-size:10.5px;color:var(--soft);max-width:150px}
+td input[type=number]{width:58px}
+td input.act{width:100%;min-width:150px}
+td input.ref{width:100%;min-width:120px}
+td input[type=date]{width:130px}
+td select{width:100%;min-width:90px}
+.due{color:var(--urgent);font-weight:700}
+.rowsave{white-space:nowrap}
+.saved{color:var(--ok);font-size:11px;font-weight:700}
+.msg{padding:24px;text-align:center;color:var(--soft)}
+.disc{background:#fdf6ec;border:1px solid var(--sand);border-radius:9px;padding:9px 13px;font-size:11.5px;color:var(--clay-deep);margin-bottom:12px}
+.gate{max-width:460px;margin:60px auto;background:#fff;border:1px solid var(--line);border-radius:14px;padding:26px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <img src="/assets/bhw-medical-logo.png" alt="" onerror="this.style.display='none'">
+  <div><h1>Care Management Log</h1><div class="sub">CCM · APCM · TCM — time, activities, referrals & follow-up</div></div>
+  <div class="controls" id="controls" style="display:none">
+    <select id="program" onchange="load()">
+      <option>All</option><option>CCM</option><option>APCM</option><option>TCM</option>
+      <option>RPM</option><option>RTM</option><option>BHI</option><option>CoCM</option><option>CharmEd Minds</option>
+    </select>
+    <input type="month" id="month" onchange="load()">
+    <input type="text" id="q" placeholder="Search name / Ctl / ICD…" oninput="render()">
+    <button class="btn sec sm" onclick="load()">↻ Refresh</button>
+    <button class="btn sm" id="importBtn" onclick="importNow()" title="Pull this month's CCM + APCM lists and enrich from the eligibility tracker">⟳ Run monthly import</button>
+  </div>
+</header>
+
+<div id="app"><div class="msg">Loading…</div></div>
+</div>
+
+<script>
+var TOKEN = "";
+try { TOKEN = sessionStorage.getItem("crewos_token") || ""; } catch(e){}
+var STAGES = ["", "1 day", "4 days", "2 weeks", "1 month"];
+var STATUSES = ["Open", "In progress", "Complete", "Billed"];
+var ALL = [];
+var app = document.getElementById("app");
+
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+
+async function api(fn, payload){
+  var r = await fetch("/.netlify/functions/"+fn, {
+    method:"POST",
+    headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+TOKEN },
+    body: JSON.stringify(payload)
+  });
+  var d = await r.json().catch(function(){ return {}; });
+  return { ok:r.ok, status:r.status, d:d };
+}
+
+function gate(msg){
+  app.innerHTML = '<div class="gate"><h2 style="margin:0 0 8px">Sign in to crewOS</h2>'+
+    '<p class="msg" style="padding:6px 0">'+esc(msg||"This board uses your crewOS session. Open it from inside crewOS after signing in.")+'</p>'+
+    '<a class="btn" href="/index.html" target="_top" style="text-decoration:none">Go to crewOS sign-in</a></div>';
+  document.getElementById("controls").style.display="none";
+}
+
+async function load(){
+  if(!TOKEN){ gate(); return; }
+  app.innerHTML = '<div class="msg">Loading…</div>';
+  var program = document.getElementById("program").value;
+  var month = (document.getElementById("month").value||"").trim();
+  var res = await api("care-log-data", { action:"list", program:program, month:month });
+  if(res.status===401){ gate("Your session expired — sign in to crewOS again."); return; }
+  if(!res.ok){ app.innerHTML = '<div class="msg">Couldn’t load: '+esc(res.d.error||res.status)+'</div>'; return; }
+  document.getElementById("controls").style.display="flex";
+  ALL = res.d.entries || [];
+  render();
+}
+
+function render(){
+  var q = (document.getElementById("q").value||"").toLowerCase();
+  var rows = ALL.filter(function(e){
+    return !q || (e.entry+" "+e.ctlNo+" "+e.icd+" "+e.coordinator).toLowerCase().indexOf(q)>-1;
+  });
+  var today = todayISO();
+  var due = rows.filter(function(e){ return e.nextFollowUp && e.nextFollowUp <= today && e.status!=="Complete" && e.status!=="Billed"; }).length;
+  var mins = rows.reduce(function(a,e){ return a + (e.minutes||0); }, 0);
+  var under = rows.filter(function(e){ return (e.program==="CCM"||e.program==="APCM") && (e.minutes||0) < 20; }).length;
+
+  var head =
+    '<div class="disc">Log time, what you did, and completed referrals for each patient, and set the next follow-up (1 day / 4 days / 2 weeks / 1 month). Saved straight to Notion and shown on the patient’s Master List profile.</div>'+
+    '<div class="kpis">'+
+      kpi(rows.length,"patients")+
+      kpi(due,"follow-ups due",due?"due":"")+
+      kpi(under,"under 20 min",under?"due":"")+
+      kpi(mins,"minutes logged")+
+    '</div>';
+
+  if(!rows.length){ app.innerHTML = head + '<div class="tablewrap"><div class="msg">No entries for this filter. Adjust the program/month, or run the monthly import.</div></div>'; return; }
+
+  var body = rows.map(function(e){
+    var dueCls = (e.nextFollowUp && e.nextFollowUp<=today && e.status!=="Complete" && e.status!=="Billed") ? " due" : "";
+    return '<tr data-id="'+esc(e.id)+'">'+
+      '<td class="pt">'+esc(nameOf(e))+'<small>'+esc(e.ctlNo||"")+(e.coordinator?" · "+esc(e.coordinator):"")+'</small></td>'+
+      '<td><span class="badge">'+esc(e.program||"")+'</span></td>'+
+      '<td class="icd">'+esc(e.icd||"—")+'</td>'+
+      '<td><input type="number" min="0" class="f-min" value="'+(e.minutes==null?"":e.minutes)+'"></td>'+
+      '<td><input type="text" class="act f-act" value="'+esc(e.activities||"")+'" placeholder="what was done"></td>'+
+      '<td><input type="text" class="ref f-ref" value="'+esc(e.referrals||"")+'" placeholder="referrals completed"></td>'+
+      '<td class="'+dueCls+'"><input type="date" class="f-fu" value="'+esc(e.nextFollowUp||"")+'"></td>'+
+      '<td><select class="f-stage">'+STAGES.map(function(s){return '<option'+(s===e.followUpStage?" selected":"")+'>'+esc(s)+'</option>';}).join("")+'</select></td>'+
+      '<td><select class="f-status">'+STATUSES.map(function(s){return '<option'+(s===(e.status||"Open")?" selected":"")+'>'+esc(s)+'</option>';}).join("")+'</select></td>'+
+      '<td class="rowsave"><button class="btn sm" onclick="save(this)">Save</button> <span class="saved" style="display:none">✓</span></td>'+
+    '</tr>';
+  }).join("");
+
+  app.innerHTML = head +
+    '<div class="tablewrap"><table><thead><tr>'+
+    '<th>Patient</th><th>Program</th><th>ICD-10</th><th>Min</th><th>Activities done</th><th>Referrals completed</th><th>Next follow-up</th><th>Stage</th><th>Status</th><th></th>'+
+    '</tr></thead><tbody>'+body+'</tbody></table></div>';
+}
+
+function kpi(n,l,cls){ return '<div class="kpi"><div class="n'+(cls?" "+cls:"")+'">'+n+'</div><div class="l">'+l+'</div></div>'; }
+function nameOf(e){ return (e.entry||"").split(" — ")[0] || e.entry || "—"; }
+
+async function save(btn){
+  var tr = btn.closest("tr");
+  var id = tr.getAttribute("data-id");
+  var payload = {
+    action:"care-log-save", id:id,
+    minutes: tr.querySelector(".f-min").value==="" ? "" : Number(tr.querySelector(".f-min").value),
+    activities: tr.querySelector(".f-act").value,
+    referrals: tr.querySelector(".f-ref").value,
+    nextFollowUp: tr.querySelector(".f-fu").value,
+    followUpStage: tr.querySelector(".f-stage").value,
+    status: tr.querySelector(".f-status").value
+  };
+  btn.disabled = true; btn.textContent = "Saving…";
+  var res = await api("action", payload);
+  btn.disabled = false; btn.textContent = "Save";
+  if(res.status===401){ gate("Your session expired — sign in to crewOS again."); return; }
+  if(res.ok && res.d.ok){
+    var s = tr.querySelector(".saved"); s.style.display="inline"; setTimeout(function(){ s.style.display="none"; }, 1600);
+    // keep local copy in sync so filters/KPIs reflect the save
+    var e = ALL.filter(function(x){ return x.id===id; })[0];
+    if(e){ e.minutes=payload.minutes===""?null:payload.minutes; e.activities=payload.activities; e.referrals=payload.referrals; e.nextFollowUp=payload.nextFollowUp; e.followUpStage=payload.followUpStage; e.status=payload.status; }
+  } else {
+    alert("Couldn't save: " + (res.d.error || res.status));
+  }
+}
+
+async function importNow(){
+  if(!confirm("Pull this month's CCM + APCM lists into the log and enrich from the eligibility tracker?\n\nSafe to re-run — it won't duplicate rows or overwrite time/activities/referrals/follow-up you've entered.")) return;
+  var btn = document.getElementById("importBtn");
+  btn.disabled = true; btn.textContent = "Importing…";
+  var res = await api("care-log-import", { confirm:true });
+  btn.disabled = false; btn.textContent = "⟳ Run monthly import";
+  if(res.status===401){ gate("Your session expired — sign in to crewOS again."); return; }
+  if(res.ok && res.d.ok){
+    var s = res.d.summary || {};
+    alert("Import complete for "+(res.d.month||"")+":\n"+
+      (s.created||0)+" created · "+(s.updated||0)+" updated · "+(s.linked||0)+" linked to Master · "+
+      (s.enriched||0)+" enriched · "+(s.unmatched||0)+" not in Master List");
+    load();
+  } else {
+    alert("Import failed: " + (res.d.error || res.status));
+  }
+}
+
+// default month = current
+document.getElementById("month").value = todayISO().slice(0,7);
+load();
+</script>
+</body>
+</html>

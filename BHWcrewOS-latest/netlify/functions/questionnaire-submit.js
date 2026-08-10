@@ -12,6 +12,8 @@
 
 const { DB, createPage, W, json } = require("./_lib");
 
+const UUID = /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i;
+
 // slug → { Notion "Questionnaire" option, owning program }. Program is set here,
 // never trusted from the client.
 const REG = {
@@ -57,10 +59,24 @@ exports.handler = async (event) => {
     "Status": W.sel("New"),
   };
 
+  // Best-effort link to the assessment/patient case when the link carried one
+  // (?case=<uuid>). Mirrors screener-submit: if the id is stale/foreign Notion
+  // rejects the relation, so we retry unlinked rather than lose the submission.
+  const caseId = String(b.case || "").trim();
+  const withRel = caseId && UUID.test(caseId)
+    ? { ...props, Patient: W.rel([caseId]) }
+    : props;
+
   try {
-    const page = await createPage(DB.questionnaires, props);
+    const page = await createPage(DB.questionnaires, withRel);
     return json(200, { ok: true, id: page.id });
   } catch (err) {
+    if (withRel !== props) {
+      try {
+        const page = await createPage(DB.questionnaires, props);
+        return json(200, { ok: true, id: page.id, note: "linked case not found — saved unlinked" });
+      } catch (e2) { return json(500, { error: String(e2.message || e2) }); }
+    }
     return json(500, { error: String(err.message || err) });
   }
 };

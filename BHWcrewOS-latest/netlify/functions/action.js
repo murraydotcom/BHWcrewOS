@@ -10,6 +10,13 @@
 
 const { DB, DIVISIONS, httpJson, queryDb, createPage, updatePage, P, W, getSession, visibleDivisions, json } = require("./_lib");
 
+// Authoritative patient list = the "🧑🏽‍⚕️ Patients Master List" (front-desk
+// MASTER_DB_ID). New patients are written here AND mirrored into the lean
+// Patient Index (DB.patients) so crewOS ops-data + the "Patient" relations
+// (referrals, handoffs, AWV, assessments, programs) — which still target the
+// Index — keep working. Literal is the confirmed id, used only if env is unset.
+const MASTER_DB = process.env.MASTER_DB_ID || "2cf580758d3080f0825de4bbfb6c7528";
+
 function sendEmail(to, subject, html) {
   return new Promise((resolve, reject) => {
     const key = (process.env.RESEND_API_KEY || "").trim();
@@ -361,39 +368,122 @@ exports.handler = async (event) => {
             m[i][j] = Math.min(m[i-1][j] + 1, m[i][j-1] + 1, m[i-1][j-1] + (x[i-1] === y[j-1] ? 0 : 1));
           return m[x.length][y.length];
         };
-        const existing = (await queryDb(DB.patients)).map((pg) => ({
+        // Dedup against BOTH lists (property names differ per DB), so we never
+        // create a duplicate in either the Master List or the Index.
+        const [idxPages, masterPages] = await Promise.all([queryDb(DB.patients), queryDb(MASTER_DB)]);
+        const existingIdx = idxPages.map((pg) => ({
           id: pg.id,
           name: P.title(pg.properties["Patient Name"]),
           bhwId: P.uid(pg.properties["BHW ID"]),
           dob: P.date(pg.properties["DOB"]),
           chart: P.text(pg.properties["CharmHealth Chart #"]),
         }));
+        const existingMaster = masterPages.map((pg) => ({
+          id: pg.id,
+          name: P.title(pg.properties["Patient Name"]),
+          bhwId: P.text(pg.properties["Patient Ctl No"]),
+          dob: P.date(pg.properties["DOB"]),
+          chart: P.text(pg.properties["MRN"]),
+        }));
         const n = norm(name);
-        const dupes = existing.filter((p) => {
+        const isDupe = (p) => {
           const pn = norm(p.name);
           if (pn === n) return true;                                   // same name (spacing/case-proof)
           if (p.dob && p.dob === b.dob && lastTok(p.name) === lastTok(name)) return true; // same DOB + last name
           if (dist(pn, n) <= 2) return true;                           // near-miss spelling
           if (b.chart && p.chart && p.chart.trim() === b.chart.trim()) return true;       // same chart #
           return false;
-        });
+        };
+        // Prefer Index dupes for returned ids (crewOS relations reference the
+        // Index); include Master-only dupes so we don't silently double-create.
+        const dupes = existingIdx.filter(isDupe)
+          .concat(existingMaster.filter((m) => isDupe(m) && !existingIdx.some((i) => norm(i.name) === norm(m.name) && i.dob === m.dob)));
         const exact = dupes.find((p) => norm(p.name) === n && p.dob === b.dob);
-        if (exact) return json(409, { error: `${exact.name} (${exact.bhwId}) already exists with this exact name and birthday — use the existing record.`, duplicates: dupes });
+        if (exact) return json(409, { error: `${exact.name} (${exact.bhwId}) already exists with this exact name and birthday — use the existing record.`, duplicates: dupes.map(({ id, name, bhwId, dob }) => ({ id, name, bhwId, dob })) });
         if (dupes.length && !b.force) return json(200, { duplicates: dupes.map(({ id, name, bhwId, dob }) => ({ id, name, bhwId, dob })) });
-        const props = {
+
+        // Next BHW#### control number (the Master List's Patient Ctl No is a
+        // manual text field, so we derive the next number from both lists).
+        const maxNum = existingMaster.concat(existingIdx).reduce((mx, p) => {
+          const m = /BHW0*(\d+)/i.exec(p.bhwId || "");
+          return m ? Math.max(mx, parseInt(m[1], 10)) : mx;
+        }, 0);
+        const ctlNo = "BHW" + String(maxNum + 1).padStart(4, "0");
+        const mbi = b.mbi ? String(b.mbi).replace(/[^A-Za-z0-9]/g, "").toUpperCase() : "";
+
+        // 1) Authoritative record in the Patients Master List. Insurance goes to
+        //    the free-text Insurance Plan Name, never the controlled Payer select.
+        const masterProps = {
+          "Patient Name": W.title(name),
+          "Patient Ctl No": W.text(ctlNo),
+          "DOB": W.date(b.dob),
+        };
+        if (b.insurance) masterProps["Insurance Plan Name"] = W.text(b.insurance);
+        if (b.memberId) masterProps["Insurance Member ID"] = W.text(b.memberId);
+        if (b.chart) masterProps["MRN"] = W.text(b.chart);
+        if (mbi) masterProps["Medicare MBI"] = W.text(mbi);
+        if (b.email) masterProps["Email"] = { email: b.email };
+        if (b.guardianEmail) masterProps["Guardian Email"] = { email: b.guardianEmail };
+        const master = await createPage(MASTER_DB, masterProps);
+
+        // 2) Mirror into the Patient Index so crewOS ops-data + the "Patient"
+        //    relations keep working. crewOS references the Index id, so that's
+        //    what we return as `id`.
+        const indexProps = {
           "Patient Name": W.title(name),
           "DOB": W.date(b.dob),
           "Status": W.sel("Active"),
         };
-        if (b.insurance) props["Insurance"] = W.sel(b.insurance);
-        if (b.memberId) props["Insurance Member ID"] = W.text(b.memberId);
-        if (b.chart) props["CharmHealth Chart #"] = W.text(b.chart);
-        if (b.mbi) props["Medicare MBI"] = W.text(String(b.mbi).replace(/[^A-Za-z0-9]/g, "").toUpperCase());
-        if (b.email) props["Email"] = { email: b.email };
-        if (b.guardianEmail) props["Guardian Email"] = { email: b.guardianEmail };
-        if (b.programs && b.programs.length) props["Active Divisions"] = { multi_select: b.programs.map((x) => ({ name: x })) };
-        const page = await createPage(DB.patients, props);
-        return json(200, { ok: true, id: page.id, name });
+        if (b.insurance) indexProps["Insurance"] = W.sel(b.insurance);
+        if (b.memberId) indexProps["Insurance Member ID"] = W.text(b.memberId);
+        if (b.chart) indexProps["CharmHealth Chart #"] = W.text(b.chart);
+        if (mbi) indexProps["Medicare MBI"] = W.text(mbi);
+        if (b.email) indexProps["Email"] = { email: b.email };
+        if (b.guardianEmail) indexProps["Guardian Email"] = { email: b.guardianEmail };
+        if (b.programs && b.programs.length) indexProps["Active Divisions"] = { multi_select: b.programs.map((x) => ({ name: x })) };
+        const index = await createPage(DB.patients, indexProps);
+
+        return json(200, { ok: true, id: index.id, masterId: master.id, bhwId: ctlNo, name });
+      }
+
+      case "care-log-save": {
+        if (!b.id) return json(400, { error: "Missing entry id" });
+        const props = {};
+        if (b.minutes !== undefined) props["Minutes Logged"] = W.num(b.minutes);
+        if (b.activities !== undefined) props["Activities Done"] = W.text(b.activities);
+        if (b.referrals !== undefined) props["Referrals Completed"] = W.text(b.referrals);
+        if (b.nextFollowUp !== undefined) props["Next Follow-up"] = W.date(b.nextFollowUp || null);
+        if (b.followUpStage !== undefined) props["Follow-up Stage"] = W.sel(b.followUpStage);
+        if (b.status !== undefined) props["Status"] = W.sel(b.status);
+        if (b.lastContact !== undefined) props["Last Contact"] = W.date(b.lastContact || null);
+        if (!Object.keys(props).length) return json(400, { error: "Nothing to update" });
+        await updatePage(b.id, props);
+        return json(200, { ok: true, id: b.id });
+      }
+
+      case "care-log-create": {
+        const name = (b.name || "").trim();
+        if (!name) return json(400, { error: "Patient name required" });
+        const program = b.program || "TCM";
+        const props = {
+          "Entry": W.title(`${name} — ${program}${b.month ? " · " + b.month : ""}`),
+          "Program": W.sel(program),
+          "Type": W.sel(b.type || (program === "TCM" ? "Episode" : "Monthly")),
+          "Status": W.sel(b.status || "Open"),
+        };
+        if (b.patientId) props["Patient"] = W.rel([b.patientId]);
+        if (b.ctlNo) props["Patient Ctl No"] = W.text(b.ctlNo);
+        if (b.month) props["Service Month"] = W.date(b.month + "-01");
+        if (b.episodeDate) props["Episode / Discharge Date"] = W.date(b.episodeDate);
+        if (b.icd) props["ICD-10 Codes"] = W.text(b.icd);
+        if (b.primaryDx) props["Primary Diagnosis"] = W.text(b.primaryDx);
+        if (b.memberId) props["Member ID"] = W.text(b.memberId);
+        if (b.notes) props["Notes"] = W.text(b.notes);
+        if (b.minutes !== undefined) props["Minutes Logged"] = W.num(b.minutes);
+        if (b.nextFollowUp) props["Next Follow-up"] = W.date(b.nextFollowUp);
+        if (b.followUpStage) props["Follow-up Stage"] = W.sel(b.followUpStage);
+        const page = await createPage(DB.careLog, props);
+        return json(200, { ok: true, id: page.id });
       }
 
       case "prog-save": {

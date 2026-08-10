@@ -375,7 +375,7 @@ async function submit(){
   const flags=(Q.flags?Q.flags(answers):[]).join(", ");
   try{
     const r=await fetch("/.netlify/functions/questionnaire-submit",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({slug, patientLabel, bhwId, who:state.who, transcript, answers, flags, hp:document.getElementById("hp").value})});
+      body:JSON.stringify({slug, patientLabel, bhwId, who:state.who, transcript, answers, flags, case:caseId, hp:document.getElementById("hp").value})});
     const d=await r.json().catch(()=>({}));
     if(!r.ok||!d.ok) throw new Error(d.error||"Something went wrong.");
     buildSummary({patientLabel, bhwId, pairs});

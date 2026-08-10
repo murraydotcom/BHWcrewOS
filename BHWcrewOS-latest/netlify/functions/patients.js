@@ -1,17 +1,25 @@
 // netlify/functions/patients.js — Master Patient List lookup for the
-// Paperwork Studio patient picker. Read-only, session-gated.
+// Paperwork / Care Plan Studio patient picker. Read-only, session-gated.
 //
 //   POST { action:"list" }  → [{ id, name, bhwId, dob, chart, insurance,
 //                                memberId, icds:[{code,label}] }]
-//                             (active patients only; deceased excluded)
 //
-// ICD-10: patient-specific diagnoses are being added to the Master Patient
-// List. This auto-detects the field by any of the common names below and
-// parses the codes out — so it lights up the moment the property exists,
-// whatever it's reasonably called (rich text, multi-select, or select). To
-// pin it to one exact name, put that name first in ICD_PROP_CANDIDATES.
+// Source of truth: the "🧑🏽‍⚕️ Patients Master List" (the same DB Front Desk
+// reads, via MASTER_DB_ID) — NOT the lean "Patient Index — Ops Hub". Field
+// names below map onto that Master List schema (Patient Ctl No, Payer,
+// Insurance Member ID, MRN). Falls back to the confirmed DB id if the env
+// var isn't set, so the picker and Front Desk always show the same roster.
+//
+// ICD-10: the Master List stores diagnoses as *relations* (Diagnoses /
+// Diagnoses 1), which icdFor() can't expand without extra lookups, so icds
+// comes back empty for now. If a plain text/select ICD field is ever added
+// under one of the names below, it lights up automatically.
 
-const { DB, queryDb, P, getSession, json } = require("./_lib");
+const { queryDb, P, getSession, json } = require("./_lib");
+
+// The authoritative Patients Master List (front-desk MASTER_DB_ID). The
+// literal is the confirmed database id, used only when the env var is unset.
+const MASTER_DB = process.env.MASTER_DB_ID || "2cf580758d3080f0825de4bbfb6c7528";
 
 const ICD_PROP_CANDIDATES = [
   "ICD-10 Codes", "ICD-10", "ICD10 Codes", "ICD10", "ICD Codes",
@@ -69,12 +77,11 @@ function shape(pg) {
   return {
     id: pg.id,
     name: P.title(p["Patient Name"]),
-    bhwId: P.uid(p["BHW ID"]),
+    bhwId: P.text(p["Patient Ctl No"]),                 // e.g. BHW0613
     dob: P.date(p["DOB"]),
-    chart: P.text(p["CharmHealth Chart #"]),
-    insurance: P.sel(p["Insurance"]),
+    chart: P.text(p["MRN"]),                            // Master List has MRN, not a Charm chart #
+    insurance: P.text(p["Insurance Plan Name"]) || P.sel(p["Payer"]) || P.text(p["Payer Name"]),
     memberId: P.text(p["Insurance Member ID"]),
-    status: P.sel(p["Status"]),
     icds: icdFor(p),
   };
 }
@@ -90,10 +97,9 @@ exports.handler = async (event) => {
 
   try {
     if (body.action === "list") {
-      const patients = (await queryDb(DB.patients))
+      const patients = (await queryDb(MASTER_DB))
         .map(shape)
-        .filter((p) => p.name && p.status !== "Deceased")
-        .map(({ status, ...rest }) => rest)
+        .filter((p) => p.name)
         .sort((a, b) => a.name.localeCompare(b.name));
       return json(200, { patients });
     }
