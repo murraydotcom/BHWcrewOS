@@ -1814,7 +1814,7 @@ function npSearch(){
     window.__npHits = hits;
     if(!hits.length){ box.innerHTML = `<div class="lede" style="margin:2px 0 8px">No match — fill in the form below to register someone new.</div>`; return; }
     box.innerHTML = hits.map((p,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 11px;border:1px solid var(--sand);border-radius:10px;margin:0 0 6px">
-      <div style="flex:1;min-width:0"><b>${esc(p.name)}</b>${p.bhwId?` · ${esc(p.bhwId)}`:""}${p.dob?` · DOB ${esc(p.dob)}`:""}${p.payer?` · ${esc(p.payer)}`:""}</div>
+      <div style="flex:1;min-width:0"><b>${esc(p.name)}</b>${p.bhwId?` · ${esc(p.bhwId)}`:""}${p.dob?` · DOB ${esc(p.dob)}`:""}${p.insuranceLabel?` · ${esc(p.insuranceLabel)}`:""}</div>
       <button class="btn sm" type="button" onclick="npBringIn(${i})">Bring in →</button>
     </div>`).join("");
   }, 280);
@@ -1833,7 +1833,7 @@ function npBringIn(i){
   document.getElementById("np-results").innerHTML = "";
   document.getElementById("np-search").value = "";
   document.getElementById("np-matched").innerHTML =
-    `<div class="res-cat" style="color:var(--sage)">✓ Brought in <b>${esc(p.name)}</b>${p.bhwId?` (${esc(p.bhwId)})`:""} — review below, then Register.${(p.payer&&!p.insurance)?` <span class="pill gray">Payer: ${esc(p.payer)}</span>`:""}${p.mbi?' <span class="pill gray">MBI on file</span>':''}</div>`;
+    `<div class="res-cat" style="color:var(--sage)">✓ Brought in <b>${esc(p.name)}</b>${p.bhwId?` (${esc(p.bhwId)})`:""} — review below, then Register.${p.insuranceLabel?` <span class="pill gray">${esc(p.insuranceLabel)}</span>`:""}${p.mbi?' <span class="pill gray">MBI on file</span>':''}</div>`;
 }
 
 async function npSubmit(force){
