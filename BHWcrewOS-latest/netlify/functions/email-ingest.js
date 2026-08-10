@@ -114,7 +114,11 @@ exports.handler = async (event) => {
     }
 
     const { patientId, patientName } = await matchPatientByPhone(from);
-    const r = await createQueueEntry({ patientId, patientName, from, summary, source, link, receivedISO: body.receivedISO || new Date().toISOString() });
+    // Prefer a direct PDF/recording URL the forwarder saved (e.g. the fax PDF in
+    // Drive) for Source Link; otherwise createQueueEntry pulls it from `link`.
+    const sourceUrl = String(body.attachmentUrl || "").trim();
+    if (sourceUrl && /fax/i.test(source)) summary = `${summary} · PDF: ${body.attachmentName || "attachment"}`;
+    const r = await createQueueEntry({ patientId, patientName, from, summary, source, link, sourceUrl, receivedISO: body.receivedISO || new Date().toISOString() });
     if (!r.ok) return { statusCode: 502, body: `notion error: ${r.error}` };
     return { statusCode: 200, body: JSON.stringify({ ok: true, source, matched: r.matched }) };
   } catch (e) {
