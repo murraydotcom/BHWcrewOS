@@ -463,6 +463,7 @@ exports.handler = async (event) => {
         if (b.icd) props["ICD-10 Codes"] = W.text(b.icd);
         if (b.primaryDx) props["Primary Diagnosis"] = W.text(b.primaryDx);
         if (b.memberId) props["Member ID"] = W.text(b.memberId);
+        if (b.notes) props["Notes"] = W.text(b.notes);
         if (b.minutes !== undefined) props["Minutes Logged"] = W.num(b.minutes);
         if (b.nextFollowUp) props["Next Follow-up"] = W.date(b.nextFollowUp);
         if (b.followUpStage) props["Follow-up Stage"] = W.sel(b.followUpStage);
