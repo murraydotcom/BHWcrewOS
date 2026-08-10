@@ -44,11 +44,12 @@ const BLOB_KEY = "secrets";
 const PROD_BASE = "https://api.dpc.cms.gov/api/v1";
 
 // Netlify Functions auto-configure Blobs via NETLIFY_BLOBS_CONTEXT. If that's
-// absent, fall back to explicit config from standard Netlify env vars (set
-// NETLIFY_SITE_ID + NETLIFY_BLOBS_TOKEN to arm the fallback).
+// absent, fall back to explicit config from env vars. NOTE: Netlify reserves the
+// NETLIFY_* prefix and silently drops any custom var with that name, so the
+// fallback must use unprefixed names — set BLOBS_SITE_ID + BLOBS_TOKEN to arm it.
 function getBlobStore() {
-  const siteID = process.env.NETLIFY_SITE_ID || process.env.SITE_ID || process.env.BLOBS_SITE_ID;
-  const token = process.env.NETLIFY_BLOBS_TOKEN || process.env.NETLIFY_API_TOKEN || process.env.NETLIFY_AUTH_TOKEN;
+  const siteID = process.env.BLOBS_SITE_ID || process.env.NETLIFY_SITE_ID || process.env.SITE_ID;
+  const token = process.env.BLOBS_TOKEN || process.env.NETLIFY_BLOBS_TOKEN || process.env.NETLIFY_API_TOKEN || process.env.NETLIFY_AUTH_TOKEN;
   if (siteID && token) return getStore({ name: BLOB_STORE, siteID, token });
   return getStore(BLOB_STORE);
 }
