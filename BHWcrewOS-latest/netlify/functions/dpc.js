@@ -43,6 +43,16 @@ const BLOB_STORE = "dpc-config";
 const BLOB_KEY = "secrets";
 const PROD_BASE = "https://api.dpc.cms.gov/api/v1";
 
+// Netlify Functions auto-configure Blobs via NETLIFY_BLOBS_CONTEXT. If that's
+// absent, fall back to explicit config from standard Netlify env vars (set
+// NETLIFY_SITE_ID + NETLIFY_BLOBS_TOKEN to arm the fallback).
+function getBlobStore() {
+  const siteID = process.env.NETLIFY_SITE_ID || process.env.SITE_ID || process.env.BLOBS_SITE_ID;
+  const token = process.env.NETLIFY_BLOBS_TOKEN || process.env.NETLIFY_API_TOKEN || process.env.NETLIFY_AUTH_TOKEN;
+  if (siteID && token) return getStore({ name: BLOB_STORE, siteID, token });
+  return getStore(BLOB_STORE);
+}
+
 // Merge Blob-stored secrets over the env-var defaults. The Blob is the source of
 // truth for anything set there; env fills the gaps. Degrades to env-only if Blobs
 // aren't reachable (e.g. local `netlify dev` without blob context).
@@ -55,7 +65,7 @@ async function loadConfig() {
     groupId: process.env.DPC_GROUP_ID || "",
   };
   try {
-    const stored = await getStore(BLOB_STORE).get(BLOB_KEY, { type: "json" });
+    const stored = await getBlobStore().get(BLOB_KEY, { type: "json" });
     if (stored && typeof stored === "object") {
       if (stored.clientToken) cfg.clientToken = String(stored.clientToken);
       if (stored.privateKey) cfg.privateKey = String(stored.privateKey).replace(/\\n/g, "\n");
@@ -203,18 +213,28 @@ exports.handler = async (event) => {
   // One-time (repeatable) install of DPC credentials into the Blob. Session-gated
   // like everything else here. Merges over whatever is already stored, so you can
   // set the private key now and add the group id later. Never returns the values.
+  // Each Blobs step is caught individually so a failure surfaces its real reason
+  // instead of a generic 500.
   if (action === "install") {
-    const store = getStore(BLOB_STORE);
-    const cur = (await store.get(BLOB_KEY, { type: "json" })) || {};
-    const next = { ...cur };
+    // Collect + validate before touching Blobs.
+    const incoming = {};
     const set = [];
     for (const k of ["clientToken", "privateKey", "publicKeyId", "base", "groupId"]) {
-      if (typeof body[k] === "string" && body[k].trim()) { next[k] = body[k].trim(); set.push(k); }
+      if (typeof body[k] === "string" && body[k].trim()) { incoming[k] = body[k].trim(); set.push(k); }
     }
     if (!set.length) return json(400, { error: "Nothing to install — send at least one of: privateKey, clientToken, publicKeyId, base, groupId." });
-    if (next.privateKey && !/-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----/.test(next.privateKey))
+    if (incoming.privateKey && !/-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----/.test(incoming.privateKey))
       return json(400, { error: "privateKey doesn't look like a PEM (missing a -----BEGIN … PRIVATE KEY----- line)." });
-    await store.setJSON(BLOB_KEY, next);
+
+    let store;
+    try { store = getBlobStore(); }
+    catch (e) { return json(500, { error: "Netlify Blobs unavailable: " + String(e.message || e) }); }
+    let cur;
+    try { cur = (await store.get(BLOB_KEY, { type: "json" })) || {}; }
+    catch (e) { return json(500, { error: "Blobs read failed: " + String(e.message || e) }); }
+    const next = { ...cur, ...incoming };
+    try { await store.setJSON(BLOB_KEY, next); }
+    catch (e) { return json(500, { error: "Blobs write failed: " + String(e.message || e) }); }
     return json(200, { ok: true, installed: set });
   }
 

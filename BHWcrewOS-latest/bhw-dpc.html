@@ -116,7 +116,11 @@ let lastJob="";
 
 async function post(fn, body){
   const r=await fetch(`/.netlify/functions/${fn}`,{method:"POST",headers:{"Content-Type":"application/json",...(TOKEN?{Authorization:`Bearer ${TOKEN}`}:{})},body:JSON.stringify(body)});
-  const d=await r.json().catch(()=>({})); return {ok:r.ok,status:r.status,d};
+  const txt=await r.text();
+  let d; try{ d=JSON.parse(txt||"{}"); }catch{ d={ error:(txt||"").slice(0,400)||`HTTP ${r.status}` }; }
+  // Netlify wraps uncaught function errors as {errorMessage}; surface that too.
+  if(d&&!d.error&&d.errorMessage) d.error=d.errorMessage;
+  return {ok:r.ok,status:r.status,d};
 }
 function setConnected(name){
   const b=$("connBtn"); const on=!!TOKEN;
