@@ -145,6 +145,14 @@ h1,h2,h3,h4,.nm,.vit .n,.sec-h b{font-family:'Nunito','OpenSans',sans-serif}
 .recheck .due .n{font-family:'Nunito';font-weight:800;font-size:15px;color:var(--teal-ink)}
 .recheck .due .l{font-size:9.5px;color:var(--ink-mute)}
 @media(max-width:1180px){.grid{grid-template-columns:1fr 1fr}.patient{width:250px}}
+@media(max-width:760px){
+  body{padding:0}
+  .app{flex-direction:column;border-radius:0;min-height:100vh;border:0}
+  .patient{width:auto}
+  .grid{grid-template-columns:1fr}
+  .top .srch{display:none}
+  .pmeta{grid-template-columns:1fr 1fr}
+}
 </style>
 </head>
 <body>

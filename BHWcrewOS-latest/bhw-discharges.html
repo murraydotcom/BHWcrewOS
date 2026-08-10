@@ -94,17 +94,9 @@ td b{font-weight:700}
 
 <script>
 const TCM_RATE = { high: 281, moderate: 209 };
-// Representative sample board — used until a signed-in session returns live CRISP rows.
-const SAMPLE = [
-  { patient:"Ellison, J.",  type:"discharge", event:"Discharge (inpatient)", facility:"Johns Hopkins Hospital", daysAgo:1, dispo:"Home", complexity:"moderate" },
-  { patient:"Ruiz, M.",     type:"discharge", event:"Discharge (inpatient)", facility:"MedStar Union Memorial", daysAgo:3, dispo:"Home w/ home health", complexity:"high" },
-  { patient:"Chen, D.",     type:"discharge", event:"Discharge (observation)", facility:"Sinai Hospital", daysAgo:6, dispo:"Home", complexity:"moderate" },
-  { patient:"Okoro, A.",    type:"discharge", event:"Discharge (inpatient)", facility:"University of Maryland MC", daysAgo:12, dispo:"SNF", complexity:"moderate" },
-  { patient:"Patel, R.",    type:"ed",        event:"ED visit", facility:"GBMC", daysAgo:2, dispo:"Discharged from ED", complexity:null },
-  { patient:"Nguyen, T.",   type:"admit",     event:"Admission (inpatient)", facility:"Johns Hopkins Bayview", daysAgo:1, dispo:"Admitted", complexity:null },
-  { patient:"Williams, S.", type:"discharge", event:"Discharge (inpatient)", facility:"Mercy Medical Center", daysAgo:16, dispo:"Home", complexity:"moderate" },
-];
-let HOSP = SAMPLE.map(x=>({...x}));
+// Live board. HOSP is filled from the CRISP ADT feed (signed-in session) or from
+// a manual CSV/paste (loadPasted). No sample rows — an empty feed shows an empty state.
+let HOSP = [];
 
 const startOfToday=()=>{const d=new Date();d.setHours(0,0,0,0);return d;};
 const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x;};
@@ -197,11 +189,12 @@ async function load(){
     if(d && !d.sampleMode && Array.isArray(d.rows) && d.rows.length){
       HOSP=d.rows.map(x=>({...x, complexity:x.complexity||"moderate"}));
       mode.className="pill live"; mode.textContent="● CRISP · live";
-      render();
     } else {
-      mode.className="pill sample"; mode.textContent="● CRISP · sample";
+      mode.className="pill sample";
+      mode.textContent = token ? "● CRISP · no events yet" : "● CRISP · sign in for live data";
     }
-  }catch(e){ /* keep sample board */ }
+    render();
+  }catch(e){ /* leave the board empty — the empty state explains it */ }
 }
 load();
 </script>

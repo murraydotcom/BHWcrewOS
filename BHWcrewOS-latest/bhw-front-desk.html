@@ -326,7 +326,6 @@
    Until then the page runs on the embedded data below.       */
 const API = '/.netlify/functions/frontdesk-data';           // e.g. '/.netlify/functions/frontdesk-data'
 const DASH_KEY = '02142022';      // optional shared key, matches function env
-const DEMO = false;        // set false when API is connected — shows sample inbox so you can preview the live experience
 
 /* ============ SPECIALIST DIRECTORY (live from Notion) ============ */
 // Loaded from the Notion "Specialist Referral Directory" via loadDir(). Empty
@@ -429,20 +428,6 @@ async function poll(){
 }
 poll(); setInterval(poll,60000);
 
-/* demo preview — sample data so the live layout is visible pre-deployment */
-if(DEMO && !API){
-  const t=new Date().toISOString();
-  renderInbox([
-    {id:'demo1',type:'Refill / Rx',source:'Voicemail',priority:'Urgent — same day',status:'Not started',sla:'🔴 BREACH',received:t,summary:'Critical lab callback — LabCorp ref #19055310',name:'Allen, Peter',phone:'+14105550111',assigned:'Amaris'},
-    {id:'demo2',type:'New Patient',source:'Text / SMS',priority:'High — 48 hr',status:'Not started',sla:'🟢 On track',received:t,summary:'Asking about Mind & Mood intake for her son',name:'Greene, Zelda',phone:'+14105550122',assigned:'Margaret'},
-    {id:'demo3',type:'Reschedule',source:'CharmHealth Portal',priority:'Routine — 1 week',status:'In progress',sla:'🟢 On track',received:t,summary:'Wants to move Thursday to next week',name:'Hinton, Gary',phone:'+14105550133',assigned:'Amanda'},
-    {id:'demo4',type:'Referral Needed',source:'Fax',priority:'High — 48 hr',status:'Not started',sla:'🟠 At risk',received:t,summary:'Cardiology consult request — Aetna, needs uniform form',name:'Messner, Cathy',phone:'',assigned:'Shadé'},
-    {id:'demo5',type:'Records Request',source:'Fax',priority:'Routine — 1 week',status:'Done',sla:'✅ Closed',received:t,summary:'Records sent to new PCP',name:'Johnson, Carl',phone:'+14105550155',assigned:'Amanda'},
-  ]);
-  $('livechip').textContent='demo preview — connects live after deployment';
-  $('livechip').style.background='var(--clay)';
-}
-
 /* write-back: Start / Done / Reopen buttons -> Notion */
 const CANNED = [
   ["Rx sent","Good news — your prescription was sent to your pharmacy today. Please allow a few hours for them to process it before pickup. — BHW Medical Group"],
@@ -501,29 +486,6 @@ async function lookup(){
   if(!q){$('lkstatus').textContent='Enter a phone number or name to search.';return;}
   $('profile').classList.remove('show');
   if(!API){
-    if(DEMO){
-      window.lastPatient={name:'Allen, Peter',dob:'1958-03-14',phone:'(410) 555-0111',member:'MD1234821',payer:'Medicare',mco:'Priority Partners'}; $('p-name').textContent='Allen, Peter';
-      $('p-meta').textContent='BHW0676 · DOB 12/24/1948';
-      $('p-info').innerHTML=`
-        <div class="kv allergy"><b>⚠️ Allergies:</b> Penicillin — hives · Sulfa — rash</div>
-        <div class="kv"><b>Phone:</b> (410) 555-0111</div>
-        <div class="kv"><b>Payer:</b> Medicare — Priority Partners</div>
-        <div class="kv"><b>Member #:</b> ●●●●●4821</div>
-        <div class="kv"><b>Last visit:</b> 2026-06-24</div>
-        <div class="kv"><b>Next visit:</b> 2026-07-28</div>
-        <div class="kv"><b>Status:</b> <span class="pill open">Active · CCM enrolled</span></div>
-        <div class="kv medblock"><b>Medications:</b><br>Lisinopril 20mg daily<br>Metformin 1000mg BID<br>Atorvastatin 40mg nightly<br>Eliquis 5mg BID</div>
-        <div class="kv snapnote">Clinical snapshot as of 2026-07-10 — chart is source of truth</div>`;
-      $('p-reqs').innerHTML=`
-        <div class="req urgent"><div class="top"><span>Refill / Rx · Voicemail</span><span class="when">today 11:43 PM</span></div><div class="sub">Critical lab callback — LabCorp ref #19055310 — <b>Not started</b></div></div>
-        <div class="req"><div class="top"><span>Reschedule · Text / SMS</span><span class="when">Jul 02</span></div><div class="sub">Moved follow-up to the 14th — <b>Done</b></div></div>
-        <div class="req"><div class="top"><span>Records Request · Fax</span><span class="when">Jun 18</span></div><div class="sub">Sent cardiology consult to Dr. Example — <b>Done</b></div></div>`;
-      $('p-open').style.display='none';
-      $('profile').classList.add('show');
-      $('lkstatus').textContent='Demo profile — live search connects after deployment.';
-      fillReferralPatient(window.lastPatient,{auto:true});
-      return;
-    }
     $('lkstatus').innerHTML='Live lookup isn\u2019t connected yet — open the patient in <a href="https://app.notion.com/p/2cf580758d3080f0825de4bbfb6c7528" target="_rel"><b>Patients Master List</b></a> for now.';
     return;
   }
