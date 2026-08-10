@@ -372,6 +372,7 @@ function buildRail(){
   html += `<div class="rail-label">Pages</div>`;
   html += `<button class="tab" data-view="pg-guide" style="--spine:var(--clay)">Staff Guide</button>`;
   html += `<button class="tab" data-view="pg-panel" style="--spine:var(--teal)">Panel &amp; Discharges</button>`;
+  html += `<button class="tab" data-view="pg-carelog" style="--spine:var(--ok,#1F6961)">Care Management Log</button>`;
   html += `<button class="tab" data-view="pg-hormone" style="--spine:var(--sand)">Hormone Analysis</button>`;
   html += `<button class="tab" data-view="pg-ana" style="--spine:var(--river-deep, #4f7f92)">Positive ANA?</button>`;
   html += `<button class="tab" data-view="pg-hormref" style="--spine:var(--sage)">Hormone Reference</button>`;
@@ -418,7 +419,7 @@ function divisionView(div){
   return `<section class="view" id="view-${id}" style="--pc:${DIV_COLORS[div]}">
     <div class="prog-head"><div class="bar"></div><div><h1>${esc(div)}</h1><p>${DIV_BLURBS[div]||""}</p></div>${div==="Primary Care"?`<img src="/assets/bhw-medical-logo.png" alt="BHW" style="height:84px;width:auto;margin-left:auto" onerror="this.style.display='none'">`:""}</div>
     ${div==="Primary Care"?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:-8px 0 18px"><button class="btn sm warn" onclick="activate('front-desk')">Front Desk OS — lookup &amp; referrals</button></div>`:""}
-    ${div==="Care Management"?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:-8px 0 18px"><button class="btn sm" style="background:var(--ok,#1F6961)" onclick="activate('pg-billing')">Billing Toolkit — care management &amp; billing codes</button><button class="btn sm" style="background:var(--blue,#80abbd)" onclick="activate('pg-discharges')">Hospital Discharges &amp; TCM</button></div>`:""}
+    ${div==="Care Management"?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:-8px 0 18px"><button class="btn sm" style="background:var(--ok,#1F6961)" onclick="activate('pg-carelog')">📋 Care Management Log — time, activities &amp; follow-up</button><button class="btn sm" style="background:var(--ok,#1F6961)" onclick="activate('pg-billing')">Billing Toolkit — care management &amp; billing codes</button><button class="btn sm" style="background:var(--blue,#80abbd)" onclick="activate('pg-discharges')">Hospital Discharges &amp; TCM</button></div>`:""}
     ${div!=="Admin Master"?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:-8px 0 18px"><a class="btn sm" style="text-decoration:none;background:var(--pc);color:#fff" href="/bhw-careplan.html?program=${encodeURIComponent(div)}" target="_blank" rel="noopener">📄 Start a care plan — branded &amp; patient-ready</a></div>`:""}
     ${PATIENT_PAGES[div]?`<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:-4px 0 18px;padding:12px 14px;background:var(--card,#fff);border-radius:12px"><span style="font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;opacity:.65">Patient pages</span><a class="btn sm sec" style="text-decoration:none" href="${PATIENT_PAGES[div]}" target="_blank" rel="noopener">View patient page</a><a class="btn sm sec" style="text-decoration:none" href="https://app.notion.com/p/3a1580758d3081c48b90fdab7b442fcb" target="_blank" rel="noopener">Manage content ↗</a><a class="btn sm sec" style="text-decoration:none" href="https://app.notion.com/p/3a1580758d3081c48b90fdab7b442fcb" target="_blank" rel="noopener">Sign-up steps</a></div>`:""}
     <div class="kpis">
@@ -646,6 +647,7 @@ const PAGE_EMBEDS = [
   {id:"pg-hormpt",   title:"Hormones Explained",   src:"/bhw-hormones-explained.html",       blurb:"Patient-facing — open it with a patient to explain how hormones work."},
   {id:"pg-billing",  title:"Billing Toolkit",      src:"/BHW_Care_Management_Toolkit.html",  blurb:"Care management and primary care billing codes."},
   {id:"pg-discharges", title:"Hospital Discharges & TCM", src:"/bhw-discharges.html",         blurb:"CRISP ADT feed — admissions, discharges, ED visits, and the TCM clock (99495/99496)."},
+  {id:"pg-carelog",  title:"Care Management Log",  src:"/bhw-care-management.html",          blurb:"CCM/APCM/TCM worklog — time, activities, referrals completed, and the follow-up clock (1d/4d/2wk/1mo), per patient per month."},
   {id:"pg-crewcare", title:"BHWCrewCare Portal",   src:"/bhw-crewcare-portal.html",          blurb:"Provider side — inbox, care plan builder, results, panel."},
   {id:"pg-portal",   title:"Primary Care Portal",  src:"/bhw-patient-portal-mockup.html",    blurb:"Patient-side design preview — sample data."},
   {id:"pg-charmed",  title:"CharmEd Minds",        src:"/bhw-charmed-patient-mockup.html",   blurb:"My Strategy Hub — patient-side preview."},

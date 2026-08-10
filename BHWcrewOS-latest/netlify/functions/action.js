@@ -431,6 +431,45 @@ exports.handler = async (event) => {
         return json(200, { ok: true, id: index.id, masterId: master.id, bhwId: ctlNo, name });
       }
 
+      case "care-log-save": {
+        if (!b.id) return json(400, { error: "Missing entry id" });
+        const props = {};
+        if (b.minutes !== undefined) props["Minutes Logged"] = W.num(b.minutes);
+        if (b.activities !== undefined) props["Activities Done"] = W.text(b.activities);
+        if (b.referrals !== undefined) props["Referrals Completed"] = W.text(b.referrals);
+        if (b.nextFollowUp !== undefined) props["Next Follow-up"] = W.date(b.nextFollowUp || null);
+        if (b.followUpStage !== undefined) props["Follow-up Stage"] = W.sel(b.followUpStage);
+        if (b.status !== undefined) props["Status"] = W.sel(b.status);
+        if (b.lastContact !== undefined) props["Last Contact"] = W.date(b.lastContact || null);
+        if (!Object.keys(props).length) return json(400, { error: "Nothing to update" });
+        await updatePage(b.id, props);
+        return json(200, { ok: true, id: b.id });
+      }
+
+      case "care-log-create": {
+        const name = (b.name || "").trim();
+        if (!name) return json(400, { error: "Patient name required" });
+        const program = b.program || "TCM";
+        const props = {
+          "Entry": W.title(`${name} — ${program}${b.month ? " · " + b.month : ""}`),
+          "Program": W.sel(program),
+          "Type": W.sel(b.type || (program === "TCM" ? "Episode" : "Monthly")),
+          "Status": W.sel(b.status || "Open"),
+        };
+        if (b.patientId) props["Patient"] = W.rel([b.patientId]);
+        if (b.ctlNo) props["Patient Ctl No"] = W.text(b.ctlNo);
+        if (b.month) props["Service Month"] = W.date(b.month + "-01");
+        if (b.episodeDate) props["Episode / Discharge Date"] = W.date(b.episodeDate);
+        if (b.icd) props["ICD-10 Codes"] = W.text(b.icd);
+        if (b.primaryDx) props["Primary Diagnosis"] = W.text(b.primaryDx);
+        if (b.memberId) props["Member ID"] = W.text(b.memberId);
+        if (b.minutes !== undefined) props["Minutes Logged"] = W.num(b.minutes);
+        if (b.nextFollowUp) props["Next Follow-up"] = W.date(b.nextFollowUp);
+        if (b.followUpStage) props["Follow-up Stage"] = W.sel(b.followUpStage);
+        const page = await createPage(DB.careLog, props);
+        return json(200, { ok: true, id: page.id });
+      }
+
       case "prog-save": {
         const props = {};
         if (b.track) props["Track"] = W.sel(b.track);
