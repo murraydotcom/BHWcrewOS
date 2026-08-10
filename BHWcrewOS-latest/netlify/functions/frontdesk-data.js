@@ -130,6 +130,44 @@ exports.handler = async (event) => {
       return { statusCode: ok ? 200 : 502, body: JSON.stringify({ ok }) };
     }
 
+    // ---- SPECIALIST DIRECTORY: ?dir=1 -> the referral directory (live from Notion) ----
+    if (event.queryStringParameters?.dir) {
+      const SPEC_DB = process.env.SPECIALIST_DB_ID || 'f4e144272dc842dc87d51f8f6f8f5e6c';
+      const specialists = [];
+      let cursor;
+      do {
+        const sres = await fetch(`${NOTION}/databases/${SPEC_DB}/query`, {
+          method: 'POST', headers: H(),
+          body: JSON.stringify({ page_size: 100, ...(cursor ? { start_cursor: cursor } : {}) }),
+        });
+        const sdata = await sres.json();
+        if (!sres.ok) return { statusCode: 502, body: JSON.stringify({ error: sdata.message || 'directory query failed' }) };
+        for (const r of (sdata.results || [])) {
+          const p = r.properties;
+          const name = text(p['Specialist']);
+          if (!name) continue;
+          specialists.push({
+            name,
+            specialty: sel(p['Specialty']),
+            org: text(p['Practice / Institution']),
+            phone: p['Phone']?.phone_number || '',
+            fax: p['Fax']?.phone_number || '',
+            networks: (p['Networks Accepted']?.multi_select || []).map(m => m.name),
+            preferred: !!p['⭐ Preferred']?.checkbox,
+            accepting: !!p['Accepting New Patients']?.checkbox,
+            wait: sel(p['Typical Wait']),
+            notes: text(p['Notes']),
+          });
+        }
+        cursor = sdata.has_more ? sdata.next_cursor : null;
+      } while (cursor);
+      return {
+        statusCode: 200,
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+        body: JSON.stringify({ specialists }),
+      };
+    }
+
     const q = (event.queryStringParameters?.q || '').trim();
 
     // ---- INBOX MODE: no q -> return the live activity feed ----
