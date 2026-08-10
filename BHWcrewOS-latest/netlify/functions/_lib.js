@@ -61,6 +61,7 @@ const DB = {
   questionnaires: "eb20fcd416df4956b2a88e35de008410", // Questionnaires — Data (patient intake)
   careGaps: "32e580758d30806bac67e7deff25bc3c", // Medicare Wellness Report (payer gaps, monthly CSV uploads)
   crewProjects: "386e620a9df545209a02207c4554c75b",
+  careLog: "a839f769a04e461a8e1c495073a22b87", // Care Management Log — one row / patient / month (CCM/APCM) or episode (TCM)
 };
 
 const DIVISIONS = ["Primary Care", "CharmEd Minds", "Mind & Mood Recovery", "The Porter House", "Care Management", "Flow"];

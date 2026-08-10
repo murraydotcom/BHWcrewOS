@@ -103,6 +103,7 @@ const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x;};
 const daysBetween=(a,b)=>Math.round((b-a)/86400000);
 function addBusinessDays(d,n){const x=new Date(d);let added=0;while(added<n){x.setDate(x.getDate()+1);const dow=x.getDay();if(dow!==0&&dow!==6)added++;}return x;}
 const md=d=>new Date(d).toLocaleDateString("en-US",{month:"short",day:"numeric"});
+const isoLocal=d=>{const x=new Date(d);return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}-${String(x.getDate()).padStart(2,"0")}`;};
 
 function render(){
   const tb=document.getElementById("tb"); const today=startOfToday();
@@ -116,6 +117,7 @@ function render(){
       if(daysBetween(dDate,today)<=7) disch7++;
       const isHigh=h.complexity==="high";
       const contactBy=addBusinessDays(dDate,2), visitBy=addDays(dDate,isHigh?7:14);
+      h._dISO=isoLocal(dDate); h._contactISO=isoLocal(contactBy);
       const contactOpen=today<=contactBy, visitOpen=today<=visitBy;
       if(!visitOpen){ windowCell='<span class="overdue"><b>Window closed</b> — TCM not billable</span>'; sortKey=90; }
       else if(!contactOpen){ windowCell='<span class="overdue"><b>Contact overdue</b> · visit by '+md(visitBy)+'</span>'; open++; sortKey=1; }
@@ -123,7 +125,10 @@ function render(){
       actionCell='<div class="cxtoggle" title="Set TCM complexity — clinical determination">'+
         '<button class="'+(!isHigh?"on":"")+'" onclick="setCx('+i+',&#39;moderate&#39;)">99495 · 14d</button>'+
         '<button class="'+(isHigh?"on":"")+'" onclick="setCx('+i+',&#39;high&#39;)">99496 · 7d</button>'+
-        '</div> <span class="mini">~$'+TCM_RATE[isHigh?"high":"moderate"]+(visitOpen?"":" · missed")+'</span>';
+        '</div> <span class="mini">~$'+TCM_RATE[isHigh?"high":"moderate"]+(visitOpen?"":" · missed")+'</span>'+
+        (h._logged
+          ? ' <span class="badge b-info">✓ TCM logged</span>'
+          : ' <button class="btn ghost tcmbtn" title="Create a TCM episode in the Care Management Log" onclick="tcmLog('+i+',this)">＋ TCM log</button>');
     }
     return {h, dtxt:md(dDate), windowCell, actionCell, sortKey};
   }).sort((a,b)=>a.sortKey-b.sortKey);
@@ -132,6 +137,26 @@ function render(){
   set("k-adm",adm); set("k-disch",disch7); set("k-open",open); set("k-ed",ed7);
 }
 function setCx(i,level){ if(HOSP[i]){ HOSP[i].complexity=level; render(); } }
+
+let CREW_TOKEN=""; try{ CREW_TOKEN=sessionStorage.getItem("crewos_token")||""; }catch(e){}
+async function tcmLog(i, btn){
+  const h=HOSP[i]; if(!h) return;
+  if(!CREW_TOKEN){ alert("Sign in to crewOS first — open this board from inside crewOS to log TCM."); return; }
+  const isHigh=h.complexity==="high";
+  const payload={ action:"care-log-create", program:"TCM", type:"Episode", name:h.patient,
+    episodeDate:h._dISO, nextFollowUp:h._contactISO, followUpStage:"4 days", status:"Open",
+    notes:["TCM — "+(isHigh?"99496 · 7-day visit":"99495 · 14-day visit"),
+      h.facility?("facility: "+h.facility):"", h.dispo?("dispo: "+h.dispo):"",
+      "discharged "+md(h._dISO)].filter(Boolean).join(" · ") };
+  const old=btn.textContent; btn.disabled=true; btn.textContent="…";
+  try{
+    const r=await fetch("/.netlify/functions/action",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+CREW_TOKEN},body:JSON.stringify(payload)});
+    const d=await r.json().catch(()=>({}));
+    if(r.ok && d.ok){ h._logged=true; render(); }
+    else if(r.status===401){ alert("Your crewOS session expired — sign in again."); btn.disabled=false; btn.textContent=old; }
+    else { alert("Couldn't create the TCM log: "+(d.error||r.status)); btn.disabled=false; btn.textContent=old; }
+  }catch(e){ alert("Network error creating the TCM log."); btn.disabled=false; btn.textContent=old; }
+}
 
 /* ---- manual load: paste or CSV upload (for when CRISP/Notion format differs) ---- */
 function splitCSVLine(line, delim){ const out=[]; let cur="", q=false;
