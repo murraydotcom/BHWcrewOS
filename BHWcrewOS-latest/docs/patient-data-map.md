@@ -9,7 +9,7 @@ and recommends how to consolidate. No behavior was changed by adding this file._
 | # | Notion DB (title) | ID / how it's referenced | What it is | Read/written by |
 |---|---|---|---|---|
 | 1 | **Patient Index — Ops Hub** | `DB.patients` = `f9a0291f…` (collection `c85c5213…`) | Lean operational index: Patient Name, BHW ID (auto), DOB, Insurance, Member ID, Medicare MBI, Status, Active Divisions, Medications | `patients.js` (Paperwork/Care Plan picker), `action.js` (create/read patients), `stedi.js`, `ops-data.js` |
-| 2 | **Patients Master List** | `process.env.MASTER_DB_ID` (value lives only in Netlify env — **not in the repo**) | Richer record: Patient Page (Health Hub link), Phone, Payer, Medicaid MCO, MRN/Member ID, Patient Ctl No, Program Enrollment, Last/Next Visit… | `frontdesk-data.js`, `console-data.js`, `lib/triage.js` (→ `dialpad-events`, `ifax-events`, `email-ingest`) |
+| 2 | **🧑🏽‍⚕️ Patients Master List** _(authoritative)_ | `process.env.MASTER_DB_ID`, DB id `2cf580758d3080f0825de4bbfb6c7528` (collection `2cf58075-8d30-8047-8de2-000b66c30acb`) | Richer record: Patient Page (Health Hub link), Phone, Payer, Medicaid MCO, MRN, Insurance Member ID, Patient Ctl No (BHW####), Program Enrollment, program statuses, Last/Next Visit, Diagnoses (relation)… | `frontdesk-data.js`, `console-data.js`, `lib/triage.js` (→ `dialpad-events`, `ifax-events`, `email-ingest`), **`patients.js` picker (as of this branch)** |
 | 3 | **Panel Patients** | `process.env.PATIENTS_DB_ID` = `7bd06869…` (collection `1763826f…`) | De-identified HEDIS / utilization tracker, keyed by **MRN / Initials** (no PHI). Care-gap columns (A1c, BP, AWV, screenings…) | `panel-data.js` |
 | 4 | **CharmEd Minds Intake & Assessment** | `2c658075…` | Pediatric neurodev **assessment cases**. Target of the `?case=` relation | Screener + Questionnaire `Patient` relation (via `screener-submit.js` / `questionnaire-submit.js`) |
 | — | **Patient Request Triage Queue** | `process.env.QUEUE_DB_ID` (default `de790690…`) | Front Desk OS inbox (not a patient list) | `frontdesk-data.js`, `lib/triage.js` |
@@ -29,24 +29,31 @@ and recommends how to consolidate. No behavior was changed by adding this file._
   and ICD/Diagnoses properties that **don't exist** on #1 (Patient Index), so the
   Paperwork/Care Plan picker always returns a blank chart # and no diagnoses.
 
-## Recommended direction (needs one decision from ops)
+## Decision (confirmed by ops)
 
-**Decision to make:** which DB is the single source of truth for an operational
-patient record — the lean **Patient Index (#1)** or the richer **Master List (#2)**?
-(And confirm what `MASTER_DB_ID` is currently set to in Netlify.)
+**The Patients Master List (#2) is the authoritative patient DB.**
 
-Recommended: **consolidate onto the Master List (#2)** — it already carries the
-fields the most surfaces need (Health Hub page, phone, payer, program) — and:
+### Done on this branch
+- **Picker repointed.** `patients.js` (the Paperwork / Care Plan patient picker,
+  read-only) now reads the Master List via `MASTER_DB_ID`, so staff pick from the
+  same roster Front Desk uses. Field mapping: `Patient Ctl No`→bhwId, `Payer` /
+  `Insurance Plan Name`→insurance, `Insurance Member ID`→memberId, `MRN`→chart.
 
-1. Point `DB.patients` at #2 (or set `MASTER_DB_ID` and `DB.patients` to the same
-   id) so the crewOS picker, `action.js`, and Front Desk all read one list.
-2. Add the properties `patients.js` expects (`CharmHealth Chart #`, an ICD/Diagnoses
-   field) to that DB, or drop them from `shape()` if they won't be maintained.
-3. Migrate any Index-only patients into #2, then retire #1.
-4. Leave **Panel Patients (#3)** as-is — it's a separate de-identified analytics
-   table and shouldn't hold PHI.
-5. Optionally add a relation from the questionnaire/screener target so intake forms
-   can link to the operational record, not only the CharmEd assessment case.
+### Remaining migration (reviewed follow-up — NOT yet done)
+These still read/write the **Patient Index (#1)** and must be moved carefully:
 
-This is a data-model migration, so it's written up here rather than changed blind.
-Ping to confirm the authoritative DB and `MASTER_DB_ID`, and it can be executed.
+1. **`action.js` (patient *creation* + roster read)** — new crewOS-created patients
+   still land in the Index. Repoint to the Master List, mapping create props to its
+   schema (title `Patient Name`, `Patient Ctl No`, `Payer`, `Insurance Member ID`,
+   `DOB`, `Program Enrollment`).
+2. **`stedi.js` (Medicare eligibility)** — ⚠️ **blocker:** the Master List has **no
+   `Medicare MBI` property**, which Stedi requires. Add `Medicare MBI` to the Master
+   List (and backfill it) *before* repointing Stedi, or eligibility checks break.
+3. **`ops-data.js`** — patient aggregation; repoint after #1/#2.
+4. Migrate any Index-only patient rows into the Master List, then retire the Index.
+5. Leave **Panel Patients (#3)** as-is (de-identified analytics; no PHI).
+6. `patients.js` still returns empty `icds` — the Master List's `Diagnoses` is a
+   relation; expanding it needs extra lookups (or a flat ICD text field).
+
+Written up here so the create/eligibility move is done with eyes open rather than
+blind. Ping to schedule the follow-up; the `Medicare MBI` add is the gating step.
