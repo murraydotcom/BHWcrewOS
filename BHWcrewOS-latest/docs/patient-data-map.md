@@ -38,22 +38,33 @@ and recommends how to consolidate. No behavior was changed by adding this file._
   read-only) now reads the Master List via `MASTER_DB_ID`, so staff pick from the
   same roster Front Desk uses. Field mapping: `Patient Ctl No`→bhwId, `Payer` /
   `Insurance Plan Name`→insurance, `Insurance Member ID`→memberId, `MRN`→chart.
+- **`Medicare MBI` text field added** to the Patients Master List (so Stedi can be
+  repointed later without breaking eligibility).
+- **`action.js patient-create` now DUAL-WRITES.** A new patient is created in the
+  **Master List** (authoritative — Patient Name, Patient Ctl No `BHW####`, DOB,
+  Insurance Plan Name, Insurance Member ID, MRN, Medicare MBI, email/guardian) AND
+  mirrored into the **Patient Index** (as before) so crewOS `ops-data` and the 8
+  `Patient` relations keep working. Dedup runs against both lists; the Index id is
+  returned as `id` (crewOS relations reference it), plus `masterId`. Why both: the
+  crewOS `Patient` relations (Referrals, Handoffs, Minutes, AWV, CharmEd ×2,
+  Programs, Growth Plans) all target the **Index** (`c85c5213…`), verified — a
+  Master-only patient would be invisible to crewOS and unlinkable.
 
-### Remaining migration (reviewed follow-up — NOT yet done)
-These still read/write the **Patient Index (#1)** and must be moved carefully:
+### Remaining migration (full consolidation — reviewed follow-up)
+The bridge above keeps both lists in sync for *new* patients. To make the Master
+List the sole source and retire the Index:
 
-1. **`action.js` (patient *creation* + roster read)** — new crewOS-created patients
-   still land in the Index. Repoint to the Master List, mapping create props to its
-   schema (title `Patient Name`, `Patient Ctl No`, `Payer`, `Insurance Member ID`,
-   `DOB`, `Program Enrollment`).
-2. **`stedi.js` (Medicare eligibility)** — ⚠️ **blocker:** the Master List has **no
-   `Medicare MBI` property**, which Stedi requires. Add `Medicare MBI` to the Master
-   List (and backfill it) *before* repointing Stedi, or eligibility checks break.
-3. **`ops-data.js`** — patient aggregation; repoint after #1/#2.
-4. Migrate any Index-only patient rows into the Master List, then retire the Index.
+1. **Repoint the 8 crewOS `Patient` relations** (Referrals/Handoffs/Minutes/AWV/
+   CharmEd ×2/Programs/Growth Plans) from the Index (`c85c5213…`) to the Master
+   List. ⚠️ Changing a relation's target DB clears existing links — write a
+   re-linking migration first, or accept historical link loss.
+2. **`ops-data.js`** → read the Master List.
+3. **`stedi.js`** → read the Master List (uses the new `Medicare MBI`; backfill MBIs).
+4. Drop the Index mirror from `action.js patient-create`; migrate any Index-only
+   rows; retire the Index.
 5. Leave **Panel Patients (#3)** as-is (de-identified analytics; no PHI).
-6. `patients.js` still returns empty `icds` — the Master List's `Diagnoses` is a
-   relation; expanding it needs extra lookups (or a flat ICD text field).
 
-Written up here so the create/eligibility move is done with eyes open rather than
-blind. Ping to schedule the follow-up; the `Medicare MBI` add is the gating step.
+Known bridge trade-off: a dual-written patient has two identifiers — the Master
+List `Patient Ctl No` (BHW####, derived) and the Index's own auto `BHW ID` — until
+step 4. `patients.js` also still returns empty `icds` (Master `Diagnoses` is a
+relation needing extra lookups).
