@@ -11,18 +11,25 @@
  *   1. Sign in to script.google.com as info@bhwmedical.org.
  *   2. New project → paste this file.
  *   3. Set ENDPOINT + SECRET below. SECRET must equal the EMAIL_INGEST_SECRET
- *      env var set in Netlify.
- *   4. Run `ingestOnce` once and approve the Gmail permission prompt.
+ *      env var set in Netlify. Optionally set FAX_DRIVE_FOLDER_ID to file
+ *      inbound fax PDFs into a specific Drive folder.
+ *   4. Run `ingestOnce` once and approve the Gmail + Drive permission prompt.
  *   5. Triggers (clock icon) → add a time-driven trigger: ingestOnce, every 5
  *      minutes.
  *
  * It only reads matching messages, marks them read, and labels them
- * "crewOS-ingested" so nothing is processed twice.
+ * "crewOS-ingested" so nothing is processed twice. Inbound fax PDFs are saved to
+ * Drive and linked on the triage row's Source Link (never shared publicly — the
+ * link opens for signed-in workspace members, keeping PHI in the BAA account).
  */
 
 var ENDPOINT = 'https://bhwcrewos.netlify.app/.netlify/functions/email-ingest';
 var SECRET   = 'PASTE_THE_SAME_VALUE_AS_EMAIL_INGEST_SECRET';
 var LABEL    = 'crewOS-ingested';
+// Where to file inbound fax PDFs. Leave '' for My Drive root, or paste a folder
+// ID (the part of the folder's URL after /folders/). The file is NOT made
+// public — access follows the folder's normal sharing.
+var FAX_DRIVE_FOLDER_ID = '';
 
 // Senders whose notifications should be forwarded. `from:ifaxapp.com` matches
 // no-reply@ifaxapp.com; `from:dialpad.com` matches voicemail@dialpad.com. The
@@ -51,6 +58,8 @@ function ingestOnce() {
         html: m.getBody(),
         receivedISO: m.getDate().toISOString()
       };
+      var pdf = savePdfToDrive(m);
+      if (pdf) { payload.attachmentUrl = pdf.url; payload.attachmentName = pdf.name; }
       try {
         var res = UrlFetchApp.fetch(ENDPOINT, {
           method: 'post',
@@ -69,4 +78,22 @@ function ingestOnce() {
       threads[i].markRead();
     }
   }
+}
+
+// Save the first PDF attachment on a message to Drive; returns {url, name} or
+// null. Not shared publicly — the file inherits the target folder's sharing, so
+// fax PHI stays inside the workspace.
+function savePdfToDrive(msg) {
+  try {
+    var atts = msg.getAttachments({ includeInlineImages: false, includeAttachments: true }) || [];
+    for (var k = 0; k < atts.length; k++) {
+      var a = atts[k];
+      if (/pdf/i.test(a.getContentType()) || /\.pdf$/i.test(a.getName())) {
+        var folder = FAX_DRIVE_FOLDER_ID ? DriveApp.getFolderById(FAX_DRIVE_FOLDER_ID) : DriveApp.getRootFolder();
+        var file = folder.createFile(a.copyBlob());
+        return { url: file.getUrl(), name: a.getName() };
+      }
+    }
+  } catch (e) { /* Drive unavailable or no PDF — skip, still ingest the text */ }
+  return null;
 }

@@ -53,19 +53,26 @@ async function matchPatientByPhone(from) {
   return out;
 }
 
-// Create one triage-queue row. `link` (fax/recording URL) is appended to the
-// summary so we never depend on a column that might not exist in the DB.
-async function createQueueEntry({ patientId, patientName, from, summary, source, receivedISO, link }) {
+// Create one triage-queue row. The DB's title is "Request ID" (REQ-…) and
+// "Patient Name" is a text field. The original's URL — fax PDF, call recording,
+// or portal/Charm message — goes in the "Source Link" property (pass an explicit
+// `sourceUrl`, else it's pulled from `link`).
+async function createQueueEntry({ patientId, patientName, from, summary, source, receivedISO, link, sourceUrl }) {
   if (!process.env.QUEUE_DB_ID) return { ok: false, error: "QUEUE_DB_ID not set" };
-  const body = `${summary || ""}${link ? `\n${link}` : ""}`.trim().slice(0, 1900);
+  const when = receivedISO || new Date().toISOString();
+  const reqId = `REQ-${when.slice(0, 10).replace(/-/g, "")}-${when.slice(11, 19).replace(/:/g, "")}`;
+  const url = sourceUrl || (String(link || "").match(/https?:\/\/[^\s)]+/) || [])[0] || "";
+  const body = `${summary || ""}`.trim().slice(0, 1900);
   const props = {
-    "Patient Name": { title: [{ text: { content: (patientName || `${source} from ${from || "unknown number"}`).slice(0, 200) } }] },
+    "Request ID": { title: [{ text: { content: reqId } }] },
+    "Patient Name": { rich_text: [{ text: { content: String(patientName || "").slice(0, 200) } }] },
     "Callback Number": { phone_number: from || null },
     "Summary": { rich_text: [{ text: { content: body || "(no content)" } }] },
     "Source": { select: { name: source } },
-    "Received": { date: { start: receivedISO || new Date().toISOString() } },
+    "Received": { date: { start: when } },
     "Status": { status: { name: "Not started" } },
   };
+  if (url) props["Source Link"] = { url };
   if (patientId) props["Patient"] = { relation: [{ id: patientId }] };
 
   const res = await fetch(`${NOTION}/pages`, {
