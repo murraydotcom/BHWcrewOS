@@ -17,6 +17,24 @@ const { matchPatientByPhone, createQueueEntry } = require("./lib/triage");
 
 const stripHtml = (h) => String(h || "").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
 const firstUrl = (s, re) => { const m = String(s || "").match(re); return m ? m[0] : ""; };
+// iFax encodes the fax's metadata in the OPEN FAX/FILE link:
+//   https://web.ifaxapp.com/open-fax/<base64 JSON><"iFaxapp"+sig>?utm=...
+// Decoding it is the authoritative direction signal ("type":"inbound"|"outbound",
+// "status":"Sent"|"Received"|…) plus any sender/fax-number fields — far more
+// reliable than subject-line keywords. Returns the parsed object or null.
+const decodeIfaxLink = (url) => {
+  try {
+    const m = String(url || "").match(/open-fax\/([A-Za-z0-9\-_%+/=]+)/i);
+    if (!m) return null;
+    const seg = decodeURIComponent(m[1]);
+    const decoded = Buffer.from(seg, "base64").toString("utf8");
+    const cut = decoded.indexOf("iFaxapp");
+    const jsonStr = cut > -1 ? decoded.slice(0, cut) : decoded;
+    const start = jsonStr.indexOf("{"), end = jsonStr.lastIndexOf("}");
+    if (start < 0 || end <= start) return null;
+    return JSON.parse(jsonStr.slice(start, end + 1));
+  } catch { return null; }
+};
 // A US phone number appearing in the text (skips obvious non-phone digit runs).
 const firstPhone = (s) => {
   const m = String(s || "").match(/(\+?1[\s.\-]?)?\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}/);
@@ -47,18 +65,29 @@ exports.handler = async (event) => {
     let source, summary, link, from = "";
 
     if (provider === "ifax") {
-      // iFax inbound email (real format): "A new fax was just received on +1 (833)…",
-      // "From: +1 (612) 216-5093", "Pages: 3", PDF attached, "OPEN FAX" button.
-      const inbound = /a new fax was just received|new fax|fax received|received on|inbound/i.test(hay);
-      const outboundConfirm = /\b(ocr complete|successfully sent|delivery (?:confirmation|report)|your fax to)\b/i.test(hay);
-      if (!inbound && outboundConfirm) return { statusCode: 200, body: "ignored: outbound iFax confirmation" };
-      // The sender's fax is on the "From:" line — NOT the "received on" line (that's BHW's own number).
+      // Direction from the OPEN FAX link payload is authoritative; subject/body
+      // keywords are only a fallback when the link can't be decoded.
+      const openLink = firstUrl(html + "\n" + hay, /https?:\/\/[^\s>"']*ifaxapp\.com\/open-fax\/[^\s>"')]*/i)
+        || firstUrl(html + "\n" + hay, /https?:\/\/[^\s>"']*ifaxapp\.com[^\s>"']*/i);
+      const meta = decodeIfaxLink(openLink);
+      const metaType = String(meta?.type || "").toLowerCase();
+      const metaStatus = String(meta?.status || "").toLowerCase();
+      const kwInbound = /a new fax was just received|new fax|fax received|you (?:have )?received a fax|incoming fax|received on/i.test(hay);
+      const kwOutbound = /\b(ocr complete|successfully sent|delivery (?:confirmation|report)|your fax to|fax sent)\b/i.test(hay);
+      let isInbound;
+      if (metaType === "inbound" || metaType === "outbound") isInbound = metaType === "inbound";
+      else if (/received|incoming/.test(metaStatus)) isInbound = true;
+      else if (/^(sent|delivered)$/.test(metaStatus)) isInbound = false;
+      else isInbound = kwInbound || !kwOutbound; // no link meta: inbound unless it's clearly a send confirmation
+      if (!isInbound) return { statusCode: 200, body: "ignored: outbound iFax confirmation" };
+      // Sender fax number: prefer the link metadata, else the body's "From: <phone>"
+      // line (NOT the "received on" line, which is BHW's own number).
+      const metaFrom = meta?.callerId || meta?.caller_id || meta?.from || meta?.senderNumber || meta?.faxNumber || meta?.sender || "";
       const caller = (text.match(/From:\s*(\+?1?[\s().\-]*\d{3}[\s().\-]*\d{3}[\s.\-]*\d{4})/i) || [])[1] || "";
-      const pages = (text.match(/Pages?:\s*(\d+)/i) || [])[1];
-      from = (caller || "").trim();
-      const openLink = firstUrl(html + "\n" + hay, /https?:\/\/[^\s>"']*ifaxapp\.com[^\s>"']*/i);
+      const pages = (text.match(/Pages?:\s*(\d+)/i) || [])[1] || (meta?.pages != null ? String(meta.pages) : "");
+      from = firstPhone(String(metaFrom)) || (caller || "").trim();
       source = "Fax";
-      summary = `Inbound fax${from ? ` from ${from}` : ""}${pages ? ` · ${pages} page(s)` : ""}${/attach/i.test(hay) ? " (PDF attached to the source email)" : ""}`;
+      summary = `Inbound fax${from ? ` from ${from}` : ""}${pages ? ` · ${pages} page(s)` : ""} (PDF in the source email / open in iFax)`;
       link = openLink ? `Open fax: ${openLink}` : undefined;
     } else if (provider === "dialpad") {
       if (/voicemail/i.test(hay)) {

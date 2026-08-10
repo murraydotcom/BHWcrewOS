@@ -24,9 +24,16 @@ var ENDPOINT = 'https://bhwcrewos.netlify.app/.netlify/functions/email-ingest';
 var SECRET   = 'PASTE_THE_SAME_VALUE_AS_EMAIL_INGEST_SECRET';
 var LABEL    = 'crewOS-ingested';
 
-// Senders whose notifications should be forwarded. Add to this list as needed.
+// Senders whose notifications should be forwarded. `from:ifaxapp.com` matches
+// no-reply@ifaxapp.com; `from:dialpad.com` matches voicemail@dialpad.com. The
+// subject fallbacks catch forwarded copies (e.g. info@ auto-forwarding to a
+// user). Over-matching is safe: email-ingest returns 2xx for anything it
+// intentionally ignores (outbound fax confirmations, answered/outbound calls),
+// so those just get marked read without creating a queue row.
 var QUERY = 'newer_than:2d -label:' + LABEL +
-  ' (from:no-reply@ifaxapp.com OR from:ifaxapp.com OR from:dialpad.com OR subject:"you received a fax" OR subject:voicemail OR subject:"missed call")';
+  ' (from:ifaxapp.com OR from:dialpad.com' +
+  ' OR subject:"new fax" OR subject:"you received a fax" OR subject:"fax received"' +
+  ' OR subject:voicemail OR subject:"missed call")';
 
 function ingestOnce() {
   var label = GmailApp.getUserLabelByName(LABEL) || GmailApp.createLabel(LABEL);
