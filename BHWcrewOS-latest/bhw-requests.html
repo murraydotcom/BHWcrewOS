@@ -291,8 +291,8 @@ async function load(){
     if(r.ok){ const d=await r.json(); if(Array.isArray(d.items)){ ITEMS=d.items; banner.className='banner'; render(); return; } }
     throw new Error('no live feed');
   }catch(e){
-    ITEMS=DEMO; banner.className='banner demo';
-    banner.textContent='Showing sample requests — connects to the live triage queue on deploy (needs NOTION_TOKEN + QUEUE_DB_ID).';
+    ITEMS=[]; banner.className='banner err';
+    banner.textContent='Couldn’t reach the live triage queue. Reload the page; if it keeps happening, open Front Desk and sign in to crewOS again.';
     render();
   }
 }
@@ -311,31 +311,7 @@ async function toggleDone(id,isDone){ if(!TOKEN){needAuth();return;}
   if(ok) load();
 }
 
-// ---- demo fallback (rich journeys to show the design) ----
-const H=t=>new Date(Date.now()-t*3600e3).toISOString();
-const DEMO=[
-  {id:'d1',source:'Portal Message',status:'Not started',received:H(0.4),name:'Jordan Rivera',phone:'940-637-5470',assigned:'',
-   journey:[{dot:'recv',time:fmtTime(H(0.4)),text:'Request received via <b>Portal message</b>'},
-            {dot:'update',time:fmtTime(H(0.4)),text:'“My left knee is worse going down stairs — can I be seen this week?”'}]},
-  {id:'d2',source:'Text / SMS',status:'Not started',priority:'Urgent',sla:'due 30m',received:H(0.9),name:'Marcus Bell',phone:'410-555-0148',assigned:'',
-   journey:[{dot:'urgent',time:fmtTime(H(0.9)),text:'<b>Urgent</b> text received — refill request'},
-            {dot:'update',time:fmtTime(H(0.9)),text:'Out of lisinopril, pharmacy closed Sunday — needs a refill before Monday.'}]},
-  {id:'d3',source:'Voicemail',status:'In progress',received:H(3.2),name:'Priya Nair',phone:'443-555-0192',assigned:'Amaris Murray',
-   journey:[{dot:'recv',time:fmtTime(H(3.2)),text:'Voicemail received about <b>lab fasting instructions</b>'},
-            {dot:'update',time:fmtTime(H(3.0)),text:'Claimed at the front desk',who:'Amaris Murray'},
-            {dot:'prog',time:fmtTime(H(2.8)),text:'Called back — left message, awaiting reply',who:'Amaris Murray'}]},
-  {id:'d4',source:'Fax',status:'In progress',received:H(5),name:'Sofia Herrera',assigned:'Tammy Fields',
-   journey:[{dot:'recv',time:fmtTime(H(5)),text:'Fax received — <b>prior-auth response, CareFirst</b> (sleep study)'},
-            {dot:'update',time:fmtTime(H(4.6)),text:'Claimed for review',who:'Tammy Fields'},
-            {dot:'prog',time:fmtTime(H(4.4)),text:'Attached to chart, routing to provider',who:'Tammy Fields'}]},
-  {id:'d6',source:'Missed Call (Phone)',status:'Done',received:H(26),name:'Leo Park',phone:'240-555-0133',assigned:'Tammy Fields',
-   journey:[{dot:'recv',time:fmtTime(H(26)),text:'Missed call — <b>reschedule request</b>'},
-            {dot:'update',time:fmtTime(H(25.6)),text:'Claimed',who:'Tammy Fields'},
-            {dot:'done',time:fmtTime(H(25)),text:'Moved appt to Sep 24 — confirmed with patient',who:'Tammy Fields'}]},
-  {id:'d7',source:'Portal Message',status:'Done',received:H(28),name:'Grace Okoro',phone:'301-555-0175',assigned:'Amaris Murray',
-   journey:[{dot:'recv',time:fmtTime(H(28)),text:'Portal message — thanks for the <b>care-plan PDF</b>'},
-            {dot:'done',time:fmtTime(H(27.7)),text:'Acknowledged, no further action',who:'Amaris Murray'}]},
-];
+// (demo request fallback removed — the page shows the live triage queue or a clean empty/error state)
 
 if(TOKEN){ document.getElementById('me').textContent='signed in'; }
 load();

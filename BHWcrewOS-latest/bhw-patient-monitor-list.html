@@ -73,7 +73,7 @@ body{font-family:'OpenSans',system-ui,sans-serif;color:var(--ink);font-size:13px
     <div class="mk"><svg viewBox="0 0 48 48" width="24" height="24"><path d="M10 24h5l3-7 5 15 4-11 2 4h9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
     <div>
       <h1>Patient Monitor</h1>
-      <div class="sub">Live roster — patients checking in and active today. Click anyone to open their monitor.</div>
+      <div class="sub">Live roster from the Patients Master List — everyone enrolled in a monitoring program. Click anyone to open their monitor.</div>
     </div>
     <div class="right">
       <span class="chip"><span class="pulse"></span>Live</span>
@@ -82,55 +82,67 @@ body{font-family:'OpenSans',system-ui,sans-serif;color:var(--ink);font-size:13px
   </div>
 
   <div class="body">
-    <div class="sec-h"><span class="t">Checking in now</span><span class="n" id="ciN">0</span><span class="live">updates as patients arrive</span></div>
+    <div class="sec-h"><span class="t">Scheduled today</span><span class="n" id="ciN">0</span><span class="live">patients whose next visit is dated today</span></div>
     <div class="checkin" id="checkin"></div>
 
-    <div class="sec-h"><span class="t">Today's patients</span><span class="live" id="rosterMeta"></span></div>
+    <div class="sec-h"><span class="t">Monitored patients</span><span class="live" id="rosterMeta"></span></div>
     <div class="list" id="list"></div>
   </div>
 
 </div>
 
 <script>
+// Live roster from the Patients Master List via monitor-data. Each row links to
+// the single-patient monitor by real Notion page id (?patient=<uuid>).
+const API='/.netlify/functions/monitor-data';
+const KEY='02142022'; // matches the DASH_KEY shared key used by Front Desk
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function initials(n){return (n||'?').split(/[ ,]+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();}
 function href(p){ return '/bhw-patient-monitor.html?patient='+encodeURIComponent(p.id); }
+function fmtD(d){ if(!d) return ''; const t=new Date(d.slice(0,10)+'T00:00:00'); return isNaN(t)?'':t.toLocaleDateString('en-US',{month:'numeric',day:'numeric'}); }
+function isToday(d){ return !!d && d.slice(0,10)===new Date().toISOString().slice(0,10); }
 
-// Demo roster. On deploy this reads the live check-in / activity feed; each
-// row already links to the single-patient monitor (which will read ?patient=).
-const CHECKIN=[
-  {id:'10428',name:'Jordan Rivera',note:'Flow visit · NP Amaris',status:'Rooming',time:'8:19 AM · just now'},
-  {id:'20591',name:'Marcus Bell',note:'Follow-up · lab review',status:'Arrived',time:'8:32 AM'},
-];
-const ROSTER=[
-  {id:'10428',name:'Jordan Rivera',mrn:'#10428',prog:'Primary Care',status:'in',statusL:'Checked in',last:'now',unread:3},
-  {id:'20591',name:'Marcus Bell',mrn:'#20591',prog:'Flow',status:'wait',statusL:'Waiting room',last:'6m',unread:1},
-  {id:'20144',name:'Priya Nair',mrn:'#20144',prog:'Mind & Mood',status:'room',statusL:'In room 2',last:'12m',unread:0},
-  {id:'20777',name:'Dennis Cole',mrn:'#20777',prog:'CharmEd',status:'msg',statusL:'New message',last:'25m',unread:2},
-  {id:'20310',name:'Sofia Herrera',mrn:'#20310',prog:'Primary Care',status:'sched',statusL:'Scheduled 10:30',last:'—',unread:0},
-  {id:'20488',name:'Leo Park',mrn:'#20488',prog:'Flow',status:'sched',statusL:'Scheduled 11:15',last:'—',unread:0},
-];
-
-document.getElementById('ciN').textContent=CHECKIN.length;
-document.getElementById('checkin').innerHTML=CHECKIN.map(p=>`
+function checkinCard(p){ return `
   <a class="ci" href="${href(p)}">
     <span class="av">${initials(p.name)}</span>
-    <div><div class="nm">${p.name}</div><div class="mt">${p.note}</div></div>
-    <div class="st"><div class="b"><span class="d"></span>${p.status}</div><div class="tm">${p.time}</div></div>
-  </a>`).join('');
-
-document.getElementById('rosterMeta').textContent=ROSTER.length+' patients';
-document.getElementById('list').innerHTML=ROSTER.map(p=>`
+    <div><div class="nm">${esc(p.name)}</div><div class="mt">${esc(p.program||'Scheduled today')}</div></div>
+    <div class="st"><div class="b"><span class="d"></span>Today</div><div class="tm">${esc(p.mrn||'')}</div></div>
+  </a>`; }
+function rosterRow(p){
+  const right = p.nextVisit ? `Next ${fmtD(p.nextVisit)}` : (p.lastVisit ? `Seen ${fmtD(p.lastVisit)}` : '—');
+  return `
   <a class="lrow" href="${href(p)}">
     <span class="av">${initials(p.name)}</span>
-    <div class="who"><div class="nm">${p.name}</div><div class="id">${p.mrn}</div></div>
-    <span class="prog">${p.prog}</span>
-    <span class="pill ${p.status}">${p.statusL}</span>
-    <div class="act">
-      ${p.unread?`<span class="unread">${p.unread}</span>`:''}
-      <span class="last">${p.last==='—'?'—':(p.last==='now'?'now':p.last+' ago')}</span>
-      <span class="chev">›</span>
-    </div>
-  </a>`).join('');
+    <div class="who"><div class="nm">${esc(p.name)}</div><div class="id">${esc(p.mrn||'')}</div></div>
+    ${p.program?`<span class="prog">${esc(p.program)}</span>`:''}
+    <div class="act"><span class="last">${right}</span><span class="chev">›</span></div>
+  </a>`;
+}
+
+async function load(){
+  const listEl=document.getElementById('list'), checkinEl=document.getElementById('checkin');
+  try{
+    const r=await fetch(`${API}?roster=1&key=${encodeURIComponent(KEY)}`);
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.error||'load failed');
+    const roster=Array.isArray(d.patients)?d.patients:[];
+    const today=roster.filter(p=>isToday(p.nextVisit));
+    document.getElementById('ciN').textContent=today.length;
+    checkinEl.innerHTML = today.length
+      ? today.map(checkinCard).join('')
+      : '<div style="color:var(--ink-mute);font-size:12px;padding:4px 2px">No one scheduled for today yet.</div>';
+    document.getElementById('rosterMeta').textContent =
+      roster.length ? `${roster.length}${d.capped?'+':''} patient${roster.length===1?'':'s'}` : '';
+    listEl.innerHTML = roster.length
+      ? roster.map(rosterRow).join('')
+      : '<div style="color:var(--ink-mute);padding:16px">No patients are enrolled in a monitoring program yet.</div>';
+  }catch(e){
+    document.getElementById('ciN').textContent='0';
+    checkinEl.innerHTML='';
+    listEl.innerHTML='<div style="color:var(--alert);padding:16px">Couldn’t load the roster. Reload the page.</div>';
+  }
+}
+load();
 </script>
 </body>
 </html>

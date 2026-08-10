@@ -159,18 +159,18 @@ h1,h2,h3,h4,.nm,.vit .n,.sec-h b{font-family:'Nunito','OpenSans',sans-serif}
     <a href="/bhw-patient-monitor-list.html" style="display:inline-flex;align-items:center;gap:7px;margin:0 20px 4px;padding:8px 12px;border-radius:9px;background:rgba(255,255,255,.08);color:#cfe0dc;text-decoration:none;font-size:11.5px;font-weight:700">‹ All patients</a>
 
     <div class="pcard">
-      <div class="av" id="pAv">JR</div>
-      <div class="nm" id="pNm">Jordan Rivera</div>
-      <div class="sub" id="pSub">Female · 01.28.1968 · #10428</div>
-      <div class="phone" id="pPhone">📞 940-637-5470</div>
+      <div class="av" id="pAv">…</div>
+      <div class="nm" id="pNm">Loading…</div>
+      <div class="sub" id="pSub">—</div>
+      <div class="phone" id="pPhone">📞 —</div>
     </div>
 
     <div class="pmeta">
-      <div><div class="k">Insurance</div><div class="v" id="pIns">Aetna</div></div>
-      <div><div class="k">Member #</div><div class="v" id="pMem">W2325235</div></div>
-      <div class="full"><div class="k">Address</div><div class="v" id="pAddr">3517 Camden Pl, Baltimore MD</div></div>
-      <div><div class="k">Directive</div><div class="v" id="pDir">POLST · 07/15/24</div></div>
-      <div><div class="k">PCP</div><div class="v" id="pPcp">NP Amaris</div></div>
+      <div><div class="k">Insurance</div><div class="v" id="pIns">—</div></div>
+      <div><div class="k">Member #</div><div class="v" id="pMem">—</div></div>
+      <div class="full"><div class="k">Address</div><div class="v" id="pAddr">—</div></div>
+      <div><div class="k">Program</div><div class="v" id="pDir">—</div></div>
+      <div><div class="k">Next visit</div><div class="v" id="pPcp">—</div></div>
     </div>
 
     <div class="act">
@@ -294,7 +294,7 @@ h1,h2,h3,h4,.nm,.vit .n,.sec-h b{font-family:'Nunito','OpenSans',sans-serif}
         <!-- COL 3 · Vitals + Labs + PFT -->
         <div class="col">
           <div class="card pad">
-            <div class="sec-h"><b>Vitals</b><span class="eb">Last 30 days</span></div>
+            <div class="sec-h"><b>Vitals</b><span class="eb">Sample — device feed pending</span></div>
             <div class="vit">
               <div class="ic"><svg viewBox="0 0 24 24"><path d="M6 20V10M12 20V4M18 20v-7"/></svg></div>
               <div><div class="n">165 <small>lbs</small></div><div class="lb">Weight</div></div>
@@ -318,7 +318,7 @@ h1,h2,h3,h4,.nm,.vit .n,.sec-h b{font-family:'Nunito','OpenSans',sans-serif}
           </div>
 
           <div class="card pad">
-            <div class="sec-h"><b>Labs</b><span class="eb">Aug 2026 · fasting</span></div>
+            <div class="sec-h"><b>Labs</b><span class="eb">Sample — chart feed pending</span></div>
             <table class="labs">
               <thead><tr><th>Marker</th><th>Value</th><th class="rg">Range</th><th>Normal</th></tr></thead>
               <tbody>
@@ -353,37 +353,48 @@ h1,h2,h3,h4,.nm,.vit .n,.sec-h b{font-family:'Nunito','OpenSans',sans-serif}
 </div>
 
 <script>
-// Populate the patient identity from ?patient=<id>. On deploy this would fetch
-// the chart from the data layer; here a small demo map keyed to the roster ids
-// lets each Patient Monitor row open the right person. Labs/vitals below stay
-// as representative demo values until the live record is wired.
-const PATIENTS={
-  '10428':{name:'Jordan Rivera',sub:'Female · 01.28.1968 · #10428',phone:'940-637-5470',ins:'Aetna',mem:'W2325235',addr:'3517 Camden Pl, Baltimore MD',dir:'POLST · 07/15/24',pcp:'NP Amaris',
-    act:[['a','New message','“My left knee is worse on stairs.”','8:32 AM · today'],['ok','Checked in — Flow visit','Arrived, rooming in progress','8:19 AM · today'],['w','Symptom check updated','Bloating ↑, energy 5/10','Yesterday · 6:10 PM']]},
-  '20591':{name:'Marcus Bell',sub:'Male · 03.14.1961 · #20591',phone:'410-555-0148',ins:'CareFirst BCBS',mem:'C8841203',addr:'88 Linden Ave, Baltimore MD',dir:'— none on file',pcp:'NP Amaris',
-    act:[['a','Urgent text','Out of lisinopril — needs a refill before Monday.','8:40 AM · today'],['ok','Checked in — Follow-up','In the waiting room','8:32 AM · today'],['w','Lab review pending','Flow panel back, needs provider read','Yesterday']]},
-  '20144':{name:'Priya Nair',sub:'Female · 09.02.1979 · #20144',phone:'443-555-0192',ins:'UnitedHealthcare',mem:'U5560112',addr:'204 Maple Ct, Towson MD',dir:'— none on file',pcp:'NP Amaris',
-    act:[['ok','In room 2','Rooming complete, ready for provider','8:10 AM · today'],['a','Voicemail','Question about lab fasting instructions','Yesterday · 4:20 PM'],['w','Mood check-in','PHQ-9 trending down','2 days ago']]},
-  '20777':{name:'Dennis Cole',sub:'Male · 12.19.1955 · #20777',phone:'240-555-0166',ins:'Medicare',mem:'1EG4-TE5-MK72',addr:'19 Oak Hill Rd, Columbia MD',dir:'POLST · 02/03/25',pcp:'NP Amaris',
-    act:[['a','New message','Uploaded the cardiology records you asked for.','25m ago'],['a','New message','“Is my ApoE result back?”','Yesterday'],['ok','Care plan sent','CharmEd annual plan delivered','3 days ago']]},
-  '20310':{name:'Sofia Herrera',sub:'Female · 06.27.1988 · #20310',phone:'301-555-0175',ins:'Cigna',mem:'CG7781290',addr:'77 Bayview Dr, Annapolis MD',dir:'— none on file',pcp:'NP Amaris',
-    act:[['w','Scheduled 10:30','Annual Wellness Visit today','—'],['ok','Prior auth received','CareFirst response, sleep study','1h ago'],['ok','Screener complete','GAD-7 within range','Yesterday']]},
-  '20488':{name:'Leo Park',sub:'Male · 04.05.1972 · #20488',phone:'240-555-0133',ins:'Aetna',mem:'W9910042',addr:'451 Cedar St, Rockville MD',dir:'— none on file',pcp:'NP Amaris',
-    act:[['ok','Scheduled 11:15','Flow follow-up today','—'],['ok','Appt confirmed','Moved to Sep 24 last week','Yesterday'],['w','ABI ordered','Vascular testing pending','2 days ago']]},
-};
+const API='/.netlify/functions/monitor-data';
+const KEY='02142022'; // matches the DASH_KEY shared key used by Front Desk
 function initials(n){return (n||'?').split(/[ ,]+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();}
-(function(){
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const set=(el,v)=>{const e=document.getElementById(el); if(e) e.textContent=(v==null||v==='')?'—':v;};
+function fmtDate(d){ if(!d) return ''; const t=new Date(d.slice(0,10)+'T00:00:00'); return isNaN(t)?'':t.toLocaleDateString('en-US',{month:'2-digit',day:'2-digit',year:'numeric'}); }
+
+(async function(){
   const id=new URLSearchParams(location.search).get('patient');
-  const p=PATIENTS[id]; if(!p) return; // unknown/no id → keep default (Jordan)
-  const set=(el,v)=>{const e=document.getElementById(el); if(e) e.textContent=v;};
-  set('pAv',initials(p.name)); set('pNm',p.name); set('pSub',p.sub);
-  document.getElementById('pPhone').innerHTML='📞 '+p.phone;
-  set('pIns',p.ins); set('pMem',p.mem); set('pAddr',p.addr); set('pDir',p.dir); set('pPcp',p.pcp);
-  document.title=p.name+' — Patient Monitor · crewOS';
-  const rows=(p.act||[]).map(a=>`<div class="arow"><span class="dot dot-${a[0]}"></span><div class="x"><b>${a[1]}</b><p>${a[2]}</p><span class="tm">${a[3]}</span></div></div>`).join('');
-  if(rows) document.getElementById('pAct').innerHTML=rows;
-  const nNew=(p.act||[]).filter(a=>a[0]==='a').length;
-  document.getElementById('pActN').textContent=nNew?nNew+' new':'up to date';
+  const blank=['pNm','pSub','pIns','pMem','pAddr','pDir','pPcp'];
+  if(!id){ set('pNm','No patient selected'); blank.slice(1).forEach(k=>set(k,'—'));
+    document.getElementById('pAv').textContent='—';
+    document.getElementById('pAct').innerHTML='<div style="color:var(--ink-mute,#9aa7a2);padding:8px 2px;font-size:12px">Open a patient from the roster to see their activity.</div>';
+    document.getElementById('pActN').textContent=''; return; }
+  document.getElementById('pAv').textContent='…'; set('pNm','Loading…'); blank.slice(1).forEach(k=>set(k,'—'));
+  try{
+    const r=await fetch(`${API}?patient=${encodeURIComponent(id)}&key=${encodeURIComponent(KEY)}`);
+    const d=await r.json();
+    if(!r.ok||!d.patient) throw new Error(d.error||'not found');
+    const p=d.patient;
+    document.getElementById('pAv').textContent=initials(p.name);
+    set('pNm',p.name);
+    set('pSub',[p.gender, fmtDate(p.dob), p.mrn?('#'+p.mrn):''].filter(Boolean).join(' · '));
+    document.getElementById('pPhone').innerHTML='📞 '+esc(p.phone||'—');
+    set('pIns',[p.payer, p.mco].filter(Boolean).join(' · '));
+    set('pMem',p.member);
+    set('pAddr',p.address);
+    set('pDir',(p.program||[]).join(' · '));               // repurposed field: Program
+    set('pPcp',p.nextVisit?fmtDate(p.nextVisit):'—');       // repurposed field: Next visit
+    document.title=(p.name||'Patient')+' — Patient Monitor · crewOS';
+    const rows=(d.activity||[]).map(a=>{
+      const dot=/urgent|breach/i.test(a.priority||'')?'a':(/done|resolved|complete/i.test(a.status||'')?'ok':'w');
+      const title=esc([a.type,a.source].filter(Boolean).join(' · ')||'Request');
+      return `<div class="arow"><span class="dot dot-${dot}"></span><div class="x"><b>${title}</b><p>${esc(a.summary||'')}</p><span class="tm">${esc(fmtDate(a.received)||'')} · ${esc(a.status||'')}</span></div></div>`;
+    }).join('');
+    document.getElementById('pAct').innerHTML = rows || '<div style="color:var(--ink-mute,#9aa7a2);padding:8px 2px;font-size:12px">No requests on file for this patient.</div>';
+    document.getElementById('pActN').textContent=(d.activity||[]).length?((d.activity.length)+' on file'):'up to date';
+  }catch(e){
+    document.getElementById('pAv').textContent='—'; set('pNm','Patient not found');
+    document.getElementById('pAct').innerHTML='<div style="color:var(--alert,#b0525a);padding:8px 2px;font-size:12px">Couldn’t load this patient. Go back to the roster and try again.</div>';
+    document.getElementById('pActN').textContent='';
+  }
 })();
 </script>
 </body>
