@@ -80,7 +80,9 @@ async function createQueueEntry({ patientId, patientName, from, summary, source,
     body: JSON.stringify({ parent: { database_id: process.env.QUEUE_DB_ID }, properties: props }),
   });
   if (!res.ok) return { ok: false, error: (await res.text()).slice(0, 300) };
-  return { ok: true, matched: !!patientId };
+  // Return the Request ID so public callers (e.g. Care Connect) can show the
+  // patient a reference they can quote when they phone in.
+  return { ok: true, matched: !!patientId, reference: reqId };
 }
 
 // Verify a Dialpad webhook body. Requires an HS256 JWT signed with the shared

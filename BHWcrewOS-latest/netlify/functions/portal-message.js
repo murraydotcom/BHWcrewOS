@@ -72,5 +72,5 @@ exports.handler = async (event) => {
   });
 
   if (!out.ok) return res(502, { error: "Couldn't send right now — please call the office." }, origin);
-  return res(200, { ok: true, matched: !!match.patientId }, origin);
+  return res(200, { ok: true, matched: !!match.patientId, reference: out.reference }, origin);
 };
