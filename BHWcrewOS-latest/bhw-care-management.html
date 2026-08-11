@@ -95,7 +95,7 @@ async function api(fn, payload){
 function gate(msg){
   app.innerHTML = '<div class="gate"><h2 style="margin:0 0 8px">Sign in to crewOS</h2>'+
     '<p class="msg" style="padding:6px 0">'+esc(msg||"This board uses your crewOS session. Open it from inside crewOS after signing in.")+'</p>'+
-    '<a class="btn" href="/index.html" target="_top" style="text-decoration:none">Go to crewOS sign-in</a></div>';
+    '<a class="btn" href="/crewos" target="_top" style="text-decoration:none">Go to crewOS sign-in</a></div>';
   document.getElementById("controls").style.display="none";
 }
 

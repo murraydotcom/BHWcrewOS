@@ -79,7 +79,7 @@ async function api(fn,payload){
   return {ok:r.ok,status:r.status,d:d};
 }
 function gate(msg){
-  app.innerHTML='<div class="gate"><h2 style="justify-content:center">Sign in to crewOS</h2><p class="msg">'+esc(msg||"Open this from inside crewOS after signing in.")+'</p><a class="btn" href="/index.html" target="_top" style="text-decoration:none">Go to crewOS sign-in</a></div>';
+  app.innerHTML='<div class="gate"><h2 style="justify-content:center">Sign in to crewOS</h2><p class="msg">'+esc(msg||"Open this from inside crewOS after signing in.")+'</p><a class="btn" href="/crewos" target="_top" style="text-decoration:none">Go to crewOS sign-in</a></div>';
   document.getElementById("controls").style.display="none";
 }
 
