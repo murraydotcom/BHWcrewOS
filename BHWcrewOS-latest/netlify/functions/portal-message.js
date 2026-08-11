@@ -17,7 +17,7 @@
 
 const { matchPatientByPhone, createQueueEntry, digits } = require("./lib/triage");
 
-const ORIGIN_OK = /^(https?:\/\/localhost(:\d+)?|https:\/\/([a-z0-9-]+\.)*netlify\.app|https:\/\/([a-z0-9-]+\.)*bhwmedical\.org)$/i;
+const ORIGIN_OK = /^(https?:\/\/localhost(:\d+)?|https:\/\/([a-z0-9-]+\.)*netlify\.app|https:\/\/([a-z0-9-]+\.)*(bhwmedical\.org|mybhw\.(com|org)))$/i;
 
 function cors(origin) {
   const h = { "Content-Type": "application/json", "Cache-Control": "no-store" };
