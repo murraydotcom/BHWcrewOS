@@ -7,6 +7,16 @@
 # the staff/employee side — it is not the public patient site.
 # force = true is required: without it Netlify serves the real index.html that
 # exists at "/" (crewOS) and the rewrite never fires.
+#
+# Side effect: Netlify treats "/" and "/index.html" as the SAME url, so the
+# forced rewrite below also captures /index.html — which means links into crewOS
+# can't use /index.html (they'd bounce back to HQ). crewOS is therefore reached
+# at /crewos, which rewrites to the real app. Keep this rule ABOVE the "/" rule.
+[[redirects]]
+  from = "/crewos"
+  to = "/index.html"
+  status = 200
+
 [[redirects]]
   from = "/"
   to = "/hq.html"
