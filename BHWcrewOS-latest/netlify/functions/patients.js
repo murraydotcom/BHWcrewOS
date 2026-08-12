@@ -15,11 +15,93 @@
 // comes back empty for now. If a plain text/select ICD field is ever added
 // under one of the names below, it lights up automatically.
 
-const { queryDb, P, getSession, json } = require("./_lib");
+const { queryDb, httpJson, P, getSession, json } = require("./_lib");
 
 // The authoritative Patients Master List (front-desk MASTER_DB_ID). The
 // literal is the confirmed database id, used only when the env var is unset.
 const MASTER_DB = process.env.MASTER_DB_ID || "2cf580758d3080f0825de4bbfb6c7528";
+
+// Map a Master-List payer/plan onto the register form's Insurance options
+// (NP_INS in index.html). Unknown → "" (left blank; the raw payer is shown).
+function mapInsurance(payer, plan) {
+  const s = `${payer || ""} ${plan || ""}`.toLowerCase();
+  if (/dual|qmb|medicare.*medicaid|medicaid.*medicare/.test(s)) return "Medicare + Medicaid";
+  if (/cigna/.test(s)) return "Cigna";
+  if (/aetna/.test(s)) return "Aetna";
+  if (/united|uhc|optum/.test(s)) return "UnitedHealthcare";
+  if (/tricare/.test(s)) return "Tricare";
+  if (/hopkins|ehp|priority partners/.test(s)) return "Johns Hopkins EHP";
+  if (/carefirst|bcbs|blue\s*cross|bluechoice/.test(s)) return "CareFirst BCBS";
+  if (/medicaid|physicians care|amerigroup|molina/.test(s)) return "Medicaid";
+  if (/medicare/.test(s)) return "Medicare";
+  if (/self.?pay|cash/.test(s)) return "Self-Pay";
+  return "";
+}
+
+const titleCase = (s) => String(s || "").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+
+// A human insurance label that combines the specific plan / Medicaid MCO name
+// with the payer program — e.g. "Maryland Physicians Care Medicaid", "CareFirst
+// Community Medicaid", "United Healthcare Medicare", "Aetna". Medicaid MCO codes
+// expand to their plan name; a real Insurance Plan Name wins over a generic one.
+const MCO_PLAN = {
+  "MPC": "Maryland Physicians Care",
+  "UHC Medicaid": "United Healthcare",
+  "CareFirst Community": "CareFirst Community",
+  "United Healthcare Medicare": "United Healthcare",
+  "FFS": "Fee-for-Service",
+};
+function insuranceLabel(payer, mco, plan) {
+  const type = /carefirst/i.test(payer || "") ? "CareFirst" : (payer ? titleCase(payer) : "");
+  const planClean = String(plan || "").trim();
+  let name = "";
+  if (planClean && !/^(medicaid|medicare|commercial|self.?pay)$/i.test(planClean)) name = titleCase(planClean);
+  else if (mco && MCO_PLAN[mco]) name = MCO_PLAN[mco];
+  if (name) {
+    const flat = name.toLowerCase().replace(/[^a-z]/g, "");
+    const tflat = type.toLowerCase().replace(/[^a-z]/g, "");
+    // Append the program only for Medicaid/Medicare, and only if not already in the name.
+    if (/^(medicaid|medicare)$/i.test(type) && !flat.includes(tflat)) return `${name} ${type}`;
+    return name;
+  }
+  return type;
+}
+
+// Search the Patients Master List by name or BHW control number and return a
+// small, register-form-shaped list so front desk can pull an existing patient
+// in without retyping. One row per patient (this DB is already deduped).
+async function masterSearch(q) {
+  const res = await httpJson("POST", `https://api.notion.com/v1/databases/${MASTER_DB}/query`, {
+    filter: {
+      or: [
+        { property: "Patient Name", title: { contains: q } },
+        { property: "Patient Ctl No", rich_text: { contains: q } },
+      ],
+    },
+    page_size: 25,
+  });
+  if (!res.ok) throw new Error(`Notion ${res.status}`);
+  return (res.data.results || [])
+    .map((pg) => {
+      const p = pg.properties;
+      return {
+        id: pg.id,
+        name: P.title(p["Patient Name"]),
+        bhwId: P.text(p["Patient Ctl No"]),
+        dob: (P.date(p["DOB"]) || "").slice(0, 10),
+        payer: P.sel(p["Payer"]) || P.text(p["Payer Name"]),
+        insuranceLabel: insuranceLabel(P.sel(p["Payer"]), P.sel(p["Medicaid MCO"]), P.text(p["Insurance Plan Name"])),
+        insurance: mapInsurance(P.sel(p["Payer"]), P.text(p["Insurance Plan Name"])),
+        memberId: P.text(p["Insurance Member ID"]),
+        mbi: P.text(p["Medicare MBI"]),
+        email: p["Email"]?.email || "",
+        chart: P.text(p["MRN"]),
+      };
+    })
+    .filter((r) => r.name)
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .slice(0, 12);
+}
 
 const ICD_PROP_CANDIDATES = [
   "ICD-10 Codes", "ICD-10", "ICD10 Codes", "ICD10", "ICD Codes",
@@ -96,6 +178,12 @@ exports.handler = async (event) => {
   try { body = JSON.parse(event.body || "{}"); } catch { return json(400, { error: "Bad JSON" }); }
 
   try {
+    if (body.action === "master-search") {
+      const q = String(body.q || "").trim();
+      if (q.length < 2) return json(200, { patients: [] });
+      return json(200, { patients: await masterSearch(q) });
+    }
+
     if (body.action === "list") {
       const patients = (await queryDb(MASTER_DB))
         .map(shape)

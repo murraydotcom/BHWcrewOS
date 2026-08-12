@@ -20,18 +20,64 @@
 // Because bulk export is async and Netlify functions are short-lived, the work
 // is split into actions the front-end drives: status → start → poll → awv.
 //
-// Env (Netlify), all required to arm:
+// Credentials (private key, client token, key id, group id, base) can come from
+// EITHER Netlify env vars OR a Netlify Blob — the Blob wins when both are set.
+// This matters because a DPC private key is a 4096-bit RSA PEM (~3.2 KB): with
+// the client token it fills AWS Lambda's hard 4 KB env-var budget by itself and
+// breaks every function's deploy. So the private key (and, if you like, the rest)
+// lives in a Blob, seeded once via the session-gated "install" action below —
+// never in an env var, never in git.
+//
 //   DPC_CLIENT_TOKEN  — the client token ("golden macaroon") from the DPC portal
-//   DPC_PRIVATE_KEY   — PEM private key whose public key is registered with DPC
+//   DPC_PRIVATE_KEY   — PEM private key whose public key is registered with DPC (keep in the Blob)
 //   DPC_PUBLIC_KEY_ID — the key id (kid) DPC assigned to that public key
 //   DPC_GROUP_ID      — your attribution Group (roster) id
 //   DPC_BASE          — optional; defaults to the production base URL
 
 const crypto = require("crypto");
 const https = require("https");
+const { getStore } = require("@netlify/blobs");
 const { getSession, json } = require("./_lib");
 
-const DPC_BASE = (process.env.DPC_BASE || "https://api.dpc.cms.gov/api/v1").replace(/\/+$/, "");
+const BLOB_STORE = "dpc-config";
+const BLOB_KEY = "secrets";
+const PROD_BASE = "https://api.dpc.cms.gov/api/v1";
+
+// Netlify Functions auto-configure Blobs via NETLIFY_BLOBS_CONTEXT. If that's
+// absent, fall back to explicit config from env vars. NOTE: Netlify reserves the
+// NETLIFY_* prefix and silently drops any custom var with that name, so the
+// fallback must use unprefixed names — set BLOBS_SITE_ID + BLOBS_TOKEN to arm it.
+function getBlobStore() {
+  const siteID = process.env.BLOBS_SITE_ID || process.env.NETLIFY_SITE_ID || process.env.SITE_ID;
+  const token = process.env.BLOBS_TOKEN || process.env.NETLIFY_BLOBS_TOKEN || process.env.NETLIFY_API_TOKEN || process.env.NETLIFY_AUTH_TOKEN;
+  if (siteID && token) return getStore({ name: BLOB_STORE, siteID, token });
+  return getStore(BLOB_STORE);
+}
+
+// Merge Blob-stored secrets over the env-var defaults. The Blob is the source of
+// truth for anything set there; env fills the gaps. Degrades to env-only if Blobs
+// aren't reachable (e.g. local `netlify dev` without blob context).
+async function loadConfig() {
+  const cfg = {
+    clientToken: process.env.DPC_CLIENT_TOKEN || "",
+    privateKey: (process.env.DPC_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
+    publicKeyId: process.env.DPC_PUBLIC_KEY_ID || "",
+    base: (process.env.DPC_BASE || "").replace(/\/+$/, ""),
+    groupId: process.env.DPC_GROUP_ID || "",
+  };
+  try {
+    const stored = await getBlobStore().get(BLOB_KEY, { type: "json" });
+    if (stored && typeof stored === "object") {
+      if (stored.clientToken) cfg.clientToken = String(stored.clientToken);
+      if (stored.privateKey) cfg.privateKey = String(stored.privateKey).replace(/\\n/g, "\n");
+      if (stored.publicKeyId) cfg.publicKeyId = String(stored.publicKeyId);
+      if (stored.base) cfg.base = String(stored.base).replace(/\/+$/, "");
+      if (stored.groupId) cfg.groupId = String(stored.groupId);
+    }
+  } catch { /* env-only fallback */ }
+  if (!cfg.base) cfg.base = PROD_BASE;
+  return cfg;
+}
 
 // Claims-based gaps-in-care. Each measure = the billing codes that satisfy it +
 // how recently one must appear (months). This is a screening aid derived from
@@ -55,8 +101,7 @@ const MEASURES = [
 ];
 const CODE_TO_MEASURE = (() => { const m = {}; for (const meas of MEASURES) for (const c of meas.codes) m[c] = meas.name; return m; })();
 
-const configured = () =>
-  !!(process.env.DPC_CLIENT_TOKEN && process.env.DPC_PRIVATE_KEY && process.env.DPC_PUBLIC_KEY_ID);
+const isConfigured = (cfg) => !!(cfg.clientToken && cfg.privateKey && cfg.publicKeyId);
 
 const b64url = (x) => Buffer.from(x).toString("base64url");
 
@@ -79,27 +124,24 @@ function httpReq(method, url, headers, body) {
 }
 
 // Signed-JWT client assertion (RS384) per the DPC auth flow.
-function clientAssertion() {
-  const clientToken = process.env.DPC_CLIENT_TOKEN;
-  const tokenUrl = `${DPC_BASE}/Token/auth`;
+function clientAssertion(cfg) {
+  const tokenUrl = `${cfg.base}/Token/auth`;
   const now = Math.floor(Date.now() / 1000);
-  const header = { alg: "RS384", kid: process.env.DPC_PUBLIC_KEY_ID, typ: "JWT" };
-  const payload = { iss: clientToken, sub: clientToken, aud: tokenUrl, jti: crypto.randomUUID(), iat: now, exp: now + 290 };
+  const header = { alg: "RS384", kid: cfg.publicKeyId, typ: "JWT" };
+  const payload = { iss: cfg.clientToken, sub: cfg.clientToken, aud: tokenUrl, jti: crypto.randomUUID(), iat: now, exp: now + 290 };
   const signingInput = `${b64url(JSON.stringify(header))}.${b64url(JSON.stringify(payload))}`;
-  // Netlify may store the PEM single-line with literal "\n" — normalize either form.
-  const privateKey = (process.env.DPC_PRIVATE_KEY || "").replace(/\\n/g, "\n");
-  const sig = crypto.sign("RSA-SHA384", Buffer.from(signingInput), privateKey);
+  const sig = crypto.sign("RSA-SHA384", Buffer.from(signingInput), cfg.privateKey);
   return `${signingInput}.${b64url(sig)}`;
 }
 
-async function accessToken() {
+async function accessToken(cfg) {
   const params = new URLSearchParams({
     grant_type: "client_credentials",
     scope: "system/*.*",
     client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-    client_assertion: clientAssertion(),
+    client_assertion: clientAssertion(cfg),
   }).toString();
-  const res = await httpReq("POST", `${DPC_BASE}/Token/auth`,
+  const res = await httpReq("POST", `${cfg.base}/Token/auth`,
     { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" }, params);
   if (res.status < 200 || res.status >= 300) throw new Error(`DPC token ${res.status}: ${res.text.slice(0, 200)}`);
   const tok = JSON.parse(res.text || "{}").access_token;
@@ -157,16 +199,55 @@ exports.handler = async (event) => {
   let body; try { body = JSON.parse(event.body || "{}"); } catch { return json(400, { error: "Bad JSON" }); }
   const action = body.action || "status";
 
-  if (action === "status") return json(200, { configured: configured(), base: DPC_BASE, groupSet: !!process.env.DPC_GROUP_ID });
-  if (!configured()) return json(503, { error: "DPC isn't configured yet — set DPC_CLIENT_TOKEN, DPC_PRIVATE_KEY, DPC_PUBLIC_KEY_ID (and DPC_GROUP_ID) in Netlify after completing DPC onboarding." });
+  const cfg = await loadConfig();
+
+  if (action === "status") {
+    return json(200, {
+      configured: isConfigured(cfg),
+      base: cfg.base,
+      groupSet: !!cfg.groupId,
+      // booleans only — never echo the secrets back
+      stored: { clientToken: !!cfg.clientToken, privateKey: !!cfg.privateKey, publicKeyId: !!cfg.publicKeyId, groupId: !!cfg.groupId },
+    });
+  }
+
+  // One-time (repeatable) install of DPC credentials into the Blob. Session-gated
+  // like everything else here. Merges over whatever is already stored, so you can
+  // set the private key now and add the group id later. Never returns the values.
+  // Each Blobs step is caught individually so a failure surfaces its real reason
+  // instead of a generic 500.
+  if (action === "install") {
+    // Collect + validate before touching Blobs.
+    const incoming = {};
+    const set = [];
+    for (const k of ["clientToken", "privateKey", "publicKeyId", "base", "groupId"]) {
+      if (typeof body[k] === "string" && body[k].trim()) { incoming[k] = body[k].trim(); set.push(k); }
+    }
+    if (!set.length) return json(400, { error: "Nothing to install — send at least one of: privateKey, clientToken, publicKeyId, base, groupId." });
+    if (incoming.privateKey && !/-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----/.test(incoming.privateKey))
+      return json(400, { error: "privateKey doesn't look like a PEM (missing a -----BEGIN … PRIVATE KEY----- line)." });
+
+    let store;
+    try { store = getBlobStore(); }
+    catch (e) { return json(500, { error: "Netlify Blobs unavailable: " + String(e.message || e) }); }
+    let cur;
+    try { cur = (await store.get(BLOB_KEY, { type: "json" })) || {}; }
+    catch (e) { return json(500, { error: "Blobs read failed: " + String(e.message || e) }); }
+    const next = { ...cur, ...incoming };
+    try { await store.setJSON(BLOB_KEY, next); }
+    catch (e) { return json(500, { error: "Blobs write failed: " + String(e.message || e) }); }
+    return json(200, { ok: true, installed: set });
+  }
+
+  if (!isConfigured(cfg)) return json(503, { error: "DPC isn't configured yet — install the private key (and client token / key id) via the credentials panel, or set the DPC_* env vars." });
 
   try {
     if (action === "start") {
-      const groupId = body.groupId || process.env.DPC_GROUP_ID;
-      if (!groupId) return json(400, { error: "No DPC_GROUP_ID (attribution roster) set." });
-      const token = await accessToken();
+      const groupId = body.groupId || cfg.groupId;
+      if (!groupId) return json(400, { error: "No DPC group (attribution roster) id set." });
+      const token = await accessToken(cfg);
       const res = await httpReq("GET",
-        `${DPC_BASE}/Group/${encodeURIComponent(groupId)}/$export?_type=ExplanationOfBenefit`,
+        `${cfg.base}/Group/${encodeURIComponent(groupId)}/$export?_type=ExplanationOfBenefit`,
         authHeaders(token, { Prefer: "respond-async" }));
       if (res.status !== 202) return json(502, { error: `DPC $export ${res.status}: ${res.text.slice(0, 200)}` });
       return json(200, { ok: true, job: res.headers["content-location"] || res.headers["Content-Location"] });
@@ -174,7 +255,7 @@ exports.handler = async (event) => {
 
     if (action === "poll") {
       if (!body.job) return json(400, { error: "Missing job URL" });
-      const token = await accessToken();
+      const token = await accessToken(cfg);
       const res = await httpReq("GET", body.job, authHeaders(token));
       if (res.status === 202) return json(200, { done: false, progress: res.headers["x-progress"] || "in progress" });
       if (res.status === 200) {
@@ -187,7 +268,7 @@ exports.handler = async (event) => {
 
     if (action === "awv") {
       if (!body.file) return json(400, { error: "Missing file URL" });
-      const token = await accessToken();
+      const token = await accessToken(cfg);
       const res = await httpReq("GET", body.file, authHeaders(token, { Accept: "application/fhir+ndjson" }));
       if (res.status < 200 || res.status >= 300) return json(502, { error: `DPC file ${res.status}` });
       return json(200, summarize(parseClaims(res.text)));

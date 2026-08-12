@@ -59,17 +59,30 @@ label{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:upperca
   <div class="panel">
     <div class="eyebrow">What this is</div>
     <h2>CMS Data at the Point of Care</h2>
-    <p class="lede">DPC returns Medicare claims for your attributed patients — including each patient's last <b>Annual Wellness Visit</b> (from HCPCS G0438/G0439), which eligibility checks can't provide. Use the steps below to verify the connection once the <b>DPC_*</b> environment variables are set in Netlify. Sign in with your crewOS PIN first.</p>
+    <p class="lede">DPC returns Medicare claims for your attributed patients — including each patient's last <b>Annual Wellness Visit</b> (from HCPCS G0438/G0439), which eligibility checks can't provide. Sign in with your crewOS PIN, install your credentials once (step 1), then verify the connection (step 2). Your <b>private key</b> is stored server-side in Netlify Blobs — it's too large for Netlify's function environment limit — so it never lives in an env var or in the page.</p>
   </div>
 
   <div class="panel">
-    <h2><span class="step">1</span>Check connection</h2>
+    <h2><span class="step">1</span>Install credentials <span style="font-size:11px;font-weight:600;color:var(--ink-soft);text-transform:none;letter-spacing:0">— one time, stored securely</span></h2>
+    <p class="lede">Paste your DPC <b>private key</b> (PEM) here while signed in. It's saved to Netlify Blobs on the server — never rendered back, never committed to git. Client token, key id, base, and group id are optional here (they can also stay as <b>DPC_*</b> env vars); anything you set here overrides the env var.</p>
+    <div class="f"><label>Private key (PEM)</label><textarea id="inKey" rows="5" placeholder="-----BEGIN PRIVATE KEY-----&#10;…&#10;-----END PRIVATE KEY-----" style="width:100%;margin-top:4px;font-family:ui-monospace,monospace;font-size:12px;padding:9px 11px;border:1.5px solid var(--line);border-radius:9px;resize:vertical"></textarea></div>
+    <div class="f"><label>Client token — optional</label><input id="inTok" placeholder="paste macaroon (overrides DPC_CLIENT_TOKEN)"></div>
+    <div class="row" style="gap:9px;flex-wrap:wrap;margin-bottom:10px">
+      <div style="flex:1;min-width:160px"><label>Public key id — optional</label><input id="inKid" placeholder="64f3488f-…"></div>
+      <div style="flex:1;min-width:160px"><label>Group id — optional</label><input id="inGid" placeholder="attribution roster id"></div>
+    </div>
+    <div class="f"><label>API base — optional</label><input id="inBase" placeholder="https://sandbox.dpc.cms.gov/api/v1"></div>
+    <div class="row" style="margin-top:8px"><button class="btn" id="installBtn" type="button" disabled>Install securely</button><span id="installMsg" class="lede" style="margin:0"></span></div>
+  </div>
+
+  <div class="panel">
+    <h2><span class="step">2</span>Check connection</h2>
     <div class="row"><button class="btn" id="statusBtn" type="button">Check status</button><span id="statusBadge"></span></div>
     <pre id="statusOut" style="display:none"></pre>
   </div>
 
   <div class="panel">
-    <h2><span class="step">2</span>Run a test export</h2>
+    <h2><span class="step">3</span>Run a test export</h2>
     <p class="lede">Starts a bulk export of Explanation-of-Benefit claims for your roster (the <b>DPC_GROUP_ID</b>), then poll until the files are ready. Bulk export is asynchronous — polling every few seconds is normal.</p>
     <div class="row">
       <button class="btn" id="startBtn" type="button" disabled>Start export</button>
@@ -79,7 +92,7 @@ label{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:upperca
   </div>
 
   <div class="panel">
-    <h2><span class="step">3</span>Last AWV + gaps in care per patient</h2>
+    <h2><span class="step">4</span>Last AWV + gaps in care per patient</h2>
     <p class="lede">Reads each patient's last Annual Wellness Visit and their <b>open care gaps</b> — preventive/quality services (screenings, vaccines, diabetes measures) with no recent Medicare claim. Claims-based screening aid; always confirm in the chart.</p>
     <div class="f"><label>Output file URL (from step 2)</label><input id="fileUrl" placeholder="https://…/Jobs/…/ExplanationOfBenefit.ndjson"></div>
     <div class="row" style="margin-top:8px"><button class="btn" id="awvBtn" type="button" disabled>Get AWV + care gaps</button></div>
@@ -103,13 +116,16 @@ let lastJob="";
 
 async function post(fn, body){
   const r=await fetch(`/.netlify/functions/${fn}`,{method:"POST",headers:{"Content-Type":"application/json",...(TOKEN?{Authorization:`Bearer ${TOKEN}`}:{})},body:JSON.stringify(body)});
-  const d=await r.json().catch(()=>({})); return {ok:r.ok,status:r.status,d};
+  const txt=await r.text();
+  let d; try{ d=JSON.parse(txt||"{}"); }catch{ d={ error:(txt||"").slice(0,400)||`HTTP ${r.status}` }; }
+  // Netlify wraps uncaught function errors as {errorMessage}; surface that too.
+  if(d&&!d.error&&d.errorMessage) d.error=d.errorMessage;
+  return {ok:r.ok,status:r.status,d};
 }
 function setConnected(name){
   const b=$("connBtn"); const on=!!TOKEN;
   b.textContent=on?(name?`✓ ${String(name).split(" ")[0]}`:"✓ Connected"):"Connect";
-  ["statusBtn","startBtn","pollBtn","awvBtn"].forEach(id=>{ if(id==="statusBtn") $(id).disabled=!on; });
-  $("startBtn").disabled=!on; $("pollBtn").disabled=!on; $("awvBtn").disabled=!on;
+  ["statusBtn","startBtn","pollBtn","awvBtn","installBtn"].forEach(id=>{ const el=$(id); if(el) el.disabled=!on; });
 }
 $("connBtn").addEventListener("click",()=>{ if(TOKEN){ if(confirm("Disconnect?")){TOKEN="";sessionStorage.removeItem("crewos_token");setConnected();} } else openSignin(); });
 async function openSignin(){ const {d}=await post("auth",{action:"roster"}); $("siStaff").innerHTML=(d.staff||[]).map(s=>`<option value="${s.id}">${esc(s.name)}${s.role?` — ${esc(s.role)}`:""}</option>`).join(""); $("siErr").style.display="none"; $("siPin").value=""; $("signin").classList.add("on"); setTimeout(()=>$("siPin").focus(),50); }
@@ -118,6 +134,22 @@ $("siGo").addEventListener("click",doLogin); $("siPin").addEventListener("keydow
 async function doLogin(){ const staffId=$("siStaff").value,pin=$("siPin").value.trim(); if(!staffId||!pin)return; const {ok,d}=await post("auth",{action:"login",staffId,pin}); if(ok&&d.token){TOKEN=d.token;sessionStorage.setItem("crewos_token",TOKEN);$("signin").classList.remove("on");setConnected(d.user?.name||d.name);} else {$("siErr").style.display="flex";$("siErrTxt").textContent=d.error||"Sign-in failed.";} }
 
 function show(el,obj){ el.style.display="block"; el.textContent=typeof obj==="string"?obj:JSON.stringify(obj,null,2); }
+
+$("installBtn").addEventListener("click",async()=>{
+  if(!TOKEN)return openSignin();
+  const payload={action:"install"};
+  const map={inKey:"privateKey",inTok:"clientToken",inKid:"publicKeyId",inGid:"groupId",inBase:"base"};
+  for(const [id,k] of Object.entries(map)){ const v=$(id).value.trim(); if(v)payload[k]=v; }
+  if(Object.keys(payload).length<2)return alert("Enter at least the private key.");
+  const msg=$("installMsg"); msg.textContent="Saving…";
+  const {ok,d,status}=await post("dpc",payload);
+  if(status===401){TOKEN="";sessionStorage.removeItem("crewos_token");setConnected();return openSignin();}
+  if(ok&&d.ok){
+    msg.innerHTML=`<span class="badge ok">Saved</span> ${esc((d.installed||[]).join(", "))}`;
+    $("inKey").value=""; $("inTok").value="";           // clear the secrets from the screen
+    setTimeout(()=>$("statusBtn").click(),300);          // auto re-check status
+  } else msg.innerHTML=`<span class="badge no">Failed</span> ${esc(d.error||"Install failed.")}`;
+});
 
 $("statusBtn").addEventListener("click",async()=>{
   if(!TOKEN)return openSignin();

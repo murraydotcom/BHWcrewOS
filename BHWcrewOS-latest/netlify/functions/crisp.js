@@ -102,6 +102,8 @@ async function writeNotionAdt(ev) {
         Facility:   { rich_text: [{ text: { content: ev.facility || '' } }] },
         Date:       ev.date ? { date: { start: ev.date } } : { date: null },
         Disposition:{ rich_text: [{ text: { content: ev.dispo || '' } }] },
+        Complexity: ev.complexity ? { select: { name: ev.complexity } } : { select: null },
+        Source:     { rich_text: [{ text: { content: ev.source || 'CRISP ENS' } }] },
       }
     })
   });
@@ -118,7 +120,8 @@ async function readNotionAdt() {
     return {
       patient: txt(P.Patient), type: P.Type?.select?.name || 'discharge',
       event: txt(P.Event), facility: txt(P.Facility),
-      date: P.Date?.date?.start || null, dispo: txt(P.Disposition), complexity: null
+      date: P.Date?.date?.start || null, dispo: txt(P.Disposition),
+      complexity: P.Complexity?.select?.name || null, source: txt(P.Source)
     };
   });
 }

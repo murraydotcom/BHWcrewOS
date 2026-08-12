@@ -114,6 +114,7 @@ const W = {
   num: (v) => ({ number: v === null || v === undefined || v === "" ? null : Number(v) }),
   rel: (ids) => ({ relation: (ids || []).filter(Boolean).map((id) => ({ id })) }),
   check: (v) => ({ checkbox: !!v }),
+  status: (v) => (v ? { status: { name: v } } : { status: null }),
 };
  
 // ---------- Sessions (HMAC-signed, no server-side store needed) ----------

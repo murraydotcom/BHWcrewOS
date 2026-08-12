@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Patient Requests — crewOS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --river:#80abbd; --linen:#f7f5f2; --clay:#b07a55; --sage:#a8b59a; --sand:#dcc8b1;
+    --teal:#4f9a95; --teal-deep:#3c7c78; --ink:#22303a; --ink-soft:#5b6b76; --ink-mute:#9aa6ad;
+    --white:#ffffff; --line:#e6e0d8; --line-2:#eee9e2;
+    --urgent:#b0525a; --ok:#5f8a63; --gold:#bf8a2f; --blue:#5b8bb0;
+    --radius:14px; --shadow:0 2px 12px rgba(34,48,58,.06);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Montserrat',sans-serif;background:var(--linen);color:var(--ink);min-height:100vh}
+  .wrap{max-width:1360px;margin:0 auto;padding:18px 20px 70px}
+
+  header{display:flex;align-items:center;gap:14px;padding:2px 2px 14px}
+  header .logo{width:42px;height:42px;border-radius:11px;background:var(--white);border:1px solid var(--line);display:grid;place-items:center;flex-shrink:0}
+  header h1{font-size:1.28rem;font-weight:800;letter-spacing:-.01em}
+  header .sub{font-size:.72rem;color:var(--ink-soft);font-weight:600;margin-top:1px}
+  header .right{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .opencount{display:flex;align-items:center;gap:9px;background:var(--white);border:1px solid var(--line);border-radius:12px;padding:7px 14px}
+  .opencount .n{font-size:1.15rem;font-weight:800;line-height:1}.opencount .n.warn{color:var(--clay)}
+  .opencount .l{font-size:.6rem;font-weight:700;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.04em;line-height:1.2}
+  .backlink{font-size:.74rem;font-weight:700;color:var(--ink-soft);text-decoration:none;padding:9px 14px;border:1px solid var(--line);border-radius:10px;background:var(--white)}
+  .backlink:hover{border-color:var(--teal)}
+
+  /* filter bar */
+  .filters{display:flex;align-items:center;gap:6px;background:linear-gradient(135deg,var(--teal),var(--teal-deep));border-radius:12px;padding:9px 12px;margin-bottom:16px;box-shadow:var(--shadow)}
+  .filters .flabel{font-size:.66rem;font-weight:800;letter-spacing:.1em;color:rgba(255,255,255,.8);text-transform:uppercase;margin-right:8px}
+  .filters button{font-family:inherit;font-size:.76rem;font-weight:700;color:rgba(255,255,255,.9);background:none;border:0;padding:7px 15px;border-radius:20px;cursor:pointer}
+  .filters button.on{background:var(--white);color:var(--teal-deep)}
+  .filters .live{margin-left:auto;font-size:.62rem;font-weight:700;color:rgba(255,255,255,.85);display:inline-flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:.04em}
+  .filters .live .pulse{width:7px;height:7px;border-radius:50%;background:#fff;animation:pl 1.6s infinite}
+  @keyframes pl{0%,100%{opacity:.35}50%{opacity:1}}
+
+  .banner{display:none;margin:0 0 14px;padding:10px 14px;border-radius:10px;font-size:.76rem;font-weight:700}
+  .banner.demo{display:block;background:#fbf1dd;border:1px solid #e6d6ad;color:#8a6a26}
+  .banner.err{display:block;background:#f6e2e2;border:1px solid #e6bcbc;color:var(--urgent)}
+
+  /* layout */
+  .layout{display:grid;grid-template-columns:1fr 240px;gap:20px;align-items:start}
+
+  /* timeline */
+  .dategroup{display:grid;grid-template-columns:66px 1fr;gap:16px;margin-bottom:6px}
+  .datenode{position:relative;text-align:center;padding-top:6px}
+  .datenode .d{font-size:1.7rem;font-weight:800;line-height:1}
+  .datenode .m{font-size:.6rem;font-weight:700;color:var(--ink-mute);letter-spacing:.06em;text-transform:uppercase;margin-top:2px}
+  .datenode .w{display:inline-block;margin-top:8px;font-size:.58rem;font-weight:800;letter-spacing:.06em;color:var(--teal-deep);border:1px solid var(--teal);border-radius:20px;padding:3px 9px;background:#fff}
+  .datenode .line{position:absolute;top:78px;bottom:-14px;left:50%;width:2px;background:var(--line);transform:translateX(-50%)}
+  .datecards{display:flex;flex-direction:column;gap:12px;padding-bottom:14px}
+
+  .rcard{background:var(--white);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+  .rcard.urgent{border-color:#e3b6ba}
+  .rc-head{display:flex;align-items:center;gap:12px;padding:14px 16px}
+  .av{border-radius:50%;display:grid;place-items:center;font-weight:800;color:#fff;flex-shrink:0}
+  .av.lg{width:44px;height:44px;font-size:.86rem;background:var(--teal)}
+  .av.sm{width:22px;height:22px;font-size:.56rem;background:var(--river)}
+  .av.un{background:#d7dee1;color:#7d8990}
+  .rc-head .nm{font-size:.98rem;font-weight:800;color:var(--teal-deep)}
+  .rc-head .rl{font-size:.7rem;color:var(--ink-soft);font-weight:600;margin-top:1px}
+  .stagepill{margin-left:auto;font-size:.62rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:6px 13px;border-radius:20px;border:1px solid var(--line)}
+  .stagepill.new{background:#f5ece4;color:#8a5a36;border-color:#e7d3c3}
+  .stagepill.ack{background:#e9f1f4;color:#3d6b7d;border-color:#cfe0e6}
+  .stagepill.prog{background:#f7efd9;color:#8a6a1f;border-color:#e6d6ad}
+  .stagepill.done{background:#e7efe4;color:#4c7350;border-color:#cadfc8}
+
+  .rc-body{padding:2px 16px 6px 16px;border-top:1px solid var(--line-2)}
+  .entry{display:flex;align-items:flex-start;gap:12px;padding:11px 0;border-bottom:1px solid var(--line-2)}
+  .entry:last-child{border-bottom:0}
+  .entry .dot{width:11px;height:11px;border-radius:50%;margin-top:3px;flex-shrink:0;box-shadow:0 0 0 3px #fff, 0 0 0 4px var(--line-2)}
+  .dot.recv{background:var(--clay)} .dot.update{background:var(--blue)} .dot.prog{background:var(--gold)} .dot.done{background:var(--ok)} .dot.urgent{background:var(--urgent)}
+  .entry .ebody{flex:1;min-width:0}
+  .entry .etime{font-size:.68rem;font-weight:800;color:var(--teal-deep);letter-spacing:.02em}
+  .entry .etext{font-size:.8rem;color:var(--ink-soft);margin-top:2px;line-height:1.45}
+  .entry .etext b{color:var(--ink);font-weight:700}
+  .entry .ewho{font-size:.68rem;font-weight:700;color:var(--ink-mute);margin-top:3px;display:flex;align-items:center;gap:6px}
+  .entry .eic{display:flex;gap:10px;align-items:center;color:var(--ink-mute);flex-shrink:0}
+  .entry .eic svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.9;cursor:pointer}
+  .entry .eic svg:hover{stroke:var(--teal)}
+
+  .rc-foot{display:flex;align-items:center;gap:10px;padding:12px 16px;background:#fcfaf6;border-top:1px solid var(--line-2)}
+  .owner{display:flex;align-items:center;gap:7px;font-size:.74rem;font-weight:700}
+  .owner.un{color:var(--ink-mute)}
+  .rc-acts{margin-left:auto;display:flex;gap:7px}
+  .btn{border:1px solid var(--line);background:var(--white);font-family:inherit;font-size:.7rem;font-weight:800;color:var(--ink);padding:8px 14px;border-radius:9px;cursor:pointer;white-space:nowrap}
+  .btn:hover{border-color:var(--teal);color:var(--teal-deep)}
+  .btn.p{background:var(--teal);border-color:var(--teal);color:#fff}.btn.p:hover{filter:brightness(.96);color:#fff}
+  .btn.done{background:var(--ok);border-color:var(--ok);color:#fff}.btn.done:hover{filter:brightness(.96);color:#fff}
+  /* one-click complete box */
+  .chk{display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:.74rem;font-weight:800;color:var(--ink-soft);user-select:none}
+  .chk .box{width:24px;height:24px;border:2px solid #cdd6d3;border-radius:8px;display:grid;place-items:center;transition:.12s;background:#fff}
+  .chk .box svg{width:15px;height:15px;stroke:#fff;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:0}
+  .chk:hover .box{border-color:var(--ok)}
+  .chk.on{color:var(--ok)}.chk.on .box{background:var(--ok);border-color:var(--ok)}.chk.on .box svg{opacity:1}
+
+  .feed .empty{background:var(--white);border:1px dashed var(--line);border-radius:14px;padding:40px;text-align:center;color:var(--ink-mute);font-weight:700;font-size:.82rem}
+
+  /* staff rail */
+  .staffrail{background:var(--white);border:1px solid var(--line);border-radius:16px;padding:14px;position:sticky;top:16px}
+  .staffrail h3{font-size:.66rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-mute);display:flex;align-items:center;gap:8px;margin-bottom:12px}
+  .staffrail h3 svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.9}
+  .srow{display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;cursor:pointer;border:1px solid transparent}
+  .srow:hover{background:#f6f3ee}
+  .srow.on{background:#eaf2f1;border-color:#cfe4e1}
+  .srow .nm{font-size:.78rem;font-weight:700}
+  .srow .ct{margin-left:auto;font-size:.66rem;font-weight:800;color:#fff;background:var(--teal);min-width:20px;height:20px;padding:0 6px;border-radius:20px;display:grid;place-items:center}
+  .srow .ct.zero{background:#d7dee1;color:#7d8990}
+  .srow.allrow{border-top:1px solid var(--line-2);border-radius:0;margin-bottom:6px;padding-top:12px;font-weight:800}
+  @media(max-width:960px){.layout{grid-template-columns:1fr}.staffrail{position:static}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo"><img src="/assets/bhw-medical-logo.png" alt="BHW" style="height:28px" onerror="this.style.display='none'"></div>
+    <div>
+      <h1>Patient Requests</h1>
+      <div class="sub">Shared journey · every request, its steps, and who owns it · <span id="me">not signed in</span></div>
+    </div>
+    <div class="right">
+      <div class="opencount"><span class="n" id="ocN">–</span><span class="l" id="ocL">open<br>requests</span></div>
+      <a class="backlink" href="/bhw-front-desk.html">← Front Desk</a>
+    </div>
+  </header>
+
+  <div class="filters">
+    <span class="flabel">Filters</span>
+    <button class="on" data-f="all"     onclick="setFilter('all',this)">All open</button>
+    <button data-f="today"    onclick="setFilter('today',this)">Today</button>
+    <button data-f="yesterday" onclick="setFilter('yesterday',this)">Yesterday</button>
+    <button data-f="unclaimed" onclick="setFilter('unclaimed',this)">Unclaimed</button>
+    <button data-f="done"     onclick="setFilter('done',this)">Completed</button>
+    <span class="live"><span class="pulse"></span><span>live · 45s</span></span>
+  </div>
+
+  <div class="banner" id="banner"></div>
+
+  <div class="layout">
+    <main class="feed" id="feed"></main>
+    <aside class="staffrail">
+      <h3><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg> Search by staff</h3>
+      <div id="staffrows"></div>
+    </aside>
+  </div>
+
+</div>
+
+<script>
+const API='/.netlify/functions';
+let TOKEN=sessionStorage.getItem('crewos_token')||'';
+let ITEMS=[];
+let FILTER='all';
+let STAFF=''; // selected staff name filter
+
+// ---- journey model ----
+function stageOf(status){
+  const s=(status||'').toLowerCase();
+  if(/done|resolved|complete|closed/.test(s)) return 'done';
+  if(/progress|working/.test(s))              return 'prog';
+  if(/ack|received|seen|claim/.test(s))       return 'ack';
+  return 'new';
+}
+const STAGE_LABEL={new:'New',ack:'Acknowledged',prog:'In progress',done:'Completed'};
+const STATUS_FOR={ new:'Not started', ack:'Acknowledged', prog:'In progress', done:'Done' };
+
+function srcLabel(source){
+  const s=(source||'').toLowerCase();
+  if(/portal/.test(s)) return 'Portal message';
+  if(/text|sms/.test(s)) return 'Text message';
+  if(/voicemail/.test(s)) return 'Voicemail';
+  if(/missed/.test(s)) return 'Missed call';
+  if(/call|phone/.test(s)) return 'Phone call';
+  if(/fax/.test(s)) return 'Fax';
+  return source||'Message';
+}
+function initials(name){return (name||'?').split(/[ ,]+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();}
+function fmtTime(iso){ if(!iso) return ''; const d=new Date(iso); let h=d.getHours(),m=d.getMinutes(); const ap=h>=12?'PM':'AM'; h=h%12||12; return h+':'+String(m).padStart(2,'0')+' '+ap; }
+function dayKey(iso){ const d=iso?new Date(iso):new Date(); return d.toISOString().slice(0,10); }
+function isHot(it){ return /overdue|urgent|breach|!/i.test(it.sla||'') || /urgent|stat|emergen/i.test(it.priority||''); }
+
+// Reconstruct the journey steps for one request from its current state
+// (or use an explicit journey array when the demo/back-end supplies one).
+function journeyOf(it){
+  if(Array.isArray(it.journey)&&it.journey.length) return it.journey;
+  const steps=[{dot:isHot(it)?'urgent':'recv',time:fmtTime(it.received),
+     text:`Request received via <b>${srcLabel(it.source)}</b>`, who:''}];
+  const st=stageOf(it.status);
+  if(it.assigned) steps.push({dot:'update',time:'',text:`Claimed`,who:it.assigned});
+  if(st==='prog') steps.push({dot:'prog',time:'',text:`In progress`,who:it.assigned});
+  if(st==='done') steps.push({dot:'done',time:'',text:`Completed`,who:it.assigned});
+  return steps;
+}
+
+// ---- filtering ----
+function todayKey(){ return new Date().toISOString().slice(0,10); }
+function yesterdayKey(){ const d=new Date(); d.setDate(d.getDate()-1); return d.toISOString().slice(0,10); }
+function passFilter(it){
+  const st=stageOf(it.status);
+  if(STAFF && (it.assigned||'')!==STAFF) return false;
+  if(FILTER==='done')      return st==='done';
+  if(FILTER==='unclaimed') return st!=='done' && !it.assigned;
+  if(FILTER==='today')     return dayKey(it.received)===todayKey();
+  if(FILTER==='yesterday') return dayKey(it.received)===yesterdayKey();
+  return st!=='done'; // 'all' = all open
+}
+
+// ---- render ----
+function render(){
+  const open=ITEMS.filter(i=>stageOf(i.status)!=='done').length;
+  const unclaimed=ITEMS.filter(i=>stageOf(i.status)!=='done'&&!i.assigned).length;
+  document.getElementById('ocN').textContent=open;
+  document.getElementById('ocN').className='n'+(unclaimed?' warn':'');
+  document.getElementById('ocL').innerHTML=unclaimed?`open · <b>${unclaimed} unclaimed</b>`:'open<br>requests';
+  try{ localStorage.setItem('bhw_open_requests',String(open)); }catch(e){}
+
+  // staff rail (counts of OPEN requests per owner)
+  const roster={};
+  ITEMS.forEach(i=>{ if(i.assigned){ roster[i.assigned]=roster[i.assigned]||0; if(stageOf(i.status)!=='done') roster[i.assigned]++; } });
+  ['Amaris Murray','Tammy Fields'].forEach(n=>{ if(!(n in roster)) roster[n]=roster[n]||0; });
+  const staffHTML=`<div class="srow allrow ${STAFF===''?'on':''}" onclick="setStaff('')"><span>Everyone</span><span class="ct ${open?'':'zero'}">${open}</span></div>`+
+    Object.keys(roster).sort().map(n=>`<div class="srow ${STAFF===n?'on':''}" onclick="setStaff('${n.replace(/'/g,"\\'")}')">
+      <span class="av sm">${initials(n)}</span><span class="nm">${n}</span><span class="ct ${roster[n]?'':'zero'}">${roster[n]}</span></div>`).join('');
+  document.getElementById('staffrows').innerHTML=staffHTML;
+
+  // feed grouped by date (desc)
+  const shown=ITEMS.filter(passFilter);
+  const groups={};
+  shown.forEach(it=>{ const k=dayKey(it.received); (groups[k]=groups[k]||[]).push(it); });
+  const keys=Object.keys(groups).sort().reverse();
+  const feed=document.getElementById('feed');
+  if(!keys.length){ feed.innerHTML=`<div class="empty">No requests match this view.</div>`; return; }
+  feed.innerHTML=keys.map(k=>{
+    const d=new Date(k+'T00:00:00');
+    const day=d.getDate(), mon=d.toLocaleString('en',{month:'short'}).toUpperCase()+' '+d.getFullYear();
+    const wd=d.toLocaleString('en',{weekday:'short'}).toUpperCase();
+    const cards=groups[k].sort((a,b)=>(b.received||'').localeCompare(a.received||'')).map(cardHTML).join('');
+    return `<div class="dategroup">
+      <div class="datenode"><div class="d">${day}</div><div class="m">${mon}</div><div class="w">${wd}</div><div class="line"></div></div>
+      <div class="datecards">${cards}</div></div>`;
+  }).join('');
+}
+
+function cardHTML(it){
+  const st=stageOf(it.status), hot=isHot(it);
+  const steps=journeyOf(it).map(s=>`
+    <div class="entry">
+      <span class="dot ${s.dot}"></span>
+      <div class="ebody">
+        ${s.time?`<div class="etime">${s.time}</div>`:''}
+        <div class="etext">${s.text}</div>
+        ${s.who?`<div class="ewho"><span class="av sm">${initials(s.who)}</span>${s.who}</div>`:''}
+      </div>
+      <div class="eic"><svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div>
+    </div>`).join('');
+  const owner = it.assigned
+    ? `<span class="owner"><span class="av sm">${initials(it.assigned)}</span>${it.assigned}</span>`
+    : `<span class="owner un"><span class="av sm un">?</span>Unclaimed — needs an owner</span>`;
+  const isDone = st==='done';
+  const claimBtn = (!isDone && !it.assigned) ? `<button class="btn" onclick="claim('${it.id}')">Claim</button>` : '';
+  const acts = `${claimBtn}
+    <label class="chk ${isDone?'on':''}" title="${isDone?'Completed — click to reopen':'Mark this request complete'}" onclick="toggleDone('${it.id}',${isDone})">
+      <span class="box"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>${isDone?'Completed':'Complete'}
+    </label>`;
+  const sum = it.summary && !(Array.isArray(it.journey)&&it.journey.length)
+    ? `<div class="entry"><span class="dot update"></span><div class="ebody"><div class="etext">${(it.summary||'').replace(/</g,'&lt;')}</div></div></div>` : '';
+  return `<div class="rcard ${hot?'urgent':''}">
+    <div class="rc-head">
+      <span class="av lg">${initials(it.name)}</span>
+      <div><div class="nm">${it.name||'Unknown patient'}</div><div class="rl">${srcLabel(it.source)}${it.phone?' · '+it.phone:''}</div></div>
+      <span class="stagepill ${st}">${STAGE_LABEL[st]}</span>
+    </div>
+    <div class="rc-body">${steps}${sum}</div>
+    <div class="rc-foot">${owner}<span class="rc-acts">${acts}</span></div>
+  </div>`;
+}
+
+function setFilter(f,btn){ FILTER=f; document.querySelectorAll('.filters button').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); render(); }
+function setStaff(n){ STAFF=n; render(); }
+
+// ---- data ----
+async function load(){
+  const banner=document.getElementById('banner');
+  try{
+    const r=await fetch(`${API}/frontdesk-data`,{headers:TOKEN?{Authorization:`Bearer ${TOKEN}`}:{}});
+    if(r.ok){ const d=await r.json(); if(Array.isArray(d.items)){ ITEMS=d.items; banner.className='banner'; render(); return; } }
+    throw new Error('no live feed');
+  }catch(e){
+    ITEMS=[]; banner.className='banner err';
+    banner.textContent='Couldn’t reach the live triage queue. Reload the page; if it keeps happening, open Front Desk and sign in to crewOS again.';
+    render();
+  }
+}
+async function post(action,body){
+  const r=await fetch(`${API}/action`,{method:'POST',headers:{'Content-Type':'application/json',...(TOKEN?{Authorization:`Bearer ${TOKEN}`}:{})},body:JSON.stringify({action,...body})});
+  return {ok:r.ok,status:r.status,d:await r.json().catch(()=>({}))};
+}
+function needAuth(){ const b=document.getElementById('banner'); b.className='banner err'; b.textContent='Sign in to crewOS first (open Front Desk and connect), then reload — claiming or completing a request records who did it.'; }
+async function claim(id){ if(!TOKEN){needAuth();return;} const {ok,status}=await post('request-status',{id,status:'In progress',claim:true}); if(status===401){TOKEN='';sessionStorage.removeItem('crewos_token');needAuth();return;} if(ok) load(); }
+async function advance(id,stage){ if(!TOKEN){needAuth();return;} const {ok,status}=await post('request-status',{id,status:STATUS_FOR[stage]}); if(status===401){TOKEN='';sessionStorage.removeItem('crewos_token');needAuth();return;} if(ok) load(); }
+// One-click complete box: check to resolve (stamps you as owner); uncheck to reopen.
+async function toggleDone(id,isDone){ if(!TOKEN){needAuth();return;}
+  const body=isDone?{id,status:STATUS_FOR.prog}:{id,status:STATUS_FOR.done,claim:true};
+  const {ok,status}=await post('request-status',body);
+  if(status===401){TOKEN='';sessionStorage.removeItem('crewos_token');needAuth();return;}
+  if(ok) load();
+}
+
+// (demo request fallback removed — the page shows the live triage queue or a clean empty/error state)
+
+if(TOKEN){ document.getElementById('me').textContent='signed in'; }
+load();
+setInterval(load,45000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) load(); });
+</script>
+</body>
+</html>
