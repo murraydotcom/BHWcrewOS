@@ -353,8 +353,8 @@ const TOOLS=[
   {name:'Medicare (DPC)',accent:'var(--peri)',tag:'Setup',href:'/bhw-dpc.html',
    desc:'Check the CMS Data at the Point of Care connection and read each patient’s last Annual Wellness Visit from Medicare claims.',
    icon:'<path d="M3 12h4l2 5 4-10 2 5h6"/>'},
-  {name:'Claim Laundering',accent:'var(--gold)',tag:'Soon',href:null,
-   desc:'The provider claims app — where clinicians scrub, submit, and track their own claims. Standalone login, coming soon.',
+  {name:'Claim Laundering',accent:'var(--gold)',tag:'Live',href:'https://bhw-rcm.netlify.app/provider/',external:true,
+   desc:'The provider claims app — where clinicians scrub, submit, and track their own claims. Opens the RCM provider workspace.',
    icon:'<path d="M3 9h18M7 15h2m4 0h4"/><rect x="3" y="4" width="18" height="16" rx="2.5"/>'},
 ];
 document.getElementById('tools').innerHTML=TOOLS.map(function(t){
@@ -363,7 +363,7 @@ document.getElementById('tools').innerHTML=TOOLS.map(function(t){
     '<p>'+t.desc+'</p>'+
     (t.href?'<span class="go">Open <span class="arrow">→</span></span>':'<span class="go" style="opacity:.7">Not yet live</span>')+'</div>';
   return t.href
-    ? '<a class="tool" style="--accent:'+t.accent+'" href="'+t.href+'">'+inner+'</a>'
+    ? '<a class="tool" style="--accent:'+t.accent+'" href="'+t.href+'"'+(t.external?' target="_blank" rel="noopener"':'')+'>'+inner+'</a>'
     : '<div class="tool locked" style="--accent:'+t.accent+'">'+inner+'</div>';
 }).join('');
 
