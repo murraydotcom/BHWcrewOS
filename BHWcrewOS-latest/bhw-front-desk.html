@@ -143,7 +143,7 @@
     // Live open-request count on the Patient Requests button — so the front desk
     // always sees how many patient requests are waiting for an owner.
     (function(){
-      fetch('/.netlify/functions/frontdesk-data').then(r=>r.ok?r.json():null).then(d=>{
+      fetch('/.netlify/functions/frontdesk-data?key=02142022').then(r=>r.ok?r.json():null).then(d=>{
         if(!d||!Array.isArray(d.items)) return;
         var open=d.items.filter(function(i){return !/done|resolved|complete|closed/i.test(i.status||'');}).length;
         var b=document.getElementById('reqBadge');
@@ -494,33 +494,60 @@ async function lookup(){
     const res=await fetch(`${API}?q=${encodeURIComponent(q)}${DASH_KEY?`&key=${DASH_KEY}`:''}`);
     if(!res.ok)throw new Error(res.status);
     const d=await res.json();
-    if(!d.patient){$('lkstatus').textContent='No match found — could be a new patient. Check spelling or search the Master List directly.';return;}
-    const p=d.patient;
-    window.lastPatient=p; $('p-name').textContent=p.name;
-    $('p-meta').textContent=[p.ctl,p.dob?`DOB ${p.dob}`:null].filter(Boolean).join(' · ');
-    const open=$('p-open');
-    if(p.pageUrl){ open.href=p.pageUrl; open.style.display=''; } else { open.style.display='none'; }
-    $('p-info').innerHTML=[
-      p.allergies?`<div class="kv allergy"><b>⚠️ Allergies:</b> ${p.allergies}</div>`:'<div class="kv allergy nkda"><b>Allergies:</b> not on file — verify</div>',
-      p.phone?`<div class="kv"><b>Phone:</b> ${p.phone}</div>`:'',
-      p.payer?`<div class="kv"><b>Payer:</b> ${p.payer}${p.mco?' — '+p.mco:''}</div>`:'',
-      p.member?`<div class="kv"><b>Member #:</b> ${p.member}</div>`:'',
-      p.lastVisit?`<div class="kv"><b>Last visit:</b> ${p.lastVisit.slice(0,10)}</div>`:'',
-      p.nextVisit?`<div class="kv"><b>Next visit:</b> ${p.nextVisit.slice(0,10)}</div>`:'<div class="kv"><b>Next visit:</b> none scheduled</div>',
-      p.status?`<div class="kv"><b>Status:</b> <span class="pill open">${p.status}</span></div>`:'',
-      p.meds?`<div class="kv medblock"><b>Medications:</b><br>${p.meds.replace(/\n/g,'<br>')}</div>`:'',
-      p.snapshot?`<div class="kv snapnote">Clinical snapshot as of ${p.snapshot.slice(0,10)} — chart is source of truth</div>`:''
-    ].join('');
-    $('p-reqs').innerHTML=(d.requests&&d.requests.length)?d.requests.map(r=>`
-      <div class="req ${/urgent/i.test(r.priority||'')?'urgent':''}">
-        <div class="top"><span>${r.type||'Request'} · ${r.source||''}</span><span class="when">${r.received||''}</span></div>
-        <div class="sub">${r.summary||''} ${r.status?`— <b>${r.status}</b>`:''}</div>
-      </div>`).join(''):'<div class="req"><div class="sub">No logged requests yet.</div></div>';
-    $('profile').classList.add('show');
-    $('lkstatus').textContent='';
-    // Auto-populate the referral form from the Master List record.
-    fillReferralPatient(p,{auto:true});
+    // Back-compat: older responses returned only {patient}; new ones return {matches,[patient]}.
+    const matches=d.matches||(d.patient?[{id:d.patient.id,name:d.patient.name,ctl:d.patient.ctl,dob:d.patient.dob,phone:d.patient.phone}]:[]);
+    if(!matches.length){$('lkstatus').textContent='No match found — could be a new patient. Check spelling or search the Master List directly.';return;}
+    if(d.patient){ renderProfile(d.patient,d.requests); return; }   // single hit → straight to the profile
+    renderChooser(matches);                                          // multiple → let the desk pick
   }catch(e){$('lkstatus').textContent='Lookup failed — check the connection or search the Master List directly.';}
+}
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+// When a name matches more than one patient (e.g. two "Amaris"), show every
+// match and let the front desk choose the right person.
+function renderChooser(matches){
+  $('profile').classList.remove('show');
+  const rows=matches.map(m=>`<button type="button" onclick="selectPatient('${m.id}')" style="display:block;width:100%;text-align:left;padding:10px 12px;margin:6px 0;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:pointer;font:inherit">
+      <b>${esc(m.name)}</b><span style="color:var(--ink-soft)">${m.dob?` · DOB ${fmtDate(m.dob)}`:''}${m.ctl?` · ${esc(m.ctl)}`:''}${m.phone?` · ${esc(m.phone)}`:''}</span>
+    </button>`).join('');
+  $('lkstatus').innerHTML=`<div style="margin-top:8px"><div style="font-weight:600;margin-bottom:4px">${matches.length} patients match — choose one:</div>${rows}</div>`;
+}
+// Load full detail for the chosen patient.
+async function selectPatient(id){
+  $('lkstatus').textContent='Loading…';
+  try{
+    const res=await fetch(`${API}?pid=${encodeURIComponent(id)}${DASH_KEY?`&key=${DASH_KEY}`:''}`);
+    if(!res.ok)throw new Error(res.status);
+    const d=await res.json();
+    if(!d.patient){$('lkstatus').textContent='Could not load that patient — try again.';return;}
+    renderProfile(d.patient,d.requests);
+  }catch(e){$('lkstatus').textContent='Lookup failed — try again.';}
+}
+// Render one patient's profile card + their logged requests.
+function renderProfile(p,requests){
+  window.lastPatient=p; $('p-name').textContent=p.name;
+  $('p-meta').textContent=[p.ctl,p.dob?`DOB ${p.dob}`:null].filter(Boolean).join(' · ');
+  const open=$('p-open');
+  if(p.pageUrl){ open.href=p.pageUrl; open.style.display=''; } else { open.style.display='none'; }
+  $('p-info').innerHTML=[
+    p.allergies?`<div class="kv allergy"><b>⚠️ Allergies:</b> ${p.allergies}</div>`:'<div class="kv allergy nkda"><b>Allergies:</b> not on file — verify</div>',
+    p.phone?`<div class="kv"><b>Phone:</b> ${p.phone}</div>`:'',
+    p.payer?`<div class="kv"><b>Payer:</b> ${p.payer}${p.mco?' — '+p.mco:''}</div>`:'',
+    p.member?`<div class="kv"><b>Member #:</b> ${p.member}</div>`:'',
+    p.lastVisit?`<div class="kv"><b>Last visit:</b> ${p.lastVisit.slice(0,10)}</div>`:'',
+    p.nextVisit?`<div class="kv"><b>Next visit:</b> ${p.nextVisit.slice(0,10)}</div>`:'<div class="kv"><b>Next visit:</b> none scheduled</div>',
+    p.status?`<div class="kv"><b>Status:</b> <span class="pill open">${p.status}</span></div>`:'',
+    p.meds?`<div class="kv medblock"><b>Medications:</b><br>${p.meds.replace(/\n/g,'<br>')}</div>`:'',
+    p.snapshot?`<div class="kv snapnote">Clinical snapshot as of ${p.snapshot.slice(0,10)} — chart is source of truth</div>`:''
+  ].join('');
+  $('p-reqs').innerHTML=(requests&&requests.length)?requests.map(r=>`
+    <div class="req ${/urgent/i.test(r.priority||'')?'urgent':''}">
+      <div class="top"><span>${r.type||'Request'} · ${r.source||''}</span><span class="when">${r.received||''}</span></div>
+      <div class="sub">${r.summary||''} ${r.status?`— <b>${r.status}</b>`:''}</div>
+    </div>`).join(''):'<div class="req"><div class="sub">No logged requests yet.</div></div>';
+  $('profile').classList.add('show');
+  $('lkstatus').textContent='';
+  // Auto-populate the referral form from the Master List record.
+  fillReferralPatient(p,{auto:true});
 }
 $('go').addEventListener('click',lookup);
 $('q').addEventListener('keydown',e=>{if(e.key==='Enter')lookup();});
