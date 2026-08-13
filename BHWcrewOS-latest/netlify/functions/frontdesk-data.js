@@ -16,6 +16,65 @@ const digits = s => (s || '').replace(/\D/g, '');
 const text = p => (p?.rich_text?.[0]?.plain_text) || (p?.title?.[0]?.plain_text) || '';
 const sel = p => p?.select?.name || p?.status?.name || '';
 
+// Full patient card from a Master List page (used for a single/selected match).
+function shapePatient(page) {
+  const P = page.properties;
+  return {
+    id: page.id,
+    pageUrl: P['Patient Page']?.url || '',
+    name: text(P['Patient Name']),
+    ctl: text(P['Patient Ctl No']),
+    dob: P['DOB']?.date?.start || '',
+    phone: P['Phone']?.phone_number || '',
+    payer: sel(P['Payer']) || text(P['Payer']),
+    mco: sel(P['Medicaid MCO']) || sel(P['MCO']) || text(P['MCO']),
+    member: text(P['MRN / Member ID']) || text(P['Member ID']),
+    status: sel(P['Status']) || sel(P['Patient Status']) ||
+            (P['Program Enrollment']?.multi_select || []).map(m => m.name).join(', '),
+    allergies: text(P['Allergies']),
+    meds: text(P['Medications']),
+    lastVisit: P['Last Visit']?.date?.start || P['Last Visit Date']?.date?.start || '',
+    nextVisit: P['Next Visit']?.date?.start || '',
+    snapshot: P['Snapshot Updated']?.date?.start || '',
+  };
+}
+
+// Lightweight row for the multi-match chooser.
+function matchRow(page) {
+  const P = page.properties;
+  return {
+    id: page.id,
+    name: text(P['Patient Name']),
+    ctl: text(P['Patient Ctl No']),
+    dob: P['DOB']?.date?.start || '',
+    phone: P['Phone']?.phone_number || '',
+  };
+}
+
+// A patient's recent requests from the triage queue (via the Patient relation).
+async function fetchRequests(pageId) {
+  const qres = await fetch(`${NOTION}/databases/${QUEUE_DB}/query`, {
+    method: 'POST', headers: H(),
+    body: JSON.stringify({
+      filter: { property: 'Patient', relation: { contains: pageId } },
+      sorts: [{ property: 'Received', direction: 'descending' }],
+      page_size: 8,
+    }),
+  });
+  const qdata = await qres.json();
+  return (qdata.results || []).map(r => {
+    const p = r.properties;
+    return {
+      type: sel(p['Request Type']),
+      source: sel(p['Source']),
+      priority: sel(p['Priority']),
+      status: sel(p['Status']),
+      received: p['Received']?.date?.start?.slice(0, 10) || '',
+      summary: text(p['Summary']),
+    };
+  });
+}
+
 exports.handler = async (event) => {
   try {
     if (process.env.DASH_KEY && (event.queryStringParameters?.key !== process.env.DASH_KEY))
@@ -169,6 +228,21 @@ exports.handler = async (event) => {
     }
 
     const q = (event.queryStringParameters?.q || '').trim();
+    const pid = (event.queryStringParameters?.pid || '').trim();
+
+    // ---- DIRECT PATIENT: ?pid=<pageId> -> full detail for one chosen match ----
+    if (pid) {
+      const pres = await fetch(`${NOTION}/pages/${pid}`, { headers: H() });
+      if (!pres.ok) return { statusCode: 200, body: JSON.stringify({ patient: null }) };
+      const page = await pres.json();
+      const patient = shapePatient(page);
+      const requests = await fetchRequests(page.id);
+      return {
+        statusCode: 200,
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+        body: JSON.stringify({ patient, requests }),
+      };
+    }
 
     // ---- INBOX MODE: no q -> return the live activity feed ----
     if (!q) {
@@ -205,7 +279,7 @@ exports.handler = async (event) => {
 
     const isPhone = digits(q).length >= 7;
 
-    // ---- 1. find patient on master list ----
+    // ---- find matching patients on the master list ----
     let filter;
     if (isPhone) {
       // phone stored as phone_number property "Phone"; match on digits via contains of last 7
@@ -216,7 +290,7 @@ exports.handler = async (event) => {
 
     let res = await fetch(`${NOTION}/databases/${process.env.MASTER_DB_ID}/query`, {
       method: 'POST', headers: H(),
-      body: JSON.stringify({ filter, page_size: 3 }),
+      body: JSON.stringify({ filter, page_size: 25 }),
     });
     let data = await res.json();
 
@@ -224,7 +298,7 @@ exports.handler = async (event) => {
     if (isPhone && (!data.results || !data.results.length)) {
       res = await fetch(`${NOTION}/databases/${process.env.MASTER_DB_ID}/query`, {
         method: 'POST', headers: H(),
-        body: JSON.stringify({ filter: { property: 'Phone', phone_number: { contains: digits(q).slice(-4) } }, page_size: 10 }),
+        body: JSON.stringify({ filter: { property: 'Phone', phone_number: { contains: digits(q).slice(-4) } }, page_size: 25 }),
       });
       data = await res.json();
       // narrow client-side on full digit match
@@ -232,55 +306,30 @@ exports.handler = async (event) => {
         digits(r.properties?.Phone?.phone_number || '').endsWith(digits(q).slice(-10)));
     }
 
-    const page = data.results?.[0];
-    if (!page) return { statusCode: 200, body: JSON.stringify({ patient: null }) };
+    const results = (data.results || []).filter(r => text(r.properties?.['Patient Name']));
+    if (!results.length) return { statusCode: 200, body: JSON.stringify({ matches: [], patient: null }) };
 
-    const P = page.properties;
-    const patient = {
-      id: page.id,
-      pageUrl: P['Patient Page']?.url || '',
-      name: text(P['Patient Name']),
-      ctl: text(P['Patient Ctl No']),
-      dob: P['DOB']?.date?.start || '',
-      phone: P['Phone']?.phone_number || '',
-      payer: sel(P['Payer']) || text(P['Payer']),
-      mco: sel(P['Medicaid MCO']) || sel(P['MCO']) || text(P['MCO']),
-      member: text(P['MRN / Member ID']) || text(P['Member ID']),
-      status: sel(P['Status']) || sel(P['Patient Status']) ||
-              (P['Program Enrollment']?.multi_select || []).map(m => m.name).join(', '),
-      allergies: text(P['Allergies']),
-      meds: text(P['Medications']),
-      lastVisit: P['Last Visit']?.date?.start || P['Last Visit Date']?.date?.start || '',
-      nextVisit: P['Next Visit']?.date?.start || '',
-      snapshot: P['Snapshot Updated']?.date?.start || '',
-    };
+    // Return EVERY match so the desk can pick the right person when names
+    // collide (e.g. two "Amaris"). Sorted by name for a stable chooser.
+    const matches = results.map(matchRow).sort((a, b) => a.name.localeCompare(b.name));
 
-    // ---- 2. pull their requests from the triage queue (via Patient relation) ----
-    const qres = await fetch(`${NOTION}/databases/${QUEUE_DB}/query`, {
-      method: 'POST', headers: H(),
-      body: JSON.stringify({
-        filter: { property: 'Patient', relation: { contains: page.id } },
-        sorts: [{ property: 'Received', direction: 'descending' }],
-        page_size: 8,
-      }),
-    });
-    const qdata = await qres.json();
-    const requests = (qdata.results || []).map(r => {
-      const p = r.properties;
+    // Exactly one match -> include full detail, so single-hit search is unchanged.
+    if (results.length === 1) {
+      const patient = shapePatient(results[0]);
+      const requests = await fetchRequests(results[0].id);
       return {
-        type: sel(p['Request Type']),
-        source: sel(p['Source']),
-        priority: sel(p['Priority']),
-        status: sel(p['Status']),
-        received: p['Received']?.date?.start?.slice(0, 10) || '',
-        summary: text(p['Summary']),
+        statusCode: 200,
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+        body: JSON.stringify({ matches, patient, requests }),
       };
-    });
+    }
 
+    // Multiple matches -> return the list; the page shows a chooser and then
+    // requests full detail for the chosen patient via ?pid=<id>.
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-      body: JSON.stringify({ patient, requests }),
+      body: JSON.stringify({ matches, patient: null }),
     };
   } catch (e) {
     return { statusCode: 500, body: JSON.stringify({ error: String(e) }) };
