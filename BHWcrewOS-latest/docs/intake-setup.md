@@ -60,3 +60,13 @@ Redeploy the site so the functions pick up the secret, then send a test (e.g.
 text the Dialpad number). A row should appear in the Front Desk inbox within a
 few seconds, matched to a patient by phone when the number is on the Master
 List.
+
+### Secret must match on both sides
+
+The single most common failure: the secret Dialpad **signs** events with (stored
+on the Dialpad webhook, visible via `GET /api/v2/webhooks` under
+`signature.secret`) must equal the Netlify `DIALPAD_WEBHOOK_SECRET`. If they
+differ, `lib/triage.js` rejects every event as an invalid signature and nothing
+reaches the queue — with no error the desk can see. When reusing an existing
+webhook, read its `signature.secret` and set Netlify's env var to that exact
+value (then redeploy), or recreate the webhook with the known secret.
