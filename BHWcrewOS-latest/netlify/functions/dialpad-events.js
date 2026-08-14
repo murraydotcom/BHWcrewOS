@@ -38,9 +38,19 @@ exports.handler = async (event) => {
       return { statusCode: 401, body: "bad signature or unrecognized payload" };
     }
 
+    // Trace the parsed event (PHI-safe: field names + scalars only, no content)
+    // so we can see Dialpad's real payload shape.
+    console.log("dialpad-events parsed:", JSON.stringify({
+      keys: Object.keys(payload || {}),
+      direction: payload.direction || null,
+      state: payload.state || payload.call_state || payload.event_type || payload.event || null,
+      hasText: !!(payload.text || payload.text_content || payload.message?.text),
+      fromLast4: String(payload.from_number || payload.external_number || payload.contact?.phone || payload.from?.phone_number || "").slice(-4),
+    }));
+
     // Inbound only.
     const dir = (payload.direction || "").toLowerCase();
-    if (dir && dir !== "inbound") return { statusCode: 200, body: "ignored: not inbound" };
+    if (dir && dir !== "inbound") { console.log("dialpad-events ignored: not inbound;", dir); return { statusCode: 200, body: "ignored: not inbound" }; }
 
     const from = payload.from_number || payload.external_number || payload.contact?.phone || payload.from?.phone_number || "";
 
@@ -86,17 +96,20 @@ exports.handler = async (event) => {
         source = "Missed Call (Phone)";
         summary = "Missed call — no message left";
       } else {
+        console.log("dialpad-events ignored: unclassified call/other; state=", state);
         return { statusCode: 200, body: "ignored: answered/other call event" };
       }
     }
 
-    if (!from && !summary) return { statusCode: 200, body: "ignored: no content" };
+    if (!from && !summary) { console.log("dialpad-events ignored: no content"); return { statusCode: 200, body: "ignored: no content" }; }
 
     const { patientId, patientName } = await matchPatientByPhone(from);
     const r = await createQueueEntry({ patientId, patientName, from, summary, source, link, receivedISO: new Date().toISOString() });
+    console.log("dialpad-events write:", JSON.stringify({ source, created: r.ok, matched: r.matched, error: r.error || null }));
     if (!r.ok) return { statusCode: 502, body: `notion error: ${r.error}` };
     return { statusCode: 200, body: JSON.stringify({ ok: true, source, matched: r.matched }) };
   } catch (e) {
+    console.log("dialpad-events error:", String((e && e.message) || e));
     return { statusCode: 500, body: String(e) };
   }
 };
