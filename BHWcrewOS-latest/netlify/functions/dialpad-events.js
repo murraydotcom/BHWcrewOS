@@ -17,10 +17,26 @@ exports.handler = async (event) => {
     // Fail closed: require the signing secret so this is never an open write.
     if (!process.env.DIALPAD_WEBHOOK_SECRET) return { statusCode: 503, body: "DIALPAD_WEBHOOK_SECRET not set" };
 
+    // Netlify may base64-encode the request body (depends on content-type);
+    // decode so the raw JWT reaches the verifier intact.
+    const rawBody = event.isBase64Encoded
+      ? Buffer.from(event.body || "", "base64").toString("utf8")
+      : (event.body || "");
+
     let payload;
-    try { payload = parseDialpadBody(event.body || "", process.env.DIALPAD_WEBHOOK_SECRET); }
-    catch { return { statusCode: 400, body: "bad payload" }; }
-    if (payload === null) return { statusCode: 401, body: "bad signature or unrecognized payload" };
+    try { payload = parseDialpadBody(rawBody, process.env.DIALPAD_WEBHOOK_SECRET); }
+    catch (e) { console.log("dialpad-events parse error:", e.message); return { statusCode: 400, body: "bad payload" }; }
+    if (payload === null) {
+      // PHI-safe diagnostic: structure only, no message content.
+      console.log("dialpad-events reject:", JSON.stringify({
+        b64: !!event.isBase64Encoded,
+        ct: event.headers?.["content-type"] || event.headers?.["Content-Type"] || "",
+        len: rawBody.length,
+        dots: (rawBody.match(/\./g) || []).length,
+        head: rawBody.slice(0, 12),
+      }));
+      return { statusCode: 401, body: "bad signature or unrecognized payload" };
+    }
 
     // Inbound only.
     const dir = (payload.direction || "").toLowerCase();
