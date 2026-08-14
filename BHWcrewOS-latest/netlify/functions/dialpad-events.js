@@ -39,10 +39,30 @@ exports.handler = async (event) => {
       const vmLink = payload.voicemail_link || payload.recording_url || payload.voicemail?.link || payload.voicemail?.recording_url || "";
       const transcript = payload.transcription || payload.voicemail?.transcription || payload.transcript || "";
       const connected = !!(payload.was_connected || payload.answered) || Number(payload.duration) > 0 || /connected|answered/.test(state);
-      const isVoicemail = /voicemail|voice_?mail/.test(state) || !!vmLink || !!transcript;
+
+      // Dialpad Ai recap / action items (fires after a call is processed).
+      // We surface the ACTION ITEMS — the follow-ups a call generates — not the
+      // raw transcript, so answered calls that need work reach the desk without
+      // dumping full transcripts. Requires the call subscription to include the
+      // recap_summary state. Field names are matched defensively because the
+      // exact recap payload varies; tune once a real recap is seen in the logs.
+      const rawItems = payload.action_items || payload.recap?.action_items || payload.call_recap?.action_items || payload.recap_summary?.action_items || [];
+      const actionItems = (Array.isArray(rawItems) ? rawItems : [])
+        .map((a) => (typeof a === "string" ? a : a?.text || a?.content || a?.name || a?.summary || "")).filter(Boolean);
+      const recapText = (typeof payload.recap_summary === "string" ? payload.recap_summary : payload.recap_summary?.text || payload.recap_summary?.summary) ||
+        payload.recap?.summary || payload.call_recap?.summary || "";
+      const isRecap = /recap|action[_\s-]?item|call[_\s-]?transcription/.test(state) || actionItems.length > 0;
+
+      const isVoicemail = /voicemail|voice_?mail/.test(state) || (!isRecap && (!!vmLink || !!transcript));
       const isMissed = /missed|no[_\s-]?answer|abandon|hangup|unanswered/.test(state) && !connected;
 
-      if (isVoicemail) {
+      if (isRecap && (actionItems.length || recapText)) {
+        source = "Phone Call"; // buckets into "Calls & voicemails" on Front Desk
+        summary = actionItems.length
+          ? `☎️ Call action items:\n${actionItems.map((i) => `• ${i}`).join("\n")}${recapText ? `\n\nRecap: ${recapText}` : ""}`
+          : `☎️ Call recap: ${recapText}`;
+        link = payload.recording_url || payload.call_recording_url || payload.recording?.url || undefined;
+      } else if (isVoicemail) {
         source = "Voicemail";
         summary = transcript ? `Voicemail: ${transcript}` : "New voicemail";
         link = vmLink || undefined;

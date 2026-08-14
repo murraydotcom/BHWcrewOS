@@ -42,13 +42,17 @@ Base URL in production: `https://crewhq.bhwmedical.org`
    isn't correctly signed, so the endpoint can't be spoofed.
 3. **Subscribe events** to that `webhook_id`:
    - Inbound SMS: `POST /api/v2/subscriptions/sms` `{ "webhook_id": …, "direction": "inbound", "enabled": true }`
-   - Calls: `POST /api/v2/subscriptions/call` `{ "webhook_id": …, "enabled": true, "call_states": ["hangup","voicemail"] }`
+   - Calls: `POST /api/v2/subscriptions/call` `{ "webhook_id": …, "enabled": true, "call_states": ["hangup","voicemail","recap_summary"] }`
    - Some Dialpad accounts also require a `target_type` / `target_id` (company or
      office) on the subscription — get IDs from `GET /api/v2/companies` /
      `GET /api/v2/offices`. Confirm field names against developers.dialpad.com.
 
-Answered and outbound events are ignored by the function; only inbound
-texts, missed calls, and voicemails become queue rows.
+Answered/outbound call *lifecycle* events are ignored. What becomes a queue row:
+inbound texts, missed calls, voicemails (with Dialpad's voicemail transcript),
+and — from the `recap_summary` state — the **Dialpad Ai action items** for a
+call (the follow-ups it generated), surfaced instead of the raw transcript. If
+a recap carries no action items, only its short recap summary is logged; calls
+with neither are skipped so the inbox stays actionable.
 
 ## After configuring
 
