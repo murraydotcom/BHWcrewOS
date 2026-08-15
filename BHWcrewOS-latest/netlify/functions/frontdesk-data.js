@@ -28,7 +28,7 @@ function shapePatient(page) {
     phone: P['Phone']?.phone_number || '',
     payer: sel(P['Payer']) || text(P['Payer']),
     mco: sel(P['Medicaid MCO']) || sel(P['MCO']) || text(P['MCO']),
-    member: text(P['MRN / Member ID']) || text(P['Member ID']),
+    member: text(P['Insurance Member ID']) || text(P['Insurance ID']) || text(P['MRN / Member ID']) || text(P['Member ID']),
     status: sel(P['Status']) || sel(P['Patient Status']) ||
             (P['Program Enrollment']?.multi_select || []).map(m => m.name).join(', '),
     allergies: text(P['Allergies']),

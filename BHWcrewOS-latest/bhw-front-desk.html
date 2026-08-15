@@ -406,7 +406,7 @@ function renderInbox(items){
         ? `<button class="act" data-id="${it.id}" data-a="reopen">Reopen</button>`
         : `${started?'':`<button class="act" data-id="${it.id}" data-a="start">Start</button>`}<button class="act primary" data-id="${it.id}" data-a="done">✓ Done</button>${it.phone?`<button class="act reply" data-id="${it.id}" data-phone="${it.phone}">💬 Reply</button>`:''}`;
       el.insertAdjacentHTML('beforeend',`<div class="inb ${breach?'breach':''}">
-        <div class="t ${done?'done':''}"><span>${it.name||it.type||'Item'}${it.type?' · '+it.type:''}</span><span class="w">${when}</span></div>
+        <div class="t ${done?'done':''}"><span>${it.name||it.type||it.phone||it.source||'Message'}${it.type?' · '+it.type:''}</span><span class="w">${when}</span></div>
         <div class="s ${done?'done':''}">${it.summary||it.source||''}${it.assigned?' — '+it.assigned:''}${breach?' · <b style="color:var(--urgent)">'+it.sla+'</b>':''}</div>
         <div class="actrow">${btn}</div>
       </div>`);
