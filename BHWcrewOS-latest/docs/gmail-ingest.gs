@@ -23,7 +23,7 @@
  * link opens for signed-in workspace members, keeping PHI in the BAA account).
  */
 
-var ENDPOINT = 'https://bhwcrewos.netlify.app/.netlify/functions/email-ingest';
+var ENDPOINT = 'https://crewhq.bhwmedical.org/.netlify/functions/email-ingest';
 var SECRET   = 'PASTE_THE_SAME_VALUE_AS_EMAIL_INGEST_SECRET';
 var LABEL    = 'crewOS-ingested';
 // Where to file inbound fax PDFs. Leave '' for My Drive root, or paste a folder
