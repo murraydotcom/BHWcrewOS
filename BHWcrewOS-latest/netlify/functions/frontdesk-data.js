@@ -102,7 +102,7 @@ exports.handler = async (event) => {
         // send a text from the practice line via Dialpad, then stamp First Response
         const { to, text: msg } = JSON.parse(event.body || '{}');
         if (!to || !msg) return { statusCode: 400, body: JSON.stringify({ error: 'missing to/text' }) };
-        const dres = await fetch('https://dialpad.com/api/v2/sms', {
+        const dres = await fetch(`https://dialpad.com/api/v2/sms?apikey=${encodeURIComponent(process.env.DIALPAD_TOKEN||'')}`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${process.env.DIALPAD_TOKEN}`,
@@ -166,7 +166,7 @@ exports.handler = async (event) => {
         // 3. optional no-PHI nudge from the practice line
         let texted = false;
         if (notify && phone && process.env.DIALPAD_TOKEN) {
-          const nres = await fetch('https://dialpad.com/api/v2/sms', {
+          const nres = await fetch(`https://dialpad.com/api/v2/sms?apikey=${encodeURIComponent(process.env.DIALPAD_TOKEN||'')}`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${process.env.DIALPAD_TOKEN}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
