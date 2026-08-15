@@ -125,6 +125,46 @@ exports.handler = async (event) => {
           });
         }
         return { statusCode: 200, body: JSON.stringify({ ok: true }) };
+      } else if (action === 'fax') {
+        // Fax a short typed note to a number via Dialpad. We render a 1-page
+        // PDF cover from the text and POST it to Dialpad's fax-send endpoint.
+        // Dialpad's fax-send request shape isn't publicly documented; the exact
+        // endpoint/field names may need one correction — the Dialpad response is
+        // logged and returned so we can confirm on the first live test.
+        const { to, text: msg } = JSON.parse(event.body || '{}');
+        if (!to || !msg) return { statusCode: 400, body: JSON.stringify({ error: 'missing to/text' }) };
+        if (!process.env.DIALPAD_TOKEN) return { statusCode: 503, body: JSON.stringify({ ok: false, detail: 'DIALPAD_TOKEN not set' }) };
+        let pdfBytes;
+        try {
+          const { PDFDocument, StandardFonts } = require('pdf-lib');
+          const doc = await PDFDocument.create();
+          const page = doc.addPage([612, 792]);
+          const font = await doc.embedFont(StandardFonts.Helvetica);
+          const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+          page.drawText('BHW Medical Group', { x: 54, y: 726, size: 20, font: bold });
+          page.drawText('443-762-5343', { x: 54, y: 706, size: 11, font });
+          const words = String(msg).split(/\s+/); const maxW = 500, size = 12; const lines = []; let line = '';
+          for (const w of words) { const t = line ? line + ' ' + w : w; if (font.widthOfTextAtSize(t, size) > maxW) { lines.push(line); line = w; } else line = t; }
+          if (line) lines.push(line);
+          let y = 656; for (const ln of lines) { if (y < 60) break; page.drawText(ln, { x: 54, y, size, font }); y -= 18; }
+          pdfBytes = await doc.save();
+        } catch (e) { return { statusCode: 500, body: JSON.stringify({ ok: false, detail: 'pdf: ' + String(e.message || e) }) }; }
+        try {
+          const form = new FormData();
+          form.append('to', to);
+          form.append('from', process.env.DIALPAD_FROM || '');
+          form.append('file', new Blob([pdfBytes], { type: 'application/pdf' }), 'reply.pdf');
+          const fres = await fetch(`https://dialpad.com/api/v2/faxes?apikey=${encodeURIComponent(process.env.DIALPAD_TOKEN)}`, {
+            method: 'POST', headers: { 'Authorization': `Bearer ${process.env.DIALPAD_TOKEN}` }, body: form,
+          });
+          const detail = await fres.text();
+          console.log('dialpad fax send:', fres.status, detail.slice(0, 300));
+          if (!fres.ok) return { statusCode: 502, body: JSON.stringify({ ok: false, detail: `Dialpad ${fres.status}: ${detail.slice(0, 160)}` }) };
+          if (pageId) {
+            await fetch(`${NOTION}/pages/${pageId}`, { method: 'PATCH', headers: H(), body: JSON.stringify({ properties: { 'First Response': { date: { start: now } } } }) });
+          }
+          return { statusCode: 200, body: JSON.stringify({ ok: true }) };
+        } catch (e) { return { statusCode: 502, body: JSON.stringify({ ok: false, detail: 'fax: ' + String(e.message || e) }) }; }
       } else if (action === 'publish') {
         // post a dated update line onto the patient's Health Hub page (+ optional no-PHI text)
         const { masterId, text: updText, notify } = JSON.parse(event.body || '{}');
