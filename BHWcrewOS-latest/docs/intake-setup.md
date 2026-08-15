@@ -83,3 +83,14 @@ produce a 503 even after "setting" the value:
 - **Env-var changes only apply on the next deploy.** After setting/altering the
   secret, redeploy, then confirm in Netlify's function observability that
   `dialpad-events` returns `200`/`401` — not `503` — for incoming posts.
+
+## Replying to patients (outbound)
+
+Front Desk inbox "Reply" sends a text from the practice line via Dialpad. Two
+env vars, set as plain Functions-scoped values (not "secret"), then redeploy:
+
+- `DIALPAD_TOKEN` — a Dialpad API key with SMS (and Fax) scope.
+- `DIALPAD_FROM` — the sending number in E.164, e.g. `+14437625343`.
+
+`frontdesk-data` passes the key via `?apikey=` (Dialpad sits behind Google Cloud
+Endpoints, which reads the key from the query string) plus a Bearer header.
