@@ -158,6 +158,7 @@ let TOKEN=sessionStorage.getItem('crewos_token')||'';
 let ITEMS=[];
 let FILTER='all';
 let STAFF=''; // selected staff name filter
+let ROSTER=[]; // active staff names, pulled from the crewOS Staff & Roles roster
 
 // ---- journey model ----
 function stageOf(status){
@@ -223,7 +224,7 @@ function render(){
   // staff rail (counts of OPEN requests per owner)
   const roster={};
   ITEMS.forEach(i=>{ if(i.assigned){ roster[i.assigned]=roster[i.assigned]||0; if(stageOf(i.status)!=='done') roster[i.assigned]++; } });
-  ['Amaris Murray','Tammy Fields'].forEach(n=>{ if(!(n in roster)) roster[n]=roster[n]||0; });
+  ROSTER.forEach(n=>{ if(!(n in roster)) roster[n]=roster[n]||0; });
   const staffHTML=`<div class="srow allrow ${STAFF===''?'on':''}" onclick="setStaff('')"><span>Everyone</span><span class="ct ${open?'':'zero'}">${open}</span></div>`+
     Object.keys(roster).sort().map(n=>`<div class="srow ${STAFF===n?'on':''}" onclick="setStaff('${n.replace(/'/g,"\\'")}')">
       <span class="av sm">${initials(n)}</span><span class="nm">${n}</span><span class="ct ${roster[n]?'':'zero'}">${roster[n]}</span></div>`).join('');
@@ -314,7 +315,17 @@ async function toggleDone(id,isDone){ if(!TOKEN){needAuth();return;}
 
 // (demo request fallback removed — the page shows the live triage queue or a clean empty/error state)
 
+// Pull the staff list from the crewOS roster (Staff & Roles) so the rail is
+// managed in one place — add/remove staff there and it reflects here.
+async function loadRoster(){
+  try{
+    const r=await fetch(`${API}/auth`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'roster'})});
+    if(r.ok){ const d=await r.json(); if(Array.isArray(d.staff)){ ROSTER=d.staff.map(s=>s.name).filter(Boolean); render(); } }
+  }catch(_){ /* best-effort — the rail still shows anyone already assigned */ }
+}
+
 if(TOKEN){ document.getElementById('me').textContent='signed in'; }
+loadRoster();
 load();
 setInterval(load,45000);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) load(); });

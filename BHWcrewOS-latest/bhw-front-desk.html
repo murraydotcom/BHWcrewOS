@@ -393,7 +393,8 @@ function renderInbox(items){
   $('inboxsection').style.display='block';
   const cols={voice:[],text:[],fax:[]};
   const today=new Date().toISOString().slice(0,10);
-  items.forEach(it=>cols[bucket(it.source||'')].push(it));
+  // Completed items drop off the inbox (reopen from Patient Requests → Completed).
+  items.forEach(it=>{ if(/done|resolved|complete|closed/i.test(it.status||'')) return; cols[bucket(it.source||'')].push(it); });
   ['voice','text','fax'].forEach(k=>{
     const el=$('col-'+k); el.innerHTML='';
     if(!cols[k].length){el.innerHTML='<div class="inb"><div class="s">Nothing waiting.</div></div>';return;}
