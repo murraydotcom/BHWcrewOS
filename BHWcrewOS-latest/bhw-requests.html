@@ -70,6 +70,12 @@
   .stagepill.done{background:#e7efe4;color:#4c7350;border-color:#cadfc8}
 
   .rc-body{padding:2px 16px 6px 16px;border-top:1px solid var(--line-2)}
+  .replyslot:empty{display:none}
+  .replybox{margin:0 16px 14px;padding:11px;background:var(--linen);border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;gap:8px}
+  .replybox select,.replybox textarea{font:inherit;font-size:.82rem;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--white);width:100%;box-sizing:border-box}
+  .replybox textarea{resize:vertical}
+  .replybox .rbtns{display:flex;gap:8px}
+  .replybox .btn.send{background:var(--sage);border-color:var(--sage);color:#fff}
   .entry{display:flex;align-items:flex-start;gap:12px;padding:11px 0;border-bottom:1px solid var(--line-2)}
   .entry:last-child{border-bottom:0}
   .entry .dot{width:11px;height:11px;border-radius:50%;margin-top:3px;flex-shrink:0;box-shadow:0 0 0 3px #fff, 0 0 0 4px var(--line-2)}
@@ -265,7 +271,12 @@ function cardHTML(it){
     : `<span class="owner un"><span class="av sm un">?</span>Unclaimed — needs an owner</span>`;
   const isDone = st==='done';
   const claimBtn = (!isDone && !it.assigned) ? `<button class="btn" onclick="claim('${it.id}')">Claim</button>` : '';
-  const acts = `${claimBtn}
+  const isFax = /fax/i.test(it.source||'');
+  const ph = String(it.phone||'').replace(/'/g,'');
+  const replyBtn = (ph && !isDone) ? (isFax
+    ? `<button class="btn" onclick="openReply('${it.id}','${ph}','fax')">📠 Fax back</button>`
+    : `<button class="btn" onclick="openReply('${it.id}','${ph}','sms')">💬 Text back</button>`) : '';
+  const acts = `${claimBtn}${replyBtn}
     <label class="chk ${isDone?'on':''}" title="${isDone?'Completed — click to reopen':'Mark this request complete'}" onclick="toggleDone('${it.id}',${isDone})">
       <span class="box"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>${isDone?'Completed':'Complete'}
     </label>`;
@@ -279,7 +290,39 @@ function cardHTML(it){
     </div>
     <div class="rc-body">${steps}${sum}</div>
     <div class="rc-foot">${owner}<span class="rc-acts">${acts}</span></div>
+    <div class="replyslot" id="rs-${it.id}"></div>
   </div>`;
+}
+
+// ---- reply (text back via Dialpad; fax back when the request came in by fax) ----
+const CANNED=[
+  ['We got your message',"Hi, this is BHW Medical — we received your message and someone will follow up shortly. Thank you!"],
+  ['Please call us',"Hi, this is BHW Medical. Please call us at 443-762-5343 so we can help. Thank you!"],
+  ['Rx in progress',"Hi, this is BHW Medical — your prescription request is in progress and we'll update you soon."],
+];
+function openReply(id,to,mode){
+  const slot=document.getElementById('rs-'+id); if(!slot||slot.querySelector('.replybox'))return;
+  const isFax=mode==='fax';
+  const opts=CANNED.map((c,i)=>`<option value="${i}">${c[0]}</option>`).join('');
+  slot.innerHTML=`<div class="replybox">
+    ${isFax?'':`<select class="canned"><option value="">Canned response…</option>${opts}</select>`}
+    <textarea rows="2" placeholder="${isFax?'Fax a note to '+to:'Text back to '+to} — sends from the BHW line"></textarea>
+    <div class="rbtns"><button class="btn send">${isFax?'Send fax':'Send text'}</button><button class="btn cancel">Cancel</button></div>
+  </div>`;
+  const box=slot.querySelector('.replybox');
+  const cn=box.querySelector('.canned'); if(cn) cn.onchange=e=>{ if(e.target.value!=='')box.querySelector('textarea').value=CANNED[+e.target.value][1]; };
+  box.querySelector('.cancel').onclick=()=>{ slot.innerHTML=''; };
+  box.querySelector('.send').onclick=async()=>{
+    const msg=box.querySelector('textarea').value.trim(); if(!msg)return;
+    const s=box.querySelector('.send'); s.disabled=true; s.textContent='Sending…';
+    try{
+      const r=await fetch(`${API}/frontdesk-data${DASH_KEY?`?key=${encodeURIComponent(DASH_KEY)}`:''}`,{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({action:isFax?'fax':'sms',pageId:id,to:to,text:msg})});
+      if(r.ok){ s.textContent='Sent ✓'; setTimeout(()=>{ slot.innerHTML=''; load(); },900); }
+      else{ const d=await r.json().catch(()=>({})); s.textContent=(d.detail?'Failed: '+String(d.detail).slice(0,40):'Failed — retry'); s.disabled=false; }
+    }catch(_){ s.textContent='Failed — retry'; s.disabled=false; }
+  };
 }
 
 function setFilter(f,btn){ FILTER=f; document.querySelectorAll('.filters button').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); render(); }
