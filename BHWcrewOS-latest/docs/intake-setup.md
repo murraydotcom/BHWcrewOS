@@ -70,3 +70,16 @@ differ, `lib/triage.js` rejects every event as an invalid signature and nothing
 reaches the queue — with no error the desk can see. When reusing an existing
 webhook, read its `signature.secret` and set Netlify's env var to that exact
 value (then redeploy), or recreate the webhook with the known secret.
+
+### The env var must be readable by Functions (and needs a redeploy)
+
+`dialpad-events` fails closed with **`503 DIALPAD_WEBHOOK_SECRET not set`** if the
+secret isn't present in the function's runtime environment. Two gotchas that
+produce a 503 even after "setting" the value:
+
+- **Set it as a normal env var, scoped to Functions/Runtime.** A value that
+  isn't in scope for functions reads back as `undefined` and 503s. (Symptom we
+  hit: the var existed but the function still 503'd.)
+- **Env-var changes only apply on the next deploy.** After setting/altering the
+  secret, redeploy, then confirm in Netlify's function observability that
+  `dialpad-events` returns `200`/`401` — not `503` — for incoming posts.
