@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Send a Fax · BHW</title>
+<link rel="stylesheet" href="/assets/bhw-tokens.css">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    -webkit-font-smoothing:antialiased;min-height:100vh;padding:28px 18px 60px}
+  .wrap{max-width:640px;margin:0 auto}
+  .top{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+  .top .mark{width:40px;height:40px;border-radius:12px;background:var(--deep-grad);color:#fff;
+    display:grid;place-items:center;font-weight:700;font-family:var(--serif);font-size:19px}
+  h1{font-family:var(--serif);font-size:1.5rem;margin:0;color:var(--deep)}
+  .sub{color:var(--ink-soft);font-size:.9rem;margin:2px 0 22px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:22px}
+  label{display:block;font-size:.74rem;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--ink-soft);font-weight:700;margin:0 0 6px}
+  .field{margin-bottom:18px}
+  input[type=text],input[type=tel],textarea{width:100%;font:inherit;font-size:.95rem;
+    padding:11px 13px;border:1.5px solid var(--line);border-radius:var(--radius-sm);
+    background:var(--bg-alt);color:var(--ink)}
+  textarea{resize:vertical;min-height:66px}
+  .drop{border:1.5px dashed var(--line);border-radius:var(--radius-sm);background:var(--bg-alt);
+    padding:22px;text-align:center;color:var(--ink-soft);cursor:pointer;transition:.15s}
+  .drop:hover,.drop.hot{border-color:var(--teal);color:var(--ink);background:var(--card)}
+  .drop b{color:var(--ink)}
+  .drop .file{margin-top:8px;font-size:.85rem;color:var(--teal);font-weight:700}
+  .btn{appearance:none;border:0;border-radius:var(--radius-sm);font:inherit;font-weight:700;
+    padding:12px 18px;cursor:pointer;background:var(--deep-grad);color:#fff;font-size:.95rem}
+  .btn:disabled{opacity:.6;cursor:default}
+  .row{display:flex;gap:12px;align-items:center;margin-top:4px}
+  .status{margin-top:14px;font-size:.9rem;min-height:1.2em}
+  .status.ok{color:var(--ok)} .status.err{color:var(--alert)}
+  .hint{color:var(--ink-soft);font-size:.8rem;margin-top:6px}
+  .note{margin-top:22px;color:var(--ink-soft);font-size:.82rem;line-height:1.5}
+  @media (prefers-color-scheme:dark){
+    body{background:#101a1f;color:#e6ecee}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="mark">B</div>
+    <div><h1>Send a Fax</h1></div>
+  </div>
+  <p class="sub">Fax any PDF out through the practice line via Dialpad. For documents made outside the studios — the referral builder and Paperwork Studio can fax their own output directly.</p>
+
+  <div class="card">
+    <div class="field">
+      <label for="pick">Document (PDF)</label>
+      <div class="drop" id="drop">
+        <div><b>Choose a PDF</b> or drop one here</div>
+        <div class="file" id="fileName"></div>
+      </div>
+      <input type="file" id="pick" accept="application/pdf,.pdf" style="display:none">
+      <div class="hint">Only PDF files are faxed. To fax something else, save or print it to PDF first.</div>
+    </div>
+
+    <div class="field">
+      <label for="to">Fax number</label>
+      <input type="tel" id="to" inputmode="tel" placeholder="e.g. 410 555 0142 or +1 410 555 0142" autocomplete="off">
+    </div>
+
+    <div class="field">
+      <label for="cover">Cover note <span style="text-transform:none;font-weight:400">(optional)</span></label>
+      <textarea id="cover" placeholder="A short note. If you don't attach a PDF, this note is faxed on its own on BHW letterhead."></textarea>
+    </div>
+
+    <div class="row">
+      <button class="btn" id="send">📠 Send fax</button>
+      <span class="status" id="status"></span>
+    </div>
+  </div>
+
+  <p class="note">Faxes send from the BHW line (443-762-5343). Dialpad must have <b>DIALPAD_TOKEN</b> and <b>DIALPAD_FROM</b> set for sending to work. Keep PHI to what belongs on the destination's record.</p>
+</div>
+
+<script>
+const API='/.netlify/functions/frontdesk-data';
+const DASH_KEY='02142022';   // shared key — matches the function's DASH_KEY env
+const $=id=>document.getElementById(id);
+let PDF_B64='', PDF_NAME='';
+
+const pick=$('pick'), drop=$('drop');
+drop.addEventListener('click',()=>pick.click());
+pick.addEventListener('change',e=>loadFile(e.target.files[0]));
+['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('hot');}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('hot');}));
+drop.addEventListener('drop',e=>{ const f=e.dataTransfer.files&&e.dataTransfer.files[0]; if(f) loadFile(f); });
+
+function loadFile(f){
+  if(!f) return;
+  if(!/pdf/i.test(f.type) && !/\.pdf$/i.test(f.name)){ setStatus('That isn’t a PDF — save it to PDF first.','err'); return; }
+  if(f.size > 4*1024*1024){ setStatus('That PDF is large (>4 MB) — it may be rejected. Try a smaller/compressed scan.','err'); }
+  const rd=new FileReader();
+  rd.onload=()=>{ PDF_B64=String(rd.result).replace(/^data:.*?;base64,/,''); PDF_NAME=f.name||'document.pdf';
+    $('fileName').textContent='✓ '+PDF_NAME; setStatus('',''); };
+  rd.onerror=()=>setStatus('Couldn’t read that file.','err');
+  rd.readAsDataURL(f);
+}
+function setStatus(msg,cls){ const s=$('status'); s.textContent=msg; s.className='status'+(cls?' '+cls:''); }
+
+$('send').addEventListener('click', async ()=>{
+  const to=($('to').value||'').replace(/[^\d+]/g,'');
+  const cover=$('cover').value.trim();
+  if(!to){ setStatus('Enter a fax number.','err'); $('to').focus(); return; }
+  if(!PDF_B64 && !cover){ setStatus('Attach a PDF or write a cover note to fax.','err'); return; }
+  const btn=$('send'); const label=btn.textContent; btn.disabled=true; btn.textContent='Sending…';
+  setStatus('Sending to '+to+'…','');
+  const body={action:'fax',to};
+  if(PDF_B64){ body.pdf=PDF_B64; body.filename=PDF_NAME; if(cover) body.text=cover; }
+  else{ body.text=cover; }
+  try{
+    const r=await fetch(`${API}?key=${encodeURIComponent(DASH_KEY)}`,{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(r.ok){ setStatus('✓ Fax sent to '+to+'.','ok'); btn.textContent='Sent ✓';
+      PDF_B64='';PDF_NAME='';$('fileName').textContent='';$('cover').value='';$('to').value='';
+      setTimeout(()=>{ btn.textContent=label; btn.disabled=false; },2400); }
+    else{ const d=await r.json().catch(()=>({}));
+      setStatus('Fax failed — '+(d.detail?String(d.detail).slice(0,160):('HTTP '+r.status))+'. You can also send it from Dialpad directly.','err');
+      btn.textContent=label; btn.disabled=false; }
+  }catch(e){ setStatus('Network error: '+(e.message||e),'err'); btn.textContent=label; btn.disabled=false; }
+});
+</script>
+</body>
+</html>

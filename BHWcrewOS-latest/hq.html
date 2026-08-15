@@ -356,6 +356,9 @@ const TOOLS=[
   {name:'Claim Laundering',accent:'var(--gold)',tag:'Live',href:'https://bhw-rcm.netlify.app/provider/workflow.html',external:true,
    desc:'Clinical Intelligence — the 24-Hour Encounter Operations queue: documentation review, coding intelligence, and provider approval before a claim goes out.',
    icon:'<path d="M3 9h18M7 15h2m4 0h4"/><rect x="3" y="4" width="18" height="16" rx="2.5"/>'},
+  {name:'Send a Fax',accent:'var(--teal)',tag:'Live',href:'/bhw-fax.html',
+   desc:'Fax any PDF out through Dialpad — pick a document, enter the number (or look up a patient), and send from the practice line. For documents made outside the studios.',
+   icon:'<path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="8" rx="2"/><path d="M8 17v4h8v-4"/><path d="M16 13h.01"/>'},
 ];
 document.getElementById('tools').innerHTML=TOOLS.map(function(t){
   var inner='<div class="tico" style="--accent:'+t.accent+'"><svg viewBox="0 0 24 24">'+t.icon+'</svg></div>'+

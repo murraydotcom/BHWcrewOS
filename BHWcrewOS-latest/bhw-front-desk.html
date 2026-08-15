@@ -301,6 +301,7 @@
         </div>
         <input id="g-auth" placeholder="Authorization # (if required)">
         <button class="btn" id="g-make" style="width:100%;margin-top:12px;background:var(--river)">📠 Generate referral PDF</button>
+        <button class="btn" id="g-fax" style="width:100%;margin-top:8px;display:none">📠 Fax to specialist</button>
         <div class="status" id="g-status"></div>
       </div>
     </div>
@@ -639,8 +640,26 @@ $('g-make').addEventListener('click', async ()=>{
     a.href=url; a.download=`Referral - ${$('g-pname').value.split(',')[0]||'patient'} - ${$('g-sspec').value||'specialist'}.pdf`;
     a.click();
     window.open(url,'_blank');
-    st.textContent='✓ Referral generated — downloaded and opened for printing. Fax to '+($('g-sfax').value||'the specialist')+'.';
+    // keep the PDF + destination so it can be faxed straight to the specialist
+    window.lastReferralPdf = pdf;
+    window.lastReferralName = `Referral - ${($('g-pname').value.split(',')[0]||'patient').trim()}.pdf`;
+    const fx=$('g-fax'), sfax=($('g-sfax').value||'').replace(/\D/g,'');
+    if(fx){ fx.style.display=sfax?'block':'none'; fx.textContent=sfax?`📠 Fax to ${$('g-sspec').value||'specialist'} (${$('g-sfax').value})`:'📠 Fax to specialist'; fx.disabled=false; }
+    st.textContent='✓ Referral generated — downloaded and opened for printing.'+(sfax?' Tap “Fax to specialist” to send it now.':' Add the specialist’s fax to send it from here.');
   }catch(e){ st.textContent='Error: '+e; }
+});
+$('g-fax').addEventListener('click', async ()=>{
+  const st=$('g-status');
+  const to=($('g-sfax').value||'').replace(/\D/g,'');
+  if(!window.lastReferralPdf){ st.textContent='Generate the referral first.'; return; }
+  if(!to){ st.textContent='Add the specialist’s fax number first.'; return; }
+  const fx=$('g-fax'); fx.disabled=true; const label=fx.textContent; fx.textContent='Faxing…';
+  try{
+    const r=await fetch(`${API}?key=${encodeURIComponent(DASH_KEY)}`,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'fax', to, pdf:window.lastReferralPdf, filename:window.lastReferralName||'referral.pdf'})});
+    if(r.ok){ fx.textContent='Faxed ✓'; st.textContent=`✓ Referral faxed to ${$('g-sspec').value||'the specialist'} at ${$('g-sfax').value}.`; }
+    else{ const d=await r.json().catch(()=>({})); fx.textContent=label; fx.disabled=false; st.textContent='Fax failed — '+(d.detail?String(d.detail).slice(0,120):'try again or send from Dialpad'); }
+  }catch(e){ fx.textContent=label; fx.disabled=false; st.textContent='Fax error: '+e; }
 });
 </script>
 </body>
