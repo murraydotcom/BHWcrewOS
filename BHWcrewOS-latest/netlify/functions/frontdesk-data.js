@@ -83,7 +83,10 @@ exports.handler = async (event) => {
     // ---- WRITE-BACK: POST {pageId, action} -> updates Notion ----
     if (event.httpMethod === 'POST') {
       const { pageId, action } = JSON.parse(event.body || '{}');
-      if (!pageId || !action) return { statusCode: 400, body: JSON.stringify({ error: 'missing pageId/action' }) };
+      if (!action) return { statusCode: 400, body: JSON.stringify({ error: 'missing action' }) };
+      // sms/fax can be sent without a triage row (referrals, paperwork, ad-hoc fax);
+      // the status/publish actions still need a pageId to mutate.
+      if (!pageId && !['sms', 'fax'].includes(action)) return { statusCode: 400, body: JSON.stringify({ error: 'missing pageId' }) };
       const now = new Date().toISOString();
       let properties = {};
       if (action === 'start') {
@@ -126,35 +129,44 @@ exports.handler = async (event) => {
         }
         return { statusCode: 200, body: JSON.stringify({ ok: true }) };
       } else if (action === 'fax') {
-        // Fax a short typed note to a number via Dialpad. We render a 1-page
-        // PDF cover from the text and POST it to Dialpad's fax-send endpoint.
-        // Dialpad's fax-send request shape isn't publicly documented; the exact
-        // endpoint/field names may need one correction — the Dialpad response is
-        // logged and returned so we can confirm on the first live test.
-        const { to, text: msg } = JSON.parse(event.body || '{}');
-        if (!to || !msg) return { statusCode: 400, body: JSON.stringify({ error: 'missing to/text' }) };
+        // Fax a document out via Dialpad. Two inputs:
+        //   pdf  — base64 of a real PDF (referral, filled paperwork, uploaded doc)
+        //   text — a short typed note, rendered onto a 1-page BHW cover sheet
+        // `pdf` wins when both are present. Dialpad's fax-send request shape isn't
+        // publicly documented (docs are behind egress), so the endpoint/field
+        // names are best-effort: the Dialpad response is logged and returned so we
+        // can confirm/correct on the first live test.
+        const { to, text: msg, pdf: pdfB64, filename } = JSON.parse(event.body || '{}');
+        if (!to) return { statusCode: 400, body: JSON.stringify({ error: 'missing to' }) };
+        if (!pdfB64 && !msg) return { statusCode: 400, body: JSON.stringify({ error: 'missing pdf/text' }) };
         if (!process.env.DIALPAD_TOKEN) return { statusCode: 503, body: JSON.stringify({ ok: false, detail: 'DIALPAD_TOKEN not set' }) };
-        let pdfBytes;
-        try {
-          const { PDFDocument, StandardFonts } = require('pdf-lib');
-          const doc = await PDFDocument.create();
-          const page = doc.addPage([612, 792]);
-          const font = await doc.embedFont(StandardFonts.Helvetica);
-          const bold = await doc.embedFont(StandardFonts.HelveticaBold);
-          page.drawText('BHW Medical Group', { x: 54, y: 726, size: 20, font: bold });
-          page.drawText('443-762-5343', { x: 54, y: 706, size: 11, font });
-          const words = String(msg).split(/\s+/); const maxW = 500, size = 12; const lines = []; let line = '';
-          for (const w of words) { const t = line ? line + ' ' + w : w; if (font.widthOfTextAtSize(t, size) > maxW) { lines.push(line); line = w; } else line = t; }
-          if (line) lines.push(line);
-          let y = 656; for (const ln of lines) { if (y < 60) break; page.drawText(ln, { x: 54, y, size, font }); y -= 18; }
-          pdfBytes = await doc.save();
-        } catch (e) { return { statusCode: 500, body: JSON.stringify({ ok: false, detail: 'pdf: ' + String(e.message || e) }) }; }
+        let pdfBytes, faxName = filename || 'document.pdf';
+        if (pdfB64) {
+          try { pdfBytes = Buffer.from(String(pdfB64).replace(/^data:.*?;base64,/, ''), 'base64'); }
+          catch (e) { return { statusCode: 400, body: JSON.stringify({ ok: false, detail: 'bad pdf base64' }) }; }
+        } else {
+          try {
+            const { PDFDocument, StandardFonts } = require('pdf-lib');
+            const doc = await PDFDocument.create();
+            const page = doc.addPage([612, 792]);
+            const font = await doc.embedFont(StandardFonts.Helvetica);
+            const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+            page.drawText('BHW Medical Group', { x: 54, y: 726, size: 20, font: bold });
+            page.drawText('443-762-5343', { x: 54, y: 706, size: 11, font });
+            const words = String(msg).split(/\s+/); const maxW = 500, size = 12; const lines = []; let line = '';
+            for (const w of words) { const t = line ? line + ' ' + w : w; if (font.widthOfTextAtSize(t, size) > maxW) { lines.push(line); line = w; } else line = t; }
+            if (line) lines.push(line);
+            let y = 656; for (const ln of lines) { if (y < 60) break; page.drawText(ln, { x: 54, y, size, font }); y -= 18; }
+            pdfBytes = await doc.save();
+            faxName = 'cover.pdf';
+          } catch (e) { return { statusCode: 500, body: JSON.stringify({ ok: false, detail: 'pdf: ' + String(e.message || e) }) }; }
+        }
         try {
           const form = new FormData();
           form.append('to', to);
-          form.append('from', process.env.DIALPAD_FROM || '');
-          form.append('file', new Blob([pdfBytes], { type: 'application/pdf' }), 'reply.pdf');
-          const fres = await fetch(`https://dialpad.com/api/v2/faxes?apikey=${encodeURIComponent(process.env.DIALPAD_TOKEN)}`, {
+          form.append('from_number', process.env.DIALPAD_FROM || '');
+          form.append('file', new Blob([pdfBytes], { type: 'application/pdf' }), faxName);
+          const fres = await fetch(`https://dialpad.com/api/v2/sendfax?apikey=${encodeURIComponent(process.env.DIALPAD_TOKEN)}`, {
             method: 'POST', headers: { 'Authorization': `Bearer ${process.env.DIALPAD_TOKEN}` }, body: form,
           });
           const detail = await fres.text();

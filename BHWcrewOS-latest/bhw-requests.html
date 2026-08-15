@@ -271,11 +271,8 @@ function cardHTML(it){
     : `<span class="owner un"><span class="av sm un">?</span>Unclaimed — needs an owner</span>`;
   const isDone = st==='done';
   const claimBtn = (!isDone && !it.assigned) ? `<button class="btn" onclick="claim('${it.id}')">Claim</button>` : '';
-  const isFax = /fax/i.test(it.source||'');
   const ph = String(it.phone||'').replace(/'/g,'');
-  const replyBtn = (ph && !isDone) ? (isFax
-    ? `<button class="btn" onclick="openReply('${it.id}','${ph}','fax')">📠 Fax back</button>`
-    : `<button class="btn" onclick="openReply('${it.id}','${ph}','sms')">💬 Text back</button>`) : '';
+  const replyBtn = (ph && !isDone) ? `<button class="btn" onclick="openReply('${it.id}','${ph}','sms')">💬 Text back</button>` : '';
   const acts = `${claimBtn}${replyBtn}
     <label class="chk ${isDone?'on':''}" title="${isDone?'Completed — click to reopen':'Mark this request complete'}" onclick="toggleDone('${it.id}',${isDone})">
       <span class="box"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>${isDone?'Completed':'Complete'}

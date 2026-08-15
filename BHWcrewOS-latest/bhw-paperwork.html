@@ -223,6 +223,8 @@ textarea{resize:vertical;min-height:60px;line-height:1.5}
         <button class="btn ghost2" id="officialBtn" title="Fill the real agency/payer PDF and download it">Fill official form</button>
       </span>
       <button class="btn" id="printBtn" style="margin-left:8px">Print / Save PDF</button>
+      <input id="faxTo" placeholder="Fax to #" inputmode="tel" style="display:none;margin-left:8px;padding:8px 10px;border:1.5px solid var(--line);border-radius:9px;font-size:12px;width:120px">
+      <button class="btn ghost2" id="faxBtn" style="margin-left:8px" title="Fax this document out via Dialpad">📠 Fax</button>
     </div>
     <div class="doc" id="doc"></div>
   </div>
@@ -716,24 +718,73 @@ function updateOfficial(){
   wrap.style.display="flex";
   sel.innerHTML=forms.map((f,i)=>`<option value="${i}">${f.label}</option>`).join("");
 }
+// Fill the selected official agency/payer PDF; returns {bytes, name, filled}.
+async function fillOfficialForm(){
+  const forms=FORMS[state.packet]; if(!forms) return null;
+  const form=forms[+$("officialSel").value || 0];
+  await loadPdfLib();
+  const bytes=await (await fetch(form.file)).arrayBuffer();
+  const doc=await PDFLib.PDFDocument.load(bytes);
+  const pdfForm=doc.getForm(); const ctx=fillCtx(); let filled=0;
+  for(const [fld,key] of Object.entries(form.map)){ const v=ctx[key]; if(v==null||v==="") continue; try{ pdfForm.getTextField(fld).setText(String(v)); filled++; }catch(e){} }
+  const out=await doc.save();
+  return { bytes: out, name: `${form.id}_${(val("patient")||"patient").replace(/[^a-z0-9]+/gi,"-")}.pdf`, filled };
+}
 $("officialBtn").addEventListener("click", async () => {
   const forms=FORMS[state.packet]; if(!forms) return;
-  const form=forms[+$("officialSel").value || 0];
   const btn=$("officialBtn"); const label=btn.textContent; btn.textContent="Filling…"; btn.disabled=true;
   try{
-    await loadPdfLib();
-    const bytes=await (await fetch(form.file)).arrayBuffer();
-    const doc=await PDFLib.PDFDocument.load(bytes);
-    const pdfForm=doc.getForm(); const ctx=fillCtx(); let filled=0;
-    for(const [fld,key] of Object.entries(form.map)){ const v=ctx[key]; if(v==null||v==="") continue; try{ pdfForm.getTextField(fld).setText(String(v)); filled++; }catch(e){} }
-    const out=await doc.save();
+    const r=await fillOfficialForm();
     const a=document.createElement("a");
-    a.href=URL.createObjectURL(new Blob([out],{type:"application/pdf"}));
-    a.download=`${form.id}_${(val("patient")||"patient").replace(/[^a-z0-9]+/gi,"-")}.pdf`;
+    a.href=URL.createObjectURL(new Blob([r.bytes],{type:"application/pdf"}));
+    a.download=r.name;
     a.click(); URL.revokeObjectURL(a.href);
-    btn.textContent=`Filled ${filled} fields ✓`;
+    btn.textContent=`Filled ${r.filled} fields ✓`;
     setTimeout(()=>{ btn.textContent=label; btn.disabled=false; }, 2200);
   }catch(e){ btn.textContent="Error — retry"; btn.disabled=false; setTimeout(()=>btn.textContent=label,2200); }
+});
+
+/* ---------- fax the document out via Dialpad ---------- */
+const FAX_API='/.netlify/functions/frontdesk-data', FAX_KEY='02142022';
+function u8ToB64(u8){ let s=''; const CH=0x8000; for(let i=0;i<u8.length;i+=CH){ s+=String.fromCharCode.apply(null,u8.subarray(i,i+CH)); } return btoa(s); }
+// Build the PDF to fax: the official form when the packet has one, else a
+// letterheaded PDF rendered from the live document's text.
+async function buildFaxPdf(){
+  if(FORMS[state.packet]){ const r=await fillOfficialForm(); return { b64:u8ToB64(r.bytes), name:r.name }; }
+  await loadPdfLib();
+  const doc=await PDFLib.PDFDocument.create();
+  const font=await doc.embedFont(PDFLib.StandardFonts.Helvetica);
+  const bold=await doc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+  const size=11, lh=15, maxW=468, margin=72;
+  let page=doc.addPage([612,792]); let y=792-margin;
+  page.drawText('BHW Medical Group',{x:margin,y,size:16,font:bold}); y-=17;
+  page.drawText('2131 Maryland Ave, Baltimore, MD 21218  ·  Tel (443) 762-5343  ·  Fax (833) 258-3941',{x:margin,y,size:8,font}); y-=24;
+  const text=(document.getElementById('doc')?.innerText||'').replace(/\n{3,}/g,'\n\n').trim();
+  for(const para of text.split('\n')){
+    if(!para.trim()){ y-=lh*0.6; continue; }
+    let line=''; const words=para.split(/\s+/);
+    const flush=()=>{ if(y<margin){ page=doc.addPage([612,792]); y=792-margin; } page.drawText(line,{x:margin,y,size,font}); y-=lh; line=''; };
+    for(const w of words){ const t=line?line+' '+w:w; if(font.widthOfTextAtSize(t,size)>maxW){ flush(); line=w; } else line=t; }
+    if(line) flush();
+  }
+  const out=await doc.save();
+  return { b64:u8ToB64(out), name:`Paperwork_${(val('patient')||'patient').replace(/[^a-z0-9]+/gi,'-')}.pdf` };
+}
+$("faxBtn").addEventListener("click", async ()=>{
+  const inp=$("faxTo");
+  if(inp.style.display==='none'){ inp.style.display='inline-block'; inp.focus(); return; }
+  const to=(inp.value||'').replace(/\D/g,'');
+  if(!to){ inp.focus(); return; }
+  const btn=$("faxBtn"); const label=btn.textContent; btn.textContent='Preparing…'; btn.disabled=true;
+  try{
+    const built=await buildFaxPdf();
+    btn.textContent='Faxing…';
+    const r=await fetch(`${FAX_API}?key=${encodeURIComponent(FAX_KEY)}`,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'fax',to,pdf:built.b64,filename:built.name})});
+    if(r.ok){ btn.textContent='Faxed ✓'; inp.value=''; inp.style.display='none'; }
+    else{ const d=await r.json().catch(()=>({})); btn.textContent='Failed'; alert('Fax failed — '+(d.detail?String(d.detail).slice(0,160):('HTTP '+r.status))); }
+  }catch(e){ btn.textContent='Error'; alert('Fax error: '+(e.message||e)); }
+  setTimeout(()=>{ btn.textContent=label; btn.disabled=false; },2600);
 });
 
 // init
