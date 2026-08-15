@@ -182,7 +182,7 @@ function srcLabel(source){
 }
 function initials(name){return (name||'?').split(/[ ,]+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();}
 function fmtTime(iso){ if(!iso) return ''; const d=new Date(iso); let h=d.getHours(),m=d.getMinutes(); const ap=h>=12?'PM':'AM'; h=h%12||12; return h+':'+String(m).padStart(2,'0')+' '+ap; }
-function dayKey(iso){ const d=iso?new Date(iso):new Date(); return d.toISOString().slice(0,10); }
+function dayKey(iso){ const d=iso?new Date(iso):new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); } // local date, not UTC
 function isHot(it){ return /overdue|urgent|breach|!/i.test(it.sla||'') || /urgent|stat|emergen/i.test(it.priority||''); }
 
 // Reconstruct the journey steps for one request from its current state
@@ -199,8 +199,8 @@ function journeyOf(it){
 }
 
 // ---- filtering ----
-function todayKey(){ return new Date().toISOString().slice(0,10); }
-function yesterdayKey(){ const d=new Date(); d.setDate(d.getDate()-1); return d.toISOString().slice(0,10); }
+function todayKey(){ return dayKey(); }
+function yesterdayKey(){ const d=new Date(); d.setDate(d.getDate()-1); return dayKey(d.toISOString()); }
 function passFilter(it){
   const st=stageOf(it.status);
   if(STAFF && (it.assigned||'')!==STAFF) return false;
