@@ -23,31 +23,45 @@ const digits = (s) => (s || "").replace(/\D/g, "");
 async function matchPatientByPhone(from) {
   const out = { patientId: null, patientName: "" };
   if (!process.env.MASTER_DB_ID) return out;
-  const last7 = digits(from).slice(-7);
+  const d = digits(from);
+  const last10 = d.slice(-10);
+  const last7 = d.slice(-7);
   if (last7.length !== 7) return out;
+  const dashed = last7.replace(/(\d{3})(\d{4})/, "$1-$2");
+  const nameOf = (r) => r.properties?.["Patient Name"]?.title?.[0]?.plain_text || "";
 
   try {
-    let res = await fetch(`${NOTION}/databases/${process.env.MASTER_DB_ID}/query`, {
+    // Master List phones may be stored raw ("4436836209") OR formatted
+    // ("(443) 683-6209"), so match on both the raw last-7 and the dashed form in
+    // one query, then confirm each candidate on the full last-10 to rule out
+    // last-4/last-7 collisions. Larger page_size so a common number's real match
+    // isn't paged out.
+    const res = await fetch(`${NOTION}/databases/${process.env.MASTER_DB_ID}/query`, {
       method: "POST", headers: H(),
       body: JSON.stringify({
-        filter: { property: "Phone", phone_number: { contains: last7.replace(/(\d{3})(\d{4})/, "$1-$2") } },
-        page_size: 5,
+        filter: { or: [
+          { property: "Phone", phone_number: { contains: last7 } },
+          { property: "Phone", phone_number: { contains: dashed } },
+        ] },
+        page_size: 50,
       }),
     });
-    let data = await res.json();
-    let hits = data.results || [];
-    if (!hits.length) {
-      const res2 = await fetch(`${NOTION}/databases/${process.env.MASTER_DB_ID}/query`, {
-        method: "POST", headers: H(),
-        body: JSON.stringify({ filter: { property: "Phone", phone_number: { contains: last7.slice(-4) } }, page_size: 10 }),
-      });
-      const d2 = await res2.json();
-      hits = (d2.results || []).filter((r) =>
-        digits(r.properties?.Phone?.phone_number || "").endsWith(digits(from).slice(-10)));
-    }
+    const data = await res.json();
+    const seen = new Set();
+    const hits = (data.results || []).filter((r) => {
+      if (!digits(r.properties?.Phone?.phone_number || "").endsWith(last10)) return false;
+      if (seen.has(r.id)) return false;
+      seen.add(r.id);
+      return true;
+    });
     if (hits.length === 1) {
       out.patientId = hits[0].id;
-      out.patientName = hits[0].properties?.["Patient Name"]?.title?.[0]?.plain_text || "";
+      out.patientName = nameOf(hits[0]);
+    } else if (hits.length > 1) {
+      // Shared/family number — don't guess one patient (and don't link the wrong
+      // relation). Surface the candidate names in the row so the desk can pick.
+      const names = [...new Set(hits.map(nameOf).filter(Boolean))];
+      out.patientName = (names.slice(0, 4).join(" / ") + (names.length > 4 ? " / …" : "") + " (shared number)").slice(0, 200);
     }
   } catch { /* matching is best-effort — never block ingestion */ }
   return out;
