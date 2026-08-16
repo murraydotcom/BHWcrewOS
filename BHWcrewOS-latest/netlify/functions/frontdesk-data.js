@@ -243,7 +243,7 @@ exports.handler = async (event) => {
 
     // ---- SPECIALIST DIRECTORY: ?dir=1 -> the referral directory (live from Notion) ----
     if (event.queryStringParameters?.dir) {
-      const SPEC_DB = process.env.SPECIALIST_DB_ID || 'f4e144272dc842dc87d51f8f6f8f5e6c';
+      const SPEC_DB = process.env.SPECIALIST_DB_ID || '8ae69b6a2f1a42679848744f3a17acb6';
       const specialists = [];
       let cursor;
       do {
