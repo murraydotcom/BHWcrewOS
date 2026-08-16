@@ -45,11 +45,18 @@ var QUERY = 'newer_than:2d -label:' + LABEL +
 function ingestOnce() {
   var label = GmailApp.getUserLabelByName(LABEL) || GmailApp.createLabel(LABEL);
   var threads = GmailApp.search(QUERY, 0, 25);
+  var seen = {};
   for (var i = 0; i < threads.length; i++) {
     var msgs = threads[i].getMessages();
     var anyPosted = false;
     for (var j = 0; j < msgs.length; j++) {
       var m = msgs[j];
+      // Dedupe within this run: iFax delivers the fax notification and a
+      // forwarded copy in the same thread; both carry the same PDF, so keying
+      // on the PDF name (or subject+date when there's no PDF) files it once.
+      var pdfName = firstPdfName(m);
+      var key = pdfName ? ('pdf:' + pdfName) : ('msg:' + m.getSubject() + '|' + m.getDate().getTime());
+      if (seen[key]) { anyPosted = true; continue; }
       var payload = {
         secret: SECRET,
         from: m.getFrom(),
@@ -68,7 +75,7 @@ function ingestOnce() {
           muteHttpExceptions: true
         });
         // 2xx = handled (created a row OR intentionally ignored) — safe to mark.
-        if (res.getResponseCode() >= 200 && res.getResponseCode() < 300) anyPosted = true;
+        if (res.getResponseCode() >= 200 && res.getResponseCode() < 300) { seen[key] = true; anyPosted = true; }
       } catch (e) {
         // leave it unlabeled so the next run retries
       }
@@ -78,6 +85,19 @@ function ingestOnce() {
       threads[i].markRead();
     }
   }
+}
+
+// Name of the first PDF attachment on a message (without uploading it), used to
+// dedupe an original + forwarded copy of the same fax. '' if there's no PDF.
+function firstPdfName(msg) {
+  try {
+    var atts = msg.getAttachments({ includeInlineImages: false, includeAttachments: true }) || [];
+    for (var k = 0; k < atts.length; k++) {
+      var a = atts[k];
+      if (/pdf/i.test(a.getContentType()) || /\.pdf$/i.test(a.getName())) return a.getName();
+    }
+  } catch (e) {}
+  return '';
 }
 
 // Save the first PDF attachment on a message to Drive; returns {url, name} or
