@@ -1,7 +1,8 @@
 import { codingOpportunities } from "./coding-opportunities.mjs";
 import { materializeEncounterWork } from "./output-work.mjs";
-import { auditTasks, clinicalAuditSummary, normalizeClinicalAudit } from "./clinical-audit.mjs";
+import { addRequiredClinicalFindings, auditTasks, clinicalAuditSummary, normalizeClinicalAudit } from "./clinical-audit.mjs";
 import { normalizeStructuredEncounter } from "./structured-encounter.mjs";
+import { normalizeEncounterSnapshot, normalizeNotePlan } from "./note-composer.mjs";
 
 export const WORKFLOW_STATUS = Object.freeze({
   VISIT_COMPLETE: "visit_complete",
@@ -80,7 +81,16 @@ export function buildEncounterPacket(input = {}) {
     completedAt: input.completedAt || new Date().toISOString(),
     provider: String(input.provider || "Unassigned"),
     visitType: String(input.visitType || "Office visit"),
+    notePlan: normalizeNotePlan(input.notePlan || {
+      primaryTemplate: input.primaryTemplate,
+      modules: input.noteModules,
+      awvType: input.awvType,
+    }),
+    encounterSnapshot: normalizeEncounterSnapshot(input.encounterSnapshot),
+    noteBuilderInput: input.noteBuilderInput && typeof input.noteBuilderInput === "object" ? { ...input.noteBuilderInput } : {},
+    noteDraftMeta: input.noteDraftMeta && typeof input.noteDraftMeta === "object" ? { ...input.noteDraftMeta } : null,
     payer: String(input.payer || "Unknown payer"),
+    sourceTranscript: String(input.sourceTranscript || ""),
     note,
     codes,
     diagnoses: Array.from(new Set([].concat(input.diagnoses || []).map((d) => String(d).trim().toUpperCase()).filter(Boolean))),
@@ -93,6 +103,9 @@ export function buildEncounterPacket(input = {}) {
     clinicalAudit: normalizeClinicalAudit(input.clinicalAudit),
     auditTrail: Array.isArray(input.auditTrail) ? input.auditTrail.slice() : [],
   };
+  if (packet.clinicalAudit.status !== "not_run") {
+    packet.clinicalAudit = addRequiredClinicalFindings(packet.clinicalAudit, packet);
+  }
   const previousTasks = [].concat(input.tasks || []);
   const work = materializeEncounterWork(packet, previousTasks, input.documents);
   packet.outputs = work.outputs;

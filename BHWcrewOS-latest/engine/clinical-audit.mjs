@@ -126,6 +126,7 @@ export function emptyClinicalAudit() {
     guidelineNotes: [],
     guidelineChecks: [],
     completeNotes: [],
+    codingAsDocumented: { cpt: [], icd10: [], hccRelevance: "", zCodes: [], zCodeEvidence: "" },
     suggestedCodesAfterChanges: { cpt: [], icd10: [] },
     baselineCodes: [],
     baselineDiagnoses: [],
@@ -146,14 +147,70 @@ const CONTROLLED_CHECK_LABELS = Object.freeze({
   followUp: "Follow-up plan",
 });
 
+const CONTROLLED_FINDING_PATTERNS = Object.freeze({
+  diagnosisLinkage: /\b(?:diagnos(?:is|es|tic)|indication|icd-?10|linked?)\b/i,
+  doseFrequency: /\b(?:dose|dosage|frequency|times? daily|bid|tid|qid|qhs|prn)\b/i,
+  pdmp: /\b(?:pdmp|prescription drug monitoring|crisp\s+pdmp)\b/i,
+  agreementConsent: /\b(?:agreement|consent|contract)\b/i,
+  monitoring: /\b(?:monitoring|urine drug|drug screen|uds|toxicology|pill count)\b/i,
+  safetyCounseling: /\b(?:safety counsel|side effect|safe storage|sedation|overdose|naloxone|avoid alcohol|do not drive|dependence|misuse)\w*\b/i,
+  followUp: /\b(?:follow[- ]?up|return\s+(?:in|to)|rtc|recheck)\b/i,
+});
+
+function findingText(finding = {}) {
+  return `${finding.issue || ""} ${finding.location || ""} ${finding.suggestedFix || ""}`.toLowerCase();
+}
+
+function findingAppliesToControlledMedication(finding, review, reviewCount) {
+  if (finding.id?.startsWith(`${review.findingPrefix}:`)) return true;
+  const text = findingText(finding);
+  const medicationTokens = String(review.medicationKey || review.medication || "")
+    .toLowerCase().split(/[^a-z0-9]+/).filter((token) => token.length >= 5);
+  if (medicationTokens.some((token) => text.includes(token))) return true;
+  return reviewCount === 1 && /\b(?:controlled|schedule\s+(?:ii|iii|iv|v)|stimulant|opioid|benzodiazepine|pdmp|urine drug|uds|toxicology)\b/i.test(text);
+}
+
+function matchingControlledFinding(findings, review, checkKey, reviewCount) {
+  const exactId = `${review.findingPrefix}:${checkKey}`;
+  const exact = findings.find((finding) => finding.id === exactId);
+  if (exact) return exact;
+  const pattern = CONTROLLED_FINDING_PATTERNS[checkKey];
+  if (!pattern) return null;
+  return findings.find((finding) => pattern.test(findingText(finding))
+    && findingAppliesToControlledMedication(finding, review, reviewCount)) || null;
+}
+
+export function controlledClinicalFinding(auditValue, review, checkKey, reviewCount = 1) {
+  const audit = normalizeClinicalAudit(auditValue);
+  return matchingControlledFinding(audit.findings, review, checkKey, reviewCount);
+}
+
 export function addRequiredClinicalFindings(auditValue, encounter = {}) {
   const audit = normalizeClinicalAudit(auditValue);
+  const reviews = controlledMedicationReviews(encounter);
+  const legacyControlled = audit.findings.filter((finding) => finding.id.startsWith("controlled:"));
+  audit.findings = audit.findings.filter((finding) => !finding.id.startsWith("controlled:"));
   const existing = new Set(audit.findings.map((finding) => finding.id));
-  controlledMedicationReviews(encounter).forEach((review, medicationIndex) => {
+  reviews.forEach((review) => {
     Object.entries(review.checks).forEach(([key, check]) => {
       if (check.status === "documented") return;
-      const id = `controlled:${medicationIndex + 1}:${key}`;
-      if (existing.has(id)) return;
+      const id = `${review.findingPrefix}:${key}`;
+      if (existing.has(id) || matchingControlledFinding(audit.findings, review, key, reviews.length)) return;
+      const prior = legacyControlled
+        .filter((finding) => finding.id === id || (
+          finding.id.endsWith(`:${key}`)
+          && (reviews.length === 1 || findingAppliesToControlledMedication(finding, review, reviews.length))
+        ))
+        .sort((left, right) => {
+          const decisionDelta = Number(right.decision !== "pending") - Number(left.decision !== "pending");
+          if (decisionDelta) return decisionDelta;
+          return String(right.decidedAt || "").localeCompare(String(left.decidedAt || ""));
+        })[0];
+      if (prior) {
+        audit.findings.push({ ...prior, id });
+        existing.add(id);
+        return;
+      }
       const label = CONTROLLED_CHECK_LABELS[key] || key;
       audit.findings.push({
         id,
@@ -193,6 +250,7 @@ export function parseClinicalAuditReport(reportText, encounter = {}) {
 
   const lines = rawReport.split("\n");
   const codeLines = [];
+  const documentedCodeLines = [];
   let section = "";
   let currentFinding = null;
   lines.forEach((line) => {
@@ -243,11 +301,23 @@ export function parseClinicalAuditReport(reportText, encounter = {}) {
       });
     }
     if (section === "complete") audit.completeNotes.push(item);
+    if (section === "codes_documented") documentedCodeLines.push(line);
     if (section === "codes_after") codeLines.push(line);
   });
 
   audit.guidelineNotes = unique(audit.guidelineNotes);
   audit.completeNotes = unique(audit.completeNotes);
+  const documentedCodes = parseSuggestedCodes(documentedCodeLines);
+  const hccLine = documentedCodeLines.find((line) => /HCC\s+relevance/i.test(line));
+  const zCodeLine = documentedCodeLines.find((line) => /Z[- ]?code\s+opportunit/i.test(line));
+  const zCodes = zCodeLine ? codeCandidates(zCodeLine, "icd10").filter((code) => code.startsWith("Z")) : [];
+  audit.codingAsDocumented = {
+    cpt: documentedCodes.cpt,
+    icd10: unique([...documentedCodes.icd10, ...zCodes]),
+    hccRelevance: clean(hccLine).replace(/^.*?HCC\s+relevance\s*:\s*/i, ""),
+    zCodes,
+    zCodeEvidence: clean(zCodeLine).replace(/^.*?Z[- ]?code\s+opportunit(?:y|ies)\s*:\s*/i, ""),
+  };
   audit.suggestedCodesAfterChanges = parseSuggestedCodes(codeLines);
   audit.status = audit.findings.some((finding) => finding.decision === "pending") ? "needs_resolution" : "resolved";
   return addRequiredClinicalFindings(audit, encounter);
@@ -271,6 +341,13 @@ export function normalizeClinicalAudit(value) {
     note: clean(item?.note),
   })).filter((item) => item.topic || item.note);
   audit.completeNotes = unique([].concat(value.completeNotes || []).map(clean));
+  audit.codingAsDocumented = {
+    cpt: unique([].concat(value.codingAsDocumented?.cpt || []).map((item) => clean(item).toUpperCase())),
+    icd10: unique([].concat(value.codingAsDocumented?.icd10 || []).map((item) => clean(item).toUpperCase())),
+    hccRelevance: clean(value.codingAsDocumented?.hccRelevance),
+    zCodes: unique([].concat(value.codingAsDocumented?.zCodes || []).map((item) => clean(item).toUpperCase())),
+    zCodeEvidence: clean(value.codingAsDocumented?.zCodeEvidence),
+  };
   audit.suggestedCodesAfterChanges = {
     cpt: unique([].concat(value.suggestedCodesAfterChanges?.cpt || []).map((value) => clean(value).toUpperCase())),
     icd10: unique([].concat(value.suggestedCodesAfterChanges?.icd10 || []).map((value) => clean(value).toUpperCase())),

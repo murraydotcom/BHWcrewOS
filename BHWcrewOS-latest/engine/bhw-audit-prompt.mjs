@@ -22,9 +22,10 @@ SINGLE-CHART WORKFLOW
 3. Check chief complaint, HPI, ROS when appropriate, complaint-specific exam, assessment, plan, prescriptions, controlled-substance requirements, medical necessity, and billing support.
 4. For every listed ICD-10-CM code, identify support in HPI, exam, history, assessment, or plan; otherwise flag it.
 5. Compare CPT/HCPCS with documented MDM/complexity and any applicable time requirements.
-6. Run a safety, controlled-substance, compliance, and billing red-flag pass.
-7. Only when the plan touches guidance that can change, perform or request a current-guideline check against primary sources.
-8. End with a clear closure verdict and next action.
+6. Run ICD-10-CM specificity, HCC/risk-adjustment relevance, and applicable Z-code review using only diagnoses and circumstances actually assessed or documented for this encounter.
+7. Run a safety, controlled-substance, compliance, and billing red-flag pass.
+8. Only when the plan touches guidance that can change, perform or request a current-guideline check against primary sources.
+9. End with a clear closure verdict and next action.
 
 CHECKLIST
 - Identification: patient/initials, DOS, provider, visit type.
@@ -38,6 +39,11 @@ CHECKLIST
 - Controlled medications: review each structured medication for diagnosis/indication linkage, dose and frequency, applicable PDMP review, applicable agreement/consent, applicable monitoring, safety counseling, and follow-up. Treat "applicable" as a provider decision; do not assume every element is required for every medication or encounter. A missing applicable legal/safety element is potentially CRITICAL.
 - Medical necessity: each lab or imaging order has a documented clinical reason.
 - Billing: no service is represented as documented when it is not; diagnoses support services; no unsupported higher-level code is suggested.
+- ICD-10-CM specificity: look for supported laterality, acuity, severity, stage, episode/encounter, complication, manifestation, causal linkage, and combination-code opportunities. When the note does not support the specificity, ask a provider clarification question; do not guess.
+- Active versus historical: distinguish an actively assessed condition from past history, status, screening, symptom, rule-out, and resolved conditions. Never code a suspected diagnosis from a medication, test result, questionnaire response, or problem-list carry-forward alone.
+- HCC/risk adjustment: identify diagnoses that may map to the applicable CMS-HCC model only when the condition is currently assessed and the note shows encounter-specific evaluation, monitoring, assessment, or treatment. HCC is a risk category—not a diagnosis and not proof that a code should be reported. Do not recommend annual recapture from history alone.
+- Z codes: review documented social drivers, long-term medication use, screening, counseling, status, history, caregiver/family circumstances, and other encounter-relevant factors. Recommend a Z code only when the documented circumstance is reportable and relevant to the service.
+- CPT/HCPCS: review MDM or time, visit family, required time, primary/add-on relationships, procedure documentation, bundling/modifier issues, preventive/behavioral services, and payer-specific requirements. Never select a higher-paying code without documented medical necessity and support.
 
 IMPORTANT E/M TIME RULE
 - Do not flag 99214 or 99215 merely because total time is absent. Office/outpatient E/M levels may generally be selected using medical decision making OR total time.
@@ -66,6 +72,8 @@ GUIDELINE CURRENCY
 CODING OUTPUT
 - First describe what the note supports AS DOCUMENTED.
 - Then separately list CPT/HCPCS and ICD-10-CM suggestions that could be supported AFTER provider-confirmed corrections are actually added.
+- For every suggested ICD-10-CM or Z code, state the exact documented evidence and any missing specificity. Flag possible HCC relevance separately; do not treat HCC mapping as permission to code.
+- For every suggested CPT/HCPCS code, state whether support is based on MDM, total time, procedure/service requirements, or an add-on relationship and identify any missing requirement.
 - Suggested codes are review-only. Do not auto-apply them and do not rewrite clinical history to justify them.
 
 OUTPUT — SINGLE CHART
@@ -96,6 +104,8 @@ Recommended risk level: [Critical/High/Moderate/Low] — for you to confirm
 💰 CODING AS DOCUMENTED
 CPT/HCPCS: [codes supported now]
 ICD-10-CM: [codes supported now]
+HCC relevance: [possible model/category relevance, or none; validation required]
+Z-code opportunities: [supported codes with evidence, or none]
 
 💡 CODING AFTER CONFIRMED CHANGES (review only)
 CPT/HCPCS: [suggested codes after fixes]

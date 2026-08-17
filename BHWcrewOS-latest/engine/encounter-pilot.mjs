@@ -66,6 +66,11 @@ export function parseQueue(raw, clinicalById = {}) {
       return buildEncounterPacket({
         ...metadata,
         note: cleanText(sessionClinical?.note || legacyNote),
+        sourceTranscript: cleanText(sessionClinical?.sourceTranscript),
+        notePlan: sessionClinical?.notePlan,
+        noteBuilderInput: sessionClinical?.noteBuilderInput,
+        encounterSnapshot: sessionClinical?.encounterSnapshot,
+        noteDraftMeta: sessionClinical?.noteDraftMeta,
         codes: cleanList(sessionClinical?.codes),
         diagnoses: cleanList(sessionClinical?.diagnoses),
         medications: Array.isArray(sessionClinical?.medications) ? sessionClinical.medications : [],
