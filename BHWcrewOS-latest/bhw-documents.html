@@ -255,6 +255,7 @@
     </select>
     <button class="secondary" id="visualAidsBtn" title="Add simple icons throughout for low-literacy patients">Icons: off</button>
     <div class="divider"></div>
+    <button id="aiDraftBtn" title="Describe the document you need and let AI draft it">✨ Draft with AI</button>
     <button class="secondary" id="loadSampleBtn">Load sample</button>
     <button class="secondary" id="resetBtn">Reset</button>
     <button class="secondary" id="downloadBtn">Download HTML</button>
@@ -268,6 +269,64 @@
     </div>
   </div>
 
+</div>
+
+<style>
+  .aidraft-overlay{position:fixed;inset:0;background:rgba(20,32,38,.5);display:none;align-items:center;justify-content:center;z-index:9999;padding:18px}
+  .aidraft-overlay.show{display:flex}
+  .aidraft-panel{background:#fff;border-radius:14px;box-shadow:0 30px 80px -20px rgba(20,32,38,.5);width:100%;max-width:560px;max-height:92vh;overflow:auto;padding:22px 22px 18px}
+  .aidraft-panel h2{margin:0 0 3px;font-size:1.15rem;color:var(--teal-dark)}
+  .aidraft-panel .sub{color:#6b7a80;font-size:.82rem;margin:0 0 16px}
+  .aidraft-panel label{display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:#6b7a80;font-weight:700;margin:0 0 5px}
+  .aidraft-field{margin-bottom:14px}
+  .aidraft-panel input[type=text],.aidraft-panel textarea{width:100%;font:inherit;font-size:.92rem;padding:10px 12px;border:1.5px solid #dfe6e9;border-radius:9px;box-sizing:border-box;background:#fbfdfd}
+  .aidraft-panel textarea{min-height:96px;resize:vertical}
+  .aidraft-row{display:flex;gap:8px}
+  .aidraft-row input{flex:1}
+  .aidraft-btn{appearance:none;border:0;border-radius:9px;font:inherit;font-weight:700;font-size:.9rem;padding:10px 16px;cursor:pointer;background:var(--teal-dark,#5d8a9e);color:#fff}
+  .aidraft-btn.ghost{background:#eef3f4;color:#3d5a66}
+  .aidraft-btn:disabled{opacity:.6;cursor:default}
+  .aidraft-btn.sm{padding:9px 12px;font-size:.82rem}
+  .aidraft-results{margin-top:6px;border:1px solid #eef1f2;border-radius:8px;overflow:hidden}
+  .aidraft-results:empty{display:none}
+  .aidraft-hit{padding:8px 11px;font-size:.86rem;cursor:pointer;border-bottom:1px solid #f1f4f5}
+  .aidraft-hit:last-child{border-bottom:0}
+  .aidraft-hit:hover{background:#f3f8f9}
+  .aidraft-chip{display:inline-flex;align-items:center;gap:8px;background:#eaf4f2;border:1px solid #bfe0da;color:#2f5d56;border-radius:20px;padding:5px 12px;font-size:.84rem;margin-top:2px}
+  .aidraft-chip button{border:0;background:none;cursor:pointer;color:#2f5d56;font-weight:700;font-size:1rem;line-height:1}
+  .aidraft-foot{display:flex;gap:8px;align-items:center;margin-top:8px}
+  .aidraft-note{font-size:.74rem;color:#8a969b;line-height:1.5;margin-top:10px}
+  .aidraft-status{font-size:.85rem;min-height:1.2em}
+  .aidraft-status.err{color:#a85846}
+</style>
+
+<div class="aidraft-overlay" id="aidraftOverlay">
+  <div class="aidraft-panel">
+    <h2>✨ Draft with AI</h2>
+    <p class="sub">Describe the document in plain English. AI writes a first draft in the <b id="aidraftDocLabel">document</b> — you review and edit it before printing.</p>
+
+    <div class="aidraft-field">
+      <label>Patient (optional — tailors the draft)</label>
+      <div class="aidraft-row">
+        <input type="text" id="aidraftPatientQ" placeholder="Search a patient by name…" autocomplete="off">
+        <button class="aidraft-btn ghost sm" id="aidraftFindBtn" type="button">Find</button>
+      </div>
+      <div class="aidraft-results" id="aidraftResults"></div>
+      <div id="aidraftChosen"></div>
+    </div>
+
+    <div class="aidraft-field">
+      <label>What do you need?</label>
+      <textarea id="aidraftRequest" placeholder="e.g. Create a nutrition plan for this patient who has high homocysteine and stage 3 CKD — foods to favor, foods to limit, and simple daily targets."></textarea>
+    </div>
+
+    <div class="aidraft-foot">
+      <button class="aidraft-btn" id="aidraftGoBtn" type="button">Draft it</button>
+      <button class="aidraft-btn ghost" id="aidraftCancelBtn" type="button">Cancel</button>
+      <span class="aidraft-status" id="aidraftStatus"></span>
+    </div>
+    <p class="aidraft-note">AI can be wrong. This is a draft for a licensed clinician to review and edit before use. Content is sent to the practice's AI provider under its BAA.</p>
+  </div>
 </div>
 
 <script>
@@ -1463,9 +1522,84 @@ function setModeButtons(){
   }
 }
 
+/* ---------------- Draft with AI ---------------- */
+function initAiDraft(){
+  const API='/.netlify/functions', DASH_KEY='02142022';
+  const $=id=>document.getElementById(id);
+  const overlay=$('aidraftOverlay');
+  let chosen=null;
+  const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+  function open(){
+    $('aidraftDocLabel').textContent=(DOC_CONFIG[state.docType]?.label||'document').toLowerCase();
+    const st=$('aidraftStatus'); st.textContent=''; st.className='aidraft-status';
+    overlay.classList.add('show'); setTimeout(()=>$('aidraftRequest').focus(),50);
+  }
+  function close(){ overlay.classList.remove('show'); }
+  function setChosen(p){
+    chosen=p; $('aidraftResults').innerHTML='';
+    $('aidraftChosen').innerHTML = p ? `<span class="aidraft-chip">${esc(p.name)}${p.dob?' · '+esc(p.dob):''} <button data-clear="1" title="Remove">×</button></span>` : '';
+  }
+
+  async function findPatient(){
+    const q=$('aidraftPatientQ').value.trim(); if(!q) return;
+    const st=$('aidraftStatus'); st.className='aidraft-status'; st.textContent='Searching…';
+    try{
+      const r=await fetch(`${API}/frontdesk-data?q=${encodeURIComponent(q)}&key=${encodeURIComponent(DASH_KEY)}`);
+      const d=await r.json(); st.textContent='';
+      if(d.patient){ setChosen(d.patient); return; }
+      const matches=d.matches||[];
+      if(!matches.length){ st.textContent='No match.'; return; }
+      $('aidraftResults').innerHTML = matches.slice(0,8).map(m=>`<div class="aidraft-hit" data-id="${esc(m.id)}">${esc(m.name)}${m.dob?' · '+esc(m.dob):''}</div>`).join('');
+    }catch(e){ st.className='aidraft-status err'; st.textContent='Search failed.'; }
+  }
+  async function pickById(id,name){
+    const st=$('aidraftStatus'); st.textContent='Loading patient…';
+    try{
+      const r=await fetch(`${API}/frontdesk-data?pid=${encodeURIComponent(id)}&key=${encodeURIComponent(DASH_KEY)}`);
+      const d=await r.json(); st.textContent='';
+      setChosen(d.patient || {name});
+    }catch(e){ st.textContent=''; setChosen({name}); }
+  }
+
+  async function draft(){
+    const st=$('aidraftStatus'); st.className='aidraft-status';
+    if(state.docType==='medication_list'){ st.className='aidraft-status err'; st.textContent='AI drafting supports handouts, summaries, care plans, and letters — not the structured medication list.'; return; }
+    const request=$('aidraftRequest').value.trim();
+    if(!request){ st.textContent='Describe what you need first.'; return; }
+    const go=$('aidraftGoBtn'); go.disabled=true; const lbl=go.textContent; go.textContent='Drafting…'; st.textContent='Writing your draft…';
+    try{
+      const r=await fetch(`${API}/doc-draft?key=${encodeURIComponent(DASH_KEY)}`,{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({docType:state.docType,request,patient:chosen||undefined})});
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok||!d.rawText){ st.className='aidraft-status err'; st.textContent=String(d.error||'Draft failed — try again.').slice(0,160); go.disabled=false; go.textContent=lbl; return; }
+      state.rawText=d.rawText; state.mode='paste';
+      if(chosen){
+        state.meta=state.meta||{};
+        const mf=(DOC_CONFIG[state.docType]?.metaFields)||[];
+        if(mf.includes('patientName')&&chosen.name) state.meta.patientName=chosen.name;
+        if(mf.includes('dob')&&chosen.dob) state.meta.dob=chosen.dob;
+      }
+      setModeButtons(); render();
+      go.disabled=false; go.textContent=lbl; close();
+    }catch(e){ st.className='aidraft-status err'; st.textContent='Network error.'; go.disabled=false; go.textContent=lbl; }
+  }
+
+  $('aiDraftBtn').addEventListener('click',open);
+  $('aidraftCancelBtn').addEventListener('click',close);
+  overlay.addEventListener('click',e=>{ if(e.target===overlay) close(); });
+  $('aidraftFindBtn').addEventListener('click',findPatient);
+  $('aidraftPatientQ').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); findPatient(); }});
+  $('aidraftResults').addEventListener('click',e=>{ const h=e.target.closest('.aidraft-hit'); if(h) pickById(h.dataset.id, h.textContent.split(' · ')[0]); });
+  $('aidraftChosen').addEventListener('click',e=>{ if(e.target.dataset.clear) setChosen(null); });
+  $('aidraftGoBtn').addEventListener('click',draft);
+}
+
 /* ---------------- Init ---------------- */
 initTopbar();
 setModeButtons();
+initAiDraft();
 render();
 </script>
 </body>
