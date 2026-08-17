@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="/crew-provider-gate.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BHW CrewOS — Patient Registry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--blue:#80abbd;--blue-d:#5f8b9d;--base:#f7f5f2;--bronze:#b07a55;--sage:#a8b59a;--ink:#2f3a3f;--muted:#68767b;--line:#e4ded6;--card:#fff;--sidebar:#243239;--danger:#c0503f;--shadow:0 1px 3px rgba(36,50,57,.08),0 6px 18px rgba(36,50,57,.05)}
+:root[data-theme=dark]{--base:#141a1d;--card:#1e272b;--ink:#e6edf0;--muted:#9db0b7;--line:#344248;--blue-d:#9ac2d1;--shadow:0 4px 18px rgba(0,0,0,.35)}
+*{box-sizing:border-box}body{margin:0;background:var(--base);color:var(--ink);font:13px Montserrat,system-ui,sans-serif}.app{display:flex;min-height:100vh}.sidebar{width:240px;background:var(--sidebar);color:#c9d6db;padding:26px 14px;position:fixed;inset:0 auto 0 0}.brand{padding:0 13px 22px;border-bottom:1px solid rgba(255,255,255,.09)}.brand h1{margin:0;color:#fff;font-size:17px}.brand div,.nav-label{font-size:9px;letter-spacing:1.3px;text-transform:uppercase}.brand div{margin-top:5px}.nav-label{margin:22px 12px 7px;opacity:.55}.nav{display:flex;gap:10px;padding:10px 12px;border-radius:9px;color:inherit;text-decoration:none;margin:2px 0}.nav:hover,.nav.active{background:#354a54;color:#fff}.nav.active{background:var(--blue);font-weight:700}.side-note{position:absolute;bottom:20px;padding:0 12px;font-size:10px;line-height:1.6;opacity:.65}.main{margin-left:240px;width:calc(100% - 240px)}.top{height:66px;padding:0 26px;background:var(--card);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}.crumb{font-size:12px;color:var(--muted)}.tools,.actions,.filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.content{padding:25px;max-width:1540px;margin:auto}.hero{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:20px}.hero h2{margin:0;font-size:24px}.hero p{margin:7px 0 0;color:var(--muted);max-width:780px;line-height:1.55}.btn{font:600 12px Montserrat;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);padding:9px 13px;cursor:pointer;text-decoration:none}.btn.primary{background:var(--blue-d);border-color:var(--blue-d);color:#fff}.btn:disabled{opacity:.45;cursor:not-allowed}.badge{display:inline-flex;padding:4px 8px;border-radius:12px;font-size:9.5px;font-weight:700}.badge.complete{background:#e9f1e5;color:#526a48}.badge.warning{background:#fff2d8;color:#89610e}.badge.needs-review{background:#f9dfdc;color:#9f3b2f}.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}.kpi,.card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}.kpi{padding:14px}.kpi .v{font-size:23px;font-weight:800}.kpi .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-top:3px}.workspace{display:grid;grid-template-columns:minmax(500px,1.1fr) minmax(400px,.9fr);gap:16px}.card-head{padding:15px 17px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:center}.card-head h3{margin:0;font-size:14px}.search{width:min(340px,100%);padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);font:500 11px Montserrat}.table-wrap{max-height:720px;overflow:auto}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:11px 13px;border-bottom:1px solid var(--line);font-size:10.5px}th{position:sticky;top:0;background:var(--card);z-index:1;font-size:9px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}tr[data-id]{cursor:pointer}tr[data-id]:hover,tr.on{background:color-mix(in srgb,var(--blue) 10%,var(--card))}.detail{padding:17px}.formgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.field label{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700;margin-bottom:5px}.field input,.field select{width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:500 11px Montserrat}.notice{padding:11px 13px;border-radius:9px;background:#fdf5e9;border-left:4px solid var(--bronze);font-size:11px;line-height:1.55;margin-bottom:14px}.empty{padding:55px 24px;text-align:center;color:var(--muted)}.privacy{font-size:9.5px;color:var(--muted);line-height:1.55;margin-top:12px}.toast{position:fixed;right:20px;bottom:20px;z-index:40;max-width:390px;background:var(--sidebar);color:#fff;border-radius:12px;padding:13px 15px;box-shadow:0 12px 36px rgba(0,0,0,.25);font-size:11px;display:none}.toast.on{display:block}.modal{position:fixed;inset:0;background:rgba(20,26,29,.62);display:none;align-items:center;justify-content:center;z-index:20;padding:18px}.modal.on{display:flex}.modal-box{width:min(700px,100%);background:var(--card);border-radius:14px;padding:20px}.modal-box h3{margin-top:0}.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:15px}@media(max-width:1100px){.workspace{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}}@media(max-width:760px){.sidebar{display:none}.main{margin:0;width:100%}.content{padding:16px}.top{padding:0 16px}.hero{display:block}.hero .btn{margin-top:12px}.formgrid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+  <div class="brand"><h1>BHW CrewOS</h1><div>Operational Intelligence</div></div>
+  <div class="nav-label">Patient Operations</div>
+  <a class="nav active" href="patient-registry.html">◎ Patient Registry</a>
+  <a class="nav" href="workflow.html">◷ 24-Hour Work Queue</a>
+  <a class="nav" href="index.html">◈ Encounter Scrub</a>
+  <a class="nav" href="claims.html">▦ Legacy Claims / Optum</a>
+  <a class="nav" href="prior-auth.html">✋ Prior Authorization</a>
+  <a class="nav" href="risk.html">◑ Risk &amp; Quality</a>
+  <div class="side-note">Protected patient master<br>Google Cloud-backed pilot.<br><br>CharmHealth remains the legal medical record.</div>
+</aside>
+<main class="main">
+  <div class="top"><div class="crumb">Operational Intelligence · <b>Patient Registry</b></div><div class="tools"><span id="cloudStatus" class="badge warning">Connecting…</span><button class="btn" id="theme">◐ Theme</button></div></div>
+  <div class="content">
+    <div class="hero"><div><h2>Patient Registry</h2><p>One protected master record links BHW Patient ID, verified contact information, coverage, referrals, pre-visit work, encounters, and future care plans across CrewOS.</p></div><button class="btn primary" id="newPatient" disabled>+ Add patient</button></div>
+    <section class="kpis" id="kpis"></section>
+    <section class="workspace">
+      <div class="card"><div class="card-head"><h3>Patient master list</h3><div class="filters"><input class="search" id="search" placeholder="Search BHW ID, name, phone, payer…"><select class="search" id="statusFilter" style="width:auto"><option value="active">Active</option><option value="all">All statuses</option><option value="prospective">Prospective</option><option value="inactive">Inactive</option><option value="needs-review">Coverage needs review</option></select></div></div><div class="table-wrap"><table><thead><tr><th>BHW ID</th><th>Patient</th><th>DOB</th><th>Phone</th><th>Primary coverage</th><th>Status</th></tr></thead><tbody id="patientRows"></tbody></table></div></div>
+      <div class="card" id="detail"><div class="empty">Select a patient to review the master record.</div></div>
+    </section>
+  </div>
+</main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-box"><h3 id="modalTitle">Add patient master record</h3><div class="notice"><b>Use the existing BHW Patient ID.</b> This pilot will not guess identity matches or create duplicate patients. Search first, then add only after identity verification.</div><div class="formgrid" id="newPatientFields"></div><div class="modal-actions"><button class="btn" id="cancel">Cancel</button><button class="btn primary" id="create">Create patient</button></div></div></div>
+<script type="module" src="patient-registry-app.mjs"></script>
+</body>
+</html>

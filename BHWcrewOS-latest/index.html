@@ -313,6 +313,11 @@ async function doLogin(){
     const data = await res.json();
     if(!res.ok) throw new Error(data.error||"Sign-in failed");
     TOKEN = data.token; sessionStorage.setItem("crewos_token",TOKEN);
+    const next = new URLSearchParams(location.search).get("next") || "";
+    if (/^\/provider\/[a-z0-9._/-]+(?:\?[a-z0-9%&=._-]*)?$/i.test(next)) {
+      location.replace(next);
+      return;
+    }
     document.getElementById("login").style.display="none";
     document.getElementById("app").style.display="block";
     await refresh();
