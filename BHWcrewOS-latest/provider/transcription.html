@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="/crew-provider-gate.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BHW Provider — Transcription Pilot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--blue:#80abbd;--blue-d:#5f8b9d;--base:#f7f5f2;--bronze:#b07a55;--sage:#a8b59a;--ink:#2f3a3f;--muted:#68767b;--line:#e4ded6;--card:#fff;--sidebar:#243239;--danger:#c0503f;--shadow:0 1px 3px rgba(36,50,57,.08),0 6px 18px rgba(36,50,57,.05)}
+*{box-sizing:border-box}body{margin:0;background:var(--base);color:var(--ink);font-family:Montserrat,system-ui,sans-serif;font-size:13px}.app{display:flex;min-height:100vh}.sidebar{width:240px;background:var(--sidebar);color:#c9d6db;padding:26px 14px;position:fixed;inset:0 auto 0 0}.brand{padding:0 13px 22px;border-bottom:1px solid rgba(255,255,255,.09)}.brand h1{margin:0;color:#fff;font-size:17px}.brand div{font-size:10px;letter-spacing:1.2px;text-transform:uppercase;margin-top:5px}.nav-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;margin:22px 12px 7px;opacity:.55}.nav{display:flex;gap:10px;padding:10px 12px;border-radius:9px;color:inherit;text-decoration:none;margin:2px 0}.nav:hover,.nav.active{background:#354a54;color:#fff}.nav.active{background:var(--blue);font-weight:700}.side-note{position:absolute;bottom:20px;padding:0 12px;font-size:10px;line-height:1.6;opacity:.65}.main{margin-left:240px;width:calc(100% - 240px)}.top{height:66px;padding:0 26px;background:var(--card);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}.badge{padding:5px 8px;border-radius:12px;font-size:9.5px;font-weight:700;background:#fff2d8;color:#89610e}.content{padding:25px;max-width:1100px;margin:auto}.hero h2{margin:0;font-size:24px}.hero p{color:var(--muted);line-height:1.6;max-width:800px}.notice{padding:13px 15px;border-radius:10px;background:#fdf5e9;border-left:4px solid var(--bronze);font-size:11px;line-height:1.6;margin:18px 0}.grid{display:grid;grid-template-columns:1fr 1.35fr;gap:16px}.card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:18px}.card h3{margin:0 0 15px}.field{margin-bottom:13px}.field label{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700;margin-bottom:6px}.field input,.field textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:500 11px/1.55 Montserrat}.field textarea{resize:vertical;min-height:390px}.check{display:grid;grid-template-columns:18px 1fr;gap:8px;align-items:start;margin:13px 0;font-size:11px;line-height:1.5}.check input{margin-top:2px}.controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.btn{font:600 12px Montserrat;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);padding:10px 13px;cursor:pointer}.btn.primary{background:var(--blue-d);border-color:var(--blue-d);color:#fff}.btn.danger{color:var(--danger);border-color:#e0b7b1}.btn:disabled{opacity:.45;cursor:not-allowed}.meter{padding:16px;border:1px dashed var(--line);border-radius:10px;text-align:center;margin:14px 0}.timer{font-size:30px;font-weight:800}.state{font-size:10px;color:var(--muted);margin-top:5px}.privacy{font-size:9.5px;color:var(--muted);line-height:1.6;margin-top:12px}.meta{font-size:9.5px;color:var(--muted);min-height:18px}.toast{position:fixed;right:20px;bottom:20px;max-width:390px;background:var(--sidebar);color:#fff;border-radius:12px;padding:13px 15px;display:none}.toast.on{display:block}@media(max-width:800px){.sidebar{display:none}.main{margin:0;width:100%}.grid{grid-template-columns:1fr}.content{padding:16px}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar"><div class="brand"><h1>BHW Provider</h1><div>Clinical Intelligence</div></div><div class="nav-label">Documentation</div><a class="nav" href="patient-registry.html">◎ Patient Registry</a><a class="nav" href="workflow.html">◷ 24-Hour Work Queue</a><a class="nav active" href="transcription.html">◉ Transcription Pilot</a><a class="nav" href="index.html">◈ Encounter Scrub</a><div class="side-note">Synthetic role-play pilot<br>No real patient audio in this release.</div></aside>
+<main class="main"><div class="top"><div>Clinical Intelligence · <b>Transcription Pilot</b></div><span class="badge" id="cloudStatus">Connecting…</span></div><div class="content">
+  <div class="hero"><h2>Provider transcription pilot</h2><p>Record a short synthetic visit, convert the audio into a speaker-labeled draft, then review it before copying. The audio and draft stay in memory only and are cleared when this page closes.</p></div>
+  <div class="notice"><b>Tomorrow’s test is synthetic only.</b> Use invented names and facts. Do not record a real patient yet. The production consent, retention, deletion, and legal-record workflow must be approved before live use.</div>
+  <section class="grid">
+    <div class="card"><h3>1 · Record role-play</h3><div class="field"><label>Pilot patient ID</label><input value="BHW0000" readonly></div>
+      <label class="check"><input type="checkbox" id="synthetic"><span>I confirm this is a staff role-play with no real patient or real patient information.</span></label>
+      <label class="check"><input type="checkbox" id="consent"><span>Everyone in the role-play knows the microphone is recording.</span></label>
+      <div class="meter"><div class="timer" id="timer">00:00</div><div class="state" id="state">Ready</div></div>
+      <div class="controls"><button class="btn primary" id="start">Start recording</button><button class="btn" id="pause" disabled>Pause</button><button class="btn" id="finish" disabled>Finish</button></div>
+      <div class="controls"><button class="btn primary" id="transcribe" disabled>Transcribe draft</button><button class="btn danger" id="clear">Clear audio and draft</button></div>
+      <div class="privacy">No audio is written to Firestore or browser storage. The Cloud Run API sends it directly to Vertex AI for transcription and logs only the test ID, byte count, model, and audio hash.</div>
+    </div>
+    <div class="card"><h3>2 · Provider review</h3><div class="field"><label>Editable transcript draft</label><textarea id="transcript" placeholder="The synthetic transcript will appear here." spellcheck="true"></textarea></div><div class="meta" id="meta"></div>
+      <label class="check"><input type="checkbox" id="reviewed"><span>I reviewed this draft against the recording. It is not a signed note or the legal medical record.</span></label>
+      <div class="controls"><button class="btn primary" id="copy" disabled>Copy reviewed transcript</button></div>
+    </div>
+  </section>
+</div></main></div><div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="transcription-app.mjs"></script>
+</body></html>
