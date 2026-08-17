@@ -16,6 +16,8 @@ import {
 import {
   approvedAuditAddenda,
   clinicalAuditSummary,
+  controlledClinicalFinding,
+  normalizeClinicalAudit,
   parseClinicalAuditReport,
   resolveClinicalAuditFinding,
 } from "../engine/clinical-audit.mjs";
@@ -32,6 +34,14 @@ import {
   normalizeStructuredEncounter,
   structuredLines,
 } from "../engine/structured-encounter.mjs";
+import {
+  PRIMARY_NOTE_TEMPLATES,
+  NOTE_MODULES,
+  ENCOUNTER_CONTEXT_FIELDS,
+  composeEncounterNote,
+  contextReviewSummary,
+  normalizeNotePlan,
+} from "../engine/note-composer.mjs";
 
 const QUEUE_KEY = "bhw_encounter_queue_v1";
 const NOTES_KEY = "bhw_encounter_session_notes_v1";
@@ -97,6 +107,11 @@ function persist() {
     .filter((row) => row.note || row.codes.length || row.diagnoses.length || row.tasks.length || row.documents.length || row.codingRecommendations.length || row.clinicalAudit?.status !== "not_run")
     .map((row) => [row.id, {
       note: row.note,
+      sourceTranscript: row.sourceTranscript,
+      notePlan: row.notePlan,
+      noteBuilderInput: row.noteBuilderInput,
+      encounterSnapshot: row.encounterSnapshot,
+      noteDraftMeta: row.noteDraftMeta,
       codes: row.codes,
       diagnoses: row.diagnoses,
       medications: row.medications,
@@ -168,16 +183,98 @@ function log(row, text) {
   row.auditTrail = row.auditTrail.slice(-100);
 }
 
+function selectedModules(container = document) {
+  return [...container.querySelectorAll("input[data-note-module]:checked")].map((input) => input.value);
+}
+
+function notePlanFromDetail(row) {
+  if (!$('dPrimaryTemplate')) return normalizeNotePlan(row.notePlan);
+  return normalizeNotePlan({
+    primaryTemplate: $('dPrimaryTemplate').value,
+    modules: selectedModules($('dModuleGrid')),
+    awvType: $('dAwvType')?.value || "",
+  });
+}
+
+function builderInputFromDetail(row) {
+  const current = row.noteBuilderInput || {};
+  const value = (id, fallback = "") => $(id) ? $(id).value : fallback;
+  return {
+    ...current,
+    chiefConcern: value("nbChiefConcern", current.chiefConcern),
+    relevantHistory: value("nbRelevantHistory", current.relevantHistory),
+    ros: value("nbRos", current.ros),
+    exam: value("nbExam", current.exam),
+    assessment: value("nbAssessment", current.assessment),
+    plan: value("nbPlan", current.plan),
+    followUp: value("nbFollowUp", current.followUp),
+    timeMdm: value("nbTimeMdm", current.timeMdm),
+    transcriptReviewed: $("nbTranscriptReviewed") ? $("nbTranscriptReviewed").checked : Boolean(current.transcriptReviewed),
+    awv: {
+      ...current.awv,
+      historyUpdate: value("nbAwvHistory", current.awv?.historyUpdate),
+      providers: value("nbAwvProviders", current.awv?.providers),
+      measurements: value("nbAwvMeasurements", current.awv?.measurements),
+      cognition: value("nbAwvCognition", current.awv?.cognition),
+      functionSafety: value("nbAwvFunction", current.awv?.functionSafety),
+      preventionSchedule: value("nbAwvPrevention", current.awv?.preventionSchedule),
+      opioidSudReview: value("nbAwvSubstance", current.awv?.opioidSudReview),
+      personalizedPlan: value("nbAwvPlan", current.awv?.personalizedPlan),
+    },
+    conditionManagement: {
+      ...current.conditionManagement,
+      status: value("nbConditionStatus", current.conditionManagement?.status),
+      objective: value("nbConditionObjective", current.conditionManagement?.objective),
+      treatmentResponse: value("nbConditionTreatment", current.conditionManagement?.treatmentResponse),
+    },
+    preventiveCare: {
+      ...current.preventiveCare,
+      screenings: value("nbPreventiveScreenings", current.preventiveCare?.screenings),
+      counselingPlan: value("nbPreventivePlan", current.preventiveCare?.counselingPlan),
+    },
+    controlledMedication: {
+      ...current.controlledMedication,
+      clinicalReview: value("nbControlledClinical", current.controlledMedication?.clinicalReview),
+      pdmp: value("nbControlledPdmp", current.controlledMedication?.pdmp),
+      agreementConsent: value("nbControlledAgreement", current.controlledMedication?.agreementConsent),
+      sampleMonitoring: value("nbControlledSample", current.controlledMedication?.sampleMonitoring),
+      safetyCounseling: value("nbControlledSafety", current.controlledMedication?.safetyCounseling),
+      followUp: value("nbControlledFollowUp", current.controlledMedication?.followUp),
+    },
+    behavioralHealth: {
+      ...current.behavioralHealth,
+      mse: value("nbBehavioralMse", current.behavioralHealth?.mse),
+      risk: value("nbBehavioralRisk", current.behavioralHealth?.risk),
+      interventionsResponse: value("nbBehavioralInterventions", current.behavioralHealth?.interventionsResponse),
+    },
+    charmedMinds: {
+      ...current.charmedMinds,
+      functionalConcern: value("nbCharmedConcern", current.charmedMinds?.functionalConcern),
+      screeningProfile: value("nbCharmedScreening", current.charmedMinds?.screeningProfile),
+      goalsPlan: value("nbCharmedGoals", current.charmedMinds?.goalsPlan),
+    },
+  };
+}
+
 function sync(row, { invalidateApproval = true } = {}) {
   const nextNote = $("dNote").value;
+  const nextSourceTranscript = $("dTranscript") ? $("dTranscript").value : row.sourceTranscript;
+  const nextNotePlan = notePlanFromDetail(row);
+  const nextBuilderInput = builderInputFromDetail(row);
   const nextOwner = $("dOwner").value.trim() || "Amaris";
   const nextCodes = $("dCodes").value.split(/[\s,]+/).map((value) => value.trim().toUpperCase()).filter(Boolean);
   const nextDiagnoses = $("dDiagnoses").value.split(/[\s,]+/).map((value) => value.trim().toUpperCase()).filter(Boolean);
   const clinicalChanged = row.note !== nextNote
+    || row.sourceTranscript !== nextSourceTranscript
+    || JSON.stringify(normalizeNotePlan(row.notePlan)) !== JSON.stringify(nextNotePlan)
+    || JSON.stringify(row.noteBuilderInput || {}) !== JSON.stringify(nextBuilderInput)
     || row.codes.join("|") !== nextCodes.join("|")
     || row.diagnoses.join("|") !== nextDiagnoses.join("|");
   const noteChanged = row.note !== nextNote;
   row.note = nextNote;
+  row.sourceTranscript = nextSourceTranscript;
+  row.notePlan = nextNotePlan;
+  row.noteBuilderInput = nextBuilderInput;
   row.owner = nextOwner;
   row.codes = Array.from(new Set(nextCodes));
   row.diagnoses = Array.from(new Set(nextDiagnoses));
@@ -243,6 +340,49 @@ function statusOptions(current) {
   return Object.values(WORKFLOW_STATUS).map((status) => `<option value="${status}" ${status === current ? "selected" : ""}>${esc(STATUS_LABELS[status])}</option>`).join("");
 }
 
+function templateOptions(current) {
+  return Object.entries(PRIMARY_NOTE_TEMPLATES).map(([id, item]) => `<option value="${esc(id)}" ${id === current ? "selected" : ""}>${esc(item.label)}</option>`).join("");
+}
+
+function moduleOptions(selected = []) {
+  const chosen = new Set(selected);
+  return Object.entries(NOTE_MODULES).map(([id, item]) => `<label class="module-option"><input type="checkbox" data-note-module value="${esc(id)}" ${chosen.has(id) ? "checked" : ""}><span>${esc(item.label)}</span></label>`).join("");
+}
+
+function renderEncounterContext(row) {
+  const summary = contextReviewSummary(row.encounterSnapshot);
+  if (!summary.total) return '<div class="notice"><b>Encounter context has not been imported yet.</b> The Patient Registry link is active; the next data-connection step will populate the pre-visit questionnaire, HRA, medications, allergies, problem list, and other master-list fields here.</div>';
+  return `<div class="notice"><b>${summary.total} imported context item${summary.total === 1 ? "" : "s"}.</b> ${summary.reviewed} reviewed for note use · ${summary.needsReview} still require reconciliation. Imported data never enters the note silently.</div>${summary.fields.map(({ field, items }) => `<div class="context-field"><b>${esc(ENCOUNTER_CONTEXT_FIELDS[field])}</b>${items.map((item) => `<div class="context-item">${esc(item.value)}<span class="context-meta">${esc(item.source)}${item.updatedAt ? ` · updated ${esc(item.updatedAt)}` : ""}${item.patientReported ? " · patient reported" : ""} · ${esc(item.reviewedForNote ? "reviewed for note" : item.reconciliationStatus.replaceAll("_", " "))}</span></div>`).join("")}</div>`).join("")}`;
+}
+
+function noteField(id, label, value = "", rows = 3) {
+  return `<div class="field"><label>${esc(label)}</label><textarea id="${esc(id)}" rows="${rows}">${esc(value || "")}</textarea></div>`;
+}
+
+function renderModuleBuilderFields(input = {}) {
+  return `<details style="margin-top:10px"><summary>Core clinical details</summary><div class="formgrid" style="margin-top:10px">${noteField("nbRelevantHistory", "Relevant history", input.relevantHistory)}${noteField("nbRos", "Relevant ROS", input.ros)}${noteField("nbExam", "Objective / examination", input.exam)}${noteField("nbTimeMdm", "Time / MDM attestation", input.timeMdm)}</div></details>
+  <details style="margin-top:10px"><summary>Annual Wellness Visit cascade</summary><div class="formgrid" style="margin-top:10px">${noteField("nbAwvHistory", "Medical and family history update", input.awv?.historyUpdate)}${noteField("nbAwvProviders", "Providers and suppliers", input.awv?.providers)}${noteField("nbAwvMeasurements", "Measurements", input.awv?.measurements)}${noteField("nbAwvCognition", "Cognitive assessment", input.awv?.cognition)}${noteField("nbAwvFunction", "Function and safety", input.awv?.functionSafety)}${noteField("nbAwvPrevention", "Screening/prevention schedule", input.awv?.preventionSchedule)}${noteField("nbAwvSubstance", "Opioid and substance-use review", input.awv?.opioidSudReview)}${noteField("nbAwvPlan", "Personalized prevention plan", input.awv?.personalizedPlan)}</div></details>
+  <details style="margin-top:10px"><summary>Condition Management and Preventive Care</summary><div class="formgrid" style="margin-top:10px">${noteField("nbConditionStatus", "Condition status / interval change", input.conditionManagement?.status)}${noteField("nbConditionObjective", "Objective monitoring", input.conditionManagement?.objective)}${noteField("nbConditionTreatment", "Treatment and response", input.conditionManagement?.treatmentResponse)}${noteField("nbPreventiveScreenings", "Preventive screenings", input.preventiveCare?.screenings)}${noteField("nbPreventivePlan", "Preventive counseling and plan", input.preventiveCare?.counselingPlan)}</div></details>
+  <details style="margin-top:10px"><summary>Controlled Medication Monitoring</summary><div class="formgrid" style="margin-top:10px">${noteField("nbControlledClinical", "Indication, adherence, effect, adverse effects", input.controlledMedication?.clinicalReview)}${noteField("nbControlledPdmp", "PDMP review", input.controlledMedication?.pdmp)}${noteField("nbControlledAgreement", "Agreement / consent", input.controlledMedication?.agreementConsent)}${noteField("nbControlledSample", "Sample obtained / monitoring", input.controlledMedication?.sampleMonitoring)}${noteField("nbControlledSafety", "Safety counseling", input.controlledMedication?.safetyCounseling)}${noteField("nbControlledFollowUp", "Controlled-medication follow-up", input.controlledMedication?.followUp)}</div></details>
+  <details style="margin-top:10px"><summary>Behavioral Health</summary><div class="formgrid" style="margin-top:10px">${noteField("nbBehavioralMse", "Mental status examination", input.behavioralHealth?.mse)}${noteField("nbBehavioralRisk", "Safety / risk assessment", input.behavioralHealth?.risk)}${noteField("nbBehavioralInterventions", "Interventions, response, and progress", input.behavioralHealth?.interventionsResponse)}</div></details>
+  <details style="margin-top:10px"><summary>CharmEd Minds</summary><div class="formgrid" style="margin-top:10px">${noteField("nbCharmedConcern", "Functional concern and context", input.charmedMinds?.functionalConcern)}${noteField("nbCharmedScreening", "Standardized screening and cognitive profile", input.charmedMinds?.screeningProfile)}${noteField("nbCharmedGoals", "Goals, transfer, and support plan", input.charmedMinds?.goalsPlan)}</div></details>`;
+}
+
+function renderNoteBuilder(row) {
+  const notePlan = normalizeNotePlan(row.notePlan);
+  const input = row.noteBuilderInput || {};
+  const missing = row.noteDraftMeta?.missing || [];
+  return `<details open><summary><b>Encounter Note Builder</b> — one primary template plus applicable modules</summary>
+    <div class="formgrid" style="margin-top:12px"><div class="field"><label>Primary note template</label><select id="dPrimaryTemplate">${templateOptions(notePlan.primaryTemplate)}</select></div><div class="field"><label>AWV type, when applicable</label><select id="dAwvType"><option value="">Not applicable / select</option><option value="initial" ${notePlan.awvType === "initial" ? "selected" : ""}>Initial AWV</option><option value="subsequent" ${notePlan.awvType === "subsequent" ? "selected" : ""}>Subsequent AWV</option></select></div><div class="field"><label>Chief concern / reason</label><input id="nbChiefConcern" value="${esc(input.chiefConcern || "")}" placeholder="Patient-stated reason for visit"></div></div>
+    <div class="field"><label>Additional modules</label><div class="module-grid" id="dModuleGrid">${moduleOptions(notePlan.modules)}</div><div class="privacy">Condition Management covers clinical condition follow-up. Medication content appears only when addressed. CCM is excluded.</div></div>
+    <div class="formgrid" style="margin-top:12px"><div class="field"><label>Assessment</label><textarea id="nbAssessment" rows="4">${esc(input.assessment || "")}</textarea></div><div class="field"><label>Plan</label><textarea id="nbPlan" rows="4">${esc(input.plan || "")}</textarea></div><div class="field"><label>Follow-up</label><textarea id="nbFollowUp" rows="4">${esc(input.followUp || "")}</textarea></div></div>
+    ${renderModuleBuilderFields(input)}
+    <label class="module-option"><input type="checkbox" id="nbTranscriptReviewed" ${input.transcriptReviewed ? "checked" : ""}><span>I reviewed the source transcription and confirm it may be used to draft this note.</span></label>
+    ${missing.length ? `<div class="notice"><b>${missing.length} required element${missing.length === 1 ? "" : "s"} still need documentation.</b><br>${missing.map(esc).join(" · ")}</div>` : ""}
+    <div class="actions"><button class="btn primary" id="generateNote">Generate structured note draft</button></div>
+  </details><details style="margin-top:12px"><summary><b>Imported patient and pre-visit context</b></summary><div style="margin-top:12px">${renderEncounterContext(row)}</div></details>`;
+}
+
 function renderDetail() {
   const row = rows.find((candidate) => candidate.id === selected);
   if (!row) {
@@ -259,9 +399,11 @@ function renderDetail() {
     <div class="detail-body"><div class="notice"><b>Operational pilot:</b> ${cloudState === "connected" ? "this packet is encrypted and synchronized through the protected BHW Google Cloud project." : "this packet is temporarily using browser storage until Google Cloud connects."} Freed and CharmHealth remain the designated medical records.</div>
     <div class="formgrid"><div class="field"><label>Status</label><select id="dStatus">${statusOptions(row.status)}</select></div><div class="field"><label>Owner</label><input id="dOwner" value="${esc(row.owner)}"></div><div class="field"><label>Approved CPT/HCPCS</label><input id="dCodes" value="${esc(row.codes.join(", "))}"></div></div>
     <div class="field"><label>ICD-10-CM diagnoses</label><input id="dDiagnoses" value="${esc(row.diagnoses.join(", "))}" placeholder="I10, E11.65"></div>
-    <div class="field" style="margin-top:12px"><label>Freed / approved clinical note</label><textarea id="dNote" rows="11">${esc(row.note)}</textarea><div class="privacy">${cloudState === "connected" ? "Protected cloud synchronization is active. Do not treat this queue as the legal medical record." : "Note text and clinical codes stay in this browser tab session only."}</div></div>
+    <div style="margin-top:12px">${renderNoteBuilder(row)}</div>
+    <div class="field" style="margin-top:12px"><label>Source transcription or imported clinical draft</label><textarea id="dTranscript" rows="7">${esc(row.sourceTranscript || "")}</textarea><div class="privacy">Source material remains separate from the structured note. Provider review is required before generation.</div></div>
+    <div class="field" style="margin-top:12px"><label>Structured clinical note — editable provider draft</label><textarea id="dNote" rows="15">${esc(row.note)}</textarea><div class="privacy">${cloudState === "connected" ? "Protected cloud synchronization is active. Do not treat this queue as the legal medical record." : "Note text and clinical codes stay in this browser tab session only."}</div></div>
     <details class="audit-raw"><summary>Structured encounter packet — auto-extracted, reviewable</summary><div class="formgrid" style="margin-top:12px"><div class="field"><label>Medications — one per line</label><textarea id="dMedications" rows="5">${esc(structuredLines(row.medications.map((item) => item.sourceText || [item.name, item.doseFrequency].filter(Boolean).join(" — "))))}</textarea></div><div class="field"><label>Orders — one per line</label><textarea id="dOrders" rows="5">${esc(structuredLines(row.orders))}</textarea></div><div class="field"><label>Referrals — one per line</label><textarea id="dReferrals" rows="5">${esc(structuredLines(row.referrals))}</textarea></div><div class="field"><label>Follow-up</label><textarea id="dFollowUp" rows="5">${esc(structuredLines(row.followUp))}</textarea></div><div class="field"><label>Patient instructions</label><textarea id="dInstructions" rows="5">${esc(structuredLines(row.patientInstructions))}</textarea></div><div class="field"><label>Pending results</label><textarea id="dPendingResults" rows="5">${esc(structuredLines(row.pendingResults))}</textarea></div><div class="field"><label>Return precautions</label><textarea id="dReturnPrecautions" rows="5">${esc(structuredLines(row.returnPrecautions))}</textarea></div></div></details>
-    <div class="actions"><button class="btn" id="pasteFreed">Paste from Freed</button><button class="btn primary" id="analyze" ${analyzingId === row.id ? "disabled" : ""}>${analyzingId === row.id ? "Running full clinical audit…" : "Run documentation + coding + clinical audit"}</button><button class="btn" id="savePacket">Update packet</button><button class="btn danger" id="deleteEncounter">Remove encounter</button></div>
+    <div class="actions"><button class="btn" id="pasteFreed">Paste source transcript / draft</button><button class="btn primary" id="analyze" ${analyzingId === row.id ? "disabled" : ""}>${analyzingId === row.id ? "Running full clinical audit…" : "Run documentation + coding + clinical audit"}</button><button class="btn" id="savePacket">Update packet</button><button class="btn danger" id="deleteEncounter">Remove encounter</button></div>
     <div class="tabs"><button class="tab ${activeTab === "clinical" ? "on" : ""}" data-tab="clinical">Required Changes${auditSummary.pending ? ` (${auditSummary.pending})` : ""}</button><button class="tab ${activeTab === "audit" ? "on" : ""}" data-tab="audit">Documentation</button><button class="tab ${activeTab === "coding" ? "on" : ""}" data-tab="coding">Coding clarification & opportunities${pendingCoding ? ` (${pendingCoding})` : ""}</button><button class="tab ${activeTab === "actions" ? "on" : ""}" data-tab="actions">Tasks, AVS & drafts${openTasks ? ` (${openTasks})` : ""}</button><button class="tab ${activeTab === "charm" ? "on" : ""}" data-tab="charm">Charm entry</button><button class="tab ${activeTab === "history" ? "on" : ""}" data-tab="history">Audit trail</button></div>
     <div class="panel ${activeTab === "clinical" ? "on" : ""}" id="p-clinical">${renderClinicalAudit(row)}</div>
     <div class="panel ${activeTab === "audit" ? "on" : ""}" id="p-audit">${renderReport(report)}</div>
@@ -285,8 +427,8 @@ function renderClinicalAudit(row) {
     followUp: "Follow-up",
   };
   const controlled = controlledMedicationReviews(row);
-  const controlledHtml = controlled.length ? `<h4>Controlled-medication review</h4>${controlled.map((review, medicationIndex) => `<div class="document-card"><b>${esc(review.medication)}</b><p class="privacy">Detected from: ${esc(review.sourceText)}</p>${Object.entries(review.checks).map(([key, check]) => {
-    const finding = audit.findings?.find((item) => item.id === `controlled:${medicationIndex + 1}:${key}`);
+  const controlledHtml = controlled.length ? `<h4>Controlled-medication review</h4>${controlled.map((review) => `<div class="document-card"><b>${esc(review.medication)}</b><p class="privacy">Detected from: ${esc(review.sourceText)}</p>${Object.entries(review.checks).map(([key, check]) => {
+    const finding = controlledClinicalFinding(audit, review, key, controlled.length);
     const status = check.status === "documented" ? "documented" : finding?.decision && finding.decision !== "pending" ? finding.decision.replaceAll("_", " ") : "needs decision";
     return `<div class="check ${check.status === "documented" || (finding?.decision && finding.decision !== "pending") ? "present" : "missing"}"><div class="mark">${check.status === "documented" || (finding?.decision && finding.decision !== "pending") ? "✓" : "!"}</div><div><b>${esc(controlledLabels[key] || key)}</b><small>${esc(status)}${check.evidence ? ` · ${esc(check.evidence)}` : ""}</small></div></div>`;
   }).join("")}</div>`).join("")}` : "";
@@ -296,9 +438,11 @@ function renderClinicalAudit(row) {
   const risk = audit.recommendedRisk ? audit.recommendedRisk.toUpperCase() : "NOT STATED";
   const suggestedCpt = audit.suggestedCodesAfterChanges?.cpt || [];
   const suggestedDx = audit.suggestedCodesAfterChanges?.icd10 || [];
+  const codingAsDocumented = audit.codingAsDocumented || {};
   const corrections = approvedAuditAddenda(audit);
   return `<div class="notice"><b>${esc(audit.verdict || "Clinical audit completed")}</b> · Recommended risk ${esc(risk)} — provider confirmation required${audit.estimatedFixMinutes !== null ? ` · Estimated fix ${esc(audit.estimatedFixMinutes)} min` : ""}.<br>${summary.blocking ? `<b>${summary.blocking} Critical/High finding${summary.blocking === 1 ? "" : "s"} block Charm approval until resolved.</b>` : summary.pending ? `${summary.pending} finding${summary.pending === 1 ? "" : "s"} still need a decision.` : "All findings have a provider decision."}</div>
     ${controlledHtml}
+    <div class="review-note"><b>Coding specificity as documented:</b> CPT/HCPCS ${esc((codingAsDocumented.cpt || []).join(", ") || "none stated")} · ICD-10-CM ${esc((codingAsDocumented.icd10 || []).join(", ") || "none stated")}<br><b>HCC relevance:</b> ${esc(codingAsDocumented.hccRelevance || "none stated; validation required")}<br><b>Z-code opportunities:</b> ${esc((codingAsDocumented.zCodes || []).join(", ") || codingAsDocumented.zCodeEvidence || "none stated")}</div>
     <div class="review-note"><b>Audit-suggested codes after changes — review only:</b> CPT/HCPCS ${esc(suggestedCpt.join(", ") || "none stated")} · ICD-10-CM ${esc(suggestedDx.join(", ") || "none stated")}. These are never applied automatically.</div>
     ${audit.findings?.length ? audit.findings.map((finding) => `<div class="audit-finding severity-${esc(finding.severity)}" data-audit-id="${esc(finding.id)}"><div class="output-head"><div><span class="code-chip">${esc(finding.severity.toUpperCase())}</span> <b>${esc(finding.issue)}</b></div><span class="badge ${finding.decision === "pending" ? "warning" : "complete"}">${esc(finding.decision.replaceAll("_", " "))}</span></div><div class="review-note"><b>Location:</b> ${esc(finding.location || "See audit finding")}</div><div class="review-note"><b>Suggested correction:</b> ${esc(finding.suggestedFix || finding.issue)}</div><div class="source"><b>Supporting source:</b> ${esc(finding.supportingSource || "Current primary-source verification required")}</div><div class="field"><label>Your context / reason</label><input class="audit-response" value="${esc(finding.providerResponse || "")}" placeholder="Optional provider context"></div><div class="field"><label>Exact correction to add only if it actually occurred</label><textarea class="audit-addendum" rows="3" placeholder="Enter only facts you can personally confirm occurred during this visit.">${esc(finding.approvedAddendum || "")}</textarea></div><div class="actions"><button class="btn audit-decision" data-decision="occurred">Occurred — draft correction</button><button class="btn audit-decision" data-decision="already_documented">Already documented</button><button class="btn audit-decision" data-decision="not_done">Not done — create task</button><button class="btn audit-decision" data-decision="dismissed">Dismiss</button></div></div>`).join("") : '<p class="privacy">No actionable findings were identified.</p>'}
     ${audit.guidelineChecks?.length ? `<h4>Relevant condition-guideline checks</h4>${audit.guidelineChecks.map((item) => `<div class="review-note"><b>${esc(item.topic || "Guideline check")}</b>${esc(item.note || "")}<div class="source">Source: ${esc(item.source)} · Year: ${esc(item.year)}</div></div>`).join("")}` : ""}
@@ -446,18 +590,66 @@ function wireDetail(row) {
 
   if ($("reanalyzeAudit")) $("reanalyzeAudit").onclick = () => runEncounterAnalysis(row);
 
+  $("generateNote").onclick = () => {
+    row.notePlan = notePlanFromDetail(row);
+    row.noteBuilderInput = builderInputFromDetail(row);
+    row.sourceTranscript = $("dTranscript").value.trim();
+    if (!row.sourceTranscript) {
+      showToast("Paste or enter the source transcription before generating the structured note.");
+      $("dTranscript").focus();
+      return;
+    }
+    if (!row.noteBuilderInput.transcriptReviewed) {
+      showToast("Review the source transcription and confirm it may be used before generating the note.");
+      $("nbTranscriptReviewed").focus();
+      return;
+    }
+    const result = composeEncounterNote({
+      ...row,
+      ...row.noteBuilderInput,
+      transcript: row.sourceTranscript,
+      transcriptReviewed: true,
+      notePlan: row.notePlan,
+      encounterSnapshot: row.encounterSnapshot,
+      orders: row.orders,
+      referrals: row.referrals,
+      patientInstructions: row.patientInstructions,
+      returnPrecautions: row.returnPrecautions,
+      followUp: row.noteBuilderInput.followUp || row.followUp,
+    });
+    row.note = result.note;
+    row.notePlan = result.notePlan;
+    row.noteDraftMeta = {
+      generatedAt: result.generatedAt,
+      generator: "BHW Encounter Note Builder",
+      missing: result.missing,
+    };
+    row.providerApproved = false;
+    row.charmDraftSaved = false;
+    row.clinicalAudit = normalizeClinicalAudit(null);
+    row.status = WORKFLOW_STATUS.DRAFT_RECEIVED;
+    reports.delete(row.id);
+    refreshEncounterIntelligence(row);
+    log(row, `Structured note draft generated from ${PRIMARY_NOTE_TEMPLATES[row.notePlan.primaryTemplate].label} with ${row.notePlan.modules.length} additional module${row.notePlan.modules.length === 1 ? "" : "s"}`);
+    persist();
+    render();
+    showToast(result.missing.length
+      ? `Structured draft created. ${result.missing.length} required element${result.missing.length === 1 ? "" : "s"} still need provider documentation before approval.`
+      : "Structured draft created. Run the documentation, coding, HCC, Z-code, and clinical audit next.");
+  };
+
   $("pasteFreed").onclick = async () => {
     try {
       const note = await navigator.clipboard.readText();
       if (!note.trim()) throw new Error("The clipboard is empty.");
-      $("dNote").value = note;
+      $("dTranscript").value = note;
       sync(row);
       row.status = WORKFLOW_STATUS.DRAFT_RECEIVED;
       reports.delete(row.id);
-      log(row, "Freed note pasted into the session-only workspace");
+      log(row, "Source transcription or clinical draft pasted into the encounter packet");
       persist();
       render();
-      showToast("Freed note loaded. Run the full documentation, coding, and clinical audit next.");
+      showToast("Source material loaded. Review it, select the note template and modules, then generate the structured note.");
     } catch (error) {
       showToast(error.message || "Clipboard access was blocked. Click in the note box and press Ctrl+V.");
     }
@@ -751,6 +943,8 @@ function openEncounterModal() {
   $("mId").readOnly = registryReady;
   $("mId").value = "";
   $("mId").placeholder = registryReady ? "Assigned when saved" : "ENC-YYYY-####";
+  $("mPrimary").value = "established_office";
+  $("mModules").querySelectorAll("input[data-note-module]").forEach((input) => { input.checked = false; });
   $("encounterIdNotice").innerHTML = registryReady
     ? "<b>The Encounter ID is assigned automatically by Google Cloud.</b> Select the BHW Patient ID so the visit stays linked to the correct patient master record."
     : "<b>The automatic Patient Registry service is not connected, so a new ID cannot be reserved safely.</b> You may enter an existing Encounter ID for temporary or migration work.";
@@ -763,6 +957,11 @@ function renderPatientOptions() {
     return `<option value="${esc(patient.bhwPatientId)}" label="${esc(name || patient.bhwPatientId)}"></option>`;
   }).join("");
   $("patientOptions").innerHTML = options;
+}
+
+function renderNotePlanOptions() {
+  $("mPrimary").innerHTML = templateOptions("established_office");
+  $("mModules").innerHTML = moduleOptions([]);
 }
 
 document.querySelectorAll(".filter").forEach((button) => {
@@ -820,7 +1019,11 @@ $("create").onclick = async () => {
     owner: "Amaris",
     completedAt: completedAt.toISOString(),
     payer: $("mPayer").value,
-    visitType: $("mVisit").value,
+    visitType: PRIMARY_NOTE_TEMPLATES[$("mPrimary").value]?.label || "Established Office Visit",
+    notePlan: normalizeNotePlan({
+      primaryTemplate: $("mPrimary").value,
+      modules: selectedModules($("mModules")),
+    }),
     codes: $("mCodes").value.split(/[\s,]+/),
     auditTrail: [{ at: new Date().toISOString(), text: "Encounter packet created; awaiting Freed draft" }],
   };
@@ -863,6 +1066,7 @@ $("create").onclick = async () => {
 };
 
 window.addEventListener("beforeunload", persist);
+renderNotePlanOptions();
 render();
 checkAlerts();
 setInterval(tick, 60000);
