@@ -102,7 +102,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
     <li><b>Sweep again mid-afternoon</b> (about 3:00) so nothing sits overnight.</li>
     <li><b>Before you leave:</b> every red and orange item is either done or has a first response logged.</li>
   </ol>
-  <div class="tip"><b>Texts arrive by themselves.</b> Once the phone system is connected, patient texts create their own queue entries — you'll see them appear without logging anything.</div>
+  <div class="tip"><b>Most of the inbox fills itself now.</b> Patient texts, missed calls, voicemails (with a transcript), and inbound faxes create their own queue entries automatically — they appear in the Front Desk inbox without anyone logging them. The 9:00 shared-inbox sweep is now a backup check, not the main way things get in.</div>
 </div>
 <div class="sec" data-k="priority sla urgent high routine color red orange yellow green timeframe">
   <h3>What the colors mean</h3>
@@ -150,7 +150,8 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
     <li>Look the patient up first, then tap <b>use last lookup</b> — name, DOB, phone, member #, and insurance fill in.</li>
     <li>Pick the specialist from the dropdown (or use the finder's button) — their whole block fills, including the fax.</li>
     <li>Provider fills in reason, brief history, what's being requested, place of service, number of visits.</li>
-    <li>Tap <b>Generate referral PDF</b> — it downloads and opens ready to print or fax.</li>
+    <li>Tap <b>Generate referral PDF</b> — it downloads and opens ready to print.</li>
+    <li>Then tap <b>📠 Fax to specialist</b> to send it straight to the consultant's fax from the practice line — no printing or fax machine needed.</li>
   </ol>
   <div class="tip"><b>Always verify the member # against the card</b> before it goes out. A wrong member number is the #1 reason referrals bounce back.</div>
 </div>
@@ -225,6 +226,34 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
   <div class="rule"><b>A patient never sees a raw number alone.</b> The system won't post without your interpretation — that's on purpose.</div>
 </div>
 
+<h2><span class="n">06b</span>Staff tools — paperwork, documents &amp; fax</h2>
+<div class="sec" data-k="bhw hq launchpad staff tools patient requests paperwork care plan document builder send fax patient monitor tiles">
+  <h3>BHW HQ — the staff launchpad <span class="who">Everyone</span></h3>
+  <p><b>BHW HQ</b> is the tile page that links the big destinations (crewOS, the RCM platform, the onboarding portal) plus the <b>Staff Tools</b> row. Each tool opens on its own page and reuses your crewOS sign-in to pull patients.</p>
+  <table>
+    <tr><th>Tool</th><th>What it does</th></tr>
+    <tr><td><b>Patient Requests</b></td><td>The whole request journey — every text, call, voicemail, and fax in one timeline. Claim it, work it, mark it complete. <b>💬 Text back</b> replies to the patient from the main line.</td></tr>
+    <tr><td><b>Paperwork Studio</b></td><td>Chart pulls, prior auth, disability, FMLA &amp; MTA. Paste a note and <b>AI read note</b> pre-fills it, fills the real agency/payer PDF, and can <b>📠 Fax</b> it out.</td></tr>
+    <tr><td><b>Care Plan Studio</b></td><td>Branded, patient-ready annual care plans per program — pull the patient, tailor it, print/Save-PDF, save to Notion.</td></tr>
+    <tr><td><b>Document Builder</b></td><td>Patient handouts, after-visit summaries, care plans, letters, and medication lists — branded, print/Save-PDF. Includes <b>✨ Draft with AI</b> (below).</td></tr>
+    <tr><td><b>Send a Fax</b></td><td>Fax any PDF out through the practice line — pick a file, enter the number, send.</td></tr>
+    <tr><td><b>Patient Monitor</b></td><td>Live roster of who's checking in and active today.</td></tr>
+  </table>
+</div>
+<div class="sec" data-k="document builder draft with ai artificial intelligence nutrition plan handout generate write letter after visit summary chatgpt claude describe">
+  <h3>Draft with AI — describe it, it writes the first draft <span class="who">Providers, staff</span></h3>
+  <ol>
+    <li>Open the <b>Document Builder</b> and pick the document type at the top (handout, after-visit summary, care plan, or letter).</li>
+    <li>Tap <b>✨ Draft with AI</b>.</li>
+    <li>Optional: <b>search a patient</b> in the box — it pulls their name, DOB, allergies, and medications so the draft is tailored to them.</li>
+    <li>Type what you need in plain English, e.g. <i>"a nutrition plan for a patient with high homocysteine and stage 3 CKD — foods to favor, foods to limit, and simple daily targets."</i></li>
+    <li>Tap <b>Draft it.</b> The document fills in — headings, bullets, key-point callouts — right in the builder.</li>
+    <li><b>Read it, fix anything that needs it,</b> then <b>Print / Save PDF</b>.</li>
+  </ol>
+  <div class="rule"><b>An AI draft is a starting point, never the final word.</b> It can be wrong or miss a contraindication. A licensed clinician reads and edits every draft before it reaches a patient. It does not replace the chart or your judgment.</div>
+  <div class="tip"><b>Works for</b> handouts, after-visit summaries, care plans, and letters. The structured medication list is still built by hand.</div>
+</div>
+
 <h2><span class="n">07</span>Care coordination requests</h2>
 <div class="sec" data-k="care coordination sdoh resources follow up specialists care plan monitoring equipment referral chronic">
   <h3>Asking care coordination for help <span class="who">Any division</span></h3>
@@ -275,9 +304,9 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
     <tr><td><b>CharmHealth</b></td><td>The medical record. Always the source of truth for anything clinical.</td></tr>
     <tr><td><b>BHWcrewOS</b></td><td>How we run the practice — inboxes, referrals, handoffs, tools, dashboards.</td></tr>
     <tr><td><b>Notion</b></td><td>The data behind crewOS — patient master list, triage queue, specialist directory, care plans, patient pages, SOPs.</td></tr>
-    <tr><td><b>Dialpad</b></td><td>Calls and texts on the main line, (443) 762-5343.</td></tr>
-    <tr><td><b>iFax</b></td><td>Faxes in and out, (833) 258-3941. Arrives as email to info@.</td></tr>
-    <tr><td><b>info@bhwmedical.org</b></td><td>The shared front door — faxes, voicemail notifications, portal alerts.</td></tr>
+    <tr><td><b>Dialpad</b></td><td>Calls and texts on the main line, (443) 762-5343. Texts, missed calls, and voicemails file themselves into the Front Desk inbox; you can also text and fax patients back from crewOS.</td></tr>
+    <tr><td><b>iFax</b></td><td>Faxes in and out, (833) 258-3941. Inbound faxes arrive as email to info@ and file themselves into the Front Desk inbox automatically.</td></tr>
+    <tr><td><b>info@bhwmedical.org</b></td><td>The shared front door — faxes, voicemail notifications, portal alerts. A background job forwards these into the Front Desk inbox, so it's a backup, not a manual queue.</td></tr>
   </table>
 </div>
 
