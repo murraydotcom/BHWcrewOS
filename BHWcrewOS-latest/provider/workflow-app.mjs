@@ -931,6 +931,7 @@ function tick() {
 
 function openEncounterModal() {
   $("modal").classList.add("on");
+  const automaticIdsReady = Boolean(cloudClient);
   encounterCreationKey = globalThis.crypto?.randomUUID?.() || `encounter-${Date.now()}-${Math.random().toString(16).slice(2)}`;
   const date = new Date();
   date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
@@ -940,14 +941,16 @@ function openEncounterModal() {
     $("mPatient").value = pendingPatientId;
     try { sessionStorage.removeItem(PENDING_PATIENT_KEY); } catch { /* session storage may be unavailable */ }
   }
-  $("mId").readOnly = registryReady;
+  $("mId").readOnly = automaticIdsReady;
   $("mId").value = "";
-  $("mId").placeholder = registryReady ? "Assigned when saved" : "ENC-YYYY-####";
+  $("mId").placeholder = automaticIdsReady ? "Assigned when saved" : "ENC-YYYY-####";
   $("mPrimary").value = "established_office";
   $("mModules").querySelectorAll("input[data-note-module]").forEach((input) => { input.checked = false; });
   $("encounterIdNotice").innerHTML = registryReady
     ? "<b>The Encounter ID is assigned automatically by Google Cloud.</b> Select the verified BHW Patient ID for clinical work. Use reserved ID <b>BHW0000</b> only for the de-identified synthetic role-play pilot; it never links to the Patient Registry."
-    : "<b>The automatic Patient Registry service is not connected, so a new ID cannot be reserved safely.</b> You may enter an existing Encounter ID for temporary or migration work.";
+    : automaticIdsReady
+      ? "<b>The Encounter ID is assigned automatically by Google Cloud.</b> The Patient Registry list is temporarily unavailable, so only reserved test ID <b>BHW0000</b> may create a new synthetic packet."
+      : "<b>Google Cloud is not connected, so a new Encounter ID cannot be reserved safely.</b> You may enter an existing Encounter ID only for temporary or migration work.";
   $("mPatient").focus();
 }
 
@@ -1004,6 +1007,11 @@ $("create").onclick = async () => {
     $("mPatient").focus();
     return;
   }
+  if (!syntheticRolePlay && !registryReady) {
+    showToast("The Patient Registry is not connected. Refresh or sign in again before creating a real-patient encounter.");
+    $("mPatient").focus();
+    return;
+  }
   if (registryReady && !syntheticRolePlay && !patients.some((patient) => patient.bhwPatientId === bhwPatientId)) {
     showToast("Select a patient from the protected Patient Registry before creating the encounter.");
     $("mPatient").focus();
@@ -1032,7 +1040,7 @@ $("create").onclick = async () => {
   let assignedAutomatically = false;
   button.disabled = true;
   try {
-    if (registryReady) {
+    if (cloudClient) {
       const created = await cloudClient.create(draft, encounterCreationKey);
       packet = buildEncounterPacket(created);
       assignedAutomatically = true;
