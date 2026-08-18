@@ -400,8 +400,8 @@ function renderDetail() {
   $("detail").innerHTML = `
     <div class="card-head"><div><h3>${esc(row.id)} · Encounter packet</h3><div class="enc-meta">${row.bhwPatientId ? `${esc(row.bhwPatientId)} · ` : ""}${esc(row.provider)} · ${esc(row.payer)} · completed ${ago(urgency.hours)} ago</div></div><span class="badge ${urgency.level}">${esc(urgency.label)}</span></div>
     <div class="detail-body"><div class="notice"><b>Operational pilot:</b> ${cloudState === "connected" ? "this packet is encrypted and synchronized through the protected BHW Google Cloud project." : "this packet is temporarily using browser storage until Google Cloud connects."} Freed and CharmHealth remain the designated medical records.</div>
-    <div class="formgrid"><div class="field"><label>Status</label><select id="dStatus">${statusOptions(row.status)}</select></div><div class="field"><label>Owner</label><input id="dOwner" value="${esc(row.owner)}"></div><div class="field"><label>Approved CPT/HCPCS</label><input id="dCodes" value="${esc(row.codes.join(", "))}"></div></div>
-    <div class="field"><label>ICD-10-CM diagnoses</label><input id="dDiagnoses" value="${esc(row.diagnoses.join(", "))}" placeholder="I10, E11.65"></div>
+    <div class="formgrid"><div class="field"><label>Status</label><select id="dStatus">${statusOptions(row.status)}</select></div><div class="field"><label>Owner</label><input id="dOwner" value="${esc(row.owner)}"></div><div class="field"><label>Approved CPT/HCPCS — after note audit</label><input id="dCodes" value="${esc(row.codes.join(", "))}" placeholder="Review and apply the post-note recommendations"></div></div>
+    <div class="field"><label>Approved ICD-10-CM diagnoses — after note audit</label><input id="dDiagnoses" value="${esc(row.diagnoses.join(", "))}" placeholder="Review and apply the post-note recommendations"></div>
     <div style="margin-top:12px">${renderNoteBuilder(row)}</div>
     <div class="field" style="margin-top:12px"><label>Source transcription or imported clinical draft</label><textarea id="dTranscript" rows="7">${esc(row.sourceTranscript || "")}</textarea><div class="privacy">Source material remains separate from the structured note. Provider review is required before generation.</div></div>
     <div class="field" style="margin-top:12px"><label>Structured clinical note — editable provider draft</label><textarea id="dNote" rows="15">${esc(row.note)}</textarea><div class="privacy">${cloudState === "connected" ? "Protected cloud synchronization is active. Do not treat this queue as the legal medical record." : "Note text and clinical codes stay in this browser tab session only."}</div></div>
@@ -1091,7 +1091,7 @@ $("create").onclick = async () => {
       primaryTemplate: $("mPrimary").value,
       modules: selectedModules($("mModules")),
     }),
-    codes: $("mCodes").value.split(/[\s,]+/),
+    codes: [],
     auditTrail: [{ at: new Date().toISOString(), text: "Encounter packet created; awaiting Freed draft" }],
   };
   let packet;
@@ -1125,7 +1125,6 @@ $("create").onclick = async () => {
   selected = packet.id;
   $("mPatient").value = "";
   $("mId").value = "";
-  $("mCodes").value = "";
   $("modal").classList.remove("on");
   persist();
   render();
