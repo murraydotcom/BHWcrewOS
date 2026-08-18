@@ -30,6 +30,13 @@
   .drop:hover,.drop.hot{border-color:var(--teal);color:var(--ink);background:var(--card)}
   .drop b{color:var(--ink)}
   .drop .file{margin-top:8px;font-size:.85rem;color:var(--teal);font-weight:700}
+  .preview{display:none;margin-top:14px;border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden;background:var(--bg-alt)}
+  .preview.on{display:block}
+  .preview-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line)}
+  .preview-head strong{font-size:.86rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .preview-actions{display:flex;gap:8px;flex:0 0 auto}
+  .preview-link,.preview-close{appearance:none;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--deep);font:inherit;font-size:.78rem;font-weight:700;padding:7px 10px;text-decoration:none;cursor:pointer}
+  .preview-frame{display:block;width:100%;height:520px;border:0;background:#eef1f2}
   .btn{appearance:none;border:0;border-radius:var(--radius-sm);font:inherit;font-weight:700;
     padding:12px 18px;cursor:pointer;background:var(--deep-grad);color:#fff;font-size:.95rem}
   .btn:disabled{opacity:.6;cursor:default}
@@ -38,6 +45,18 @@
   .status.ok{color:var(--ok)} .status.err{color:var(--alert)}
   .hint{color:var(--ink-soft);font-size:.8rem;margin-top:6px}
   .note{margin-top:22px;color:var(--ink-soft);font-size:.82rem;line-height:1.5}
+  @media(max-width:600px){
+    body{padding:14px 10px 32px}
+    .card{padding:16px;border-radius:12px}
+    .drop{padding:24px 12px;min-height:92px;display:grid;place-items:center}
+    input[type=text],input[type=tel],textarea{font-size:16px}
+    .row{align-items:stretch;flex-direction:column}
+    .btn{width:100%;min-height:48px}
+    .preview-head{align-items:stretch;flex-direction:column}
+    .preview-actions{display:grid;grid-template-columns:1fr 1fr}
+    .preview-link,.preview-close{text-align:center;min-height:42px;display:grid;place-items:center}
+    .preview-frame{height:62vh;min-height:380px}
+  }
   @media (prefers-color-scheme:dark){
     body{background:#101a1f;color:#e6ecee}
   }
@@ -60,6 +79,16 @@
       </div>
       <input type="file" id="pick" accept="application/pdf,.pdf" style="display:none">
       <div class="hint">Only PDF files are faxed. To fax something else, save or print it to PDF first.</div>
+      <section class="preview" id="preview" aria-label="Selected PDF preview">
+        <div class="preview-head">
+          <strong id="previewName">Selected PDF</strong>
+          <div class="preview-actions">
+            <a class="preview-link" id="openPdf" href="#" target="_blank" rel="noopener">Open full PDF</a>
+            <button class="preview-close" id="removePdf" type="button">Remove</button>
+          </div>
+        </div>
+        <iframe class="preview-frame" id="previewFrame" title="Selected PDF preview"></iframe>
+      </section>
     </div>
 
     <div class="field">
@@ -85,7 +114,7 @@
 const API='/.netlify/functions/frontdesk-data';
 const DASH_KEY='02142022';   // shared key — matches the function's DASH_KEY env
 const $=id=>document.getElementById(id);
-let PDF_B64='', PDF_NAME='';
+let PDF_B64='', PDF_NAME='', PDF_OBJECT_URL='';
 
 const pick=$('pick'), drop=$('drop');
 drop.addEventListener('click',()=>pick.click());
@@ -94,17 +123,32 @@ pick.addEventListener('change',e=>loadFile(e.target.files[0]));
 ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('hot');}));
 drop.addEventListener('drop',e=>{ const f=e.dataTransfer.files&&e.dataTransfer.files[0]; if(f) loadFile(f); });
 
+function clearPdf(){
+  if(PDF_OBJECT_URL) URL.revokeObjectURL(PDF_OBJECT_URL);
+  PDF_B64=''; PDF_NAME=''; PDF_OBJECT_URL=''; pick.value='';
+  $('fileName').textContent=''; $('previewName').textContent='Selected PDF';
+  $('previewFrame').removeAttribute('src'); $('openPdf').removeAttribute('href');
+  $('preview').classList.remove('on');
+}
+
 function loadFile(f){
   if(!f) return;
   if(!/pdf/i.test(f.type) && !/\.pdf$/i.test(f.name)){ setStatus('That isn’t a PDF — save it to PDF first.','err'); return; }
   if(f.size > 4*1024*1024){ setStatus('That PDF is large (>4 MB) — it may be rejected. Try a smaller/compressed scan.','err'); }
+  if(PDF_OBJECT_URL) URL.revokeObjectURL(PDF_OBJECT_URL);
+  PDF_OBJECT_URL=URL.createObjectURL(f);
+  $('previewName').textContent=f.name||'document.pdf';
+  $('previewFrame').src=PDF_OBJECT_URL+'#view=FitH';
+  $('openPdf').href=PDF_OBJECT_URL;
+  $('preview').classList.add('on');
   const rd=new FileReader();
   rd.onload=()=>{ PDF_B64=String(rd.result).replace(/^data:.*?;base64,/,''); PDF_NAME=f.name||'document.pdf';
-    $('fileName').textContent='✓ '+PDF_NAME; setStatus('',''); };
+    $('fileName').textContent='Selected: '+PDF_NAME; setStatus('Review the PDF below before sending.',''); };
   rd.onerror=()=>setStatus('Couldn’t read that file.','err');
   rd.readAsDataURL(f);
 }
 function setStatus(msg,cls){ const s=$('status'); s.textContent=msg; s.className='status'+(cls?' '+cls:''); }
+$('removePdf').addEventListener('click',()=>{ clearPdf(); setStatus('PDF removed.',''); });
 
 $('send').addEventListener('click', async ()=>{
   const to=($('to').value||'').replace(/[^\d+]/g,'');
@@ -120,13 +164,14 @@ $('send').addEventListener('click', async ()=>{
     const r=await fetch(`${API}?key=${encodeURIComponent(DASH_KEY)}`,{method:'POST',
       headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     if(r.ok){ setStatus('✓ Fax sent to '+to+'.','ok'); btn.textContent='Sent ✓';
-      PDF_B64='';PDF_NAME='';$('fileName').textContent='';$('cover').value='';$('to').value='';
+      clearPdf();$('cover').value='';$('to').value='';
       setTimeout(()=>{ btn.textContent=label; btn.disabled=false; },2400); }
     else{ const d=await r.json().catch(()=>({}));
       setStatus('Fax failed — '+(d.detail?String(d.detail).slice(0,160):('HTTP '+r.status))+'. You can also send it from Dialpad directly.','err');
       btn.textContent=label; btn.disabled=false; }
   }catch(e){ setStatus('Network error: '+(e.message||e),'err'); btn.textContent=label; btn.disabled=false; }
 });
+window.addEventListener('beforeunload',()=>{ if(PDF_OBJECT_URL) URL.revokeObjectURL(PDF_OBJECT_URL); });
 </script>
 </body>
 </html>

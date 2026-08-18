@@ -89,6 +89,24 @@
   .entry .eic svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.9;cursor:pointer}
   .entry .eic svg:hover{stroke:var(--teal)}
 
+  .faxdoc{display:flex;align-items:center;gap:10px;margin:0 0 12px;padding:11px 12px;border:1px solid #cfe0e6;border-radius:11px;background:#f3f8fa}
+  .faxdoc svg{width:20px;height:20px;flex:0 0 auto;fill:none;stroke:var(--teal-deep);stroke-width:1.8}
+  .faxdoc .copy{min-width:0;flex:1}
+  .faxdoc .title{font-size:.75rem;font-weight:800;color:var(--ink)}
+  .faxdoc .hint{font-size:.65rem;font-weight:600;color:var(--ink-soft);margin-top:2px}
+  .faxdoc .btn{background:var(--teal);border-color:var(--teal);color:#fff}
+
+  .pdfmodal[hidden]{display:none}
+  .pdfmodal{position:fixed;inset:0;z-index:1000;background:rgba(25,38,46,.68);display:flex;align-items:center;justify-content:center;padding:20px}
+  .pdfpanel{width:min(1100px,100%);height:min(88vh,900px);background:var(--white);border-radius:16px;box-shadow:0 20px 65px rgba(0,0,0,.28);display:flex;flex-direction:column;overflow:hidden}
+  .pdfhead{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line);background:#fcfaf6}
+  .pdfhead .pdftitle{font-size:.88rem;font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pdfhead .pdfacts{margin-left:auto;display:flex;gap:8px}
+  .pdfhead a{text-decoration:none}
+  .pdfclose{font-size:1.25rem;line-height:1;padding:7px 11px}
+  .pdfbody{position:relative;flex:1;min-height:0;background:#eef1f2}
+  .pdfbody iframe{display:block;width:100%;height:100%;border:0;background:#fff}
+
   .rc-foot{display:flex;align-items:center;gap:10px;padding:12px 16px;background:#fcfaf6;border-top:1px solid var(--line-2)}
   .owner{display:flex;align-items:center;gap:7px;font-size:.74rem;font-weight:700}
   .owner.un{color:var(--ink-mute)}
@@ -118,6 +136,15 @@
   .srow .ct.zero{background:#d7dee1;color:#7d8990}
   .srow.allrow{border-top:1px solid var(--line-2);border-radius:0;margin-bottom:6px;padding-top:12px;font-weight:800}
   @media(max-width:960px){.layout{grid-template-columns:1fr}.staffrail{position:static}}
+  @media(max-width:640px){
+    .wrap{padding:12px 10px 50px}.right .opencount{display:none}.backlink{padding:8px 10px}
+    .filters{overflow-x:auto}.filters .flabel,.filters .live{display:none}.filters button{flex:0 0 auto;padding:7px 12px}
+    .dategroup{grid-template-columns:44px 1fr;gap:8px}.datenode .d{font-size:1.35rem}.datenode .w{padding:3px 6px}
+    .rc-head{padding:12px 10px;gap:8px}.av.lg{width:38px;height:38px}.stagepill{padding:5px 8px;font-size:.55rem}
+    .rc-body{padding-left:10px;padding-right:10px}.rc-foot{padding:10px;align-items:flex-start;flex-direction:column}.rc-acts{margin-left:0;width:100%;flex-wrap:wrap}
+    .faxdoc{align-items:flex-start;flex-wrap:wrap}.faxdoc .copy{min-width:calc(100% - 32px)}.faxdoc .btn{width:100%}
+    .pdfmodal{padding:0}.pdfpanel{height:100dvh;border-radius:0}.pdfhead{padding:10px}.pdfhead .pdftitle{font-size:.76rem}.pdfhead .btn{padding:8px 10px;font-size:.64rem}
+  }
 </style>
 </head>
 <body>
@@ -157,6 +184,19 @@
 
 </div>
 
+<div class="pdfmodal" id="faxPdfModal" hidden role="dialog" aria-modal="true" aria-labelledby="faxPdfTitle">
+  <section class="pdfpanel">
+    <div class="pdfhead">
+      <div class="pdftitle" id="faxPdfTitle">Incoming fax</div>
+      <div class="pdfacts">
+        <a class="btn" id="faxPdfExternal" href="#" target="_blank" rel="noopener noreferrer">Open full screen</a>
+        <button class="btn pdfclose" type="button" id="faxPdfClose" aria-label="Close fax viewer">×</button>
+      </div>
+    </div>
+    <div class="pdfbody"><iframe id="faxPdfFrame" title="Incoming fax PDF"></iframe></div>
+  </section>
+</div>
+
 <script>
 const API='/.netlify/functions';
 const DASH_KEY='02142022';   // shared key for frontdesk-data — matches the function's DASH_KEY env (same as Front Desk)
@@ -191,6 +231,38 @@ function initials(name){return (name||'?').split(/[ ,]+/).filter(Boolean).slice(
 function fmtTime(iso){ if(!iso) return ''; const d=new Date(iso); let h=d.getHours(),m=d.getMinutes(); const ap=h>=12?'PM':'AM'; h=h%12||12; return h+':'+String(m).padStart(2,'0')+' '+ap; }
 function dayKey(iso){ const d=iso?new Date(iso):new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); } // local date, not UTC
 function isHot(it){ return /overdue|urgent|breach|!/i.test(it.sla||'') || /urgent|stat|emergen/i.test(it.priority||''); }
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function safeHttpsUrl(raw){
+  try{const u=new URL(String(raw||''),location.origin);return u.protocol==='https:'?u.href:'';}catch(_){return '';}
+}
+function pdfEmbedUrl(raw){
+  const safe=safeHttpsUrl(raw); if(!safe)return '';
+  try{
+    const u=new URL(safe);
+    if(u.hostname==='drive.google.com'){
+      const m=u.pathname.match(/\/file\/d\/([^/]+)/);
+      if(m)return `https://drive.google.com/file/d/${encodeURIComponent(m[1])}/preview`;
+      const id=u.searchParams.get('id');
+      if(id)return `https://drive.google.com/file/d/${encodeURIComponent(id)}/preview`;
+    }
+    return safe;
+  }catch(_){return '';}
+}
+
+function openFaxPdf(url,name){
+  const safe=safeHttpsUrl(url); if(!safe)return;
+  document.getElementById('faxPdfTitle').textContent=name||'Incoming fax PDF';
+  document.getElementById('faxPdfExternal').href=safe;
+  document.getElementById('faxPdfFrame').src=pdfEmbedUrl(safe);
+  document.getElementById('faxPdfModal').hidden=false;
+  document.body.style.overflow='hidden';
+  document.getElementById('faxPdfClose').focus();
+}
+function closeFaxPdf(){
+  const modal=document.getElementById('faxPdfModal'); modal.hidden=true;
+  document.getElementById('faxPdfFrame').src='about:blank';
+  document.body.style.overflow='';
+}
 
 // Reconstruct the journey steps for one request from its current state
 // (or use an explicit journey array when the demo/back-end supplies one).
@@ -279,13 +351,19 @@ function cardHTML(it){
     </label>`;
   const sum = it.summary && !(Array.isArray(it.journey)&&it.journey.length)
     ? `<div class="entry"><span class="dot update"></span><div class="ebody"><div class="etext">${(it.summary||'').replace(/</g,'&lt;')}</div></div></div>` : '';
+  const faxUrl=/fax/i.test(it.source||'')?safeHttpsUrl(it.sourceUrl):'';
+  const faxDoc=faxUrl?`<div class="faxdoc">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></svg>
+    <div class="copy"><div class="title">Incoming fax PDF</div><div class="hint">Opens here in CrewOS</div></div>
+    <button class="btn view-fax" type="button" data-fax-url="${esc(faxUrl)}" data-fax-name="${esc((it.name||'Patient')+' — incoming fax')}">View fax PDF</button>
+  </div>`:'';
   return `<div class="rcard ${hot?'urgent':''}">
     <div class="rc-head">
       <span class="av lg">${initials(it.name)}</span>
       <div><div class="nm">${it.name||'Unknown patient'}</div><div class="rl">${srcLabel(it.source)}${it.phone?' · '+it.phone:''}</div></div>
       <span class="stagepill ${st}">${STAGE_LABEL[st]}</span>
     </div>
-    <div class="rc-body">${steps}${sum}</div>
+    <div class="rc-body">${steps}${sum}${faxDoc}</div>
     <div class="rc-foot">${owner}<span class="rc-acts">${acts}</span></div>
     <div class="replyslot" id="rs-${it.id}"></div>
   </div>`;
@@ -369,6 +447,13 @@ loadRoster();
 load();
 setInterval(load,45000);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) load(); });
+document.addEventListener('click',e=>{
+  const btn=e.target.closest('.view-fax');
+  if(btn)openFaxPdf(btn.dataset.faxUrl,btn.dataset.faxName);
+});
+document.getElementById('faxPdfClose').addEventListener('click',closeFaxPdf);
+document.getElementById('faxPdfModal').addEventListener('click',e=>{if(e.target.id==='faxPdfModal')closeFaxPdf();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.getElementById('faxPdfModal').hidden)closeFaxPdf();});
 </script>
 </body>
 </html>
