@@ -946,7 +946,7 @@ function openEncounterModal() {
   $("mPrimary").value = "established_office";
   $("mModules").querySelectorAll("input[data-note-module]").forEach((input) => { input.checked = false; });
   $("encounterIdNotice").innerHTML = registryReady
-    ? "<b>The Encounter ID is assigned automatically by Google Cloud.</b> Select the BHW Patient ID so the visit stays linked to the correct patient master record."
+    ? "<b>The Encounter ID is assigned automatically by Google Cloud.</b> Select the verified BHW Patient ID for clinical work. Use reserved ID <b>BHW0000</b> only for the de-identified synthetic role-play pilot; it never links to the Patient Registry."
     : "<b>The automatic Patient Registry service is not connected, so a new ID cannot be reserved safely.</b> You may enter an existing Encounter ID for temporary or migration work.";
   $("mPatient").focus();
 }
@@ -998,12 +998,13 @@ $("cancel").onclick = () => $("modal").classList.remove("on");
 $("create").onclick = async () => {
   const button = $("create");
   const bhwPatientId = $("mPatient").value.trim().toUpperCase();
+  const syntheticRolePlay = bhwPatientId === "BHW0000";
   if (bhwPatientId && !/^BHW\d{4}$/.test(bhwPatientId)) {
     showToast("Enter a BHW Patient ID in the BHW#### format.");
     $("mPatient").focus();
     return;
   }
-  if (registryReady && !patients.some((patient) => patient.bhwPatientId === bhwPatientId)) {
+  if (registryReady && !syntheticRolePlay && !patients.some((patient) => patient.bhwPatientId === bhwPatientId)) {
     showToast("Select a patient from the protected Patient Registry before creating the encounter.");
     $("mPatient").focus();
     return;
