@@ -78,6 +78,12 @@ export async function createEncounterCloudClient(fetchImpl = fetch) {
         body: JSON.stringify(encounter),
       });
     },
+    async structureNote(encounter) {
+      return request(`/v1/encounters/${encodeURIComponent(encounter.id)}/structure-note`, {
+        method: "POST",
+        body: JSON.stringify(encounter),
+      });
+    },
     async transcribe(audioBlob, { bhwPatientId = "BHW0000", syntheticRolePlay = false } = {}) {
       return request("/v1/transcriptions", {
         method: "POST",
