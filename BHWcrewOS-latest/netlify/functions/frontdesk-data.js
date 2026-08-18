@@ -71,6 +71,7 @@ async function fetchRequests(pageId) {
       status: sel(p['Status']),
       received: p['Received']?.date?.start?.slice(0, 10) || '',
       summary: text(p['Summary']),
+      sourceUrl: p['Source Link']?.url || '',
     };
   });
 }
@@ -317,6 +318,7 @@ exports.handler = async (event) => {
           sla: p['⚠️ SLA']?.formula?.string || '',
           received: p['Received']?.date?.start || '',
           summary: text(p['Summary']),
+          sourceUrl: p['Source Link']?.url || '',
           name: text(p['Patient Name']),
           phone: p['Callback Number']?.phone_number || '',
           assigned: sel(p['Assigned To']),
