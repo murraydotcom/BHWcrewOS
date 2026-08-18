@@ -95,6 +95,7 @@ let cloudState = "connecting";
 let cloudSaveTimer;
 let activeTab = "clinical";
 let analyzingId = "";
+let structuringId = "";
 let patients = [];
 let encounterCreationKey = "";
 let registryReady = false;
@@ -202,6 +203,7 @@ function builderInputFromDetail(row) {
   return {
     ...current,
     chiefConcern: value("nbChiefConcern", current.chiefConcern),
+    hpi: value("nbHpi", current.hpi),
     relevantHistory: value("nbRelevantHistory", current.relevantHistory),
     ros: value("nbRos", current.ros),
     exam: value("nbExam", current.exam),
@@ -375,11 +377,12 @@ function renderNoteBuilder(row) {
   return `<details open><summary><b>Encounter Note Builder</b> — one primary template plus applicable modules</summary>
     <div class="formgrid" style="margin-top:12px"><div class="field"><label>Primary note template</label><select id="dPrimaryTemplate">${templateOptions(notePlan.primaryTemplate)}</select></div><div class="field"><label>AWV type, when applicable</label><select id="dAwvType"><option value="">Not applicable / select</option><option value="initial" ${notePlan.awvType === "initial" ? "selected" : ""}>Initial AWV</option><option value="subsequent" ${notePlan.awvType === "subsequent" ? "selected" : ""}>Subsequent AWV</option></select></div><div class="field"><label>Chief concern / reason</label><input id="nbChiefConcern" value="${esc(input.chiefConcern || "")}" placeholder="Patient-stated reason for visit"></div></div>
     <div class="field"><label>Additional modules</label><div class="module-grid" id="dModuleGrid">${moduleOptions(notePlan.modules)}</div><div class="privacy">Condition Management covers clinical condition follow-up. Medication content appears only when addressed. CCM is excluded.</div></div>
+    ${noteField("nbHpi", "History of present illness", input.hpi, 5)}
     <div class="formgrid" style="margin-top:12px"><div class="field"><label>Assessment</label><textarea id="nbAssessment" rows="4">${esc(input.assessment || "")}</textarea></div><div class="field"><label>Plan</label><textarea id="nbPlan" rows="4">${esc(input.plan || "")}</textarea></div><div class="field"><label>Follow-up</label><textarea id="nbFollowUp" rows="4">${esc(input.followUp || "")}</textarea></div></div>
     ${renderModuleBuilderFields(input)}
     <label class="module-option"><input type="checkbox" id="nbTranscriptReviewed" ${input.transcriptReviewed ? "checked" : ""}><span>I reviewed the source transcription and confirm it may be used to draft this note.</span></label>
     ${missing.length ? `<div class="notice"><b>${missing.length} required element${missing.length === 1 ? "" : "s"} still need documentation.</b><br>${missing.map(esc).join(" · ")}</div>` : ""}
-    <div class="actions"><button class="btn primary" id="generateNote">Generate structured note draft</button></div>
+    <div class="actions"><button class="btn bronze" id="structureSource" ${structuringId === row.id ? "disabled" : ""}>${structuringId === row.id ? "Organizing source…" : "Organize Freed draft into fields"}</button><button class="btn primary" id="generateNote">Generate structured note draft</button></div>
   </details><details style="margin-top:12px"><summary><b>Imported patient and pre-visit context</b></summary><div style="margin-top:12px">${renderEncounterContext(row)}</div></details>`;
 }
 
@@ -589,6 +592,61 @@ function wireDetail(row) {
   };
 
   if ($("reanalyzeAudit")) $("reanalyzeAudit").onclick = () => runEncounterAnalysis(row);
+
+  $("structureSource").onclick = async () => {
+    row.notePlan = notePlanFromDetail(row);
+    row.noteBuilderInput = builderInputFromDetail(row);
+    row.sourceTranscript = $("dTranscript").value.trim();
+    if (!row.sourceTranscript) {
+      showToast("Paste or enter the Freed draft or transcription first.");
+      $("dTranscript").focus();
+      return;
+    }
+    if (!cloudClient) {
+      showToast("The protected Google Cloud note organizer is not connected yet.");
+      return;
+    }
+    structuringId = row.id;
+    render();
+    try {
+      const result = await cloudClient.structureNote(row);
+      const extracted = result.noteBuilderInput || {};
+      const merged = { ...row.noteBuilderInput };
+      for (const [key, value] of Object.entries(extracted)) {
+        if (["awv", "conditionManagement", "preventiveCare", "controlledMedication", "behavioralHealth", "charmedMinds"].includes(key)) continue;
+        if (key !== "transcriptReviewed" && String(value || "").trim()) merged[key] = value;
+      }
+      for (const group of ["awv", "conditionManagement", "preventiveCare", "controlledMedication", "behavioralHealth", "charmedMinds"]) {
+        merged[group] = { ...(row.noteBuilderInput?.[group] || {}) };
+        for (const [key, value] of Object.entries(extracted[group] || {})) {
+          if (String(value || "").trim()) merged[group][key] = value;
+        }
+      }
+      merged.transcriptReviewed = false;
+      row.noteBuilderInput = merged;
+      if (merged.orders) row.orders = lineValues(merged.orders);
+      if (merged.referrals) row.referrals = lineValues(merged.referrals);
+      if (merged.patientInstructions) row.patientInstructions = lineValues(merged.patientInstructions);
+      if (merged.returnPrecautions) row.returnPrecautions = lineValues(merged.returnPrecautions);
+      if (merged.followUp) row.followUp = lineValues(merged.followUp);
+      row.providerApproved = false;
+      row.charmDraftSaved = false;
+      row.status = WORKFLOW_STATUS.DRAFT_RECEIVED;
+      log(row, `Protected source draft organized into editable note fields with ${result.model || "Vertex AI"}; provider review remains required`);
+      if (Array.isArray(result.warnings) && result.warnings.length) {
+        log(row, `${result.warnings.length} source gap${result.warnings.length === 1 ? "" : "s"} flagged for provider review`);
+      }
+      persist();
+      showToast(result.warnings?.length
+        ? `Draft organized. Review the populated fields and ${result.warnings.length} source gap${result.warnings.length === 1 ? "" : "s"}, then confirm the source.`
+        : "Draft organized into editable fields. Review them, confirm the source, then generate the structured note.");
+    } catch (error) {
+      showToast(error.message || "The protected note organizer could not process this source draft.");
+    } finally {
+      structuringId = "";
+      render();
+    }
+  };
 
   $("generateNote").onclick = () => {
     row.notePlan = notePlanFromDetail(row);
