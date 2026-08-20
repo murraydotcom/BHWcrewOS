@@ -84,15 +84,27 @@ export async function createEncounterCloudClient(fetchImpl = fetch) {
         body: JSON.stringify(encounter),
       });
     },
-    async transcribe(audioBlob, { bhwPatientId = "BHW0000", syntheticRolePlay = false } = {}) {
+    async transcribe(audioBlob, { bhwPatientId = "BHW0000", consentMode = "" } = {}) {
       return request("/v1/transcriptions", {
         method: "POST",
         headers: {
           "Content-Type": audioBlob.type || "audio/webm",
           "X-BHW-Patient-ID": bhwPatientId,
-          "X-Recording-Consent": syntheticRolePlay ? "synthetic-role-play" : "",
+          "X-Recording-Consent": consentMode,
         },
         body: audioBlob,
+      });
+    },
+    async transcriptionConfig() {
+      return request("/v1/transcription-config");
+    },
+    async recordingConsent(bhwPatientId) {
+      return request(`/v1/patients/${encodeURIComponent(bhwPatientId)}/recording-consent`);
+    },
+    async saveRecordingConsent(bhwPatientId, consent) {
+      return request(`/v1/patients/${encodeURIComponent(bhwPatientId)}/recording-consent`, {
+        method: "PUT",
+        body: JSON.stringify(consent),
       });
     },
     async remove(id) {
@@ -129,3 +141,4 @@ export async function createEncounterCloudClient(fetchImpl = fetch) {
     async saveInsuranceRecords(records) { return request("/v1/insurance-records",{method:"PUT",body:JSON.stringify({records})}); },
   };
 }
+

@@ -7,6 +7,7 @@ const esc = (value) => String(value ?? "").replace(/[&<>\"]/g, (character) => ({
 const PAYERS = ["Medicare", "Medicare + QMB", "Maryland Medicaid", "CareFirst BCBS", "UnitedHealthcare Commercial", "UnitedHealthcare Medicare Advantage", "UnitedHealthcare Community Plan", "Aetna Commercial", "Aetna Better Health of Maryland", "Cigna", "Humana", "Maryland Physicians Care", "TRICARE", "Alterwood Advantage", "Self-pay", "Other"];
 const STATUS_OPTIONS = ["active", "prospective", "inactive", "transferred", "deceased"];
 const COVERAGE_OPTIONS = ["verified", "pending", "needs-review", "inactive", "self-pay", "unknown"];
+const CONSENT_SOURCES = ["previsit-form", "new-patient-packet"];
 
 let client = null;
 let patients = [];
@@ -71,6 +72,64 @@ function validationMessage(patient) {
   return "";
 }
 
+function localDateTimeValue(value = "") {
+  const date = value ? new Date(value) : null;
+  if (!date || !Number.isFinite(date.getTime())) return "";
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
+}
+
+function consentSourceLabel(value) {
+  return value === "new-patient-packet" ? "New-patient packet" : "Previsit form";
+}
+
+async function renderRecordingConsent(bhwPatientId) {
+  const panel = $("recordingConsentPanel");
+  if (!panel) return;
+  try {
+    const result = await client.recordingConsent(bhwPatientId);
+    if (selectedId !== bhwPatientId || !$("recordingConsentPanel")) return;
+    const consent = result.consent || {};
+    const source = CONSENT_SOURCES.includes(consent.sourceType) ? consent.sourceType : CONSENT_SOURCES[0];
+    const statusClass = result.eligible ? "complete" : "warning";
+    const statusText = result.eligible
+      ? `Current · ${consentSourceLabel(source)} · signed ${new Date(consent.signedAt).toLocaleString()}`
+      : consent.status === "revoked" ? "Revoked" : "Not yet verified";
+    panel.innerHTML = `<div class="card-head" style="padding:0 0 12px;border:0"><div><h3>Visit recording &amp; AI-transcription consent</h3><div class="privacy">Use either the signed previsit form or signed new-patient packet. Do not paste the document or patient details here—record only its secure identifier or location.</div></div><span class="badge ${statusClass}">${esc(statusText)}</span></div><div class="formgrid">${field("dConsentSource", "Signed form source", source, "select", CONSENT_SOURCES)}${field("dConsentSignedAt", "Patient signed at", localDateTimeValue(consent.signedAt), "datetime-local")}${field("dConsentVersion", "Form version", consent.formVersion || "recording-ai-consent-v1")}${field("dConsentEvidence", "Signed form reference", consent.evidenceReference || "")}</div><label class="attestation"><input type="checkbox" id="dConsentReviewed"><span>I reviewed the signed form and confirmed that it specifically authorizes visit recording and AI-assisted transcription.</span></label><div class="actions"><button class="btn primary" id="verifyRecordingConsent">Verify signed consent</button>${consent.consentId && consent.status !== "revoked" ? '<button class="btn" id="revokeRecordingConsent">Mark consent revoked</button>' : ""}</div><div class="privacy">This verification controls access to real-patient recording. The patient and everyone else who may be heard must still agree again at the visit.</div>`;
+    $("dConsentSource").value = source;
+    $("verifyRecordingConsent").onclick = async () => {
+      if (!$("dConsentReviewed").checked) { showToast("Review the signed form and check the verification statement first."); return; }
+      if (!$("dConsentSignedAt").value || !$("dConsentEvidence").value.trim()) { showToast("Signed date/time and the secure form reference are required."); return; }
+      try {
+        const saved = await client.saveRecordingConsent(bhwPatientId, {
+          sourceType: $("dConsentSource").value,
+          signedAt: new Date($("dConsentSignedAt").value).toISOString(),
+          formVersion: $("dConsentVersion").value.trim(),
+          evidenceReference: $("dConsentEvidence").value.trim(),
+          status: "current",
+          verificationAttestation: true,
+        });
+        await renderRecordingConsent(bhwPatientId);
+        showToast(`Signed consent verified from the ${consentSourceLabel(saved.consent.sourceType).toLowerCase()}.`);
+      } catch (error) { showToast(error.message || "Signed consent could not be verified."); }
+    };
+    if ($("revokeRecordingConsent")) {
+      $("revokeRecordingConsent").onclick = async () => {
+        if (!confirm("Mark this recording and AI-transcription consent as revoked? Real-patient recording will be blocked immediately.")) return;
+        try {
+          await client.saveRecordingConsent(bhwPatientId, { status: "revoked" });
+          await renderRecordingConsent(bhwPatientId);
+          showToast("Consent marked revoked. Real-patient recording is blocked.");
+        } catch (error) { showToast(error.message || "Consent could not be revoked."); }
+      };
+    }
+  } catch (error) {
+    if (selectedId === bhwPatientId && $("recordingConsentPanel")) {
+      $("recordingConsentPanel").innerHTML = `<div class="notice"><b>Consent verification is unavailable.</b><br>${esc(error.message || "Try again after the protected registry reconnects.")}</div>`;
+    }
+  }
+}
+
 function visiblePatients() {
   const query = $("search").value.trim().toLowerCase();
   const filter = $("statusFilter").value;
@@ -102,7 +161,7 @@ function renderRows() {
 function renderDetail() {
   const patient = patients.find((item) => item.bhwPatientId === selectedId);
   if (!patient) { $("detail").innerHTML = '<div class="empty">Select a patient to review the master record.</div>'; return; }
-  $("detail").innerHTML = `<div class="card-head"><div><h3>${esc(patient.bhwPatientId)} · ${esc(patient.legalLastName)}, ${esc(patient.preferredName || patient.legalFirstName)}</h3><div class="privacy">Last verified ${patient.lastVerifiedAt ? new Date(patient.lastVerifiedAt).toLocaleString() : "not recorded"}</div></div><span class="badge ${patient.coverageStatus === "verified" ? "complete" : "warning"}">${esc(patient.coverageStatus)}</span></div><div class="detail"><div class="formgrid">${patientFields(patient)}</div><div class="actions"><button class="btn primary" id="savePatient">Save verified changes</button><button class="btn" id="startEncounter">Create encounter</button></div><div class="privacy">Patient-reported changes must be verified before they replace this authoritative record. This registry supports operations; CharmHealth remains the legal medical record.</div></div>`;
+  $("detail").innerHTML = `<div class="card-head"><div><h3>${esc(patient.bhwPatientId)} · ${esc(patient.legalLastName)}, ${esc(patient.preferredName || patient.legalFirstName)}</h3><div class="privacy">Last verified ${patient.lastVerifiedAt ? new Date(patient.lastVerifiedAt).toLocaleString() : "not recorded"}</div></div><span class="badge ${patient.coverageStatus === "verified" ? "complete" : "warning"}">${esc(patient.coverageStatus)}</span></div><div class="detail"><div class="formgrid">${patientFields(patient)}</div><div class="actions"><button class="btn primary" id="savePatient">Save verified changes</button><button class="btn" id="startEncounter">Create encounter</button></div><div class="privacy">Patient-reported changes must be verified before they replace this authoritative record. This registry supports operations; CharmHealth remains the legal medical record.</div><div class="consent-panel" id="recordingConsentPanel"><div class="privacy">Loading signed consent status…</div></div></div>`;
   $("savePatient").onclick = async () => {
     const next = readPatient("d", patient.bhwPatientId);
     const error = validationMessage(next);
@@ -118,6 +177,7 @@ function renderDetail() {
     sessionStorage.setItem(PENDING_PATIENT_KEY, patient.bhwPatientId);
     location.href = "workflow.html";
   };
+  void renderRecordingConsent(patient.bhwPatientId);
 }
 
 function render() { renderKpis(); renderRows(); renderDetail(); }
@@ -168,3 +228,5 @@ async function initialize() {
 }
 
 initialize();
+
+
