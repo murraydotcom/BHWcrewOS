@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>BHW Front Desk — Patient Monitor</title>
+<link rel="stylesheet" href="/assets/bhw-tokens.css">
+<script src="/crew-provider-gate.js"></script>
 <style>
 @font-face{font-family:'Nunito';src:url('fonts/Nunito/Nunito-VariableFont_wght.ttf') format('truetype');font-weight:300 900;font-display:swap}
 @font-face{font-family:'OpenSans';src:url('fonts/Open_Sans/OpenSans-VariableFont_wdth,wght.ttf') format('truetype');font-weight:300 800;font-display:swap}
@@ -362,7 +364,7 @@ h1,h2,h3,h4,.nm,.vit .n,.sec-h b{font-family:'Nunito','OpenSans',sans-serif}
 
 <script>
 const API='/.netlify/functions/monitor-data';
-const KEY='02142022'; // matches the DASH_KEY shared key used by Front Desk
+const TOKEN=sessionStorage.getItem('crewos_token')||'';
 function initials(n){return (n||'?').split(/[ ,]+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();}
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const set=(el,v)=>{const e=document.getElementById(el); if(e) e.textContent=(v==null||v==='')?'—':v;};
@@ -377,7 +379,7 @@ function fmtDate(d){ if(!d) return ''; const t=new Date(d.slice(0,10)+'T00:00:00
     document.getElementById('pActN').textContent=''; return; }
   document.getElementById('pAv').textContent='…'; set('pNm','Loading…'); blank.slice(1).forEach(k=>set(k,'—'));
   try{
-    const r=await fetch(`${API}?patient=${encodeURIComponent(id)}&key=${encodeURIComponent(KEY)}`);
+    const r=await fetch(`${API}?patient=${encodeURIComponent(id)}`,{headers:{Authorization:`Bearer ${TOKEN}`}});
     const d=await r.json();
     if(!r.ok||!d.patient) throw new Error(d.error||'not found');
     const p=d.patient;

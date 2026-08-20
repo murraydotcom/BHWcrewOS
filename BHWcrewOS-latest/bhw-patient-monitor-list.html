@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Patient Monitor — crewOS</title>
+<link rel="stylesheet" href="/assets/bhw-tokens.css">
+<script src="/crew-provider-gate.js"></script>
 <style>
 @font-face{font-family:'Nunito';src:url('fonts/Nunito/Nunito-VariableFont_wght.ttf') format('truetype');font-weight:300 900;font-display:swap}
 @font-face{font-family:'OpenSans';src:url('fonts/Open_Sans/OpenSans-VariableFont_wdth,wght.ttf') format('truetype');font-weight:300 800;font-display:swap}
@@ -14,7 +16,7 @@
   --ok:#5f8a63; --ok-q:#e7efe4; --gold:#bf8a2f; --gold-q:#f7efd9; --clay:#b07a55; --clay-q:#f3e8df; --alert:#b0525a; --alert-q:#f6e2e2;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'OpenSans',system-ui,sans-serif;color:var(--ink);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased;background:#dfe7e4;padding:20px}
+body{font-family:'Montserrat','OpenSans',system-ui,sans-serif;color:var(--ink);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased;background:#dfe7e4;padding:20px}
 .app{max-width:1240px;margin:0 auto;background:#fff;border-radius:22px;overflow:hidden;box-shadow:0 40px 90px -50px rgba(20,45,40,.6);border:1px solid #d8e0dd}
 
 .top{display:flex;align-items:center;gap:14px;padding:20px 24px;border-bottom:1px solid var(--line)}
@@ -77,6 +79,7 @@ body{font-family:'OpenSans',system-ui,sans-serif;color:var(--ink);font-size:13px
     </div>
     <div class="right">
       <span class="chip"><span class="pulse"></span>Live</span>
+      <a class="back" href="/bhw-patient-materials.html">Materials &amp; Feedback</a>
       <a class="back" href="/bhw-front-desk.html">← Front Desk</a>
     </div>
   </div>
@@ -95,7 +98,7 @@ body{font-family:'OpenSans',system-ui,sans-serif;color:var(--ink);font-size:13px
 // Live roster from the Patients Master List via monitor-data. Each row links to
 // the single-patient monitor by real Notion page id (?patient=<uuid>).
 const API='/.netlify/functions/monitor-data';
-const KEY='02142022'; // matches the DASH_KEY shared key used by Front Desk
+const TOKEN=sessionStorage.getItem('crewos_token')||'';
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function initials(n){return (n||'?').split(/[ ,]+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();}
 function href(p){ return '/bhw-patient-monitor.html?patient='+encodeURIComponent(p.id); }
@@ -122,7 +125,7 @@ function rosterRow(p){
 async function load(){
   const listEl=document.getElementById('list'), checkinEl=document.getElementById('checkin');
   try{
-    const r=await fetch(`${API}?roster=1&key=${encodeURIComponent(KEY)}`);
+    const r=await fetch(`${API}?roster=1`,{headers:{Authorization:`Bearer ${TOKEN}`}});
     const d=await r.json();
     if(!r.ok) throw new Error(d.error||'load failed');
     const roster=Array.isArray(d.patients)?d.patients:[];

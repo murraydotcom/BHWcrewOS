@@ -2,7 +2,7 @@
 // Live data for the Patient Monitor pages (bhw-patient-monitor-list.html and
 // bhw-patient-monitor.html). Reads the Patients Master List (MASTER_DB_ID) and
 // the triage queue (QUEUE_DB_ID) over raw Notion. Gated by DASH_KEY — the same
-// shared key the Front Desk board uses.
+// signed CrewOS session. Never accept a browser-visible shared key.
 //
 //   GET ?roster=1          -> { patients:[{id,name,mrn,program,phone,lastVisit,nextVisit,page}], capped }
 //                             (patients enrolled in a monitoring program, A–Z, capped)
@@ -17,6 +17,7 @@ const H = () => ({
 const MASTER_DB = process.env.MASTER_DB_ID;
 const QUEUE_DB = process.env.QUEUE_DB_ID || 'de7906906a134b65bb0fc6966ba20b13';
 const ROSTER_CAP = 150;
+const { getSession } = require('./_lib');
 
 const text = p => (p?.rich_text?.[0]?.plain_text) || (p?.title?.[0]?.plain_text) || '';
 const sel = p => p?.select?.name || p?.status?.name || '';
@@ -31,8 +32,7 @@ const j = (status, obj) => ({
 
 exports.handler = async (event) => {
   try {
-    if (process.env.DASH_KEY && event.queryStringParameters?.key !== process.env.DASH_KEY)
-      return j(401, { error: 'unauthorized' });
+    if (!getSession(event)) return j(401, { error: 'unauthorized' });
     if (!process.env.NOTION_TOKEN || !MASTER_DB)
       return j(503, { error: 'NOTION_TOKEN / MASTER_DB_ID not set on this site' });
 
