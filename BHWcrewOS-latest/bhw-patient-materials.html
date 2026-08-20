@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Patient Materials &amp; Feedback — crewOS</title>
+  <link rel="stylesheet" href="/assets/bhw-tokens.css">
+  <script src="/crew-provider-gate.js"></script>
+  <style>
+    *{box-sizing:border-box}body{margin:0;font-family:var(--sans);color:var(--ink);background:var(--page-wash),var(--bg);font-size:13px}.wrap{max-width:1180px;margin:auto;padding:24px}.top{display:flex;align-items:center;gap:14px;margin-bottom:18px}.top h1{margin:0;font-size:24px}.top p{margin:3px 0 0;color:var(--ink-soft)}.back{margin-left:auto;text-decoration:none;color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:9px 14px;background:white;font-weight:650}.grid{display:grid;grid-template-columns:minmax(300px,.8fr) minmax(420px,1.2fr);gap:18px}.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:22px;box-shadow:var(--shadow)}h2{margin:0 0 4px;font-size:17px}.sub{color:var(--ink-soft);font-size:12px;margin-bottom:18px}.field{margin-bottom:14px}.field label{display:block;font-weight:700;font-size:11px;margin-bottom:6px}.input{width:100%;border:1px solid #d9d5cc;border-radius:10px;padding:11px;font:500 12px var(--sans);background:white;color:var(--ink)}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.btn{border:0;border-radius:999px;background:var(--clay-grad);color:white;padding:12px 18px;font:750 11px var(--sans);letter-spacing:.05em;text-transform:uppercase;cursor:pointer}.btn.secondary{background:white;color:var(--ink);border:1px solid var(--line)}.btn.small{padding:8px 12px;font-size:9px}.btn:disabled{opacity:.5}.message{display:none;margin-top:14px;border-radius:11px;padding:11px;font-size:12px}.message.on{display:block}.message.ok{background:#eaf2e7;color:#466243}.message.error{background:#f8e8e5;color:#7d382e}.linkbox{display:none;margin-top:14px;padding:14px;border:1px solid #cfe0d3;background:#edf5eb;border-radius:12px}.linkbox.on{display:block}.linkbox code{display:block;word-break:break-all;font-size:11px;margin:8px 0 10px}.queue{display:grid;gap:10px}.item{border:1px solid var(--line);border-left:5px solid var(--teal);border-radius:13px;padding:13px;background:white}.item.alert{border-left-color:var(--alert)}.item.warn{border-left-color:var(--clay)}.item-top{display:flex;gap:8px;align-items:start}.item h3{font-size:13px;margin:0}.meta{font-size:10px;color:var(--ink-soft);margin-top:3px}.pill{margin-left:auto;border-radius:999px;background:#eef2f0;padding:4px 8px;font-size:9px;font-weight:800;text-transform:uppercase}.feedback{margin-top:9px;background:#f7f5f2;padding:9px;border-radius:8px;font-size:11px;white-space:pre-wrap}.actions{display:flex;gap:7px;margin-top:10px}.empty{color:var(--ink-soft);padding:20px;text-align:center;border:1px dashed var(--line);border-radius:12px}@media(max-width:850px){.grid{grid-template-columns:1fr}.wrap{padding:16px}.top{align-items:flex-start;flex-wrap:wrap}.back{margin-left:0}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="top"><div><h1>Patient Materials &amp; Feedback</h1><p>Assign any prepared BHW HTML and review the patient’s response.</p></div><a class="back" href="/bhw-patient-monitor-list.html">Patient Monitor</a></header>
+    <div class="grid">
+      <section class="card">
+        <h2>Create a secure patient link</h2><div class="sub">Use BHW0000 until the security smoke test is complete.</div>
+        <form id="assignForm">
+          <div class="field"><label for="patientId">Patient reference</label><input class="input" id="patientId" required maxlength="128" value="BHW0000"></div>
+          <div class="field"><label for="title">Material title</label><input class="input" id="title" required maxlength="200" value="Synthetic BHW Care Guide"></div>
+          <div class="field"><label for="contentPath">HTML path on CrewHQ</label><input class="input" id="contentPath" required value="/bhw-patient-material-demo.html"></div>
+          <div class="row">
+            <div class="field"><label for="mode">Response type</label><select class="input" id="mode"><option value="hybrid">Instructions + feedback</option><option value="acknowledge">Read and acknowledge</option><option value="feedback">Feedback only</option><option value="follow_confirm">Follow and confirm</option><option value="fill_out">Fill out questions</option></select></div>
+            <div class="field"><label for="expiry">Link expires</label><select class="input" id="expiry"><option value="72">3 days</option><option value="168" selected>7 days</option><option value="336">14 days</option><option value="720">30 days</option></select></div>
+          </div>
+          <div class="field"><label for="question">Optional question</label><input class="input" id="question" maxlength="300" placeholder="Example: Do you understand the next step?"></div>
+          <button class="btn" id="createButton" type="submit">Generate private link</button>
+          <div class="message" id="message"></div>
+          <div class="linkbox" id="linkbox"><strong>Private patient link</strong><code id="patientLink"></code><button class="btn secondary small" id="copyButton" type="button">Copy link</button></div>
+        </form>
+      </section>
+      <section class="card">
+        <h2>Recent patient responses</h2><div class="sub">New feedback, questions, barriers, and reported problems.</div>
+        <div class="queue" id="queue"><div class="empty">Loading responses…</div></div>
+      </section>
+    </div>
+  </main>
+  <script>
+    const API='https://bhw-medication-api-343692256275.us-east4.run.app';
+    const crewToken=sessionStorage.getItem('crewos_token')||'';
+    let cloudToken='';let cloudTokenExpiresAt=0;
+    const esc=value=>String(value==null?'':value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    const fmt=value=>value?new Date(value).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';
+    async function getCloudToken(){if(cloudToken&&Date.now()<cloudTokenExpiresAt)return cloudToken;const response=await fetch('/.netlify/functions/care-cloud-token',{method:'POST',headers:{Authorization:`Bearer ${crewToken}`}});const data=await response.json();if(!response.ok||!data.token)throw new Error(data.error||'Cloud access unavailable');cloudToken=data.token;cloudTokenExpiresAt=Date.now()+Math.max(30,(data.expiresIn||300)-30)*1000;return cloudToken}
+    async function api(path,options={}){const accessToken=await getCloudToken();const response=await fetch(API+path,{...options,headers:{Authorization:`Bearer ${accessToken}`,'Content-Type':'application/json',...(options.headers||{})}});const data=await response.json();if(!response.ok)throw new Error(data.error||'Request failed');return data}
+    document.getElementById('assignForm').addEventListener('submit',async event=>{event.preventDefault();const button=document.getElementById('createButton'),message=document.getElementById('message'),question=document.getElementById('question').value.trim();button.disabled=true;message.className='message';document.getElementById('linkbox').className='linkbox';try{const data=await api('/v1/content-assignments',{method:'POST',body:JSON.stringify({patientId:document.getElementById('patientId').value.trim(),title:document.getElementById('title').value.trim(),contentPath:document.getElementById('contentPath').value.trim(),responseMode:document.getElementById('mode').value,expiresInHours:Number(document.getElementById('expiry').value),questions:question?[{id:'custom_question',label:question,type:'long_text',required:false}]:[]})});document.getElementById('patientLink').textContent=data.patientLink;document.getElementById('linkbox').className='linkbox on';message.textContent='Secure link created. Use synthetic data only during this test.';message.className='message on ok'}catch(error){message.textContent='Could not create the link: '+error.message;message.className='message on error'}finally{button.disabled=false}});
+    document.getElementById('copyButton').addEventListener('click',async()=>{await navigator.clipboard.writeText(document.getElementById('patientLink').textContent);document.getElementById('copyButton').textContent='Copied'});
+    async function review(id,action){await api(`/v1/staff/content-submissions/${encodeURIComponent(id)}/review`,{method:'POST',body:JSON.stringify({action})});await loadQueue()}
+    async function loadQueue(){const queue=document.getElementById('queue');try{const data=await api('/v1/staff/content-submissions?limit=50');if(!data.submissions.length){queue.innerHTML='<div class="empty">No responses yet.</div>';return}queue.innerHTML=data.submissions.map(item=>{const cls=item.priority==='same_day_review'?'alert':item.flags?.length?'warn':'';return `<article class="item ${cls}"><div class="item-top"><div><h3>${esc(item.title)}</h3><div class="meta">${esc(item.patientId)} · ${esc(fmt(item.submittedAt))} · ${esc(item.completionStatus)}</div></div><span class="pill">${esc(item.status)}</span></div>${item.flags?.length?`<div class="meta">Flags: ${esc(item.flags.join(', '))}</div>`:''}${item.feedback?`<div class="feedback">${esc(item.feedback)}</div>`:''}<div class="actions">${item.status!=='reviewed'?`<button class="btn secondary small" data-id="${esc(item.id)}" data-action="reviewed">Mark reviewed</button>`:''}<button class="btn secondary small" data-id="${esc(item.id)}" data-action="follow_up">Follow-up</button><button class="btn secondary small" data-id="${esc(item.id)}" data-action="closed">Close</button></div></article>`}).join('');queue.querySelectorAll('[data-action]').forEach(button=>button.addEventListener('click',()=>review(button.dataset.id,button.dataset.action)))}catch(error){queue.innerHTML=`<div class="empty">Could not load responses: ${esc(error.message)}</div>`}}
+    loadQueue();
+  </script>
+</body>
+</html>

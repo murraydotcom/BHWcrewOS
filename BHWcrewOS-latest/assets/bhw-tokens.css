@@ -11,6 +11,14 @@
    colour here and it changes everywhere.
    ============================================================ */
 
+@font-face{
+  font-family:'Montserrat';
+  font-style:normal;
+  font-weight:100 900;
+  font-display:swap;
+  src:url('/fonts/Montserrat/Montserrat-Variable.woff2') format('woff2');
+}
+
 :root{
   /* ---- Surfaces ---- */
   --bg:#f5f2ec;            /* app background (warm linen) */
