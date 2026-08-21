@@ -1,4 +1,4 @@
-import { createEncounterCloudClient } from "./cloud-queue.mjs";
+import { CREW_SESSION_EXPIRED, createEncounterCloudClient } from "./cloud-queue.mjs";
 
 const SYNTHETIC_PATIENT_ID = "BHW0000";
 const SYNTHETIC_CONSENT = "synthetic-role-play";
@@ -33,6 +33,11 @@ function selectedPatientId() { return $("patient").value; }
 function isSynthetic() { return selectedPatientId() === SYNTHETIC_PATIENT_ID; }
 function consentMode() { return isSynthetic() ? SYNTHETIC_CONSENT : LIVE_CONSENT; }
 function hasVerifiedConsent() { return Boolean(verifiedConsent?.eligible); }
+function crewSignInUrl() {
+  const next = `${location.pathname}${location.search}${location.hash}`;
+  return `/crewos?next=${encodeURIComponent(next)}`;
+}
+function signInAgain() { location.replace(crewSignInUrl()); }
 function consentSourceLabel(value) {
   return value === "new-patient-packet" ? "new-patient packet" : "previsit form";
 }
@@ -299,6 +304,7 @@ $("transcribe").onclick = async () => {
     return;
   }
   setState("Cloud Speech-to-Text is transcribing…");
+  let sessionExpired = false;
   try {
     const result = await cloudClient.transcribe(recording, { bhwPatientId, consentMode: attestation });
     if (requestVersion !== sessionVersion) return;
@@ -309,8 +315,11 @@ $("transcribe").onclick = async () => {
     setState("Draft ready for provider review · audio discarded");
   } catch (error) {
     if (requestVersion !== sessionVersion) return;
-    setState("Transcription failed · audio discarded");
-    showToast(error.message || "The recording could not be transcribed.");
+    sessionExpired = error.code === CREW_SESSION_EXPIRED;
+    setState(sessionExpired ? "CrewHQ session expired · audio discarded" : "Transcription failed · audio discarded");
+    showToast(sessionExpired
+      ? "Your CrewHQ session expired. Sign in again in this tab; the audio was discarded."
+      : (error.message || "The recording could not be transcribed."));
   } finally {
     discardAudio();
     if (requestVersion !== sessionVersion) return;
@@ -318,6 +327,7 @@ $("transcribe").onclick = async () => {
     if (isSynthetic()) $("previsitConsent").checked = false;
     $("sessionConsent").checked = false;
     updateConsentCopy();
+    if (sessionExpired) setTimeout(signInAgain, 1200);
   }
 };
 
@@ -355,6 +365,10 @@ async function initialize() {
       setState("Select a patient");
     }
   } catch (error) {
+    if (error.code === CREW_SESSION_EXPIRED) {
+      signInAgain();
+      return;
+    }
     $("cloudStatus").textContent = "Cloud authorization failed";
     $("start").disabled = true;
     $("patient").disabled = true;
@@ -363,5 +377,4 @@ async function initialize() {
 }
 
 initialize();
-
 
