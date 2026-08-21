@@ -30,7 +30,11 @@ function json(statusCode, body) {
 
 function header(event, name) {
   const headers = event.headers || {};
-  return String(headers[name] || headers[name.toLowerCase()] || headers[name.toUpperCase()] || "");
+  const wanted = name.toLowerCase();
+  for (const key of Object.keys(headers)) {
+    if (key.toLowerCase() === wanted) return String(headers[key] || "");
+  }
+  return "";
 }
 
 function cleanOrigin(value) {
@@ -40,6 +44,10 @@ function cleanOrigin(value) {
 function originAllowed(event) {
   const origin = cleanOrigin(header(event, "origin"));
   if (!origin) return true;
+  const requestHost = header(event, "host").split(",")[0].trim().toLowerCase();
+  try {
+    if (requestHost && new URL(origin).host.toLowerCase() === requestHost) return true;
+  } catch {}
   const allowed = [process.env.URL, process.env.DEPLOY_URL, process.env.DEPLOY_PRIME_URL]
     .map(cleanOrigin)
     .filter(Boolean);
