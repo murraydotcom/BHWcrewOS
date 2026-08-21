@@ -7,9 +7,10 @@ Phone-first, installable capture surface for non-PHI BHW thinking and work notes
 **NON-PHI ONLY.** Do not record patients, patient names, identifiers, or clinical encounters in this MVP.
 
 Why:
-- text and audio are stored in IndexedDB on the current device/browser;
-- the optional browser live-transcription feature may use the browser/device vendor speech service;
-- no audited HIPAA-grade server transcription/storage pipeline is connected yet.
+- saved text and audio are stored in IndexedDB on the current device/browser;
+- after recording stops, a size-limited audio copy is sent in memory through the Netlify function to the existing OpenAI API transcription setup;
+- the function does not intentionally persist audio or transcript, but this MVP path is not approved for PHI;
+- optional browser live transcription may also use the browser/device vendor speech service.
 
 The Clinical capture mode is visibly locked in the UI.
 
@@ -18,9 +19,9 @@ The Clinical capture mode is visibly locked in the UI.
 - installable PWA shell (`bhw-capture.webmanifest` + minimal service worker)
 - local six-digit app PIN
 - phone microphone recording via `MediaRecorder`
-- optional browser live speech-to-text with typed/paste fallback
+- automatic server-side transcription after stop, with optional browser live speech-to-text and typed/paste fallbacks
 - Brain Dump, Research, Operations, Teaching, and Content modes
-- deterministic local organization into title, project, tags, summary, and action candidates
+- automatic deterministic organization into visible title, project, tags, summary, and action candidates
 - project detection for PSCM, PREVENT-ND, CharmEd Minds, Mind & Mood, Flow, EduMedia, and BHW Operations
 - local IndexedDB storage for text and audio
 - searchable Memory library with project filters
@@ -32,7 +33,8 @@ The Clinical capture mode is visibly locked in the UI.
 ## Files
 
 - `bhw-capture.html` — phone-first UI
-- `bhw-capture.js` — local capture, organization, IndexedDB, search, and PWA behavior
+- `bhw-capture.js` — capture, post-stop transcription, organization, IndexedDB, search, and PWA behavior
+- `netlify/functions/bhw-capture-transcribe.js` — bounded, in-memory non-PHI OpenAI transcription proxy
 - `bhw-capture.webmanifest` — install metadata
 - `bhw-capture-sw.js` — install/activate only; does not intercept CrewOS requests
 - `assets/bhw-capture-icon.svg` — app icon
@@ -43,15 +45,22 @@ The Clinical capture mode is visibly locked in the UI.
 2. Create a six-digit local PIN; lock and confirm the PIN reopens the app.
 3. Deny microphone permission and confirm typed capture still saves.
 4. Allow microphone permission and record 10-20 seconds of **synthetic/non-PHI** speech.
-5. Stop recording; confirm the status shows a local KB size.
-6. Save; open Memory; confirm an `audio` badge appears.
-7. Open the entry and play the audio.
-8. Create a typed capture containing `PSCM`, `IgA`, and `need to research`; preview organization and confirm project/tag/action extraction.
+5. Stop recording; confirm the status changes to transcription, the transcript is populated, and the organization preview appears automatically.
+6. Confirm the title field and project selector are populated from the transcript and tags, summary, and actions render in the preview.
+7. Save; open Memory; confirm an `audio` badge appears, then open the entry and play the audio.
+8. Create a typed capture containing `PSCM`, `IgA`, and `need to research`; select Preview organization and confirm project/tag/action extraction still works.
 9. Search `IgA`; confirm the entry is returned.
 10. Background the app for more than five minutes and return; confirm the local lock screen appears.
 11. Use Export and confirm the JSON contains text/metadata but no audio blob.
 12. Confirm Clinical mode cannot be selected.
 13. If Chrome offers Install, install it and relaunch from the home screen.
+
+## Transcription configuration
+
+- `OPENAI_API_KEY` — existing Netlify environment variable; required.
+- `OPENAI_TRANSCRIBE_MODEL` — optional; defaults to `gpt-4o-mini-transcribe`.
+- Requests must be same-origin, explicitly acknowledge the non-PHI boundary, use an allowlisted audio MIME type, and stay at or below 4 MB.
+- Audio and transcript exist only in request memory in this function; the handler does not log or persist either payload.
 
 ## Phase 2: HIPAA-grade cloud path
 
