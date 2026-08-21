@@ -107,7 +107,10 @@ import {
 
   function openDB() {
     return new Promise(function (resolve, reject) {
-      var request = indexedDB.open(DB_NAME, 2);
+      // No Phase 2 schema change is required. Omitting a version opens either
+      // the existing v1 cache or any later compatible cache without an
+      // upgrade transaction that another browser context could block.
+      var request = indexedDB.open(DB_NAME);
       request.onupgradeneeded = function () {
         var database = request.result;
         if (!database.objectStoreNames.contains(STORE)) {
