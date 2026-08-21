@@ -1,0 +1,19 @@
+{
+  "name": "BHW Capture",
+  "short_name": "Capture",
+  "description": "Private device-local voice and thought capture for BHW work.",
+  "start_url": "/bhw-capture.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#091722",
+  "theme_color": "#091722",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/assets/bhw-capture-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
