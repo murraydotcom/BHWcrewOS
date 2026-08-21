@@ -13,12 +13,11 @@
 //   CCM List, APCM billing list, Care Management Program Eligibility Dashboard.
 
 const { DB, queryDb, createPage, updatePage, P, W, getSession, json } = require("./_lib");
+const { listCloudPatients } = require("./lib/cloud-patients");
 
 const CCM_DB = "77af6cd2e9c4409685dadeff02a2d307";
 const APCM_DB = "335580758d3080438484c662fce22ad9";
 const ELIG_DB = "5f83291ac81b40ae912a2db4ced8ecb2";
-const MASTER_DB = process.env.MASTER_DB_ID || "2cf580758d3080f0825de4bbfb6c7528";
-
 const status = (p) => p?.status?.name || p?.select?.name || "";
 const people = (p) => (p?.people || []).map((u) => u.name).filter(Boolean).join(", ");
 const norm = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -44,14 +43,14 @@ exports.handler = async (event) => {
 
   try {
     // ---- reference data ----
-    const [masterPages, logPages, eligPages] = await Promise.all([
-      queryDb(MASTER_DB), queryDb(DB.careLog), queryDb(ELIG_DB),
+    const [cloudPatients, logPages, eligPages] = await Promise.all([
+      listCloudPatients(getSession(event) || { sub: "scheduled-care-log" }), queryDb(DB.careLog), queryDb(ELIG_DB),
     ]);
 
     const ctlToMaster = new Map();
-    for (const pg of masterPages) {
-      const ctl = P.text(pg.properties["Patient Ctl No"]);
-      if (ctl && !ctlToMaster.has(ctl)) ctlToMaster.set(ctl, pg.id);
+    for (const patient of cloudPatients) {
+      const ctl = patient.bhwPatientId;
+      if (ctl && patient.notionPageId && !ctlToMaster.has(ctl)) ctlToMaster.set(ctl, patient.notionPageId);
     }
 
     // existing rows this month, keyed ctl|program → pageId (idempotent upsert)

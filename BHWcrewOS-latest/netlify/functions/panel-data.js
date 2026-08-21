@@ -24,6 +24,7 @@ const HEDIS_VAL = { met: "Met", open: "Gap", na: "N/A" };
 const HEDIS_VAL_R = { "Met": "met", "Gap": "open", "N/A": "na" };
 const TYPE_VAL = { ed: "ED visit", uc: "Urgent care", admit: "Admission", readmit: "Readmission", obs: "Observation" };
 const TYPE_VAL_R = Object.fromEntries(Object.entries(TYPE_VAL).map(([k, v]) => [v, k]));
+const { listCloudPatients } = require('./lib/cloud-patients');
 
 async function notion(path, method = "GET", body) {
   const res = await fetch(NOTION + path, {
@@ -142,11 +143,21 @@ exports.handler = async (event) => {
   const PDB = process.env.PATIENTS_DB_ID, EDB = process.env.EVENTS_DB_ID;
   try {
     if (event.httpMethod === "GET") {
-      const [pp, ee] = await Promise.all([queryAll(PDB), queryAll(EDB)]);
+      const [pp, ee, roster] = await Promise.all([queryAll(PDB), queryAll(EDB), listCloudPatients()]);
       const patients = pp.map(mapPatient).filter(Boolean);
+      const rosterByIdentifier = new Map();
+      roster.forEach((patient) => [patient.bhwPatientId, patient.mrn].filter(Boolean)
+        .forEach((value) => rosterByIdentifier.set(String(value).toLowerCase(), patient)));
+      patients.forEach((patient) => {
+        const match = rosterByIdentifier.get(String(patient.label || '').trim().toLowerCase());
+        patient.bhwPatientId = match?.bhwPatientId || '';
+        patient.rosterLinked = !!match;
+        if (match?.payer) patient.payer = match.payer;
+        if (match?.program) patient.program = match.program;
+      });
       const ids = new Set(patients.map((p) => p.id));
       const events = ee.map(mapEvent).filter((e) => e && ids.has(e.patientId));
-      return { statusCode: 200, headers: cors, body: JSON.stringify({ patients, events }) };
+      return { statusCode: 200, headers: cors, body: JSON.stringify({ patients, events, rosterCount: roster.length }) };
     }
 
     if (event.httpMethod === "POST") {
