@@ -133,6 +133,17 @@ export async function createEncounterCloudClient(fetchImpl = fetch) {
       const body = await request("/v1/patients");
       return Array.isArray(body.patients) ? body.patients : [];
     },
+    async listTcmEvents(limit = 1000) {
+      const safeLimit = Math.max(1, Math.min(1000, Number(limit) || 1000));
+      const body = await request(`/v1/tcm/events?limit=${safeLimit}`);
+      return Array.isArray(body.rows) ? body.rows : [];
+    },
+    async importTcmEvents(rows, { source = "CrewHQ Panel and Discharges", sourceFile = "", manual = true } = {}) {
+      return request("/v1/tcm/events/import", {
+        method: "POST",
+        body: JSON.stringify({ source, sourceFile, manual, rows }),
+      });
+    },
     async savePatient(patient) {
       return request(`/v1/patients/${encodeURIComponent(patient.bhwPatientId)}`, {
         method: "PUT",

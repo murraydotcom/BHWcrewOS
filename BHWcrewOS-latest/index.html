@@ -212,7 +212,7 @@ a.res .star{color:var(--clay);margin-right:6px}
 <circle cx="30" cy="70" r="20" stroke="#80abbd" stroke-width="3.2" stroke-dasharray="114 12" transform="rotate(150 30 70)"/>
 </g></svg>
   <div class="wordmark">BHW<b>crew</b><span class="os">OS</span></div>
-  <div class="whoami" id="whoami"></div><button class="btn sm" style="margin-left:10px;background:rgba(244,247,247,.12);color:#f4f7f7;border:1.5px solid var(--sand)" onclick="openNewPatient()">＋ Patient</button>
+  <div class="whoami" id="whoami"></div><button class="btn sm" style="margin-left:10px;background:rgba(244,247,247,.12);color:#f4f7f7;border:1.5px solid var(--sand)" onclick="openContextPatient()">＋ Patient</button>
   <div class="top-right">
     <a class="btn-ghost" href="/hq.html" style="text-decoration:none">← BHW HQ</a>
     <button class="btn-ghost" onclick="refresh()">Refresh</button>
@@ -1765,6 +1765,28 @@ function npEnsureOverlay(){
   document.body.appendChild(d);
 }
 function npClose(){ const d=document.getElementById("np-overlay"); if(d) d.classList.remove("open"); }
+
+function openContextPatient(){
+  const active=document.querySelector('.tab.active')?.dataset.view;
+  if(active==='pg-panel'){
+    const frame=document.getElementById('if-pg-panel');
+    try{
+      const doc=frame?.contentDocument,tab=doc?.querySelector('nav button[data-tab="patients"]');
+      tab?.click();
+      const hospital=doc?.getElementById('pHospital');
+      if(hospital){hospital.checked=true;hospital.dispatchEvent(new Event('change',{bubbles:true}));}
+      doc?.getElementById('pLabel')?.focus();
+      frame?.scrollIntoView({behavior:'smooth',block:'start'});
+      return;
+    }catch(error){console.warn('Panel add-patient shortcut unavailable',error);}
+  }
+  if(active==='pg-discharges'){
+    const frame=document.getElementById('if-pg-discharges');
+    try{frame?.contentDocument?.getElementById('addPatientToggle')?.click();return;}
+    catch(error){console.warn('Hospital add-patient shortcut unavailable',error);}
+  }
+  openNewPatient();
+}
 
 function openNewPatient(){
   npEnsureOverlay();
