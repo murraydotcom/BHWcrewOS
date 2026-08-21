@@ -1,7 +1,7 @@
 {
   "name": "BHW Capture",
   "short_name": "Capture",
-  "description": "Private device-local voice and thought capture for BHW work.",
+  "description": "Authenticated, offline-ready voice and thought capture for non-PHI BHW work.",
   "start_url": "/bhw-capture.html",
   "scope": "/",
   "display": "standalone",
