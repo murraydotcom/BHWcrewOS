@@ -46,7 +46,9 @@ td b{font-weight:700}
 .cxtoggle button.on{background:var(--deep);color:#fff}
 .btn{background:var(--clay-grad);color:#fff;border:none;border-radius:999px;padding:8px 15px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-family:inherit}
 .btn.ghost{background:#fff;color:var(--clay-deep);border:1.5px solid var(--sand)}
+.form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}.form-grid label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}.form-grid input,.form-grid select,.form-grid textarea{width:100%;margin-top:4px;padding:9px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font:inherit}.form-grid textarea{min-height:70px;resize:vertical}.span2{grid-column:span 2}.span3{grid-column:1/-1}
 .empty{text-align:center;color:var(--ink-soft);padding:26px}
+@media(max-width:760px){.form-grid{grid-template-columns:1fr}.span2,.span3{grid-column:auto}}
 </style>
 </head>
 <body>
@@ -58,11 +60,14 @@ td b{font-weight:700}
     </div>
     <div class="r">
       <span class="pill sample" id="mode">● CRISP · sample</span>
+      <button class="btn" id="addPatientToggle" type="button">＋ Add patient</button>
+      <button class="btn ghost" id="alertsToggle" type="button">Enable alerts</button>
       <button class="btn ghost" onclick="exportPanel()">⬇ CEND panel (.csv)</button>
     </div>
   </div>
 
   <div class="note"><b>Where the data comes from.</b> Admit/discharge/transfer (ADT) events arrive from <b>CRISP</b> (Maryland's HIE) via its <b>CEND / ENS</b> service — CRISP matches the patient panel you submit against live hospital ADT. TCM billing requires interactive contact within <b>2 business days</b> of discharge and a face-to-face visit within <b>7 days</b> (99496, high complexity) or <b>14 days</b> (99495, moderate). The clock below is computed from each discharge date. Set <b>complexity per discharge</b> with the toggle in the Action column — it moves the visit deadline and the billed code, and the clock recomputes instantly.</div>
+  <div class="note" id="alertBanner" hidden></div>
 
   <div class="kpis">
     <div class="kpi" style="--kc:var(--blue)"><div class="n" id="k-adm">—</div><div class="l">Admissions (open)</div></div>
@@ -71,9 +76,27 @@ td b{font-weight:700}
     <div class="kpi" style="--kc:var(--sage)"><div class="n" id="k-ed">—</div><div class="l">ED visits (7d)</div></div>
   </div>
 
+  <details class="card" id="manualPatientCard" style="margin-bottom:16px">
+    <summary style="cursor:pointer;font-weight:800;font-size:.9rem;color:var(--deep,#2f4551)">＋ Add a patient hospital event manually <span class="tag">shared with RCM</span></summary>
+    <div class="form-grid">
+      <label>First name *<input id="mFirst" autocomplete="off"></label>
+      <label>Last name *<input id="mLast" autocomplete="off"></label>
+      <label>Date of birth *<input id="mDob" type="date"></label>
+      <label>Event type *<select id="mType"><option value="Inpatient">Inpatient discharge</option><option value="Observation">Observation discharge</option><option value="Emergency">ED visit</option><option value="Inpatient-admit">Inpatient admission (still admitted)</option></select></label>
+      <label>Admit date<input id="mAdmit" type="date"></label>
+      <label>Discharge / event date *<input id="mDischarge" type="date"></label>
+      <label class="span2">Facility *<input id="mFacility" placeholder="Hospital or facility"></label>
+      <label>Disposition<input id="mDisposition" placeholder="Home"></label>
+      <label class="span2">Chief complaint<input id="mComplaint" placeholder="Reason for hospital visit"></label>
+      <label>Diagnosis codes<input id="mDx" placeholder="I10; E11.9"></label>
+      <label class="span3">Diagnosis description<textarea id="mDxDesc" placeholder="Optional diagnosis description"></textarea></label>
+    </div>
+    <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:12px"><button class="btn" id="manualPatientSave" type="button">Add to Hospital Discharges</button><span class="mini" id="manualPatientNote"></span></div>
+  </details>
+
   <details class="card" id="uploadCard">
     <summary style="cursor:pointer;font-weight:800;font-size:.9rem;color:var(--deep,#2f4551)">⬆ Load discharge data manually <span class="tag">CSV or paste</span></summary>
-    <div class="note" style="margin-top:10px"><b>Best:</b> copy the rows straight from a spreadsheet or Notion table and paste — that keeps names like “Horton, S.” intact. (Typed CSV also works; put quotes around any name that has a comma.) Header row, any column order: <b>patient, event, facility, date, disposition, complexity</b>. <b>date</b> = a real date (2026-08-01) <i>or</i> a number of days ago. <b>complexity</b> = high / moderate (leave blank for ED/admissions). This stays in your browser — nothing is uploaded.</div>
+    <div class="note" style="margin-top:10px"><b>Best:</b> copy the rows straight from a spreadsheet or Notion table and paste — that keeps names like “Horton, S.” intact. (Typed CSV also works; put quotes around any name that has a comma.) Header row, any column order: <b>patient, event, facility, date, disposition, complexity</b>. <b>date</b> = a real date (2026-08-01) <i>or</i> a number of days ago. <b>complexity</b> = high / moderate (leave blank for ED/admissions). Signed-in uploads are retained in the shared Hospital Visits feed for CrewHQ and RCM.</div>
     <input type="file" id="csvFile" accept=".csv,text/csv" style="margin:10px 0 6px">
     <textarea id="pasteBox" placeholder="patient, event, facility, date, disposition, complexity&#10;Doe, J., Discharge (inpatient), Sinai Hospital, 2026-08-01, Home, moderate&#10;Roe, M., ED visit, GBMC, 2, Discharged from ED," style="width:100%;min-height:96px;font-family:ui-monospace,monospace;font-size:12px;padding:9px;border:1px solid var(--line,#e2ddd2);border-radius:8px;background:var(--linen,#fff);color:var(--ink,#2e3d45)"></textarea>
     <div style="display:flex;gap:8px;margin-top:9px;flex-wrap:wrap;align-items:center">
@@ -86,7 +109,7 @@ td b{font-weight:700}
   <div class="card">
     <div class="card-head"><h3>ADT &amp; TCM Worklist</h3><span class="tag">CRISP CEND · TCM clock</span></div>
     <div class="tbl-wrap"><table>
-      <thead><tr><th>Patient</th><th>Event</th><th>Facility</th><th>Date</th><th>Disposition</th><th>TCM window (computed)</th><th>Action</th></tr></thead>
+      <thead><tr><th>Patient</th><th>Event</th><th>Facility</th><th>Date</th><th>Disposition</th><th>Chief Complaint</th><th>Diagnosis</th><th>TCM window (computed)</th><th>Action</th></tr></thead>
       <tbody id="tb"></tbody>
     </table></div>
   </div>
@@ -97,6 +120,7 @@ const TCM_RATE = { high: 281, moderate: 209 };
 // Live board. HOSP is filled from the CRISP ADT feed (signed-in session) or from
 // a manual CSV/paste (loadPasted). No sample rows — an empty feed shows an empty state.
 let HOSP = [];
+let CLOUD = null;
 
 const startOfToday=()=>{const d=new Date();d.setHours(0,0,0,0);return d;};
 const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x;};
@@ -107,7 +131,7 @@ const isoLocal=d=>{const x=new Date(d);return `${x.getFullYear()}-${String(x.get
 
 function render(){
   const tb=document.getElementById("tb"); const today=startOfToday();
-  let open=0, disch7=0, ed7=0, adm=0;
+  let open=0, disch7=0, ed7=0, adm=0, urgent=0;
   const rows = HOSP.map((h,i)=>{
     const dDate = h.date ? new Date(h.date) : addDays(today, -(h.daysAgo||0));
     let windowCell, actionCell, sortKey=50;
@@ -120,8 +144,8 @@ function render(){
       h._dISO=isoLocal(dDate); h._contactISO=isoLocal(contactBy);
       const contactOpen=today<=contactBy, visitOpen=today<=visitBy;
       if(!visitOpen){ windowCell='<span class="overdue"><b>Window closed</b> — TCM not billable</span>'; sortKey=90; }
-      else if(!contactOpen){ windowCell='<span class="overdue"><b>Contact overdue</b> · visit by '+md(visitBy)+'</span>'; open++; sortKey=1; }
-      else { const dleft=daysBetween(today,contactBy); const col=dleft<=1?"var(--alert)":"var(--blue-deep)"; windowCell='<span style="color:'+col+'">Contact by '+md(contactBy)+' <b>('+dleft+'d)</b> · visit by '+md(visitBy)+'</span>'; open++; sortKey=2+dleft; }
+      else if(!contactOpen){ windowCell='<span class="overdue"><b>Contact overdue</b> · visit by '+md(visitBy)+'</span>'; open++; urgent++; sortKey=1; }
+      else { const dleft=daysBetween(today,contactBy); if(dleft<=0)urgent++; const col=dleft<=1?"var(--alert)":"var(--blue-deep)"; windowCell='<span style="color:'+col+'">Contact by '+md(contactBy)+' <b>('+dleft+'d)</b> · visit by '+md(visitBy)+'</span>'; open++; sortKey=2+dleft; }
       actionCell='<div class="cxtoggle" title="Set TCM complexity — clinical determination">'+
         '<button class="'+(!isHigh?"on":"")+'" onclick="setCx('+i+',&#39;moderate&#39;)">99495 · 14d</button>'+
         '<button class="'+(isHigh?"on":"")+'" onclick="setCx('+i+',&#39;high&#39;)">99496 · 7d</button>'+
@@ -132,13 +156,43 @@ function render(){
     }
     return {h, dtxt:md(dDate), windowCell, actionCell, sortKey};
   }).sort((a,b)=>a.sortKey-b.sortKey);
-  tb.innerHTML = rows.length ? rows.map(r=>`<tr><td><b>${r.h.patient}</b></td><td>${r.h.event}</td><td>${r.h.facility}</td><td>${r.dtxt}</td><td>${r.h.dispo||""}</td><td>${r.windowCell}</td><td>${r.actionCell}</td></tr>`).join("") : `<tr><td colspan="7" class="empty">No hospital events in the feed.</td></tr>`;
+  const safe=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  tb.innerHTML = rows.length ? rows.map(r=>`<tr><td><b>${safe(r.h.patient)}</b></td><td>${safe(r.h.event)}</td><td>${safe(r.h.facility)}</td><td>${safe(r.dtxt)}</td><td>${safe(r.h.dispo||"")}</td><td>${safe(r.h.complaint||"—")}</td><td>${safe(r.h.dxCodes||"—")}${r.h.dxDesc?`<br><span class="mini">${safe(r.h.dxDesc)}</span>`:""}</td><td>${r.windowCell}</td><td>${r.actionCell}</td></tr>`).join("") : `<tr><td colspan="9" class="empty">No hospital events in the shared feed.</td></tr>`;
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
   set("k-adm",adm); set("k-disch",disch7); set("k-open",open); set("k-ed",ed7);
+  updateUrgentAlert(urgent);
 }
-function setCx(i,level){ if(HOSP[i]){ HOSP[i].complexity=level; render(); } }
+async function setCx(i,level){
+  if(!HOSP[i])return;
+  HOSP[i].complexity=level; render();
+  if(CLOUD&&HOSP[i]._row){
+    try{
+      const row={...HOSP[i]._row,Complexity:level};
+      await CLOUD.importTcmEvents([row],{source:"CrewHQ Panel and Discharges",manual:true});
+      HOSP[i]._row=row;
+    }catch(error){console.warn("TCM complexity was not retained",error);}
+  }
+}
 
 let CREW_TOKEN=""; try{ CREW_TOKEN=sessionStorage.getItem("crewos_token")||""; }catch(e){}
+function updateAlertsButton(){
+  const button=document.getElementById("alertsToggle");
+  if(!("Notification" in window)){button.disabled=true;button.textContent="Alerts unavailable";return;}
+  button.textContent=Notification.permission==="granted"?"Alerts enabled":Notification.permission==="denied"?"Alerts blocked":"Enable alerts";
+}
+function updateUrgentAlert(count){
+  const banner=document.getElementById("alertBanner");
+  banner.hidden=!count;banner.innerHTML=count?`<b>TCM action required:</b> ${count} contact${count===1?" is":"s are"} due today or overdue.`:"";
+  if(!count||!("Notification" in window)||Notification.permission!=="granted")return;
+  const marker=`bhw-hospital-alert:${new Date().toISOString().slice(0,10)}:${count}`;
+  try{if(localStorage.getItem(marker))return;localStorage.setItem(marker,new Date().toISOString());}catch(e){return;}
+  new Notification("TCM follow-up alert",{body:`${count} contact${count===1?" is":"s are"} due today or overdue. Open Hospital Visits in CrewHQ.`,tag:"bhw-hospital-alert"});
+}
+document.getElementById("alertsToggle").addEventListener("click",async()=>{
+  if(!("Notification" in window))return;
+  await Notification.requestPermission();updateAlertsButton();render();
+});
+updateAlertsButton();
 async function tcmLog(i, btn){
   const h=HOSP[i]; if(!h) return;
   if(!CREW_TOKEN){ alert("Sign in to crewOS first — open this board from inside crewOS to log TCM."); return; }
@@ -192,11 +246,42 @@ function parseDischarges(text){
     return {patient, type, event:eventRaw, facility, date, daysAgo, dispo, complexity};
   }).filter(Boolean);
 }
-function loadPasted(){
+function hospitalToCloudRow(h,index=0){
+  const label=String(h.patient||"").trim();
+  let first="",last="";
+  if(label.includes(",")){const parts=label.split(",");last=parts.shift().trim();first=parts.join(",").trim();}
+  else{const parts=label.split(/\s+/).filter(Boolean);last=parts.pop()||"";first=parts.join(" ");}
+  const encounter=h.type==="ed"?"Emergency":h.type==="admit"?"Inpatient":/observation/i.test(h.event||"")?"Observation":"Inpatient";
+  return {
+    "First Name":first,"Last Name":last,"Date of Birth":h.dob||"",
+    "Patient Label":label,"Source Event ID":h.sourceEventId||"",
+    "Source System":"CrewHQ Panel and Discharges","Encounter Type":encounter,
+    "Admit Date / Time":h.admitDate||((h.type==="admit")?(h.date||""):""),
+    "Discharge Date / Time":h.type==="admit"?"":(h.date||""),
+    "Discharge Disposition":h.dispo||"",Facility:h.facility||"",
+    "Patient Complaint":h.complaint||"","Primary Diagnosis Codes":h.dxCodes||"",
+    "Primary Diagnosis Description":h.dxDesc||"",Complexity:h.complexity||"",
+  };
+}
+function cloudRowToHospital(row){
+  const encounter=String(row["Encounter Type"]||"").toLowerCase();
+  const discharge=row["Discharge Date / Time"]||"",admit=row["Admit Date / Time"]||"";
+  const type=/emergency|\bed\b/.test(encounter)?"ed":discharge?"discharge":"admit";
+  const patient=row["Patient Label"]||[row["Last Name"],row["First Name"]].filter(Boolean).join(", ")||row["BHW Patient ID"]||"Unknown";
+  return {patient,type,event:row["Encounter Type"]||type,facility:row.Facility||row.Location||"",date:discharge||admit,
+    dispo:row["Discharge Disposition"]||"",complexity:row.Complexity||("discharge"===type?"moderate":null),
+    complaint:row["Patient Complaint"]||"",dxCodes:row["Primary Diagnosis Codes"]||"",dxDesc:row["Primary Diagnosis Description"]||"",_row:row};
+}
+async function loadPasted(){
   const rows=parseDischarges(document.getElementById("pasteBox").value);
   const note=document.getElementById("upNote");
   if(!rows.length){ note.textContent="Couldn't parse any rows — check the columns."; return; }
-  HOSP=rows; render(); note.textContent=`Loaded ${rows.length} row(s) from pasted data.`;
+  if(!CLOUD){HOSP=rows;render();note.textContent=`Loaded ${rows.length} row(s) for this session; cloud retention is unavailable.`;return;}
+  try{
+    const saved=await CLOUD.importTcmEvents(rows.map(hospitalToCloudRow),{source:"CrewHQ Panel and Discharges",sourceFile:"manual CSV or paste",manual:true});
+    await loadSharedEvents();
+    note.textContent=`Retained ${saved.retained} row(s): ${saved.created} new, ${saved.updated} updated. RCM can see them now.`;
+  }catch(error){note.textContent="Couldn't retain these rows: "+error.message;}
 }
 document.getElementById("csvFile").addEventListener("change", function(e){
   const f=e.target.files&&e.target.files[0]; if(!f) return;
@@ -204,15 +289,34 @@ document.getElementById("csvFile").addEventListener("change", function(e){
 });
 function exportPanel(){ window.open("/.netlify/functions/crisp?action=panel","_blank"); }
 
+async function loadSharedEvents(){
+  if(!CLOUD)return false;
+  const rows=await CLOUD.listTcmEvents();
+  HOSP=rows.map(cloudRowToHospital);
+  const mode=document.getElementById("mode");
+  mode.className="pill live";mode.textContent=`● Shared with RCM · ${rows.length}`;
+  render();
+  return true;
+}
+
 async function load(){
   render();
   try{
+    if(!CLOUD){
+      const module=await import("./provider/cloud-queue.mjs");
+      CLOUD=await module.createEncounterCloudClient();
+    }
+    if(CLOUD){await loadSharedEvents();if(HOSP.length)return;}
     let token=""; try{ token=sessionStorage.getItem("crewos_token")||""; }catch(e){}
     const res=await fetch("/.netlify/functions/crisp?feed=adt",{headers: token?{Authorization:`Bearer ${token}`}:{}});
     const d=await res.json();
     const mode=document.getElementById("mode");
     if(d && !d.sampleMode && Array.isArray(d.rows) && d.rows.length){
       HOSP=d.rows.map(x=>({...x, complexity:x.complexity||"moderate"}));
+      if(CLOUD){
+        await CLOUD.importTcmEvents(HOSP.map(hospitalToCloudRow),{source:"CrewHQ Panel and Discharges",sourceFile:"CRISP ADT feed migration",manual:true});
+        await loadSharedEvents();return;
+      }
       mode.className="pill live"; mode.textContent="● CRISP · live";
     } else {
       mode.className="pill sample";
@@ -220,6 +324,37 @@ async function load(){
     }
     render();
   }catch(e){ /* leave the board empty — the empty state explains it */ }
+}
+
+document.getElementById("addPatientToggle").addEventListener("click",()=>{
+  const card=document.getElementById("manualPatientCard");card.open=true;card.scrollIntoView({behavior:"smooth",block:"start"});
+});
+document.getElementById("manualPatientSave").addEventListener("click",async e=>{
+  const note=document.getElementById("manualPatientNote"),button=e.currentTarget;
+  const first=document.getElementById("mFirst").value.trim(),last=document.getElementById("mLast").value.trim();
+  const dob=document.getElementById("mDob").value,facility=document.getElementById("mFacility").value.trim();
+  const kind=document.getElementById("mType").value,discharge=document.getElementById("mDischarge").value;
+  if(!first||!last||!dob||!facility||!discharge){note.textContent="First name, last name, DOB, facility, and event date are required.";return;}
+  if(!CLOUD){note.textContent="Secure retention is unavailable. Sign in to CrewHQ again, then retry.";return;}
+  const stillAdmitted=kind==="Inpatient-admit",encounter=stillAdmitted?"Inpatient":kind;
+  const row={"First Name":first,"Last Name":last,"Date of Birth":dob,"Encounter Type":encounter,
+    "Admit Date / Time":document.getElementById("mAdmit").value||(stillAdmitted?discharge:""),
+    "Discharge Date / Time":stillAdmitted?"":discharge,"Discharge Disposition":document.getElementById("mDisposition").value.trim(),
+    Facility:facility,"Patient Complaint":document.getElementById("mComplaint").value.trim(),
+    "Primary Diagnosis Codes":document.getElementById("mDx").value.trim(),"Primary Diagnosis Description":document.getElementById("mDxDesc").value.trim(),
+    "Source Event ID":`manual-${cryptoRandomId()}`,"Source System":"CrewHQ Panel and Discharges",Complexity:stillAdmitted||kind==="Emergency"?"":"moderate"};
+  button.disabled=true;note.textContent="Saving to the shared hospital list…";
+  try{
+    await CLOUD.importTcmEvents([row],{source:"CrewHQ Panel and Discharges",sourceFile:"manual add patient",manual:true});
+    await loadSharedEvents();
+    ["mFirst","mLast","mDob","mAdmit","mDischarge","mFacility","mDisposition","mComplaint","mDx","mDxDesc"].forEach(id=>document.getElementById(id).value="");
+    note.textContent="Added. This patient event is now visible in CrewHQ and RCM Hospital Visits.";
+  }catch(error){note.textContent="Couldn't add this event: "+error.message;}
+  finally{button.disabled=false;}
+});
+function cryptoRandomId(){
+  if(globalThis.crypto?.randomUUID)return crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 load();
 </script>

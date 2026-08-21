@@ -39,7 +39,12 @@ const FIELD_HEADERS = {
   risk1: "Risk Score 1",
   risk2: "Risk Score 2",
 };
-const HEADER_TO_FIELD = Object.fromEntries(Object.entries(FIELD_HEADERS).map(([f, h]) => [key(h), f]));
+const INTERNAL_FIELD_HEADERS = {
+  patientLabel: "Patient Label",
+  bhwPatientId: "BHW Patient ID",
+};
+const HEADER_TO_FIELD = Object.fromEntries(Object.entries({ ...FIELD_HEADERS, ...INTERNAL_FIELD_HEADERS })
+  .map(([f, h]) => [key(h), f]));
 
 export const CRISP_HEADERS = Object.values(FIELD_HEADERS);
 
@@ -55,6 +60,9 @@ export function normalizeRecord(raw) {
   for (const f of Object.keys(FIELD_HEADERS)) if (out[f] == null) out[f] = out[f] ?? "";
   out.firstName = norm(out.firstName);
   out.lastName = norm(out.lastName);
+  out.patientLabel = norm(out.patientLabel);
+  out.bhwPatientId = norm(out.bhwPatientId);
+  if (!out.firstName && !out.lastName && out.patientLabel) out.lastName = out.patientLabel;
   return out;
 }
 
@@ -251,7 +259,7 @@ export function buildWorklist(rawRecords, opts = {}) {
     seen.add(dk);
     const { category, flags } = classify(rec);
     const dl = category === "tcm" ? deadlines(rec.dischargeAt, today) : null;
-    const item = { ...rec, name: `${rec.lastName}, ${rec.firstName}`.replace(/^, |, $/g, ""), category, flags, ...(dl ? { dl } : {}) };
+    const item = { ...rec, name: `${rec.lastName}, ${rec.firstName}`.replace(/^, |, $/g, ""), category, flags, sourceRow: raw, ...(dl ? { dl } : {}) };
     if (idx) item.panel = matchRoster(item, idx);
     items.push(item);
   }
