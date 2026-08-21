@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { createEncounterCloudClient } from "../provider/cloud-queue.mjs";
+import { CREW_SESSION_EXPIRED, createEncounterCloudClient } from "../provider/cloud-queue.mjs";
 
 function jsonResponse(body, { status = 200 } = {}) {
   return {
@@ -65,12 +65,37 @@ test("CrewHQ keeps its protected token exchange while using consent-aware transc
   assert.equal(transcription.options.body, audio);
 });
 
+test("an expired CrewHQ session is cleared and reported before another cloud request", async () => {
+  const removed = [];
+  globalThis.sessionStorage = {
+    getItem(key) { return key === "crewos_token" ? "expired-crew-session" : ""; },
+    removeItem(key) { removed.push(key); },
+  };
+  const client = await createEncounterCloudClient(async (url) => {
+    if (url === "/.netlify/functions/rcm-cloud-config") {
+      return jsonResponse({ enabled: true, apiBase: "https://api.example.test" });
+    }
+    if (url === "/.netlify/functions/rcm-cloud-token") {
+      return jsonResponse({ error: "Sign in to CrewOS again." }, { status: 401 });
+    }
+    throw new Error(`unexpected request: ${url}`);
+  });
+
+  await assert.rejects(
+    () => client.listPatients(),
+    (error) => error.code === CREW_SESSION_EXPIRED
+      && error.message === "CrewHQ session expired. Sign in again in this tab.",
+  );
+  assert.deepEqual(removed, ["crewos_token"]);
+});
+
 test("CrewHQ frontend exposes verified-consent controls and preserves the provider gate", async () => {
-  const [html, app, registry, registryHtml] = await Promise.all([
+  const [html, app, registry, registryHtml, gate] = await Promise.all([
     readFile(new URL("../provider/transcription.html", import.meta.url), "utf8"),
     readFile(new URL("../provider/transcription-app.mjs", import.meta.url), "utf8"),
     readFile(new URL("../provider/patient-registry-app.mjs", import.meta.url), "utf8"),
     readFile(new URL("../provider/patient-registry.html", import.meta.url), "utf8"),
+    readFile(new URL("../crew-provider-gate.js", import.meta.url), "utf8"),
   ]);
   assert.match(html, /crew-provider-gate\.js/);
   assert.doesNotMatch(html, /auth-gate\.js/);
@@ -82,5 +107,9 @@ test("CrewHQ frontend exposes verified-consent controls and preserves the provid
   assert.match(registryHtml, /crew-provider-gate\.js/);
   assert.match(registryHtml, /\.consent-panel\{/);
   assert.match(registryHtml, /\.attestation\{/);
+  assert.match(gate, /session\.exp/);
+  assert.match(gate, /removeItem\("crewos_token"\)/);
+  assert.match(app, /CREW_SESSION_EXPIRED/);
+  assert.match(app, /crewos\?next=/);
 });
 
