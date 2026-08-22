@@ -103,6 +103,12 @@ test("Capture keeps the local PIN, non-PHI warning, locked Clinical mode, and ex
   assert.doesNotMatch(html, /id="keepAudio"[^>]*checked/);
   assert.match(html, /type="module" src="\/bhw-capture\.js"/);
   assert.match(app, /bhw_capture_pin_v1/);
+  assert.match(app, /var dbPromise = null/);
+  assert.match(app, /CACHE_STARTUP_TIMEOUT_MS/);
+  assert.match(app, /await openDB\(\);/);
+  assert.match(app, /return openDB\(\)\.then\(function \(database\)/);
+  assert.doesNotMatch(app, /\bdb\.transaction\(/);
   assert.match(app, /raw audio discarded/);
   assert.match(index, /next === "\/bhw-capture\.html"/);
 });
+
