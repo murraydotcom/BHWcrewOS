@@ -12,7 +12,9 @@ import {
   var STORE = "entries";
   var PIN_KEY = "bhw_capture_pin_v1";
   var MAX_TRANSCRIPTION_BYTES = 4 * 1024 * 1024;
+  var CACHE_STARTUP_TIMEOUT_MS = 12000;
   var db = null;
+  var dbPromise = null;
   var currentMode = "Brain Dump";
   var recorder = null;
   var stream = null;
@@ -91,8 +93,20 @@ import {
       $("gateError").textContent = "Use exactly 6 digits.";
       return;
     }
-    var hash = await hashPin(pin);
+    $("pinBtn").disabled = true;
+    $("pinBtn").textContent = "Starting offline cache\u2026";
+    try {
+      await openDB();
+    } catch (error) {
+      $("gateError").textContent = "Offline cache could not start. Close other BHW Capture windows and try again: " + errorText(error);
+      $("pinBtn").disabled = false;
+      $("pinBtn").textContent = "Try again";
+      return;
+    }
+    $("pinBtn").disabled = false;
     var saved = localStorage.getItem(PIN_KEY);
+    $("pinBtn").textContent = saved ? "Open" : "Set PIN & open";
+    var hash = await hashPin(pin);
     if (!saved) {
       localStorage.setItem(PIN_KEY, hash);
       unlock();
@@ -106,11 +120,29 @@ import {
   }
 
   function openDB() {
-    return new Promise(function (resolve, reject) {
+    if (db) return Promise.resolve(db);
+    if (dbPromise) return dbPromise;
+    dbPromise = new Promise(function (resolve, reject) {
       // No Phase 2 schema change is required. Omitting a version opens either
       // the existing v1 cache or any later compatible cache without an
       // upgrade transaction that another browser context could block.
-      var request = indexedDB.open(DB_NAME);
+      var request = null;
+      var settled = false;
+      var timer = setTimeout(function () {
+        finishFailure(new Error("Offline cache startup timed out. Close other BHW Capture windows and try again."));
+      }, CACHE_STARTUP_TIMEOUT_MS);
+      function finishFailure(error) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        reject(error || new Error("Offline cache could not start."));
+      }
+      try {
+        request = indexedDB.open(DB_NAME);
+      } catch (error) {
+        finishFailure(error);
+        return;
+      }
       request.onupgradeneeded = function () {
         var database = request.result;
         if (!database.objectStoreNames.contains(STORE)) {
@@ -120,26 +152,52 @@ import {
           store.createIndex("mode", "mode");
         }
       };
-      request.onsuccess = function () { db = request.result; resolve(db); };
-      request.onerror = function () { reject(request.error); };
+      request.onsuccess = function () {
+        var database = request.result;
+        if (settled) {
+          database.close();
+          return;
+        }
+        settled = true;
+        clearTimeout(timer);
+        db = database;
+        database.onversionchange = function () {
+          database.close();
+          if (db === database) db = null;
+          dbPromise = null;
+        };
+        resolve(database);
+      };
+      request.onerror = function () { finishFailure(request.error); };
+      request.onblocked = function () {
+        finishFailure(new Error("Offline cache is open in another BHW Capture window. Close the other window and try again."));
+      };
+    }).catch(function (error) {
+      dbPromise = null;
+      throw error;
     });
+    return dbPromise;
   }
 
   function putEntry(entry) {
-    return new Promise(function (resolve, reject) {
-      var request = db.transaction(STORE, "readwrite").objectStore(STORE).put(entry);
-      request.onsuccess = function () { resolve(entry); };
-      request.onerror = function () { reject(request.error); };
+    return openDB().then(function (database) {
+      return new Promise(function (resolve, reject) {
+        var request = database.transaction(STORE, "readwrite").objectStore(STORE).put(entry);
+        request.onsuccess = function () { resolve(entry); };
+        request.onerror = function () { reject(request.error); };
+      });
     });
   }
 
   function allRecords() {
-    return new Promise(function (resolve, reject) {
-      var request = db.transaction(STORE, "readonly").objectStore(STORE).getAll();
-      request.onsuccess = function () {
-        resolve((request.result || []).sort(function (left, right) { return right.createdAt - left.createdAt; }));
-      };
-      request.onerror = function () { reject(request.error); };
+    return openDB().then(function (database) {
+      return new Promise(function (resolve, reject) {
+        var request = database.transaction(STORE, "readonly").objectStore(STORE).getAll();
+        request.onsuccess = function () {
+          resolve((request.result || []).sort(function (left, right) { return right.createdAt - left.createdAt; }));
+        };
+        request.onerror = function () { reject(request.error); };
+      });
     });
   }
 
@@ -148,26 +206,32 @@ import {
   }
 
   function getEntry(id) {
-    return new Promise(function (resolve, reject) {
-      var request = db.transaction(STORE, "readonly").objectStore(STORE).get(id);
-      request.onsuccess = function () { resolve(request.result); };
-      request.onerror = function () { reject(request.error); };
+    return openDB().then(function (database) {
+      return new Promise(function (resolve, reject) {
+        var request = database.transaction(STORE, "readonly").objectStore(STORE).get(id);
+        request.onsuccess = function () { resolve(request.result); };
+        request.onerror = function () { reject(request.error); };
+      });
     });
   }
 
   function deleteEntry(id) {
-    return new Promise(function (resolve, reject) {
-      var request = db.transaction(STORE, "readwrite").objectStore(STORE).delete(id);
-      request.onsuccess = function () { resolve(); };
-      request.onerror = function () { reject(request.error); };
+    return openDB().then(function (database) {
+      return new Promise(function (resolve, reject) {
+        var request = database.transaction(STORE, "readwrite").objectStore(STORE).delete(id);
+        request.onsuccess = function () { resolve(); };
+        request.onerror = function () { reject(request.error); };
+      });
     });
   }
 
   function clearEntries() {
-    return new Promise(function (resolve, reject) {
-      var request = db.transaction(STORE, "readwrite").objectStore(STORE).clear();
-      request.onsuccess = function () { resolve(); };
-      request.onerror = function () { reject(request.error); };
+    return openDB().then(function (database) {
+      return new Promise(function (resolve, reject) {
+        var request = database.transaction(STORE, "readwrite").objectStore(STORE).clear();
+        request.onsuccess = function () { resolve(); };
+        request.onerror = function () { reject(request.error); };
+      });
     });
   }
 
@@ -741,6 +805,9 @@ import {
     if (sessionStorage.getItem("bhw_capture_unlocked") === "1") unlock();
     else openGate();
   }).catch(function (error) {
-    $("gateError").textContent = "Local storage could not start: " + errorText(error);
+    openGate();
+    $("gateError").textContent = "Offline cache could not start. Close other BHW Capture windows and try again: " + errorText(error);
+    setSyncUi("error", "Offline cache needs attention \u00b7 " + errorText(error));
   });
 })();
+
