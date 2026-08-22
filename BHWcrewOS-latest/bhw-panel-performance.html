@@ -929,6 +929,16 @@ document.querySelectorAll('nav button').forEach(b=>{
     window.scrollTo({top:0});
   };
 });
+window.addEventListener('message',event=>{
+  if(event.source!==window.parent||event.origin!==location.origin||event.data?.type!=='BHW_CREW_OPEN_PANEL_PATIENT')return;
+  document.querySelector('nav button[data-tab="patients"]')?.click();
+  const hospital=$('pHospital');
+  if(!hospital.checked){
+    hospital.checked=true;
+    hospital.dispatchEvent(new Event('change',{bubbles:true}));
+  }
+  $('pLabel').focus();
+});
 
 /* data tab */
 $('refreshBtn').onclick=e=>busy(e.target,refresh);

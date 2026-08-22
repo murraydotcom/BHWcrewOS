@@ -329,6 +329,10 @@ async function load(){
 document.getElementById("addPatientToggle").addEventListener("click",()=>{
   const card=document.getElementById("manualPatientCard");card.open=true;card.scrollIntoView({behavior:"smooth",block:"start"});
 });
+window.addEventListener("message",event=>{
+  if(event.source!==window.parent||event.origin!==location.origin||event.data?.type!=="BHW_CREW_OPEN_HOSPITAL_PATIENT")return;
+  document.getElementById("addPatientToggle").click();
+});
 document.getElementById("manualPatientSave").addEventListener("click",async e=>{
   const note=document.getElementById("manualPatientNote"),button=e.currentTarget;
   const first=document.getElementById("mFirst").value.trim(),last=document.getElementById("mLast").value.trim();
