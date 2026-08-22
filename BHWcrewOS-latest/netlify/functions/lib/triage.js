@@ -4,7 +4,7 @@
 // Front Desk OS inbox already renders (Calls & voicemails / Texts & portal /
 // Faxes) by the row's Source.
 //
-// Env: NOTION_TOKEN, MASTER_DB_ID (patient list), QUEUE_DB_ID (triage queue).
+// Env: Cloud patient registry settings, NOTION_TOKEN, QUEUE_DB_ID (triage queue).
 //
 // Source strings are chosen so Front Desk OS buckets them correctly — its
 // bucket() sorts /voicemail|phone/ → voice, /text|sms|portal/ → text, else fax:
@@ -17,50 +17,26 @@ const H = () => ({
   "Content-Type": "application/json",
 });
 const digits = (s) => (s || "").replace(/\D/g, "");
+const { listCloudPatients } = require("./cloud-patients");
 
 // Match a sender phone number to one patient on the Master Patient List.
 // Returns { patientId, patientName } — nulls when there's no confident match.
 async function matchPatientByPhone(from) {
   const out = { patientId: null, patientName: "" };
-  if (!process.env.MASTER_DB_ID) return out;
   const d = digits(from);
   const last10 = d.slice(-10);
   const last7 = d.slice(-7);
   if (last7.length !== 7) return out;
-  const dashed = last7.replace(/(\d{3})(\d{4})/, "$1-$2");
-  const nameOf = (r) => r.properties?.["Patient Name"]?.title?.[0]?.plain_text || "";
-
   try {
-    // Master List phones may be stored raw ("4436836209") OR formatted
-    // ("(443) 683-6209"), so match on both the raw last-7 and the dashed form in
-    // one query, then confirm each candidate on the full last-10 to rule out
-    // last-4/last-7 collisions. Larger page_size so a common number's real match
-    // isn't paged out.
-    const res = await fetch(`${NOTION}/databases/${process.env.MASTER_DB_ID}/query`, {
-      method: "POST", headers: H(),
-      body: JSON.stringify({
-        filter: { or: [
-          { property: "Phone", phone_number: { contains: last7 } },
-          { property: "Phone", phone_number: { contains: dashed } },
-        ] },
-        page_size: 50,
-      }),
-    });
-    const data = await res.json();
-    const seen = new Set();
-    const hits = (data.results || []).filter((r) => {
-      if (!digits(r.properties?.Phone?.phone_number || "").endsWith(last10)) return false;
-      if (seen.has(r.id)) return false;
-      seen.add(r.id);
-      return true;
-    });
+    const hits = (await listCloudPatients()).filter((p) => digits(p.phone).endsWith(last10));
     if (hits.length === 1) {
-      out.patientId = hits[0].id;
-      out.patientName = nameOf(hits[0]);
+      out.patientId = hits[0].notionPageId || null;
+      out.bhwPatientId = hits[0].bhwPatientId;
+      out.patientName = hits[0].name;
     } else if (hits.length > 1) {
       // Shared/family number — don't guess one patient (and don't link the wrong
       // relation). Surface the candidate names in the row so the desk can pick.
-      const names = [...new Set(hits.map(nameOf).filter(Boolean))];
+      const names = [...new Set(hits.map((p) => p.name).filter(Boolean))];
       out.patientName = (names.slice(0, 4).join(" / ") + (names.length > 4 ? " / …" : "") + " (shared number)").slice(0, 200);
     }
   } catch { /* matching is best-effort — never block ingestion */ }
