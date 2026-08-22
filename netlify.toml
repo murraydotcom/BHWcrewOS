@@ -1,0 +1,25 @@
+[build]
+  # This repository is a monorepo. CrewHQ's deploy-ready site lives here.
+  base = "BHWcrewOS-latest"
+  publish = "."
+  functions = "netlify/functions"
+
+# Employee landing: the site root serves BHW HQ (the staff launchpad).
+# crewOS login stays at /crewos.
+[[redirects]]
+  from = "/crewos"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/"
+  to = "/hq.html"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+    X-Frame-Options = "SAMEORIGIN"
+    Referrer-Policy = "no-referrer"
