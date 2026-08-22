@@ -13,7 +13,7 @@ import {
   var PIN_KEY = "bhw_capture_pin_v1";
   var FALLBACK_STORE_KEY = "bhw_capture_text_cache_v1";
   var MAX_TRANSCRIPTION_BYTES = 4 * 1024 * 1024;
-  var CACHE_STARTUP_TIMEOUT_MS = 12000;
+  var CACHE_STARTUP_TIMEOUT_MS = 4000;
   var db = null;
   var dbPromise = null;
   var cacheFallback = false;
