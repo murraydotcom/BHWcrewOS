@@ -112,3 +112,13 @@ test("Capture keeps the local PIN, non-PHI warning, locked Clinical mode, and ex
   assert.match(index, /next === "\/bhw-capture\.html"/);
 });
 
+test("Capture falls back to a text-only cache when IndexedDB is unavailable", async () => {
+  const app = await readFile(new URL("../bhw-capture.js", import.meta.url), "utf8");
+
+  assert.match(app, /FALLBACK_STORE_KEY = "bhw_capture_text_cache_v1"/);
+  assert.match(app, /if \(!globalThis\.indexedDB\)/);
+  assert.match(app, /return Promise\.resolve\(enableFallbackCache\(\)\)/);
+  assert.match(app, /Object\.assign\(\{\}, entry, \{ audio: null, audioType: null \}\)/);
+  assert.match(app, /keepAudio"\)\.disabled = true/);
+});
+
