@@ -11,10 +11,12 @@ import {
   var DB_NAME = "bhw_capture_local_v1";
   var STORE = "entries";
   var PIN_KEY = "bhw_capture_pin_v1";
+  var FALLBACK_STORE_KEY = "bhw_capture_text_cache_v1";
   var MAX_TRANSCRIPTION_BYTES = 4 * 1024 * 1024;
   var CACHE_STARTUP_TIMEOUT_MS = 12000;
   var db = null;
   var dbPromise = null;
+  var cacheFallback = false;
   var currentMode = "Brain Dump";
   var recorder = null;
   var stream = null;
@@ -119,9 +121,49 @@ import {
     unlock();
   }
 
+  function readFallbackRecords() {
+    var raw = localStorage.getItem(FALLBACK_STORE_KEY);
+    if (!raw) return [];
+    var parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) throw new Error("Offline text cache has an invalid format.");
+    return parsed;
+  }
+
+  function writeFallbackRecords(records) {
+    try {
+      localStorage.setItem(FALLBACK_STORE_KEY, JSON.stringify(records));
+    } catch (error) {
+      throw new Error("Offline text cache is full or unavailable: " + errorText(error));
+    }
+  }
+
+  function enableFallbackCache() {
+    // Some embedded phone browsers expose localStorage but not IndexedDB.
+    // Keep a text-only cache so captures can still save and reach BHW Memory.
+    var records = readFallbackRecords();
+    writeFallbackRecords(records);
+    cacheFallback = true;
+    db = { fallback: true };
+    if ($("keepAudio")) {
+      $("keepAudio").checked = false;
+      $("keepAudio").disabled = true;
+    }
+    if ($("recordStatus")) {
+      $("recordStatus").textContent = "Text-only offline cache ready. Device audio retention is unavailable in this browser.";
+    }
+    return db;
+  }
+
   function openDB() {
     if (db) return Promise.resolve(db);
     if (dbPromise) return dbPromise;
+    if (!globalThis.indexedDB) {
+      try {
+        return Promise.resolve(enableFallbackCache());
+      } catch (error) {
+        return Promise.reject(error);
+      }
+    }
     dbPromise = new Promise(function (resolve, reject) {
       // No Phase 2 schema change is required. Omitting a version opens either
       // the existing v1 cache or any later compatible cache without an
@@ -172,15 +214,28 @@ import {
       request.onblocked = function () {
         finishFailure(new Error("Offline cache is open in another BHW Capture window. Close the other window and try again."));
       };
-    }).catch(function (error) {
+    }).catch(function (indexedDbError) {
       dbPromise = null;
-      throw error;
+      try {
+        return enableFallbackCache();
+      } catch (fallbackError) {
+        throw new Error(errorText(indexedDbError) + " Text-only fallback also failed: " + errorText(fallbackError));
+      }
     });
     return dbPromise;
   }
 
   function putEntry(entry) {
     return openDB().then(function (database) {
+      if (database.fallback) {
+        var records = readFallbackRecords();
+        var stored = Object.assign({}, entry, { audio: null, audioType: null });
+        var existingIndex = records.findIndex(function (record) { return record.id === stored.id; });
+        if (existingIndex >= 0) records[existingIndex] = stored;
+        else records.push(stored);
+        writeFallbackRecords(records);
+        return stored;
+      }
       return new Promise(function (resolve, reject) {
         var request = database.transaction(STORE, "readwrite").objectStore(STORE).put(entry);
         request.onsuccess = function () { resolve(entry); };
@@ -191,6 +246,9 @@ import {
 
   function allRecords() {
     return openDB().then(function (database) {
+      if (database.fallback) {
+        return readFallbackRecords().sort(function (left, right) { return right.createdAt - left.createdAt; });
+      }
       return new Promise(function (resolve, reject) {
         var request = database.transaction(STORE, "readonly").objectStore(STORE).getAll();
         request.onsuccess = function () {
@@ -207,6 +265,9 @@ import {
 
   function getEntry(id) {
     return openDB().then(function (database) {
+      if (database.fallback) {
+        return readFallbackRecords().find(function (entry) { return entry.id === id; });
+      }
       return new Promise(function (resolve, reject) {
         var request = database.transaction(STORE, "readonly").objectStore(STORE).get(id);
         request.onsuccess = function () { resolve(request.result); };
@@ -217,6 +278,10 @@ import {
 
   function deleteEntry(id) {
     return openDB().then(function (database) {
+      if (database.fallback) {
+        writeFallbackRecords(readFallbackRecords().filter(function (entry) { return entry.id !== id; }));
+        return;
+      }
       return new Promise(function (resolve, reject) {
         var request = database.transaction(STORE, "readwrite").objectStore(STORE).delete(id);
         request.onsuccess = function () { resolve(); };
@@ -227,6 +292,10 @@ import {
 
   function clearEntries() {
     return openDB().then(function (database) {
+      if (database.fallback) {
+        writeFallbackRecords([]);
+        return;
+      }
       return new Promise(function (resolve, reject) {
         var request = database.transaction(STORE, "readwrite").objectStore(STORE).clear();
         request.onsuccess = function () { resolve(); };
@@ -303,7 +372,7 @@ import {
         else await putEntry(fromCloudMemory(remote, existing));
       }
       var visible = await allEntries();
-      setSyncUi("synced", "BHW Memory synced · " + visible.length + " memor" + (visible.length === 1 ? "y" : "ies") + (localOnly ? " · " + localOnly + " device-only legacy item" : ""));
+      setSyncUi("synced", "BHW Memory synced · " + visible.length + " memor" + (visible.length === 1 ? "y" : "ies") + (cacheFallback ? " · text-only device cache" : "") + (localOnly ? " · " + localOnly + " device-only legacy item" : ""));
       if (!$("libraryView").classList.contains("hidden")) renderLibrary();
     } catch (error) {
       var status = Number(error && error.status) || 0;
