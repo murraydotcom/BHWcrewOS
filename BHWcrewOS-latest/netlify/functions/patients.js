@@ -4,22 +4,12 @@
 //   POST { action:"list" }  → [{ id, name, bhwId, dob, chart, insurance,
 //                                memberId, icds:[{code,label}] }]
 //
-// Source of truth: the "🧑🏽‍⚕️ Patients Master List" (the same DB Front Desk
-// reads, via MASTER_DB_ID) — NOT the lean "Patient Index — Ops Hub". Field
-// names below map onto that Master List schema (Patient Ctl No, Payer,
-// Insurance Member ID, MRN). Falls back to the confirmed DB id if the env
-// var isn't set, so the picker and Front Desk always show the same roster.
-//
-// ICD-10: the Master List stores diagnoses as *relations* (Diagnoses /
-// Diagnoses 1), which icdFor() can't expand without extra lookups, so icds
-// comes back empty for now. If a plain text/select ICD field is ever added
-// under one of the names below, it lights up automatically.
+// Source of truth: the Google Cloud patient registry. The server-side adapter
+// preserves the legacy picker field names while the browser never receives the
+// Cloud signing secret.
 
-const { queryDb, httpJson, P, getSession, json } = require("./_lib");
-
-// The authoritative Patients Master List (front-desk MASTER_DB_ID). The
-// literal is the confirmed database id, used only when the env var is unset.
-const MASTER_DB = process.env.MASTER_DB_ID || "2cf580758d3080f0825de4bbfb6c7528";
+const { P, getSession, json } = require("./_lib");
+const { listCloudPatients, searchCloudPatients } = require("./lib/cloud-patients");
 
 // Map a Master-List payer/plan onto the register form's Insurance options
 // (NP_INS in index.html). Unknown → "" (left blank; the raw payer is shown).
@@ -67,40 +57,16 @@ function insuranceLabel(payer, mco, plan) {
   return type;
 }
 
-// Search the Patients Master List by name or BHW control number and return a
+// Search the Cloud registry by name or BHW control number and return a
 // small, register-form-shaped list so front desk can pull an existing patient
 // in without retyping. One row per patient (this DB is already deduped).
-async function masterSearch(q) {
-  const res = await httpJson("POST", `https://api.notion.com/v1/databases/${MASTER_DB}/query`, {
-    filter: {
-      or: [
-        { property: "Patient Name", title: { contains: q } },
-        { property: "Patient Ctl No", rich_text: { contains: q } },
-      ],
-    },
-    page_size: 25,
-  });
-  if (!res.ok) throw new Error(`Notion ${res.status}`);
-  return (res.data.results || [])
-    .map((pg) => {
-      const p = pg.properties;
-      return {
-        id: pg.id,
-        name: P.title(p["Patient Name"]),
-        bhwId: P.text(p["Patient Ctl No"]),
-        dob: (P.date(p["DOB"]) || "").slice(0, 10),
-        payer: P.sel(p["Payer"]) || P.text(p["Payer Name"]),
-        insuranceLabel: insuranceLabel(P.sel(p["Payer"]), P.sel(p["Medicaid MCO"]), P.text(p["Insurance Plan Name"])),
-        insurance: mapInsurance(P.sel(p["Payer"]), P.text(p["Insurance Plan Name"])),
-        memberId: P.text(p["Insurance Member ID"]),
-        mbi: P.text(p["Medicare MBI"]),
-        email: p["Email"]?.email || "",
-        chart: P.text(p["MRN"]),
-      };
-    })
-    .filter((r) => r.name)
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .slice(0, 12);
+async function masterSearch(q, session) {
+  return searchCloudPatients(await listCloudPatients(session), q, 12).map((p) => ({
+    ...p,
+    insuranceLabel: insuranceLabel(p.payer, p.medicaidMco, p.insurancePlanName),
+    insurance: mapInsurance(p.payer, p.insurancePlanName),
+    mbi: p.medicareMbi || "",
+  }));
 }
 
 const ICD_PROP_CANDIDATES = [
@@ -172,7 +138,6 @@ exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return json(405, { error: "POST only" });
   const session = getSession(event);
   if (!session) return json(401, { error: "Signed out — sign in to crewOS again." });
-  if (!process.env.NOTION_TOKEN) return json(503, { error: "NOTION_TOKEN is not set on this site" });
 
   let body;
   try { body = JSON.parse(event.body || "{}"); } catch { return json(400, { error: "Bad JSON" }); }
@@ -181,12 +146,11 @@ exports.handler = async (event) => {
     if (body.action === "master-search") {
       const q = String(body.q || "").trim();
       if (q.length < 2) return json(200, { patients: [] });
-      return json(200, { patients: await masterSearch(q) });
+      return json(200, { patients: await masterSearch(q, session) });
     }
 
     if (body.action === "list") {
-      const patients = (await queryDb(MASTER_DB))
-        .map(shape)
+      const patients = (await listCloudPatients(session))
         .filter((p) => p.name)
         .sort((a, b) => a.name.localeCompare(b.name));
       return json(200, { patients });

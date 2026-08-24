@@ -9,6 +9,7 @@
 //   POST {}  →  { today, endOfWeek, followups, notStarted, requests, counts }
 
 const { DB, queryDb, P, getSession, json } = require("./_lib");
+const { listCloudPatients } = require("./lib/cloud-patients");
 
 const QUEUE_DB = process.env.QUEUE_DB_ID || "de7906906a134b65bb0fc6966ba20b13";
 const people = (p) => (p?.people || []).map((u) => u.name).filter(Boolean).join(", ");
@@ -30,7 +31,9 @@ exports.handler = async (event) => {
   const DONE = new Set(["Complete", "Billed"]);
 
   try {
-    const logs = await queryDb(DB.careLog);
+    const [logs, roster] = await Promise.all([queryDb(DB.careLog), listCloudPatients(session)]);
+    const byBhwId = new Map(roster.map((patient) => [patient.bhwPatientId, patient]));
+    const bySourceId = new Map(roster.filter((patient) => patient.notionPageId).map((patient) => [patient.notionPageId, patient]));
     const followups = [];
     const notStarted = [];
     for (const pg of logs) {
@@ -49,6 +52,16 @@ exports.handler = async (event) => {
         lastContact: P.date(p["Last Contact"]),
         patientId: P.rel(p["Patient"])[0] || "",
       };
+      const registryPatient = byBhwId.get(it.ctlNo) || bySourceId.get(it.patientId);
+      if (registryPatient) {
+        it.bhwPatientId = registryPatient.bhwPatientId;
+        it.name = registryPatient.name || it.name;
+        it.payer = registryPatient.payer;
+        it.rosterLinked = true;
+      } else {
+        it.bhwPatientId = "";
+        it.rosterLinked = false;
+      }
       if (it.nextFollowUp && !DONE.has(it.status) && it.nextFollowUp <= eow) {
         it.bucket = it.nextFollowUp < today ? "overdue" : it.nextFollowUp === today ? "today" : "week";
         followups.push(it);
