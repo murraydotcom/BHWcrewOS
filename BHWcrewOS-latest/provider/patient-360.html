@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="/crew-provider-gate.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BHW CrewOS — Patient 360</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--blue:#80abbd;--blue-d:#5f8b9d;--base:#f7f5f2;--bronze:#b07a55;--sage:#a8b59a;--ink:#2f3a3f;--muted:#68767b;--line:#e4ded6;--card:#fff;--sidebar:#243239;--danger:#c0503f;--shadow:0 1px 3px rgba(36,50,57,.08),0 6px 18px rgba(36,50,57,.05)}
+:root[data-theme=dark]{--base:#141a1d;--card:#1e272b;--ink:#e6edf0;--muted:#9db0b7;--line:#344248;--blue-d:#9ac2d1;--shadow:0 4px 18px rgba(0,0,0,.35)}
+*{box-sizing:border-box}body{margin:0;background:var(--base);color:var(--ink);font:13px Montserrat,system-ui,sans-serif}.app{display:flex;min-height:100vh}.sidebar{width:240px;background:var(--sidebar);color:#c9d6db;padding:26px 14px;position:fixed;inset:0 auto 0 0}.brand{padding:0 13px 22px;border-bottom:1px solid rgba(255,255,255,.09)}.brand h1{margin:0;color:#fff;font-size:17px}.brand div,.nav-label{font-size:9px;letter-spacing:1.3px;text-transform:uppercase}.brand div{margin-top:5px}.nav-label{margin:22px 12px 7px;opacity:.55}.nav{display:flex;gap:10px;padding:10px 12px;border-radius:9px;color:inherit;text-decoration:none;margin:2px 0}.nav:hover,.nav.active{background:#354a54;color:#fff}.nav.active{background:var(--blue);font-weight:700}.side-note{position:absolute;bottom:20px;padding:0 12px;font-size:10px;line-height:1.6;opacity:.65}.main{margin-left:240px;width:calc(100% - 240px)}.top{height:66px;padding:0 26px;background:var(--card);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}.content{padding:25px;max-width:1500px;margin:auto}.tools,.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.btn{font:600 12px Montserrat;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);padding:9px 13px;cursor:pointer;text-decoration:none}.btn.primary{background:var(--blue-d);border-color:var(--blue-d);color:#fff}.badge{display:inline-flex;padding:4px 8px;border-radius:12px;font-size:9.5px;font-weight:700}.badge.complete{background:#e9f1e5;color:#526a48}.badge.warning{background:#fff2d8;color:#89610e}.badge.restricted{background:#f9dfdc;color:#9f3b2f}.hero,.card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}.hero{padding:22px;margin-bottom:16px;display:flex;justify-content:space-between;gap:18px;align-items:flex-start}.hero h2{margin:0 0 6px;font-size:24px}.hero p{margin:0;color:var(--muted);line-height:1.55}.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:11px;margin-bottom:16px}.kpi{padding:14px;background:var(--card);border:1px solid var(--line);border-radius:12px}.kpi .v{font-size:22px;font-weight:800}.kpi .l{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-top:3px}.grid{display:grid;grid-template-columns:1.15fr .85fr;gap:16px}.card{margin-bottom:16px}.card-head{padding:14px 17px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;align-items:center}.card-head h3{margin:0;font-size:14px}.card-body{padding:16px}.systems{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.system{border:1px solid var(--line);border-radius:11px;padding:12px}.system h4{margin:0 0 6px;font-size:12px}.system p{margin:7px 0 0;color:var(--muted);line-height:1.5}.list{display:grid;gap:9px}.item{border-bottom:1px solid var(--line);padding:0 0 9px}.item:last-child{border-bottom:0;padding-bottom:0}.item b{font-size:11px}.meta{font-size:9.5px;color:var(--muted);margin-top:4px;line-height:1.5}.notice{padding:12px 14px;border-radius:9px;background:#fdf5e9;border-left:4px solid var(--bronze);font-size:11px;line-height:1.55;margin-bottom:16px}.empty{padding:48px;text-align:center;color:var(--muted)}.error{color:var(--danger)}@media(max-width:1050px){.grid{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(3,1fr)}}@media(max-width:760px){.sidebar{display:none}.main{margin:0;width:100%}.content{padding:15px}.top{padding:0 15px}.kpis,.systems{grid-template-columns:1fr 1fr}.hero{display:block}.hero .actions{margin-top:14px}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+  <div class="brand"><h1>BHW CrewOS</h1><div>Clinical Intelligence</div></div>
+  <div class="nav-label">Patient Operations</div>
+  <a class="nav" href="patient-registry.html">◎ Patient Registry</a>
+  <a class="nav active" href="patient-360.html">◉ Patient 360</a>
+  <a class="nav" href="workflow.html">◷ 24-Hour Work Queue</a>
+  <a class="nav" href="transcription.html">◉ Visit Transcription</a>
+  <a class="nav" href="index.html">◈ Encounter Scrub</a>
+  <div class="side-note">FHIR R4-shaped longitudinal view.<br><br>Synthetic-only pilot. No production Firestore access.</div>
+</aside>
+<main class="main">
+  <div class="top"><div>Clinical Intelligence · <b>Patient 360</b></div><div class="tools"><span class="badge warning" id="status">Connecting…</span><button class="btn" id="theme">◐ Theme</button></div></div>
+  <div class="content" id="content"><div class="card"><div class="empty">Loading the synthetic longitudinal record…</div></div></div>
+</main>
+</div>
+<script type="module" src="patient-360-app.mjs"></script>
+</body>
+</html>
