@@ -100,8 +100,11 @@ test("CrewHQ frontend exposes verified-consent controls and preserves the provid
   assert.match(html, /crew-provider-gate\.js/);
   assert.doesNotMatch(html, /auth-gate\.js/);
   assert.match(html, /Consent-gated visit transcription/);
+  assert.match(html, /private temporary Google Cloud Storage object/);
   assert.match(app, /session-recording-confirmed/);
   assert.match(app, /recordingConsent\(bhwPatientId\)/);
+  assert.match(app, /longRecordingEnabled/);
+  assert.match(app, /elapsedSeconds >= 600/);
   assert.match(registry, /Verify signed consent/);
   assert.match(registry, /new-patient-packet/);
   assert.match(registryHtml, /crew-provider-gate\.js/);

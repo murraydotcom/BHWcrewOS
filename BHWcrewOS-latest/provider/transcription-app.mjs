@@ -6,6 +6,7 @@ const LIVE_CONSENT = "session-recording-confirmed";
 const MAX_AUDIO_BYTES = 9 * 1024 * 1024;
 const $ = (id) => document.getElementById(id);
 let cloudClient = null;
+let longRecordingEnabled = false;
 let recorder = null;
 let stream = null;
 let chunks = [];
@@ -55,6 +56,7 @@ function discardAudio() {
 function canStart() {
   return Boolean(
     cloudClient
+    && longRecordingEnabled
     && selectedPatientId()
     && (isSynthetic() ? $("previsitConsent").checked : hasVerifiedConsent())
     && $("sessionConsent").checked
@@ -356,7 +358,15 @@ async function initialize() {
       cloudClient.listPatients(),
       cloudClient.transcriptionConfig(),
     ]);
+    longRecordingEnabled = Boolean(config.longRecordingEnabled);
     loadPatientOptions(patients, config);
+    if (!longRecordingEnabled) {
+      $("cloudStatus").textContent = "Long recording setup incomplete";
+      $("complianceNotice").innerHTML = "<b>Recording is temporarily locked.</b> Private temporary audio storage and immediate deletion must be configured before either short or long visit transcription can run.";
+      setState("Waiting for protected long-recording setup");
+      updateStartAvailability();
+      return;
+    }
     $("cloudStatus").textContent = config.realPatientEnabled ? "Google Cloud ready" : "Training only · BAA pending";
     if (!config.realPatientEnabled) {
       $("complianceNotice").innerHTML = "<b>Real-patient recording is still locked.</b> BHW must confirm its active Google Cloud BAA before the server will offer real patients. Synthetic BHW0000 role-play remains available.";
