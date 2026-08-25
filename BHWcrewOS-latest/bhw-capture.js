@@ -4,6 +4,11 @@ import {
   getDeviceMetadata,
   toCloudMemory,
 } from "/bhw-capture-sync.mjs";
+import {
+  clearCrewSession,
+  crewosSigninUrl,
+  validateCrewSession,
+} from "/bhw-capture-auth.mjs";
 
 (function () {
   "use strict";
@@ -41,6 +46,7 @@ import {
   var syncInFlight = false;
   var syncTimer = null;
   var device = null;
+  var crewUser = null;
 
   var $ = function (id) { return document.getElementById(id); };
   function esc(value) {
@@ -63,6 +69,41 @@ import {
     return String(error && error.message ? error.message : "Sync unavailable").replace(/\s+/g, " ").slice(0, 180);
   }
 
+  function showAuthGate(message, allowRetry) {
+    $("authStatus").textContent = message || "Sign in with your CrewOS staff account to continue.";
+    $("authRetry").hidden = !allowRetry;
+    $("authGate").classList.remove("hidden");
+    $("gate").classList.add("hidden");
+    $("shell").setAttribute("aria-hidden", "true");
+  }
+
+  function showCrewIdentity(user) {
+    crewUser = user;
+    $("sessionName").textContent = user.name || "BHW staff";
+    $("sessionRole").textContent = user.role ? "· " + user.role : user.access ? "· " + user.access : "";
+    $("sessionBar").hidden = false;
+    $("authGate").classList.add("hidden");
+  }
+
+  async function requireCrewSession() {
+    $("authStatus").textContent = "Checking your CrewOS session…";
+    $("authRetry").hidden = true;
+    try {
+      var result = await validateCrewSession();
+      if (!result.authenticated) {
+        showAuthGate(result.reason === "missing" || result.reason === "expired"
+          ? "Sign in with your CrewOS staff account to continue."
+          : result.message || "Your CrewOS session could not be verified.", result.reason === "unavailable");
+        return false;
+      }
+      showCrewIdentity(result.user);
+      return true;
+    } catch (error) {
+      showAuthGate("CrewOS sign-in verification is temporarily unavailable: " + errorText(error), true);
+      return false;
+    }
+  }
+
   async function hashPin(pin) {
     var bytes = new TextEncoder().encode("BHW-CAPTURE|" + pin);
     var hash = await crypto.subtle.digest("SHA-256", bytes);
@@ -71,9 +112,10 @@ import {
 
   function openGate() {
     var saved = localStorage.getItem(PIN_KEY);
+    var identity = crewUser && crewUser.name ? "Signed in as " + crewUser.name + ". " : "";
     $("gateCopy").textContent = saved
-      ? "Enter your local BHW Capture PIN."
-      : "Set a local 6-digit PIN. This protects the offline cache on this phone; it is not a substitute for device security.";
+      ? identity + "Enter your local BHW Capture PIN."
+      : identity + "Set a local 6-digit PIN. This protects the offline cache on this phone; it is not a substitute for device security.";
     $("pinBtn").textContent = saved ? "Open" : "Set PIN & open";
     $("pinInput").value = "";
     $("gateError").textContent = "";
@@ -781,6 +823,22 @@ import {
     $("pinInput").addEventListener("input", function () { this.value = this.value.replace(/\D/g, "").slice(0, 6); });
     $("pinInput").addEventListener("keydown", function (event) { if (event.key === "Enter") handlePin(); });
     $("pinBtn").onclick = handlePin;
+    $("crewSigninBtn").href = crewosSigninUrl();
+    $("authRetry").onclick = async function () {
+      $("authRetry").hidden = true;
+      if (await requireCrewSession()) startLocalCache();
+    };
+    $("logoutBtn").onclick = function () {
+      if (recorder && recorder.state === "recording") {
+        alert("Stop and save or discard the current recording before signing out.");
+        return;
+      }
+      clearCrewSession();
+      sessionStorage.removeItem("bhw_capture_unlocked");
+      crewUser = null;
+      $("sessionBar").hidden = true;
+      location.replace(crewosSigninUrl());
+    };
     $("lockBtn").onclick = function () { sessionStorage.removeItem("bhw_capture_unlocked"); openGate(); };
     document.addEventListener("visibilitychange", function () {
       if (document.hidden) hiddenAt = Date.now();
@@ -869,14 +927,22 @@ import {
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("/bhw-capture-sw.js").catch(function () {});
   }
 
+  function startLocalCache() {
+    return openDB().then(function () {
+      if (!crewUser) return;
+      if (sessionStorage.getItem("bhw_capture_unlocked") === "1") unlock();
+      else openGate();
+    }).catch(function (error) {
+      openGate();
+      $("gateError").textContent = "Offline cache could not start. Close other BHW Capture windows and try again: " + errorText(error);
+      setSyncUi("error", "Offline cache needs attention \u00b7 " + errorText(error));
+    });
+  }
+
   bind();
-  openDB().then(function () {
-    if (sessionStorage.getItem("bhw_capture_unlocked") === "1") unlock();
-    else openGate();
-  }).catch(function (error) {
-    openGate();
-    $("gateError").textContent = "Offline cache could not start. Close other BHW Capture windows and try again: " + errorText(error);
-    setSyncUi("error", "Offline cache needs attention \u00b7 " + errorText(error));
+  requireCrewSession().then(function (authenticated) {
+    if (!authenticated) return;
+    startLocalCache();
   });
 })();
 

@@ -101,8 +101,11 @@ test("Capture keeps the local PIN, non-PHI warning, locked Clinical mode, and ex
   assert.match(html, /data-mode="Clinical" disabled/);
   assert.match(html, /id="keepAudio" type="checkbox"/);
   assert.doesNotMatch(html, /id="keepAudio"[^>]*checked/);
-  assert.match(html, /type="module" src="\/bhw-capture\.js\?v=20260821-3"/);
+  assert.match(html, /id="authGate"/);
+  assert.match(html, /Sign in with CrewOS/);
+  assert.match(html, /type="module" src="\/bhw-capture\.js\?v=20260824-1"/);
   assert.match(app, /bhw_capture_pin_v1/);
+  assert.match(app, /validateCrewSession/);
   assert.match(app, /var dbPromise = null/);
   assert.match(app, /CACHE_STARTUP_TIMEOUT_MS/);
   assert.match(app, /await openDB\(\);/);
