@@ -3,6 +3,16 @@ const { getSession, json } = require("./_lib");
 
 const AUDIENCE = "bhw-rcm-cloud";
 
+function healthRoleFor(session = {}) {
+  const role = String(session.role || "").trim().toLowerCase();
+  if (["admin", "executive", "provider", "physician", "pmhnp", "crnp", "ma-bha", "care-manager"].includes(role)) return role;
+  if (/medical director|nurse practitioner|family nurse practitioner|\bfnp\b|\bcrnp\b|\bpmhnp\b|physician|provider/.test(role)) return "provider";
+  if (/care manager|care coordinator/.test(role)) return "care-manager";
+  if (/medical assistant|behavioral health assistant|\bbha\b/.test(role)) return "ma-bha";
+  if (/owner|chief executive|\bceo\b|executive/.test(role)) return "executive";
+  return "staff";
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return json(405, { ok: false, error: "POST only" });
   const session = getSession(event);
@@ -16,6 +26,7 @@ exports.handler = async (event) => {
     staffId: session.staffId,
     name: session.name || "CrewOS staff",
     role: session.role || "staff",
+    healthRole: healthRoleFor(session),
     iss: "bhw-crewhq",
     aud: AUDIENCE,
     iat: now,
