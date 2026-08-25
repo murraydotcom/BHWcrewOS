@@ -125,4 +125,3 @@ test("Capture falls back to a text-only cache when IndexedDB is unavailable", as
   assert.match(app, /keepAudio"\)\.disabled = true/);
 });
 
-
