@@ -5,15 +5,24 @@
 // header row. No third-party library, nothing uploaded.
 
 const DATE_HEADERS = new Set(["Discharge Date / Time", "Admit Date / Time", "Date of Birth"]);
+const DELIMITERS = ["\t", ",", ";", "|"];
+const CRISP_HEADER_KEYS = new Set([
+  "First Name", "Last Name", "Gender", "Primary Care Provider", "Address", "Location",
+  "Admit Date / Time", "ER Last 90 Days", "Admit Source", "Discharge To Location", "Cell Phone",
+  "Encounter Type", "Facility", "Patient Complaint", "Primary Diagnosis Description",
+  "Primary Diagnosis Codes", "Middle Name", "Date of Birth", "Death Indicator",
+  "Discharge Date / Time", "Date of Death", "Discharge Disposition",
+].map(headerKey));
 
 // ---- public entry -----------------------------------------------------------
 
 // Accepts a File/Blob (browser) or any object with .name + .arrayBuffer()/.text().
 export async function readSpreadsheet(file) {
   const name = (file.name || "").toLowerCase();
-  if (name.endsWith(".csv") || name.endsWith(".tsv")) {
-    const text = await file.text();
-    return { sheet: "", rows: parseDelimited(text, name.endsWith(".tsv") ? "\t" : ",") };
+  if (name.endsWith(".csv") || name.endsWith(".tsv") || name.endsWith(".txt")) {
+    const text = await readText(file);
+    const delimiter = name.endsWith(".tsv") ? "\t" : detectDelimiter(text);
+    return { sheet: "", delimiter, rows: parseDelimited(text, delimiter) };
   }
   const buf = await file.arrayBuffer();
   return await readXlsx(buf);
@@ -21,12 +30,76 @@ export async function readSpreadsheet(file) {
 
 // ---- CSV / TSV --------------------------------------------------------------
 
-export function parseDelimited(text, delim = ",") {
-  const rows = parseDelimitedRows(text, delim);
+export function parseDelimited(text, delim = null) {
+  const source = stripSeparatorDeclaration(text);
+  const rows = parseDelimitedRows(source, delim || detectDelimiter(source));
   if (!rows.length) return [];
-  const headers = rows[0].map((h) => String(h).trim());
-  return rows.slice(1).filter((r) => r.some((c) => String(c).trim() !== ""))
-    .map((r) => Object.fromEntries(headers.map((h, i) => [h, r[i] == null ? "" : r[i]])));
+  const headerIndex = findHeaderRow(rows);
+  const headers = rows[headerIndex].map(cleanHeader);
+  return rows.slice(headerIndex + 1).filter((r) => r.some((c) => String(c).trim() !== ""))
+    .map((r) => {
+      const out = {};
+      headers.forEach((h, i) => { if (h) out[h] = r[i] == null ? "" : r[i]; });
+      return out;
+    });
+}
+
+// CRISP/Excel may save a file named .csv with tabs or semicolons. Score each
+// candidate delimiter by recognized CRISP headers, width, and row consistency.
+export function detectDelimiter(text) {
+  const declared = String(text).match(/^\uFEFF?sep=(.)\s*(?:\r\n?|\n|$)/i);
+  if (declared) return declared[1] === "\\t" ? "\t" : declared[1];
+  let best = ",", bestScore = -Infinity;
+  for (const delimiter of DELIMITERS) {
+    const rows = parseDelimitedRows(stripSeparatorDeclaration(text), delimiter);
+    if (!rows.length) continue;
+    const headerIndex = findHeaderRow(rows);
+    const header = rows[headerIndex] || [];
+    const filled = header.filter((cell) => cleanHeader(cell) !== "").length;
+    const known = header.filter((cell) => CRISP_HEADER_KEYS.has(headerKey(cell))).length;
+    const samples = rows.slice(headerIndex + 1, headerIndex + 6).filter((row) => row.some((cell) => String(cell ?? "").trim()));
+    const consistent = samples.filter((row) => Math.abs(row.length - header.length) <= 1).length;
+    const score = known * 1000 + filled * 10 + consistent;
+    if (score > bestScore) { best = delimiter; bestScore = score; }
+  }
+  return best;
+}
+
+function headerKey(value) {
+  return cleanHeader(value).toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function cleanHeader(value) {
+  return String(value == null ? "" : value).replace(/^\uFEFF/, "").trim();
+}
+
+function stripSeparatorDeclaration(text) {
+  return String(text).replace(/^\uFEFF?sep=.\s*(?:\r\n?|\n)/i, "");
+}
+
+// CRISP workbooks sometimes include a title/instructions row before the real
+// column names. Prefer the first row with recognized headers, then the widest
+// non-empty row among the first 30 rows.
+function findHeaderRow(rows) {
+  let bestIndex = 0, bestKnown = -1, bestFilled = -1;
+  for (let i = 0; i < Math.min(rows.length, 30); i++) {
+    const row = rows[i] || [];
+    const known = row.filter((cell) => CRISP_HEADER_KEYS.has(headerKey(cell))).length;
+    const filled = row.filter((cell) => cleanHeader(cell) !== "").length;
+    if (known > bestKnown || (known === bestKnown && filled > bestFilled)) {
+      bestIndex = i; bestKnown = known; bestFilled = filled;
+    }
+  }
+  return bestIndex;
+}
+
+async function readText(file) {
+  if (typeof file.arrayBuffer !== "function") return await file.text();
+  const buf = await file.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  if (bytes[0] === 0xff && bytes[1] === 0xfe) return new TextDecoder("utf-16le").decode(bytes.subarray(2));
+  if (bytes[0] === 0xfe && bytes[1] === 0xff) return new TextDecoder("utf-16be").decode(bytes.subarray(2));
+  return new TextDecoder("utf-8").decode(bytes);
 }
 
 // RFC-4180-ish: quoted fields, doubled quotes, embedded newlines.
@@ -105,11 +178,12 @@ export function sheetToObjects(sheetXml, shared) {
   let rm;
   while ((rm = rowRe.exec(sheetXml))) rows.push(parseCells(rm[1], shared));
   if (!rows.length) return [];
+  const headerIndex = findHeaderRow(rows);
   const headers = [];
-  rows[0].forEach((v, i) => { headers[i] = v == null ? "" : String(v).trim(); });
+  rows[headerIndex].forEach((v, i) => { headers[i] = cleanHeader(v); });
   const dateCols = new Set(headers.map((h, i) => (DATE_HEADERS.has(h) ? i : -1)).filter((i) => i >= 0));
   const out = [];
-  for (let r = 1; r < rows.length; r++) {
+  for (let r = headerIndex + 1; r < rows.length; r++) {
     const cells = rows[r];
     if (!cells.some((c) => c != null && c !== "")) continue;
     const obj = {};
@@ -136,8 +210,8 @@ function parseCells(rowBody, shared) {
     const idx = ref ? colIndex(ref) : arr.length;
     let val = "";
     if (t === "inlineStr") {
-      const im = inner.match(/<t\b[^>]*>([\s\S]*?)<\/t>/);
-      val = im ? decodeXml(im[1]) : "";
+      let tm; const tRe = /<t\b[^>]*>([\s\S]*?)<\/t>/g;
+      while ((tm = tRe.exec(inner))) val += decodeXml(tm[1]);
     } else {
       const vm = inner.match(/<v>([\s\S]*?)<\/v>/);
       const raw = vm ? vm[1] : "";

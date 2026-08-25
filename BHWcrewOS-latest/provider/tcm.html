@@ -164,7 +164,7 @@ a{color:inherit;text-decoration:none}
         <div class="card-head"><h3>Upload the CRISP Panel Details export</h3>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
             <button class="btn btn-primary btn-sm" id="fileBtn">Choose file…</button>
-            <input type="file" id="fileInput" accept=".xlsx,.csv" hidden>
+            <input type="file" id="fileInput" accept=".xlsx,.csv,.tsv,.txt" hidden>
             <button class="btn btn-ghost btn-sm" id="alertsBtn">Enable alerts</button>
             <button class="btn btn-ghost btn-sm" id="csvBtn" disabled>Export CSV</button>
             <button class="btn btn-ghost btn-sm" id="clearBtn" disabled>Clear view</button>
@@ -172,7 +172,7 @@ a{color:inherit;text-decoration:none}
         </div>
         <div class="drop" id="drop">
           <div class="big">Drop the <code>PanelDetails….xlsx</code> here, or click to choose</div>
-          <div class="mini" style="margin-top:5px">Accepts the CRISP ENS panel export (<b>.xlsx</b>) or a <b>.csv</b> with the same columns. Uploads merge into retained history; repeat events are updated instead of duplicated.</div>
+          <div class="mini" style="margin-top:5px">Accepts the CRISP ENS panel export (<b>.xlsx</b>) or a delimited <b>.csv, .tsv, or .txt</b> with the same columns. Tabs, commas, semicolons, and pipes are detected automatically. Uploads merge into retained history; repeat events are updated instead of duplicated.</div>
           <details class="mini" style="margin-top:8px;text-align:left"><summary style="cursor:pointer;font-weight:700">Columns required for upload</summary><div style="margin-top:6px"><b>Required headers:</b> First Name, Last Name, Date of Birth, Encounter Type, Admit Date / Time, Discharge Date / Time, Discharge Disposition, Facility.<br><b>Also retained when present:</b> Gender, Patient Complaint (chief complaint), Admit Source, Facility Type, Location, Notification Type, Past Emergency Visits, Past Inpatient Visits, Primary Diagnosis Codes, Primary Diagnosis Description, Risk Score 1, Risk Score 2.</div></details>
         </div>
         <div class="mini" id="cloudStatus" style="margin-top:8px">Checking secure retention…</div>
@@ -206,7 +206,7 @@ a{color:inherit;text-decoration:none}
 </div>
 
 <script type="module">
-import { buildWorklist, normalizeRoster } from "../engine/tcm-parse.mjs";
+import { buildWorklist, normalizeRoster, inspectCrispColumns } from "../engine/tcm-parse.mjs";
 import { readSpreadsheet } from "../engine/xlsx-lite.mjs";
 import { createEncounterCloudClient } from "./cloud-queue.mjs";
 
@@ -242,6 +242,10 @@ async function loadFile(file) {
   try {
     const { rows, sheet } = await readSpreadsheet(file);
     if (!rows.length) { $("parseNote").textContent = "No rows found in that file — is it the Panel Details export?"; return; }
+    const columns = inspectCrispColumns(rows);
+    if (columns.missing.length) {
+      throw new Error(`Columns were not separated correctly. Missing required headers: ${columns.missing.join(", ")}`);
+    }
     RAW_ROWS = rows; LAST_FILE = { name: file.name, sheet };
     if (CLOUD) {
       $("parseNote").textContent = `Retaining ${rows.length} CRISP event rows…`;
