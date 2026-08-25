@@ -1,12 +1,12 @@
-// netlify/functions/auth.js - BHWcrewOS login (zero dependencies)
+// netlify/functions/auth.js — BHWcrewOS login (zero dependencies)
 // PINs are scrypt-hashed and stored in the "PIN Hash" property of the
-// Staff & Roles database in Notion (hash only - the PIN itself is never
+// Staff & Roles database in Notion (hash only — the PIN itself is never
 // stored anywhere). The property is created automatically on first use.
 //
 // Actions:
-//   POST { action:"roster" }                               names for the pickers
-//   POST { action:"set-pin", setupSecret, staffId, pin }   set/reset a PIN (needs SETUP_SECRET)
-//   POST { action:"login", staffId, pin }                  { token, user }
+//   POST { action:"roster" }                              → names for the pickers
+//   POST { action:"set-pin", setupSecret, staffId, pin }  → set/reset a PIN (needs SETUP_SECRET)
+//   POST { action:"login", staffId, pin }                 → { token, user }
 
 const crypto = require("crypto");
 const { DB, httpJson, queryDb, updatePage, P, W, sign, getSession, json } = require("./_lib");
@@ -70,7 +70,7 @@ exports.handler = async (event) => {
       if (!process.env.SETUP_SECRET) return json(503, { error: "SETUP_SECRET environment variable is not set on this site" });
       if (body.setupSecret !== process.env.SETUP_SECRET) return json(403, { error: "That setup key didn't match" });
       if (!body.staffId || !body.pin || !/^\d{4,8}$/.test(String(body.pin))) {
-        return json(400, { error: "Pick a person and use a 4-8 digit PIN" });
+        return json(400, { error: "Pick a person and use a 4–8 digit PIN" });
       }
       await ensurePinProperty();
       const salt = crypto.randomBytes(16).toString("hex");
@@ -85,7 +85,7 @@ exports.handler = async (event) => {
       const user = staff.find((s) => s.id === staffId);
       if (!user || !user.active) return json(403, { error: "Account inactive" });
       if (!user.pinHash || !user.pinHash.includes(":")) {
-        return json(403, { error: "No PIN set for this account yet - ask Amaris or Shad�" });
+        return json(403, { error: "No PIN set for this account yet — ask Amaris or Shadé" });
       }
       const [salt, storedHash] = user.pinHash.split(":");
       const attempt = hashPin(pin, salt);
@@ -111,4 +111,3 @@ exports.handler = async (event) => {
     return json(500, { error: err.message });
   }
 };
-
