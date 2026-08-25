@@ -45,8 +45,42 @@ const INTERNAL_FIELD_HEADERS = {
 };
 const HEADER_TO_FIELD = Object.fromEntries(Object.entries({ ...FIELD_HEADERS, ...INTERNAL_FIELD_HEADERS })
   .map(([f, h]) => [key(h), f]));
+Object.assign(HEADER_TO_FIELD, {
+  dob: "dob",
+  birthdate: "dob",
+  chiefcomplaint: "complaint",
+  reasonforvisit: "complaint",
+  diagnosiscodes: "dxCodes",
+  primarydiagnosiscode: "dxCodes",
+  diagnosisdescription: "dxDesc",
+  primarydiagnosis: "dxDesc",
+  admissiondatetime: "admitAt",
+  admitdatetime: "admitAt",
+  dischargedatetime: "dischargeAt",
+  disposition: "disposition",
+  hospital: "facility",
+  facilityname: "facility",
+  eventtype: "encounterType",
+});
+
+const REQUIRED_FIELDS = ["firstName", "lastName", "dob", "encounterType", "admitAt", "dischargeAt", "disposition", "facility"];
 
 export const CRISP_HEADERS = Object.values(FIELD_HEADERS);
+export const CRISP_REQUIRED_HEADERS = REQUIRED_FIELDS.map((field) => FIELD_HEADERS[field]);
+
+// Validate column names before any rows are retained. A tab-separated file that
+// was incorrectly read as comma-separated will have one giant unrecognized key,
+// so this check prevents malformed data from reaching the shared cloud feed.
+export function inspectCrispColumns(rawRecords) {
+  const sample = (rawRecords || []).find((row) => row && typeof row === "object") || {};
+  const headers = Object.keys(sample);
+  const fields = new Set(headers.map((header) => HEADER_TO_FIELD[key(header)]).filter(Boolean));
+  return {
+    headers,
+    recognized: headers.filter((header) => HEADER_TO_FIELD[key(header)]),
+    missing: REQUIRED_FIELDS.filter((field) => !fields.has(field)).map((field) => FIELD_HEADERS[field]),
+  };
+}
 
 // Map one raw row (object keyed by CRISP headers, tolerant of case/spacing) to
 // canonical fields. Date fields are coerced to an ISO-ish string.
@@ -74,7 +108,7 @@ function toISO(v) {
   if (!s) return "";
   // Already ISO-ish
   const m = s.match(/^(\d{4})-(\d{2})-(\d{2})([ T](\d{2}):(\d{2}))?/);
-  if (m) return m[3] ? `${m[1]}-${m[2]}-${m[3]}T${m[5]}:${m[6]}` : `${m[1]}-${m[2]}-${m[3]}`;
+  if (m) return m[4] ? `${m[1]}-${m[2]}-${m[3]}T${m[5]}:${m[6]}` : `${m[1]}-${m[2]}-${m[3]}`;
   const d = new Date(s);
   return isNaN(d) ? "" : d.toISOString().slice(0, 16);
 }
