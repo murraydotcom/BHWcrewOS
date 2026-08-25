@@ -1,4 +1,4 @@
-# BHW Capture - Phase 2 non-PHI memory sync
+# BHW Capture — Phase 2 non-PHI memory sync
 
 Phone-first, installable capture surface for non-PHI BHW thinking and work notes.
 
@@ -50,22 +50,22 @@ Firestore placement is `bhwMemories/{ownerHash}/items/{memoryHash}` in the exist
 
 No new Netlify secret is required when the existing CrewHQ cloud path is already configured:
 
-- `RCM_CLOUD_API_URL` - existing HTTPS Cloud Run base URL.
-- `CREWHQ_CLOUD_TOKEN_SECRET` - existing shared token-exchange secret in Netlify and Cloud Run.
-- `SESSION_SECRET` - existing CrewOS session signing secret.
-- `OPENAI_API_KEY` - existing transcription key.
-- `OPENAI_TRANSCRIBE_MODEL` - optional; defaults to `gpt-4o-mini-transcribe`.
+- `RCM_CLOUD_API_URL` — existing HTTPS Cloud Run base URL.
+- `CREWHQ_CLOUD_TOKEN_SECRET` — existing shared token-exchange secret in Netlify and Cloud Run.
+- `SESSION_SECRET` — existing CrewOS session signing secret.
+- `OPENAI_API_KEY` — existing transcription key.
+- `OPENAI_TRANSCRIBE_MODEL` — optional; defaults to `gpt-4o-mini-transcribe`.
 
 The Cloud Run service continues to use its existing `GOOGLE_CLOUD_PROJECT` and `FIRESTORE_DATABASE` settings. Add the production Capture origin and the current deploy-preview origin to Cloud Run `ALLOWED_ORIGINS` before live browser sync testing.
 
 ## Files
 
-- `bhw-capture.html` - phone-first UI, local PIN, sync/retry state, and device-audio opt-in.
-- `bhw-capture.js` - capture, transcription, organization, IndexedDB cache, automatic migration, and sync orchestration.
-- `bhw-capture-auth.mjs` - CrewOS return URL, server-verified staff session, and sign-out behavior.
-- `bhw-capture-sync.mjs` - testable CrewOS/Cloud Run client and cloud-safe memory serializers.
-- `netlify/functions/bhw-capture-transcribe.js` - bounded, in-memory non-PHI OpenAI transcription proxy.
-- `bhw-capture.webmanifest` and `bhw-capture-sw.js` - installable shell; the service worker does not intercept application requests.
+- `bhw-capture.html` — phone-first UI, local PIN, sync/retry state, and device-audio opt-in.
+- `bhw-capture.js` — capture, transcription, organization, IndexedDB cache, automatic migration, and sync orchestration.
+- `bhw-capture-auth.mjs` — CrewOS return URL, server-verified staff session, and sign-out behavior.
+- `bhw-capture-sync.mjs` — testable CrewOS/Cloud Run client and cloud-safe memory serializers.
+- `netlify/functions/bhw-capture-transcribe.js` — bounded, in-memory non-PHI OpenAI transcription proxy.
+- `bhw-capture.webmanifest` and `bhw-capture-sw.js` — installable shell; the service worker does not intercept application requests.
 
 ## Synthetic smoke test
 
@@ -86,4 +86,3 @@ The Cloud Run service continues to use its existing `GOOGLE_CLOUD_PROJECT` and `
 ## Clinical mode
 
 Phase 2 does not unlock Clinical capture. Real-patient use still requires the approved consent, BAA-covered transcription/storage, role authorization, retention/deletion, audit, and written go-live path already defined for BHW clinical systems.
-
