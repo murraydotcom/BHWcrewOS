@@ -1,15 +1,15 @@
-// netlify/functions/auth.js — BHWcrewOS login (zero dependencies)
+// netlify/functions/auth.js - BHWcrewOS login (zero dependencies)
 // PINs are scrypt-hashed and stored in the "PIN Hash" property of the
-// Staff & Roles database in Notion (hash only — the PIN itself is never
+// Staff & Roles database in Notion (hash only - the PIN itself is never
 // stored anywhere). The property is created automatically on first use.
 //
 // Actions:
-//   POST { action:"roster" }                              → names for the pickers
-//   POST { action:"set-pin", setupSecret, staffId, pin }  → set/reset a PIN (needs SETUP_SECRET)
-//   POST { action:"login", staffId, pin }                 → { token, user }
+//   POST { action:"roster" }                               names for the pickers
+//   POST { action:"set-pin", setupSecret, staffId, pin }   set/reset a PIN (needs SETUP_SECRET)
+//   POST { action:"login", staffId, pin }                  { token, user }
 
 const crypto = require("crypto");
-const { DB, httpJson, queryDb, updatePage, P, W, sign, json } = require("./_lib");
+const { DB, httpJson, queryDb, updatePage, P, W, sign, getSession, json } = require("./_lib");
 
 const NOTION = "https://api.notion.com/v1";
 const PIN_PROP = "PIN Hash";
@@ -42,11 +42,25 @@ function shapeStaff(pg) {
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return json(405, { error: "POST only" });
-  if (!process.env.NOTION_TOKEN) return json(503, { error: "NOTION_TOKEN environment variable is not set on this site" });
   let body;
   try { body = JSON.parse(event.body || "{}"); } catch { return json(400, { error: "Bad JSON" }); }
 
   try {
+    if (body.action === "session") {
+      const session = getSession(event);
+      if (!session) return json(401, { error: "CrewOS session expired or invalid" });
+      return json(200, { user: {
+        staffId: session.staffId,
+        name: session.name,
+        role: session.role,
+        divisions: session.divisions || [],
+        access: session.access,
+        exp: session.exp,
+      } });
+    }
+
+    if (!process.env.NOTION_TOKEN) return json(503, { error: "NOTION_TOKEN environment variable is not set on this site" });
+
     if (body.action === "roster") {
       const staff = (await queryDb(DB.staff)).map(shapeStaff).filter((s) => s.active);
       return json(200, { staff: staff.map(({ id, name, role }) => ({ id, name, role })) });
@@ -56,7 +70,7 @@ exports.handler = async (event) => {
       if (!process.env.SETUP_SECRET) return json(503, { error: "SETUP_SECRET environment variable is not set on this site" });
       if (body.setupSecret !== process.env.SETUP_SECRET) return json(403, { error: "That setup key didn't match" });
       if (!body.staffId || !body.pin || !/^\d{4,8}$/.test(String(body.pin))) {
-        return json(400, { error: "Pick a person and use a 4–8 digit PIN" });
+        return json(400, { error: "Pick a person and use a 4-8 digit PIN" });
       }
       await ensurePinProperty();
       const salt = crypto.randomBytes(16).toString("hex");
@@ -71,7 +85,7 @@ exports.handler = async (event) => {
       const user = staff.find((s) => s.id === staffId);
       if (!user || !user.active) return json(403, { error: "Account inactive" });
       if (!user.pinHash || !user.pinHash.includes(":")) {
-        return json(403, { error: "No PIN set for this account yet — ask Amaris or Shadé" });
+        return json(403, { error: "No PIN set for this account yet - ask Amaris or Shad�" });
       }
       const [salt, storedHash] = user.pinHash.split(":");
       const attempt = hashPin(pin, salt);
@@ -97,3 +111,4 @@ exports.handler = async (event) => {
     return json(500, { error: err.message });
   }
 };
+
