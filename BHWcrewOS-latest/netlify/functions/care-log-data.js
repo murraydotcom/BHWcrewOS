@@ -11,6 +11,7 @@
 // filters client-side too, but program/month narrow the payload when given.
 
 const { DB, queryDb, P, getSession, json } = require("./_lib");
+const { listCloudPatients } = require("./lib/cloud-patients");
 
 const people = (p) => (p?.people || []).map((u) => u.name).filter(Boolean).join(", ");
 
@@ -51,7 +52,20 @@ exports.handler = async (event) => {
 
   try {
     if ((body.action || "list") === "list") {
-      let entries = (await queryDb(DB.careLog)).map(shape);
+      const [logPages, roster] = await Promise.all([queryDb(DB.careLog), listCloudPatients(session)]);
+      const byBhwId = new Map(roster.map((patient) => [patient.bhwPatientId, patient]));
+      const bySourceId = new Map(roster.filter((patient) => patient.notionPageId).map((patient) => [patient.notionPageId, patient]));
+      let entries = logPages.map(shape).map((entry) => {
+        const patient = byBhwId.get(entry.ctlNo) || bySourceId.get(entry.patientId);
+        return patient ? {
+          ...entry,
+          bhwPatientId: patient.bhwPatientId,
+          entry: entry.entry || patient.name,
+          memberId: patient.memberId || entry.memberId,
+          payer: patient.payer,
+          rosterLinked: true,
+        } : { ...entry, bhwPatientId: "", rosterLinked: false };
+      });
       const program = String(body.program || "").trim();
       const month = String(body.month || "").trim(); // YYYY-MM
       if (program && program !== "All") entries = entries.filter((e) => e.program === program);

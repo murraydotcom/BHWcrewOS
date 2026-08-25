@@ -1,8 +1,7 @@
 // netlify/functions/frontdesk-data.js
 // Live patient lookup for bhw-front-desk.html
-// Env vars required: NOTION_TOKEN, MASTER_DB_ID, QUEUE_DB_ID  (optional: DASH_KEY)
-// MASTER_DB_ID = Patients Master List data source id
-// QUEUE_DB_ID  = Patient Request Triage Queue data source id
+// Patient identity comes from Google Cloud. NOTION_TOKEN and QUEUE_DB_ID remain
+// temporary requirements for triage rows, specialist data, and publish actions.
 
 const NOTION = 'https://api.notion.com/v1';
 const H = () => ({
@@ -12,6 +11,7 @@ const H = () => ({
 });
 
 const QUEUE_DB = process.env.QUEUE_DB_ID || 'de7906906a134b65bb0fc6966ba20b13';
+const { listCloudPatients, findCloudPatient, searchCloudPatients } = require('./lib/cloud-patients');
 const digits = s => (s || '').replace(/\D/g, '');
 const text = p => (p?.rich_text?.[0]?.plain_text) || (p?.title?.[0]?.plain_text) || '';
 const sel = p => p?.select?.name || p?.status?.name || '';
@@ -285,11 +285,9 @@ exports.handler = async (event) => {
 
     // ---- DIRECT PATIENT: ?pid=<pageId> -> full detail for one chosen match ----
     if (pid) {
-      const pres = await fetch(`${NOTION}/pages/${pid}`, { headers: H() });
-      if (!pres.ok) return { statusCode: 200, body: JSON.stringify({ patient: null }) };
-      const page = await pres.json();
-      const patient = shapePatient(page);
-      const requests = await fetchRequests(page.id);
+      const patient = await findCloudPatient(pid);
+      if (!patient) return { statusCode: 200, body: JSON.stringify({ patient: null }) };
+      const requests = patient.notionPageId ? await fetchRequests(patient.notionPageId) : [];
       return {
         statusCode: 200,
         headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
@@ -331,46 +329,17 @@ exports.handler = async (event) => {
       };
     }
 
-    const isPhone = digits(q).length >= 7;
-
-    // ---- find matching patients on the master list ----
-    let filter;
-    if (isPhone) {
-      // phone stored as phone_number property "Phone"; match on digits via contains of last 7
-      filter = { property: 'Phone', phone_number: { contains: digits(q).slice(-7).replace(/(\d{3})(\d{4})/, '$1-$2') } };
-    } else {
-      filter = { property: 'Patient Name', title: { contains: q } };
-    }
-
-    let res = await fetch(`${NOTION}/databases/${process.env.MASTER_DB_ID}/query`, {
-      method: 'POST', headers: H(),
-      body: JSON.stringify({ filter, page_size: 25 }),
-    });
-    let data = await res.json();
-
-    // phone fallback: try raw contains if formatted guess missed
-    if (isPhone && (!data.results || !data.results.length)) {
-      res = await fetch(`${NOTION}/databases/${process.env.MASTER_DB_ID}/query`, {
-        method: 'POST', headers: H(),
-        body: JSON.stringify({ filter: { property: 'Phone', phone_number: { contains: digits(q).slice(-4) } }, page_size: 25 }),
-      });
-      data = await res.json();
-      // narrow client-side on full digit match
-      data.results = (data.results || []).filter(r =>
-        digits(r.properties?.Phone?.phone_number || '').endsWith(digits(q).slice(-10)));
-    }
-
-    const results = (data.results || []).filter(r => text(r.properties?.['Patient Name']));
+    const results = searchCloudPatients(await listCloudPatients(), q, 25).filter(r => r.name);
     if (!results.length) return { statusCode: 200, body: JSON.stringify({ matches: [], patient: null }) };
 
     // Return EVERY match so the desk can pick the right person when names
     // collide (e.g. two "Amaris"). Sorted by name for a stable chooser.
-    const matches = results.map(matchRow).sort((a, b) => a.name.localeCompare(b.name));
+    const matches = results.map(p => ({ id:p.id, name:p.name, ctl:p.bhwPatientId, dob:p.dob || '', phone:p.phone || '' })).sort((a, b) => a.name.localeCompare(b.name));
 
     // Exactly one match -> include full detail, so single-hit search is unchanged.
     if (results.length === 1) {
-      const patient = shapePatient(results[0]);
-      const requests = await fetchRequests(results[0].id);
+      const patient = results[0];
+      const requests = patient.notionPageId ? await fetchRequests(patient.notionPageId) : [];
       return {
         statusCode: 200,
         headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },

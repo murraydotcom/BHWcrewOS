@@ -1,6 +1,6 @@
 // netlify/functions/console-data.js
-// Care Console v1 — wired to Notion.
-// GET  ?mode=patients            -> roster from Patients Master List
+// Care Console v1 — Cloud patient roster plus transitional Notion content.
+// GET  ?mode=patients            -> roster from Google Cloud
 // GET  ?mode=plan&pid=<id>       -> care plan text for a patient (via Care Plans relation)
 // GET  ?mode=inbox               -> triage queue items (provider lens)
 // POST {action:'publishweek', pageId, week, title, body}   -> appends week to patient's page
@@ -8,7 +8,7 @@
 // POST {action:'publishblueprint', pageId, domain, rec, target, provider} -> appends Blueprint recommendation callout
 // POST {action:'publishcareplan', pageId, program, plan, fileName, provider} -> appends a program's 12-week care plan
 // POST {action:'start'|'done', id}                          -> queue status (same as front desk)
-// Env: NOTION_TOKEN, MASTER_DB_ID, QUEUE_DB_ID, DASH_KEY
+// Env: RCM_CLOUD_API_URL, CREWHQ_CLOUD_TOKEN_SECRET, NOTION_TOKEN, QUEUE_DB_ID, DASH_KEY
 
 const NOTION = 'https://api.notion.com/v1';
 const H = () => ({
@@ -23,6 +23,7 @@ const pageIdFromUrl = u => {
   const m = String(u || '').replace(/-/g, '').match(/([0-9a-f]{32})/i);
   return m ? m[1] : null;
 };
+const { listCloudPatients, findCloudPatient } = require('./lib/cloud-patients');
 
 exports.handler = async (event) => {
   try {
@@ -115,36 +116,18 @@ exports.handler = async (event) => {
 
     // ---------------- GET modes ----------------
     if (qs.mode === 'patients') {
-      const res = await fetch(`${NOTION}/databases/${process.env.MASTER_DB_ID}/query`, {
-        method: 'POST', headers: H(),
-        body: JSON.stringify({ page_size: 100, sorts: [{ property: 'Patient Name', direction: 'ascending' }] }),
-      });
-      const d = await res.json();
-      const patients = (d.results || []).map(r => {
-        const P = r.properties || {};
-        return {
-          id: r.id,
-          name: P['Patient Name']?.title?.[0]?.plain_text || '',
-          ctl: text(P['Patient Ctl No']),
-          program: P['Program Enrollment']?.multi_select?.map(m => m.name).join(', ') ||
-                   P['APCM/CCM/RPM/CharmEd Status']?.select?.name || '',
-          payer: P['Payer']?.select?.name || '',
-          pageUrl: P['Patient Page']?.url || '',
-          pageId: pageIdFromUrl(P['Patient Page']?.url),
-          planIds: (P['Care Plans']?.relation || []).map(x => x.id),
-        };
-      }).filter(p => p.name);
+      const patients = (await listCloudPatients()).filter(p => p.name).map(p => ({
+        ...p, pageId: pageIdFromUrl(p.pageUrl),
+        planIds: p.sourceRelations?.carePlans || [],
+      }));
       return J(200, { patients });
     }
 
     if (qs.mode === 'plan') {
       if (!qs.pid) return J(400, { error: 'pid required' });
-      // fetch the master row to get Care Plans relation
-      const pres = await fetch(`${NOTION}/pages/${qs.pid}`, { headers: H() });
-      const pd = await pres.json();
-      const rel = pd.properties?.['Care Plans']?.relation || [];
-      if (!rel.length) return J(200, { plan: null, note: 'No care plan linked on the Master List for this patient.' });
-      const planId = rel[0].id;
+      const patient = await findCloudPatient(qs.pid);
+      const planId = patient?.sourceRelations?.carePlans?.[0] || '';
+      if (!planId) return J(200, { plan: null, note: 'No care plan linked for this patient.' });
       // pull the plan page's blocks as readable text
       let cursor = null, lines = [], title = '';
       const tres = await fetch(`${NOTION}/pages/${planId}`, { headers: H() });

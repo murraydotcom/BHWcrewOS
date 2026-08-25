@@ -63,6 +63,8 @@ a{color:inherit;text-decoration:none}
 .note{background:#fdf7ef;border:1px solid #ecd9c1;border-left:4px solid var(--bronze);border-radius:10px;padding:12px 14px;font-size:12px;color:#6b5233;margin-bottom:18px}
 :root[data-theme="dark"] .note{background:#241d15;color:#d8c3a4;border-color:#4a3a26}
 .note b{color:#5a4223}:root[data-theme="dark"] .note b{color:#e9d6ba}
+.alert-note{display:none;background:#faece9;border-color:#e6b7ad;color:#7f3026}.alert-note b{color:#7f3026}
+:root[data-theme="dark"] .alert-note{background:#2e1d1a;color:#efb5ab;border-color:#67382f}:root[data-theme="dark"] .alert-note b{color:#ffd0c8}
 .mini{font-size:11px;color:var(--ink-soft)}
 .empty{padding:26px;text-align:center;color:var(--ink-soft);font-size:12.5px}
 .drop{border:2px dashed var(--line);border-radius:12px;padding:26px;text-align:center;color:var(--ink-soft);transition:border-color .15s,background .15s;cursor:pointer}
@@ -126,7 +128,7 @@ a{color:inherit;text-decoration:none}
       <a class="nav-item" href="claims.html"><span class="ic">▦</span> Claims Tracker</a>
       <a class="nav-item" href="../index.html"><span class="ic">▤</span> RCM Command Center</a>
     </nav>
-    <div class="sidebar-foot">TCM worklist from the CRISP ENS panel export.<br>Runs in your browser — nothing is uploaded.</div>
+    <div class="sidebar-foot">TCM worklist from the CRISP ENS panel export.<br>Retained through the authenticated BHW cloud service.</div>
   </aside>
   <div class="scrim" id="navScrim"></div>
 
@@ -152,8 +154,8 @@ a{color:inherit;text-decoration:none}
       </div>
 
       <div class="note">
-        <b>Runs entirely in your browser.</b> The uploaded file is parsed locally and never leaves this page — nothing is
-        uploaded or stored. Decision support only: TCM requires an eligible discharge to a community setting, an
+        <b>Secure retained workflow.</b> The CRISP file is parsed locally, then retained through the authenticated BHW
+        cloud service. Desktop alerts contain counts only—not patient details. Decision support only: TCM requires an eligible discharge to a community setting, an
         interactive contact within 2 business days, and the face-to-face visit within the window. The 2-business-day
         clock ignores federal holidays — verify against the calendar. Confirm eligibility before billing.
       </div>
@@ -163,15 +165,18 @@ a{color:inherit;text-decoration:none}
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
             <button class="btn btn-primary btn-sm" id="fileBtn">Choose file…</button>
             <input type="file" id="fileInput" accept=".xlsx,.csv" hidden>
+            <button class="btn btn-ghost btn-sm" id="alertsBtn">Enable alerts</button>
             <button class="btn btn-ghost btn-sm" id="csvBtn" disabled>Export CSV</button>
-            <button class="btn btn-ghost btn-sm" id="clearBtn" disabled>Clear</button>
+            <button class="btn btn-ghost btn-sm" id="clearBtn" disabled>Clear view</button>
           </div>
         </div>
         <div class="drop" id="drop">
           <div class="big">Drop the <code>PanelDetails….xlsx</code> here, or click to choose</div>
-          <div class="mini" style="margin-top:5px">Accepts the CRISP ENS panel export (<b>.xlsx</b>) or a <b>.csv</b> with the same columns. Each upload replaces the current list.</div>
+          <div class="mini" style="margin-top:5px">Accepts the CRISP ENS panel export (<b>.xlsx</b>) or a <b>.csv</b> with the same columns. Uploads merge into retained history; repeat events are updated instead of duplicated.</div>
+          <details class="mini" style="margin-top:8px;text-align:left"><summary style="cursor:pointer;font-weight:700">Columns required for upload</summary><div style="margin-top:6px"><b>Required headers:</b> First Name, Last Name, Date of Birth, Encounter Type, Admit Date / Time, Discharge Date / Time, Discharge Disposition, Facility.<br><b>Also retained when present:</b> Gender, Patient Complaint (chief complaint), Admit Source, Facility Type, Location, Notification Type, Past Emergency Visits, Past Inpatient Visits, Primary Diagnosis Codes, Primary Diagnosis Description, Risk Score 1, Risk Score 2.</div></details>
         </div>
-        <div class="mini" id="parseNote" style="margin-top:8px"></div>
+        <div class="mini" id="cloudStatus" style="margin-top:8px">Checking secure retention…</div>
+        <div class="mini" id="parseNote" style="margin-top:5px"></div>
         <div class="mini" id="rosterBar" style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:10px">
           <b>Panel roster:</b>
           <span id="rosterStatus">not loaded — showing all discharges</span>
@@ -182,6 +187,7 @@ a{color:inherit;text-decoration:none}
         </div>
       </div>
 
+      <div class="note alert-note" id="alertBanner"></div>
       <div id="statsWrap"></div>
       <div class="filters" id="filters" style="display:none">
         <span class="mini" style="font-weight:700">Show:</span>
@@ -202,12 +208,15 @@ a{color:inherit;text-decoration:none}
 <script type="module">
 import { buildWorklist, normalizeRoster } from "../engine/tcm-parse.mjs";
 import { readSpreadsheet } from "../engine/xlsx-lite.mjs";
+import { createEncounterCloudClient } from "./cloud-queue.mjs";
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 let RESULT = { items: [], stats: {}, meta: {} }, FILTER = "tcm";
 let RAW_ROWS = [], ROSTER = [], PANEL_ONLY = false;
+let CLOUD = null;
 const ROSTER_KEY = "bhw-tcm-roster";
+const ALERT_KEY_PREFIX = "bhw-tcm-alert";
 
 (function theme() {
   const KEY = "bhw-theme";
@@ -234,11 +243,23 @@ async function loadFile(file) {
     const { rows, sheet } = await readSpreadsheet(file);
     if (!rows.length) { $("parseNote").textContent = "No rows found in that file — is it the Panel Details export?"; return; }
     RAW_ROWS = rows; LAST_FILE = { name: file.name, sheet };
-    rebuild();
+    if (CLOUD) {
+      $("parseNote").textContent = `Retaining ${rows.length} CRISP event rows…`;
+      const saved = await CLOUD.importTcmEvents(rows, { source: "CrewHQ Panel and Discharges", sourceFile: file.name, manual: false });
+      RAW_ROWS = await CLOUD.listTcmEvents();
+      LAST_FILE = { name: "retained hospital history", sheet: "BHW Cloud" };
+      rebuild();
+      $("parseNote").innerHTML = `Retained <b>${saved.retained}</b> events from “${esc(file.name)}” · ` +
+        `<b>${saved.created}</b> new · <b>${saved.updated}</b> updated · ${RAW_ROWS.length} retained events loaded.`;
+      notifyNewEvents(saved.created);
+    } else {
+      rebuild();
+      $("parseNote").innerHTML = `<b>Not retained:</b> secure cloud storage is unavailable. This file is visible only for the current browser session.`;
+    }
     $("clearBtn").disabled = false; $("csvBtn").disabled = false;
   } catch (e) {
-    $("parseNote").innerHTML = `Couldn't read that file: ${esc(e.message)}. ` +
-      `If your browser can't open .xlsx here, re-save it as <b>.csv</b> and drop that instead.`;
+    $("parseNote").innerHTML = `Couldn't import that file: ${esc(e.message)}. ` +
+      `Confirm that it is the CRISP Panel Details export with the required columns.`;
   }
 }
 
@@ -249,6 +270,40 @@ function rebuild() {
   const s = RESULT.stats;
   const onPanel = s.rosterLoaded ? ` · <b>${s.onPanel}</b> on panel` : "";
   $("parseNote").innerHTML = `Loaded <b>${esc(LAST_FILE.name)}</b>${LAST_FILE.sheet ? ` · sheet “${esc(LAST_FILE.sheet)}”` : ""} · ${s.rows} people${onPanel} · as of ${esc(RESULT.meta.today)}.`;
+}
+
+async function initCloud() {
+  try {
+    CLOUD = await createEncounterCloudClient();
+    if (!CLOUD) {
+      $("cloudStatus").innerHTML = `<b>Retention unavailable:</b> the BHW cloud API is not configured.`;
+      return;
+    }
+    $("cloudStatus").innerHTML = `<b>Secure retention connected.</b> Loading retained hospital events…`;
+    await loadRetainedEvents();
+    window.setInterval(() => loadRetainedEvents(true), 5 * 60 * 1000);
+  } catch (error) {
+    CLOUD = null;
+    $("cloudStatus").innerHTML = `<b>Retention unavailable:</b> ${esc(error.message)}`;
+  }
+}
+
+async function loadRetainedEvents(silent = false) {
+  if (!CLOUD) return;
+  try {
+    const rows = await CLOUD.listTcmEvents();
+    $("cloudStatus").innerHTML = `<b>Secure retention connected.</b> ${rows.length} hospital events retained.`;
+    if (!rows.length) {
+      if (!silent) $("parseNote").textContent = "No retained hospital events yet. Upload the first CRISP Panel Details file.";
+      return;
+    }
+    RAW_ROWS = rows;
+    LAST_FILE = { name: "retained hospital history", sheet: "BHW Cloud" };
+    rebuild();
+    $("clearBtn").disabled = false; $("csvBtn").disabled = false;
+  } catch (error) {
+    if (!silent) $("parseNote").innerHTML = `<b>Could not load retained events:</b> ${esc(error.message)}`;
+  }
 }
 
 // ---- panel roster (optional, remembered locally) ----------------------------
@@ -288,8 +343,10 @@ function render() {
   const s = RESULT.stats;
   $("countPill").textContent = s.rows ? `${s.tcm} TCM · ${s.callsDueToday + s.callsOverdue} calls to act` : "no file loaded";
   renderStats(s);
+  renderAlertBanner(s);
   $("filters").style.display = s.rows ? "flex" : "none";
   renderTable();
+  notifyUrgent(s);
 }
 
 function renderStats(s) {
@@ -306,6 +363,44 @@ function renderStats(s) {
   );
   $("statsWrap").innerHTML = `<div class="stats">${tiles.map((t) =>
     `<div class="tile ${t.cls}"><div class="k">${esc(t.k)}</div><div class="v">${t.v}</div><div class="s">${esc(t.sub)}</div></div>`).join("")}</div>`;
+}
+
+function renderAlertBanner(s) {
+  const overdue = Number(s.callsOverdue) || 0;
+  const due = Number(s.callsDueToday) || 0;
+  const banner = $("alertBanner");
+  if (!overdue && !due) { banner.style.display = "none"; banner.textContent = ""; return; }
+  const parts = [
+    overdue ? `<b>${overdue}</b> TCM contact${overdue === 1 ? " is" : "s are"} overdue` : "",
+    due ? `<b>${due}</b> ${due === 1 ? "is" : "are"} due today` : "",
+  ].filter(Boolean);
+  banner.innerHTML = `<b>TCM action required:</b> ${parts.join("; ")}. Review the discharge rows below and document completed outreach in the clinical record.`;
+  banner.style.display = "block";
+}
+
+function updateAlertsButton() {
+  if (!("Notification" in window)) { $("alertsBtn").textContent = "Desktop alerts unavailable"; $("alertsBtn").disabled = true; return; }
+  $("alertsBtn").textContent = Notification.permission === "granted" ? "Alerts enabled" : Notification.permission === "denied" ? "Alerts blocked" : "Enable alerts";
+}
+async function enableAlerts() {
+  if (!("Notification" in window)) return;
+  const permission = await Notification.requestPermission(); updateAlertsButton();
+  if (permission === "granted") notifyUrgent(RESULT.stats, true);
+}
+function sendDesktopAlert(title, body) {
+  if (("Notification" in window) && Notification.permission === "granted") new Notification(title, { body, tag: "bhw-tcm-alert", renotify: true });
+}
+function notifyUrgent(s, force = false) {
+  const overdue = Number(s?.callsOverdue) || 0, due = Number(s?.callsDueToday) || 0;
+  if ((!overdue && !due) || !("Notification" in window) || Notification.permission !== "granted") return;
+  const day = RESULT.meta?.today || new Date().toISOString().slice(0, 10), marker = `${ALERT_KEY_PREFIX}:${day}:${overdue}:${due}`;
+  try { if (!force && localStorage.getItem(marker)) return; localStorage.setItem(marker, new Date().toISOString()); }
+  catch (e) { if (!force) return; }
+  sendDesktopAlert("TCM follow-up alert", `${overdue} contact${overdue === 1 ? "" : "s"} overdue; ${due} due today. Open the BHW TCM worklist.`);
+}
+function notifyNewEvents(created) {
+  const count = Number(created) || 0;
+  if (count) sendDesktopAlert("New hospital events retained", `${count} new event${count === 1 ? " was" : "s were"} added. Open the BHW TCM worklist for details.`);
 }
 
 function visible() {
@@ -343,7 +438,7 @@ function renderTable() {
   $("tableWrap").innerHTML = `<div class="tblwrap"><table class="tbl">
     <thead><tr>
       <th>Patient</th>${showP ? "<th>Panel</th>" : ""}<th>Status</th><th>Discharge / Admit</th><th>Day</th>
-      <th>Call by</th><th>Visit window</th><th>Billable</th><th>Facility</th><th>Primary Dx</th><th>Notes</th>
+      <th>Call by</th><th>Visit window</th><th>Billable</th><th>Facility</th><th>Primary Dx</th><th>Chief Complaint</th><th>Notes</th>
     </tr></thead>
     <tbody>${rows.map((it) => {
       const dl = it.dl;
@@ -360,6 +455,7 @@ function renderTable() {
         <td>${dl ? esc(dl.billable) : "—"}</td>
         <td>${esc(it.facility || "—")}</td>
         <td>${esc(it.dxCodes || "")}${it.dxDesc ? `<br><span class="mini">${esc(it.dxDesc)}</span>` : ""}</td>
+        <td>${esc(it.complaint || "—")}</td>
         <td>${it.flags && it.flags.length ? `<span class="flags">${esc(it.flags.join("; "))}</span>` : (it.disposition ? `<span class="mini">${esc(it.disposition)}</span>` : "")}</td>
       </tr>`;
     }).join("")}</tbody></table></div>`;
@@ -370,7 +466,7 @@ function fmtDate(iso) { return String(iso || "").slice(0, 10); }
 function toCSV() {
   const withPanel = !!RESULT.stats.rosterLoaded;
   const cols = ["name", "dob", "gender", "category", "encounterType", "facility", "dischargeAt", "disposition",
-    "daysSince", "callBy", "callState", "visitBy99496", "visitBy99495", "billable", "dxCodes", "dxDesc", "flags"]
+    "daysSince", "callBy", "callState", "visitBy99496", "visitBy99495", "billable", "dxCodes", "dxDesc", "complaint", "flags"]
     .concat(withPanel ? ["onPanel", "panelMatch", "mrn", "pcp", "program"] : []);
   const q = (v) => `"${String(v == null ? "" : v).replace(/"/g, '""')}"`;
   const dlKeys = ["daysSince", "callBy", "callState", "visitBy99496", "visitBy99495", "billable"];
@@ -392,6 +488,7 @@ function toCSV() {
 $("fileBtn").onclick = () => $("fileInput").click();
 $("drop").onclick = () => $("fileInput").click();
 $("fileInput").addEventListener("change", (e) => loadFile(e.target.files[0]));
+$("alertsBtn").onclick = enableAlerts;
 $("csvBtn").onclick = toCSV;
 $("rosterBtn").onclick = () => $("rosterInput").click();
 $("rosterInput").addEventListener("change", (e) => loadRoster(e.target.files[0]));
@@ -399,7 +496,8 @@ $("rosterForget").onclick = forgetRoster;
 $("clearBtn").onclick = () => {
   RESULT = { items: [], stats: {}, meta: {} }; RAW_ROWS = []; LAST_FILE = null;
   $("statsWrap").innerHTML = ""; $("tableWrap").innerHTML = ""; $("filters").style.display = "none";
-  $("countPill").textContent = "no file loaded"; $("parseNote").textContent = "";
+  $("alertBanner").style.display = "none";
+  $("countPill").textContent = "view cleared"; $("parseNote").textContent = "Retained events remain in secure storage and will reload on the next visit.";
   $("csvBtn").disabled = true; $("clearBtn").disabled = true; $("fileInput").value = "";
 }; // the panel roster is kept (use “Forget” to remove it)
 
@@ -422,6 +520,8 @@ $("filters").addEventListener("click", (e) => {
 });
 
 initRoster();
+updateAlertsButton();
+void initCloud();
 </script>
 </body>
 </html>

@@ -9,12 +9,11 @@
 //   booking-create (requires Can Schedule; enforces room rules + conflicts)
 
 const { DB, DIVISIONS, httpJson, queryDb, createPage, updatePage, P, W, getSession, visibleDivisions, json } = require("./_lib");
+const { cloudRequest, listCloudPatients } = require("./lib/cloud-patients");
 
-// Authoritative patient list = the "🧑🏽‍⚕️ Patients Master List" (front-desk
-// MASTER_DB_ID). New patients are written here AND mirrored into the lean
-// Patient Index (DB.patients) so crewOS ops-data + the "Patient" relations
-// (referrals, handoffs, AWV, assessments, programs) — which still target the
-// Index — keep working. Literal is the confirmed id, used only if env is unset.
+// Google Cloud is the authoritative patient list. During migration, new
+// registrations are also mirrored to the Notion master and lean Patient Index
+// so existing operational relations continue to work.
 const MASTER_DB = process.env.MASTER_DB_ID || "2cf580758d3080f0825de4bbfb6c7528";
 
 function sendEmail(to, subject, html) {
@@ -370,7 +369,7 @@ exports.handler = async (event) => {
         };
         // Dedup against BOTH lists (property names differ per DB), so we never
         // create a duplicate in either the Master List or the Index.
-        const [idxPages, masterPages] = await Promise.all([queryDb(DB.patients), queryDb(MASTER_DB)]);
+        const [idxPages, cloudPatients] = await Promise.all([queryDb(DB.patients), listCloudPatients(session)]);
         const existingIdx = idxPages.map((pg) => ({
           id: pg.id,
           name: P.title(pg.properties["Patient Name"]),
@@ -378,12 +377,12 @@ exports.handler = async (event) => {
           dob: P.date(pg.properties["DOB"]),
           chart: P.text(pg.properties["CharmHealth Chart #"]),
         }));
-        const existingMaster = masterPages.map((pg) => ({
-          id: pg.id,
-          name: P.title(pg.properties["Patient Name"]),
-          bhwId: P.text(pg.properties["Patient Ctl No"]),
-          dob: P.date(pg.properties["DOB"]),
-          chart: P.text(pg.properties["MRN"]),
+        const existingMaster = cloudPatients.map((patient) => ({
+          id: patient.bhwPatientId,
+          name: patient.name,
+          bhwId: patient.bhwPatientId,
+          dob: patient.dob,
+          chart: patient.mrn,
         }));
         const n = norm(name);
         const isDupe = (p) => {
@@ -410,9 +409,31 @@ exports.handler = async (event) => {
         }, 0);
         const ctlNo = "BHW" + String(maxNum + 1).padStart(4, "0");
         const mbi = b.mbi ? String(b.mbi).replace(/[^A-Za-z0-9]/g, "").toUpperCase() : "";
+        const nameParts = name.split(/\s+/).filter(Boolean);
+        const cloudPatient = {
+          bhwPatientId: ctlNo,
+          legalFirstName: nameParts.slice(0, -1).join(" ") || nameParts[0],
+          legalLastName: nameParts.length > 1 ? nameParts.at(-1) : "Unknown",
+          dateOfBirth: b.dob,
+          email: b.email || "",
+          guardianEmail: b.guardianEmail || "",
+          patientStatus: "active",
+          primaryPayer: b.insurance || "",
+          insurancePlanName: b.insurance || "",
+          memberId: b.memberId || "",
+          medicareMbi: mbi,
+          mrn: b.chart || "",
+          programEnrollment: Array.isArray(b.programs) ? b.programs : [],
+          source: { system: "crewhq-registration", importedAt: new Date().toISOString() },
+        };
+        // Write the authoritative Cloud record first. Transitional Notion rows
+        // below keep existing operational relations working during migration.
+        await cloudRequest(`/v1/patients/${encodeURIComponent(ctlNo)}`, {
+          actor: session, method: "PUT", body: cloudPatient,
+        });
 
-        // 1) Authoritative record in the Patients Master List. Insurance goes to
-        //    the free-text Insurance Plan Name, never the controlled Payer select.
+        // 1) Transitional master-row mirror. Insurance goes to the free-text
+        //    Insurance Plan Name, never the controlled Payer select.
         const masterProps = {
           "Patient Name": W.title(name),
           "Patient Ctl No": W.text(ctlNo),
@@ -425,6 +446,10 @@ exports.handler = async (event) => {
         if (b.email) masterProps["Email"] = { email: b.email };
         if (b.guardianEmail) masterProps["Guardian Email"] = { email: b.guardianEmail };
         const master = await createPage(MASTER_DB, masterProps);
+        await cloudRequest(`/v1/patients/${encodeURIComponent(ctlNo)}`, {
+          actor: session, method: "PUT",
+          body: { ...cloudPatient, source: { ...cloudPatient.source, recordId: master.id, recordUrl: master.url || "" } },
+        });
 
         // 2) Mirror into the Patient Index so crewOS ops-data + the "Patient"
         //    relations keep working. crewOS references the Index id, so that's

@@ -270,6 +270,26 @@ input:focus,select:focus,button:focus-visible{outline:2.5px solid var(--seaglass
     </select>
     <label class="f" for="pEnroll">Care plan enrollment date</label>
     <input type="date" id="pEnroll">
+    <label class="check" style="margin-top:14px"><input type="checkbox" id="pHospital"> This patient needs to be added to the shared Hospital Discharges list</label>
+    <div id="pHospitalFields" hidden style="border-left:3px solid var(--blue);padding-left:12px;margin-top:10px">
+      <div class="gridd">
+        <div><label class="f req" for="pFirst">First name</label><input id="pFirst" autocomplete="off"></div>
+        <div><label class="f req" for="pLast">Last name</label><input id="pLast" autocomplete="off"></div>
+      </div>
+      <label class="f req" for="pDob">Date of birth</label><input type="date" id="pDob">
+      <label class="f req" for="pHospType">Hospital event</label>
+      <select id="pHospType"><option value="Inpatient">Inpatient discharge</option><option value="Observation">Observation discharge</option><option value="Emergency">ED visit</option><option value="Inpatient-admit">Inpatient admission (still admitted)</option></select>
+      <div class="gridd">
+        <div><label class="f" for="pAdmit">Admit date</label><input type="date" id="pAdmit"></div>
+        <div><label class="f req" for="pDischarge">Discharge / event date</label><input type="date" id="pDischarge"></div>
+      </div>
+      <label class="f req" for="pFacility">Facility</label><input id="pFacility" placeholder="Hospital or facility">
+      <label class="f" for="pDisposition">Discharge disposition</label><input id="pDisposition" placeholder="Home">
+      <label class="f" for="pComplaint">Chief complaint</label><input id="pComplaint" placeholder="Reason for hospital visit">
+      <label class="f" for="pDx">Diagnosis codes</label><input id="pDx" placeholder="I10; E11.9">
+      <label class="f" for="pDxDesc">Diagnosis description</label><input id="pDxDesc" placeholder="Optional diagnosis description">
+      <p class="muted" style="margin-top:6px">Saving will create the Panel patient, the utilization event, and the retained Hospital Visits row in one workflow.</p>
+    </div>
     <button class="btn" id="addPatient">Add patient</button>
   </div>
   <div class="card">
@@ -390,6 +410,7 @@ const CACHE_KEY='bhw-panel-cache', BENCH_KEY='bhw-panel-bench', KEY_KEY='bhw-pan
 let state={patients:[],events:[]};
 let bench={admit:280,ed:650};
 let online=false;
+let CLOUD=null;
 
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -414,12 +435,66 @@ async function refresh(){
     setPill('offline — cached',true);
     console.warn('Sync failed:',err.message);
   }
+  if(CLOUD){
+    try{ mergeCloudRows(await CLOUD.listTcmEvents()); setPill(online?'synced · Notion + Hospital feed':'Notion offline · Hospital feed connected',!online); }
+    catch(error){ console.warn('Hospital feed sync failed:',error.message); }
+  }
   renderAll();
 }
 function setPill(t,off){ const p=$('storagePill'); p.textContent=t; p.classList.toggle('off',!!off); }
 function guardOnline(){ if(!online){ alert("Can't reach Notion right now — check your connection, the access key in Data & Settings, or the Netlify function setup, then Refresh."); return false; } return true; }
 async function busy(btn,fn){ const t=btn.textContent; btn.disabled=true; btn.textContent='Saving…';
   try{ await fn(); }catch(err){ alert('Save failed: '+err.message); } btn.disabled=false; btn.textContent=t; }
+
+const truthy=v=>/^(true|yes|1)$/i.test(String(v||''));
+function cloudType(row){
+  const encounter=String(row['Encounter Type']||'').toLowerCase();
+  if(/emergency|\bed\b/.test(encounter))return'ed';
+  if(/urgent/.test(encounter))return'uc';
+  if(/observation/.test(encounter))return'obs';
+  return'admit';
+}
+function cloudPatientLabel(row){
+  return row['Patient Label']||[row['Last Name'],row['First Name']].filter(Boolean).join(', ')||row['BHW Patient ID']||'Unknown patient';
+}
+function mergeCloudRows(rows){
+  const patientByLabel=new Map(state.patients.map(p=>[String(p.label||'').trim().toLowerCase(),p]));
+  const eventKeys=new Set(state.events.map(ev=>{
+    const patient=state.patients.find(p=>p.id===ev.patientId);
+    return [patient?.label,ev.type,ev.date,ev.dateTo||ev.date,ev.facility].map(v=>String(v||'').trim().toLowerCase()).join('|');
+  }));
+  rows.forEach((row,index)=>{
+    const label=cloudPatientLabel(row),labelKey=label.toLowerCase();
+    let patient=patientByLabel.get(labelKey);
+    if(!patient){
+      patient={id:`cloud-patient:${row['BHW Patient ID']||row['BHW Event ID']||index}`,label,payer:'Other',program:'none',enrollDate:null,hedis:{},cloudOnly:true};
+      state.patients.push(patient);patientByLabel.set(labelKey,patient);
+    }
+    const type=cloudType(row),admit=String(row['Admit Date / Time']||'').slice(0,10),discharge=String(row['Discharge Date / Time']||'').slice(0,10);
+    const date=admit||discharge,dateTo=discharge||admit,facility=row.Facility||row.Location||'';
+    const key=[label,type,date,dateTo,facility].map(v=>String(v||'').trim().toLowerCase()).join('|');
+    if(!date||eventKeys.has(key))return;
+    eventKeys.add(key);
+    state.events.push({id:`cloud:${row['BHW Event ID']||row['Source Event ID']||index}`,patientId:patient.id,type,date,dateTo,facility,
+      reason:row['Patient Complaint']||row['Primary Diagnosis Description']||row['Primary Diagnosis Codes']||'',
+      discharge:truthy(row['Discharge Info in Chart']),outreach1:row['Outreach 1']||null,outreach2:row['Outreach 2']||null,outreach3:row['Outreach 3']||null,
+      appointment:row['Follow-Up Appointment']||'',historical:truthy(row['Historical Backfill']),cloudOnly:true,sourceRow:row});
+  });
+}
+function panelEventToCloudRow(patient,payload,sourceEventId,extra={}){
+  const encounter=payload.type==='ed'?'Emergency':payload.type==='uc'?'Urgent Care':payload.type==='obs'?'Observation':'Inpatient';
+  return {'Patient Label':patient.label,'BHW Patient ID':patient.bhwPatientId||'','Source Event ID':sourceEventId||'',
+    'Source System':'CrewHQ Panel and Discharges','Encounter Type':encounter,'Admit Date / Time':payload.date||'',
+    'Discharge Date / Time':payload.type==='ed'||payload.type==='uc'||payload.type==='obs'||payload.discharge?(payload.dateTo||payload.date||''):'',
+    'Discharge Disposition':extra.disposition||'',Facility:payload.facility||'','Patient Complaint':extra.complaint||payload.reason||'',
+    'Primary Diagnosis Codes':extra.dxCodes||'','Primary Diagnosis Description':extra.dxDesc||'',
+    'Discharge Info in Chart':payload.discharge?'true':'false','Outreach 1':payload.outreach1||'','Outreach 2':payload.outreach2||'',
+    'Outreach 3':payload.outreach3||'','Follow-Up Appointment':payload.appointment||'','Historical Backfill':payload.historical?'true':'false'};
+}
+async function initCloud(){
+  try{const module=await import('./provider/cloud-queue.mjs');CLOUD=await module.createEncounterCloudClient();}
+  catch(error){CLOUD=null;console.warn('Shared hospital feed unavailable:',error.message);}
+}
 
 /* ============ HEDIS measures ============ */
 const MEASURES=[
@@ -539,7 +614,8 @@ function renderOverview(){
   $('hedisDetail').textContent=elig?`${met} of ${elig} measure-gaps closed`:'No measures marked yet';
 
   $('enrolledCt').textContent=enrolled.length;
-  $('panelCt').textContent=`of ${state.patients.length} tracked patients`;
+  const panelCount=state.patients.filter(p=>!p.cloudOnly).length,sharedCount=state.patients.length-panelCount;
+  $('panelCt').textContent=`of ${panelCount} panel patients${sharedCount?` · ${sharedCount} from hospital feed`:''}`;
   const allIds=new Set(state.patients.map(p=>p.id));
   const evCt=countEvents(allIds,['ed','uc','admit','readmit','obs'],start,end);
   const adCt=countEvents(allIds,['admit','readmit'],start,end);
@@ -557,10 +633,10 @@ function renderPatients(){
     <div class="row tap" data-open="${p.id}">
       <div class="grow"><div class="t">${esc(p.label)}</div>
       <div class="s">${esc(p.payer)}${p.enrollDate?' · enrolled '+p.enrollDate:''}</div></div>
-      ${programChip(p.program)}
+      ${p.cloudOnly?'<span class="chip obs">Hospital feed</span>':programChip(p.program)}
     </div>`).join('')
     :'<div class="empty">No patients yet. Add your CCM panel above — include a few non-enrolled patients as a comparison group.</div>';
-  $('ePatient').innerHTML=state.patients.slice().sort((a,b)=>a.label.localeCompare(b.label))
+  $('ePatient').innerHTML=state.patients.filter(p=>!p.cloudOnly).sort((a,b)=>a.label.localeCompare(b.label))
     .map(p=>`<option value="${p.id}">${esc(p.label)} — ${esc(p.payer)}</option>`).join('');
 }
 
@@ -648,6 +724,12 @@ function openSheet(id){
     </div>`;
   $('sheetBg').classList.add('open'); $('sheet').classList.add('open');
 
+  if(p.cloudOnly){
+    const card=$('dSave')?.closest('.card');
+    if(card)card.innerHTML='<div class="eyebrow">Shared hospital feed</div><p class="muted">This patient came from the retained Hospital Visits feed. Add them as a Panel patient to manage payer, program, enrollment, and HEDIS fields.</p>';
+    return;
+  }
+
   $('dSave').onclick=e=>{ if(!guardOnline())return;
     busy(e.target,async()=>{
       const program=$('dProgram').value, enrollDate=$('dEnroll').value||null;
@@ -707,6 +789,20 @@ function openEventSheet(id){
     </div>`;
   $('sheetBg').classList.add('open'); $('sheet').classList.add('open');
 
+  if(ev.cloudOnly){
+    $('xDelete').disabled=true;$('xDelete').textContent='Managed in shared hospital feed';
+    $('xSave').onclick=e=>busy(e.target,async()=>{
+      if(!CLOUD)throw new Error('Shared hospital feed is unavailable');
+      const upd={discharge:$('xDischarge').checked,outreach1:$('xOut1').value||null,outreach2:$('xOut2').value||null,
+        outreach3:$('xOut3').value||null,appointment:$('xAppt').value.trim()};
+      const row={...ev.sourceRow,'Discharge Info in Chart':upd.discharge?'true':'false','Outreach 1':upd.outreach1||'',
+        'Outreach 2':upd.outreach2||'','Outreach 3':upd.outreach3||'','Follow-Up Appointment':upd.appointment};
+      await CLOUD.importTcmEvents([row],{source:'CrewHQ Panel and Discharges',manual:true});
+      Object.assign(ev,upd,{sourceRow:row});renderAll();closeSheet();
+    });
+    return;
+  }
+
   $('xSave').onclick=e=>{ if(!guardOnline())return;
     const out1=$('xOut1').value;
     if(!out1&&!ev.historical){ alert('The first outreach date is required.'); return; }
@@ -716,6 +812,10 @@ function openEventSheet(id){
         appointment:$('xAppt').value.trim()};
       await api('updateEvent',upd);
       Object.assign(ev,upd);
+      if(CLOUD&&p){
+        try{await CLOUD.importTcmEvents([panelEventToCloudRow(p,ev,id)],{source:'CrewHQ Panel and Discharges',sourceFile:'Panel follow-up update',manual:true});}
+        catch(error){alert('Follow-up was saved in Notion, but the shared Hospital Visits feed could not be updated: '+error.message);}
+      }
       renderAll(); closeSheet();
     });
   };
@@ -733,17 +833,43 @@ function openEventSheet(id){
 $('addPatient').onclick=e=>{
   const label=$('pLabel').value.trim();
   if(!label){ alert('Enter an MRN or initials'); return; }
+  const addHospital=$('pHospital').checked;
+  const first=$('pFirst').value.trim(),last=$('pLast').value.trim(),dob=$('pDob').value;
+  const hospitalType=$('pHospType').value,eventDate=$('pDischarge').value,facility=$('pFacility').value.trim();
+  if(addHospital){
+    const missing=[];if(!first)missing.push('First name');if(!last)missing.push('Last name');if(!dob)missing.push('Date of birth');if(!eventDate)missing.push('Event date');if(!facility)missing.push('Facility');
+    if(missing.length){alert('Required for the Hospital Discharges list: '+missing.join(', '));return;}
+    if(!CLOUD){alert('The shared Hospital Discharges feed is not connected. Sign in to CrewHQ again or check the cloud configuration, then retry.');return;}
+  }
   if(!guardOnline())return;
   busy(e.target,async()=>{
     const program=$('pProgram').value;
     const payload={label,payer:$('pPayer').value,program,
       enrollDate:program==='none'?null:($('pEnroll').value||null)};
     const res=await api('addPatient',payload);
-    state.patients.push({...payload,id:res.id,hedis:{}});
+    const patient={...payload,id:res.id,hedis:{}};state.patients.push(patient);
+    if(addHospital){
+      const stillAdmitted=hospitalType==='Inpatient-admit';
+      const type=hospitalType==='Emergency'?'ed':hospitalType==='Observation'?'obs':'admit';
+      const complaint=$('pComplaint').value.trim(),dxCodes=$('pDx').value.trim(),dxDesc=$('pDxDesc').value.trim();
+      const eventPayload={patientId:res.id,type,date:$('pAdmit').value||eventDate,dateTo:eventDate,facility,
+        reason:complaint||dxDesc||dxCodes||'Hospital event',discharge:!stillAdmitted,historical:false,
+        outreach1:null,outreach2:null,outreach3:null,appointment:''};
+      const eventRes=await api('addEvent',eventPayload);
+      state.events.push({...eventPayload,id:eventRes.id});
+      const row={...panelEventToCloudRow(patient,eventPayload,eventRes.id,{disposition:$('pDisposition').value.trim(),complaint,dxCodes,dxDesc}),
+        'First Name':first,'Last Name':last,'Date of Birth':dob,'Encounter Type':stillAdmitted?'Inpatient':hospitalType,
+        'Admit Date / Time':$('pAdmit').value||(stillAdmitted?eventDate:''),'Discharge Date / Time':stillAdmitted?'':eventDate};
+      try{await CLOUD.importTcmEvents([row],{source:'CrewHQ Panel and Discharges',sourceFile:'manual add patient',manual:true});}
+      catch(error){alert('The patient and Panel event were saved, but the shared Hospital Discharges row could not be retained: '+error.message);}
+    }
     $('pLabel').value=''; $('pEnroll').value='';
+    ['pFirst','pLast','pDob','pAdmit','pDischarge','pFacility','pDisposition','pComplaint','pDx','pDxDesc'].forEach(id=>$(id).value='');
+    $('pHospital').checked=false;$('pHospitalFields').hidden=true;
     renderAll();
   });
 };
+$('pHospital').addEventListener('change',e=>{$('pHospitalFields').hidden=!e.target.checked;});
 $('addEvent').onclick=e=>{
   const pid=$('ePatient').value;
   if(!pid){ alert('Add a patient first'); return; }
@@ -766,6 +892,11 @@ $('addEvent').onclick=e=>{
       appointment:$('eAppt').value.trim()};
     const res=await api('addEvent',payload);
     state.events.push({...payload,id:res.id});
+    const patient=state.patients.find(p=>p.id===pid);
+    if(CLOUD&&patient){
+      try{await CLOUD.importTcmEvents([panelEventToCloudRow(patient,payload,res.id)],{source:'CrewHQ Panel and Discharges',sourceFile:'Panel event log',manual:true});}
+      catch(error){alert('The Panel event was saved in Notion, but the shared Hospital Visits feed could not be updated: '+error.message);}
+    }else alert('The Panel event was saved in Notion, but the shared Hospital Visits feed is not connected.');
     $('eFacility').value=''; $('eReason').value=''; $('eAppt').value='';
     $('eOut1').value=''; $('eOut2').value=''; $('eOut3').value='';
     $('eDischarge').checked=false; $('eHistorical').checked=false; $('eDateTo').value=$('eDate').value;
@@ -797,6 +928,16 @@ document.querySelectorAll('nav button').forEach(b=>{
     document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.id==='tab-'+b.dataset.tab));
     window.scrollTo({top:0});
   };
+});
+window.addEventListener('message',event=>{
+  if(event.source!==window.parent||event.origin!==location.origin||event.data?.type!=='BHW_CREW_OPEN_PANEL_PATIENT')return;
+  document.querySelector('nav button[data-tab="patients"]')?.click();
+  const hospital=$('pHospital');
+  if(!hospital.checked){
+    hospital.checked=true;
+    hospital.dispatchEvent(new Event('change',{bubbles:true}));
+  }
+  $('pLabel').focus();
 });
 
 /* data tab */
@@ -850,7 +991,8 @@ try{ const b=localStorage.getItem(BENCH_KEY); if(b)bench=JSON.parse(b); }catch(e
 try{ const k=localStorage.getItem(KEY_KEY); if(k)$('dashKey').value=k; }catch(e){}
 $('eDate').value=new Date().toISOString().slice(0,10);
 $('eDateTo').value=$('eDate').value;
-refresh();
+$('pDischarge').value=$('eDate').value;
+void (async()=>{await initCloud();await refresh();})();
 })();
 </script>
 </body>

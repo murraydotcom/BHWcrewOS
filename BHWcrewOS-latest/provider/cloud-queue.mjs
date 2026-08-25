@@ -1,5 +1,14 @@
 const CONFIG_URL = "/.netlify/functions/rcm-cloud-config";
 const TOKEN_URL = "/.netlify/functions/rcm-cloud-token";
+export const CREW_SESSION_EXPIRED = "CREWHQ_SESSION_EXPIRED";
+
+function sessionError(message = "CrewHQ session expired. Sign in again in this tab.") {
+  return Object.assign(new Error(message), { status: 401, code: CREW_SESSION_EXPIRED });
+}
+
+function clearCrewSession() {
+  try { sessionStorage.removeItem("crewos_token"); } catch { /* storage unavailable */ }
+}
 
 export async function createEncounterCloudClient(fetchImpl = fetch) {
   const configResponse = await fetchImpl(CONFIG_URL, { credentials: "same-origin", cache: "no-store" });
@@ -14,14 +23,24 @@ export async function createEncounterCloudClient(fetchImpl = fetch) {
     if (!force && token && tokenExpiresAt > Date.now() + 30000) return token;
     let crewToken = "";
     try { crewToken = sessionStorage.getItem("crewos_token") || ""; } catch { /* storage unavailable */ }
-    if (!crewToken) throw Object.assign(new Error("Sign in to CrewOS again"), { status: 401 });
+    if (!crewToken) throw sessionError();
     const response = await fetchImpl(TOKEN_URL, {
       method: "POST",
       credentials: "same-origin",
       cache: "no-store",
       headers: { Authorization: `Bearer ${crewToken}` },
     });
-    if (!response.ok) throw Object.assign(new Error("Google Cloud authorization failed"), { status: response.status });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        clearCrewSession();
+        throw sessionError();
+      }
+      throw Object.assign(
+        new Error(body.error || `CrewHQ cloud authorization failed (${response.status})`),
+        { status: response.status },
+      );
+    }
     const body = await response.json();
     token = body.token;
     tokenExpiresAt = Date.now() + Number(body.expiresIn || 300) * 1000;
@@ -113,6 +132,17 @@ export async function createEncounterCloudClient(fetchImpl = fetch) {
     async listPatients() {
       const body = await request("/v1/patients");
       return Array.isArray(body.patients) ? body.patients : [];
+    },
+    async listTcmEvents(limit = 1000) {
+      const safeLimit = Math.max(1, Math.min(1000, Number(limit) || 1000));
+      const body = await request(`/v1/tcm/events?limit=${safeLimit}`);
+      return Array.isArray(body.rows) ? body.rows : [];
+    },
+    async importTcmEvents(rows, { source = "CrewHQ Panel and Discharges", sourceFile = "", manual = true } = {}) {
+      return request("/v1/tcm/events/import", {
+        method: "POST",
+        body: JSON.stringify({ source, sourceFile, manual, rows }),
+      });
     },
     async savePatient(patient) {
       return request(`/v1/patients/${encodeURIComponent(patient.bhwPatientId)}`, {
