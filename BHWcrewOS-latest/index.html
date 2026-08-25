@@ -212,7 +212,7 @@ a.res .star{color:var(--clay);margin-right:6px}
 <circle cx="30" cy="70" r="20" stroke="#80abbd" stroke-width="3.2" stroke-dasharray="114 12" transform="rotate(150 30 70)"/>
 </g></svg>
   <div class="wordmark">BHW<b>crew</b><span class="os">OS</span></div>
-  <div class="whoami" id="whoami"></div><button class="btn sm" style="margin-left:10px;background:rgba(244,247,247,.12);color:#f4f7f7;border:1.5px solid var(--sand)" onclick="openNewPatient()">＋ Patient</button>
+  <div class="whoami" id="whoami"></div><button class="btn sm" style="margin-left:10px;background:rgba(244,247,247,.12);color:#f4f7f7;border:1.5px solid var(--sand)" onclick="openContextPatient()">＋ Patient</button>
   <div class="top-right">
     <a class="btn-ghost" href="/hq.html" style="text-decoration:none">← BHW HQ</a>
     <button class="btn-ghost" onclick="refresh()">Refresh</button>
@@ -1765,6 +1765,22 @@ function npEnsureOverlay(){
   document.body.appendChild(d);
 }
 function npClose(){ const d=document.getElementById("np-overlay"); if(d) d.classList.remove("open"); }
+
+function openEmbeddedPatientForm(viewId,frameId,messageType){
+  const view=document.getElementById(`view-${viewId}`);
+  if(!view?.classList.contains('active')) return false;
+  const frame=document.getElementById(frameId);
+  if(!frame?.contentWindow) return false;
+  frame.contentWindow.postMessage({type:messageType},location.origin);
+  frame.scrollIntoView({behavior:'smooth',block:'start'});
+  return true;
+}
+
+function openContextPatient(){
+  if(openEmbeddedPatientForm('pg-panel','if-pg-panel','BHW_CREW_OPEN_PANEL_PATIENT')) return;
+  if(openEmbeddedPatientForm('pg-discharges','if-pg-discharges','BHW_CREW_OPEN_HOSPITAL_PATIENT')) return;
+  openNewPatient();
+}
 
 function openNewPatient(){
   npEnsureOverlay();
