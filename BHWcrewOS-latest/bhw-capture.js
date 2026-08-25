@@ -4,6 +4,11 @@ import {
   getDeviceMetadata,
   toCloudMemory,
 } from "/bhw-capture-sync.mjs";
+import {
+  clearCrewSession,
+  crewosSigninUrl,
+  validateCrewSession,
+} from "/bhw-capture-auth.mjs";
 
 (function () {
   "use strict";
@@ -41,6 +46,7 @@ import {
   var syncInFlight = false;
   var syncTimer = null;
   var device = null;
+  var crewUser = null;
 
   var $ = function (id) { return document.getElementById(id); };
   function esc(value) {
@@ -63,6 +69,41 @@ import {
     return String(error && error.message ? error.message : "Sync unavailable").replace(/\s+/g, " ").slice(0, 180);
   }
 
+  function showAuthGate(message, allowRetry) {
+    $("authStatus").textContent = message || "Sign in with your CrewOS staff account to continue.";
+    $("authRetry").hidden = !allowRetry;
+    $("authGate").classList.remove("hidden");
+    $("gate").classList.add("hidden");
+    $("shell").setAttribute("aria-hidden", "true");
+  }
+
+  function showCrewIdentity(user) {
+    crewUser = user;
+    $("sessionName").textContent = user.name || "BHW staff";
+    $("sessionRole").textContent = user.role ? "\u00b7 " + user.role : user.access ? "\u00b7 " + user.access : "";
+    $("sessionBar").hidden = false;
+    $("authGate").classList.add("hidden");
+  }
+
+  async function requireCrewSession() {
+    $("authStatus").textContent = "Checking your CrewOS session\u2026";
+    $("authRetry").hidden = true;
+    try {
+      var result = await validateCrewSession();
+      if (!result.authenticated) {
+        showAuthGate(result.reason === "missing" || result.reason === "expired"
+          ? "Sign in with your CrewOS staff account to continue."
+          : result.message || "Your CrewOS session could not be verified.", result.reason === "unavailable");
+        return false;
+      }
+      showCrewIdentity(result.user);
+      return true;
+    } catch (error) {
+      showAuthGate("CrewOS sign-in verification is temporarily unavailable: " + errorText(error), true);
+      return false;
+    }
+  }
+
   async function hashPin(pin) {
     var bytes = new TextEncoder().encode("BHW-CAPTURE|" + pin);
     var hash = await crypto.subtle.digest("SHA-256", bytes);
@@ -71,9 +112,10 @@ import {
 
   function openGate() {
     var saved = localStorage.getItem(PIN_KEY);
+    var identity = crewUser && crewUser.name ? "Signed in as " + crewUser.name + ". " : "";
     $("gateCopy").textContent = saved
-      ? "Enter your local BHW Capture PIN."
-      : "Set a local 6-digit PIN. This protects the offline cache on this phone; it is not a substitute for device security.";
+      ? identity + "Enter your local BHW Capture PIN."
+      : identity + "Set a local 6-digit PIN. This protects the offline cache on this phone; it is not a substitute for device security.";
     $("pinBtn").textContent = saved ? "Open" : "Set PIN & open";
     $("pinInput").value = "";
     $("gateError").textContent = "";
@@ -319,11 +361,11 @@ import {
   async function syncMemory() {
     if (!db || syncInFlight) return;
     if (navigator.onLine === false) {
-      setSyncUi("offline", "Offline · saves stay in this device cache until connection returns");
+      setSyncUi("offline", "Offline � saves stay in this device cache until connection returns");
       return;
     }
     syncInFlight = true;
-    setSyncUi("syncing", "Syncing BHW Memory…");
+    setSyncUi("syncing", "Syncing BHW Memory.");
     var activeRecord = null;
     try {
       if (!device) device = getDeviceMetadata();
@@ -372,7 +414,7 @@ import {
         else await putEntry(fromCloudMemory(remote, existing));
       }
       var visible = await allEntries();
-      setSyncUi("synced", "BHW Memory synced · " + visible.length + " memor" + (visible.length === 1 ? "y" : "ies") + (cacheFallback ? " · text-only device cache" : "") + (localOnly ? " · " + localOnly + " device-only legacy item" : ""));
+      setSyncUi("synced", "BHW Memory synced � " + visible.length + " memor" + (visible.length === 1 ? "y" : "ies") + (cacheFallback ? " � text-only device cache" : "") + (localOnly ? " � " + localOnly + " device-only legacy item" : ""));
       if (!$("libraryView").classList.contains("hidden")) renderLibrary();
     } catch (error) {
       var status = Number(error && error.status) || 0;
@@ -380,9 +422,9 @@ import {
         cloudClient = null;
         setSyncUi("auth", "Sign in through CrewOS to sync this device; local capture remains available");
       } else if (navigator.onLine === false) {
-        setSyncUi("offline", "Offline · saves stay in this device cache until connection returns");
+        setSyncUi("offline", "Offline � saves stay in this device cache until connection returns");
       } else {
-        setSyncUi("error", "Sync needs attention · " + errorText(error));
+        setSyncUi("error", "Sync needs attention � " + errorText(error));
       }
       if (activeRecord && !$("libraryView").classList.contains("hidden")) renderLibrary();
     } finally {
@@ -431,21 +473,21 @@ import {
   function inferActions(text) {
     var expression = /\b(need to|should|remember to|look up|research|follow up|follow-up|create|build|add|check|compare|find|send|write|develop|test|review)\b/i;
     return Array.from(new Set(sentenceParts(text).filter(function (part) { return expression.test(part); }).map(function (part) {
-      return part.replace(/^[\-•\s]+/, "").trim();
+      return part.replace(/^[\-\s]+/, "").trim();
     }))).slice(0, 6);
   }
   function buildTitle(text) {
     var clean = text.replace(/\s+/g, " ").trim();
     if (!clean) return "Untitled capture";
     var first = clean.split(/[.!?\n]/)[0].trim();
-    return first.length > 74 ? first.slice(0, 71) + "…" : first;
+    return first.length > 74 ? first.slice(0, 71) + "." : first;
   }
   function summarize(text) {
     var clean = text.replace(/\s+/g, " ").trim();
     if (!clean) return "";
     var picked = sentenceParts(clean).slice(0, 2).join(". ");
     if (picked && /[A-Za-z0-9]$/.test(picked)) picked += ".";
-    return picked.length > 320 ? picked.slice(0, 317) + "…" : picked;
+    return picked.length > 320 ? picked.slice(0, 317) + "." : picked;
   }
   function organize() {
     var text = $("transcript").value.trim();
@@ -466,7 +508,7 @@ import {
       var organized = organize();
       if (!titlePinned) $("title").value = organized.title;
       if (!projectPinned && Array.from($("project").options).some(function (option) { return option.value === organized.project; })) $("project").value = organized.project;
-      box.innerHTML = "<h3>" + esc(organized.title) + '</h3><div class="kv"><b>Project</b><span>' + esc(organized.project) + "</span><b>Summary</b><span>" + esc(organized.summary || "Add more detail to generate a useful summary.") + "</span><b>Tags</b><span>" + esc(organized.tags.join(", ") || "—") + "</span><b>Actions</b><span>" + (organized.actions.length ? '<ul class="actions">' + organized.actions.map(function (action) { return "<li>" + esc(action) + "</li>"; }).join("") + "</ul>" : "—") + "</span></div>";
+      box.innerHTML = "<h3>" + esc(organized.title) + '</h3><div class="kv"><b>Project</b><span>' + esc(organized.project) + "</span><b>Summary</b><span>" + esc(organized.summary || "Add more detail to generate a useful summary.") + "</span><b>Tags</b><span>" + esc(organized.tags.join(", ") || "-") + "</span><b>Actions</b><span>" + (organized.actions.length ? '<ul class="actions">' + organized.actions.map(function (action) { return "<li>" + esc(action) + "</li>"; }).join("") + "</ul>" : "-") + "</span></div>";
       box.classList.remove("hidden");
       return organized;
     } catch (error) {
@@ -501,8 +543,8 @@ import {
       return;
     }
     setCaptureBusy(true);
-    $("recordLabel").textContent = "Transcribing…";
-    $("recordStatus").textContent = "Sending this non-PHI recording for server transcription…";
+    $("recordLabel").textContent = "Transcribing.";
+    $("recordStatus").textContent = "Sending this non-PHI recording for server transcription.";
     try {
       var response = await fetch("/.netlify/functions/bhw-capture-transcribe", {
         method: "POST",
@@ -522,7 +564,7 @@ import {
         audioBlob = null;
         chunks = [];
       }
-      $("recordStatus").textContent = "Transcript ready" + (organized ? " · organization generated" : "") + (kept ? " · audio kept on this device only." : " · raw audio discarded.");
+      $("recordStatus").textContent = "Transcript ready" + (organized ? " � organization generated" : "") + (kept ? " � audio kept on this device only." : " � raw audio discarded.");
     } catch (error) {
       if (runId !== transcriptionRun) return;
       if ($("transcript").value.trim()) renderPreview();
@@ -608,8 +650,8 @@ import {
       startedAt = Date.now();
       timerId = setInterval(function () { $("timer").textContent = fmtTime(Date.now() - startedAt); }, 250);
       $("micBtn").classList.add("recording");
-      $("recordLabel").textContent = "Recording · tap to stop";
-      $("recordStatus").textContent = "Listening… non-PHI only.";
+      $("recordLabel").textContent = "Recording � tap to stop";
+      $("recordStatus").textContent = "Listening. non-PHI only.";
       startSpeech();
     } catch (error) {
       $("recordStatus").textContent = "Microphone permission was not available: " + errorText(error);
@@ -623,8 +665,8 @@ import {
     if (timerId) clearInterval(timerId);
     timerId = null;
     $("micBtn").classList.remove("recording");
-    $("recordLabel").textContent = "Finishing recording…";
-    $("recordStatus").textContent = "Preparing automatic non-PHI transcription…";
+    $("recordLabel").textContent = "Finishing recording.";
+    $("recordStatus").textContent = "Preparing automatic non-PHI transcription.";
   }
   function resetCapture() {
     if (recorder && recorder.state === "recording") stopRecording();
@@ -725,10 +767,10 @@ import {
     var entry = await getEntry(id);
     if (!entry || entry.deletedAt) return;
     currentDetail = entry;
-    $("detailMeta").textContent = fmtDate(entry.createdAt) + " · " + entry.mode + " · " + (entry.syncStatus === "synced" ? "Cloud synced" : entry.syncStatus === "local-only" ? "Device only" : "Sync pending");
+    $("detailMeta").textContent = fmtDate(entry.createdAt) + " � " + entry.mode + " � " + (entry.syncStatus === "synced" ? "Cloud synced" : entry.syncStatus === "local-only" ? "Device only" : "Sync pending");
     $("detailTitle").textContent = entry.title;
     $("detailBadges").innerHTML = '<span class="badge project">' + esc(entry.project) + "</span>" + syncBadge(entry) + (entry.tags || []).map(function (tag) { return '<span class="badge">' + esc(tag) + "</span>"; }).join("");
-    $("detailSummary").innerHTML = '<div class="kv"><b>Summary</b><span>' + esc(entry.summary || "—") + "</span><b>Actions</b><span>" + (entry.actions && entry.actions.length ? '<ul class="actions">' + entry.actions.map(function (action) { return "<li>" + esc(action) + "</li>"; }).join("") + "</ul>" : "—") + "</span></div>";
+    $("detailSummary").innerHTML = '<div class="kv"><b>Summary</b><span>' + esc(entry.summary || "-") + "</span><b>Actions</b><span>" + (entry.actions && entry.actions.length ? '<ul class="actions">' + entry.actions.map(function (action) { return "<li>" + esc(action) + "</li>"; }).join("") + "</ul>" : "-") + "</span></div>";
     $("detailText").textContent = entry.transcript || "No text transcript was saved.";
     var audio = $("detailAudio");
     if (entry.audio) {
@@ -781,6 +823,22 @@ import {
     $("pinInput").addEventListener("input", function () { this.value = this.value.replace(/\D/g, "").slice(0, 6); });
     $("pinInput").addEventListener("keydown", function (event) { if (event.key === "Enter") handlePin(); });
     $("pinBtn").onclick = handlePin;
+    $("crewSigninBtn").href = crewosSigninUrl();
+    $("authRetry").onclick = async function () {
+      $("authRetry").hidden = true;
+      if (await requireCrewSession()) startLocalCache();
+    };
+    $("logoutBtn").onclick = function () {
+      if (recorder && recorder.state === "recording") {
+        alert("Stop and save or discard the current recording before signing out.");
+        return;
+      }
+      clearCrewSession();
+      sessionStorage.removeItem("bhw_capture_unlocked");
+      crewUser = null;
+      $("sessionBar").hidden = true;
+      location.replace(crewosSigninUrl());
+    };
     $("lockBtn").onclick = function () { sessionStorage.removeItem("bhw_capture_unlocked"); openGate(); };
     document.addEventListener("visibilitychange", function () {
       if (document.hidden) hiddenAt = Date.now();
@@ -856,7 +914,7 @@ import {
       scheduleSync(10);
     };
     window.addEventListener("online", function () { scheduleSync(20); });
-    window.addEventListener("offline", function () { setSyncUi("offline", "Offline · saves stay in this device cache until connection returns"); });
+    window.addEventListener("offline", function () { setSyncUi("offline", "Offline � saves stay in this device cache until connection returns"); });
     window.addEventListener("beforeinstallprompt", function (event) { event.preventDefault(); deferredInstall = event; $("installBtn").style.display = "inline-flex"; });
     $("installBtn").onclick = async function () {
       if (!deferredInstall) return;
@@ -869,14 +927,23 @@ import {
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("/bhw-capture-sw.js").catch(function () {});
   }
 
+  function startLocalCache() {
+    return openDB().then(function () {
+      if (!crewUser) return;
+      if (sessionStorage.getItem("bhw_capture_unlocked") === "1") unlock();
+      else openGate();
+    }).catch(function (error) {
+      openGate();
+      $("gateError").textContent = "Offline cache could not start. Close other BHW Capture windows and try again: " + errorText(error);
+      setSyncUi("error", "Offline cache needs attention \u00b7 " + errorText(error));
+    });
+  }
+
   bind();
-  openDB().then(function () {
-    if (sessionStorage.getItem("bhw_capture_unlocked") === "1") unlock();
-    else openGate();
-  }).catch(function (error) {
-    openGate();
-    $("gateError").textContent = "Offline cache could not start. Close other BHW Capture windows and try again: " + errorText(error);
-    setSyncUi("error", "Offline cache needs attention \u00b7 " + errorText(error));
+  requireCrewSession().then(function (authenticated) {
+    if (!authenticated) return;
+    startLocalCache();
   });
 })();
+
 
