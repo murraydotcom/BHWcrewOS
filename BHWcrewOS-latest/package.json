@@ -1,6 +1,9 @@
 {
   "name": "bhwcrewos",
   "private": true,
+  "scripts": {
+    "test": "node --test"
+  },
    "dependencies": {
     "pdf-lib": "^1.17.1",
     "@netlify/blobs": "^10.7.11"

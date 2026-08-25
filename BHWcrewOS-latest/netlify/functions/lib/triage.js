@@ -20,9 +20,11 @@ const digits = (s) => (s || "").replace(/\D/g, "");
 const { listCloudPatients } = require("./cloud-patients");
 
 // Match a sender phone number to one patient on the Master Patient List.
-// Returns { patientId, patientName } — nulls when there's no confident match.
+// Returns { patientId, patientName, bhwPatientId } — nulls when there's no
+// confident match. `patientId` is the legacy Notion relation ID;
+// `bhwPatientId` is the migrated Google registry ID when present on that row.
 async function matchPatientByPhone(from) {
-  const out = { patientId: null, patientName: "" };
+  const out = { patientId: null, patientName: "", bhwPatientId: "" };
   const d = digits(from);
   const last10 = d.slice(-10);
   const last7 = d.slice(-7);
@@ -31,8 +33,8 @@ async function matchPatientByPhone(from) {
     const hits = (await listCloudPatients()).filter((p) => digits(p.phone).endsWith(last10));
     if (hits.length === 1) {
       out.patientId = hits[0].notionPageId || null;
-      out.bhwPatientId = hits[0].bhwPatientId;
-      out.patientName = hits[0].name;
+      out.bhwPatientId = hits[0].bhwPatientId || "";
+      out.patientName = hits[0].name || "";
     } else if (hits.length > 1) {
       // Shared/family number — don't guess one patient (and don't link the wrong
       // relation). Surface the candidate names in the row so the desk can pick.

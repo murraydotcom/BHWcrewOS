@@ -1,0 +1,20 @@
+{
+  "bhwPatientId": "BHW0000",
+  "patientMatchStatus": "matched",
+  "requestType": "referral",
+  "priority": "routine",
+  "summary": "Synthetic referral status request",
+  "message": "Please confirm the synthetic referral status.",
+  "requester": {
+    "displayName": "Synthetic Patient",
+    "preferredChannel": "portal"
+  },
+  "routing": {
+    "targetSystem": "crewos",
+    "assignedTeam": "front-desk"
+  },
+  "sourceMetadata": {
+    "sourceRecordId": "synthetic-submission-0001",
+    "sourcePage": "care-connect-patient-page"
+  }
+}
