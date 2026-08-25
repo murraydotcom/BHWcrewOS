@@ -107,3 +107,26 @@ test("the auth endpoint rejects an invalid CrewOS session", async () => {
   assert.equal(response.statusCode, 401);
 });
 
+test("Clinical step-up claims preserve identity and expire after fifteen minutes", () => {
+  const crypto = require("node:crypto");
+  const { _test } = require("../netlify/functions/auth.js");
+  const salt = "0123456789abcdef0123456789abcdef";
+  const pinHash = `${salt}:${crypto.scryptSync("246810", salt, 64).toString("hex")}`;
+  assert.equal(_test.pinMatches("246810", pinHash), true);
+  assert.equal(_test.pinMatches("111111", pinHash), false);
+  const now = Date.now();
+  const claims = _test.staffSession({
+    id: "staff-1",
+    name: "Amaris",
+    role: "Provider",
+    divisions: ["Primary Care"],
+    access: "Admin",
+    landing: "HQ",
+    canSchedule: true,
+  }, { scope: "clinical", authTime: now, exp: now + 15 * 60_000 });
+  assert.equal(claims.scope, "clinical");
+  assert.equal(claims.staffId, "staff-1");
+  assert.equal(claims.exp - claims.authTime, 15 * 60_000);
+});
+
+

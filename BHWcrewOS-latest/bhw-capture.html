@@ -31,6 +31,7 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 .sheet{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(8px);z-index:20;display:flex;align-items:flex-end;justify-content:center}.sheet-card{width:min(760px,100%);max-height:86vh;overflow:auto;background:#0e2233;border:1px solid var(--line);border-radius:24px 24px 0 0;padding:18px 16px calc(20px + env(safe-area-inset-bottom));box-shadow:0 -20px 50px rgba(0,0,0,.35)}.sheet-head{display:flex;gap:10px;align-items:flex-start}.sheet h2{font-size:18px;margin:0;line-height:1.3}.sheet .close{margin-left:auto}.detail-text{white-space:pre-wrap;font-size:12.5px;line-height:1.55;color:#dce8ed;background:rgba(0,0,0,.14);padding:12px;border-radius:14px;margin-top:12px}.detail-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.dangerbtn{border:1px solid rgba(219,122,115,.42);background:rgba(219,122,115,.08);color:#ffc3be;border-radius:12px;padding:10px;font-size:11px;font-weight:800}.copybtn{border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--ink);border-radius:12px;padding:10px;font-size:11px;font-weight:800}
 .gate{position:fixed;inset:0;background:radial-gradient(720px 460px at 75% -5%,rgba(95,179,172,.2),transparent 55%),#091722;z-index:50;display:grid;place-items:center;padding:20px}.gate-card{width:min(420px,100%);border:1px solid var(--line);border-radius:24px;padding:24px;background:rgba(255,255,255,.05);box-shadow:var(--shadow);text-align:center}.gate-card .mark{width:72px;height:72px}.gate-card h2{margin:12px 0 5px}.gate-card p{font-size:11.5px;color:var(--soft);line-height:1.5}.pin{width:100%;border:1px solid var(--line);background:#0c1f2e;color:#fff;border-radius:14px;padding:13px;text-align:center;font-size:22px;letter-spacing:.35em;margin-top:12px;outline:none}.gate-error{min-height:18px;font-size:10.5px;color:#ffaaa2;margin-top:7px}
 .auth-gate{z-index:60}.auth-gate .primary{display:block;text-decoration:none}.auth-status{min-height:18px;font-size:10.5px;color:var(--soft);margin-top:9px}.auth-retry{margin-top:8px}
+.clinical-gate{z-index:65}.clinical-gate .pin{margin-top:14px}.clinical-panel{margin:12px 0 2px;padding:12px;border:1px solid rgba(224,183,94,.36);border-radius:14px;background:rgba(224,183,94,.07)}.clinical-panel .formgrid{margin-top:0}.consent-state{font-size:10px;line-height:1.45;color:var(--soft);margin-top:8px}.consent-state[data-state="ready"]{color:#c8f0cc}.consent-state[data-state="blocked"]{color:#ffc3be}.memory.clinical-memory{border-color:rgba(224,183,94,.38);background:rgba(224,183,94,.06)}.detail-actions .open-encounter{text-align:center;text-decoration:none}
 @media(max-width:520px){.shell{padding-left:11px;padding-right:11px}.card{padding:14px;border-radius:19px}.formgrid{grid-template-columns:1fr}.mic{width:116px;height:116px}.brand p{letter-spacing:.1em}.top-actions .smallbtn{display:none}}
 </style>
 </head>
@@ -43,6 +44,17 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
     <a id="crewSigninBtn" class="primary" href="/crewos?next=%2Fbhw-capture.html">Sign in with CrewOS</a>
     <button id="authRetry" class="secondary auth-retry" hidden>Retry verification</button>
     <div id="authStatus" class="auth-status" aria-live="polite">Checking your CrewOS session…</div>
+  </div>
+</div>
+<div id="clinicalGate" class="gate clinical-gate hidden">
+  <div class="gate-card">
+    <img class="mark" src="/assets/bhw-capture-icon.svg" alt="">
+    <h2>Unlock Clinical</h2>
+    <p id="clinicalGateCopy">Re-enter your CrewOS PIN. Clinical access lasts 15 minutes and is recorded under your staff identity.</p>
+    <input id="clinicalPin" class="pin" type="password" inputmode="numeric" autocomplete="off" maxlength="8" aria-label="CrewOS PIN">
+    <button id="clinicalUnlockBtn" class="primary">Verify &amp; open Clinical</button>
+    <button id="clinicalCancelBtn" class="secondary">Cancel</button>
+    <div id="clinicalGateError" class="gate-error" aria-live="polite"></div>
   </div>
 </div>
 <div id="gate" class="gate">
@@ -62,22 +74,32 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
     <div class="top-actions"><button id="installBtn" class="smallbtn install">Install</button><button id="lockBtn" class="iconbtn" title="Lock">⌁</button></div>
   </div>
   <div id="sessionBar" class="sessionbar" hidden><span class="sessiondot"></span><span class="sessioncopy">Signed in as <b id="sessionName"></b> <span id="sessionRole" class="sessionrole"></span></span><button id="logoutBtn" class="logoutbtn">Sign out</button></div>
-  <div class="notice"><b>Non-PHI only.</b> Do not record patients, patient names, identifiers, or clinical encounters. Saved text synchronizes through BHW’s authenticated Google Cloud path. Raw audio is never uploaded to BHW Memory and is discarded after successful transcription unless you explicitly keep a device-only copy. Clinical mode remains locked.</div>
+  <div id="captureNotice" class="notice"><b>Non-PHI modes.</b> Do not include patient information unless you enter Clinical and complete the additional verification. Non-clinical text synchronizes to BHW Memory; retained audio stays only on this device.</div>
   <div id="syncBar" class="syncbar" data-state="starting"><span class="syncdot"></span><span id="syncStatus" class="synccopy" aria-live="polite">Starting secure sync…</span><a id="syncSignin" class="syncaction" href="/crewos?next=%2Fbhw-capture.html" hidden>Sign in</a><button id="syncRetry" class="syncaction" hidden>Retry</button></div>
   <div class="tabs"><button class="tab active" data-tab="capture">Capture</button><button class="tab" data-tab="library">Memory</button></div>
   <section id="captureView">
     <div class="card">
       <div class="section-label">Capture mode</div>
       <div class="mode-row">
-        <button class="chip active" data-mode="Brain Dump">Brain Dump</button><button class="chip" data-mode="Research">Research</button><button class="chip" data-mode="Operations">Operations</button><button class="chip" data-mode="Teaching">Teaching</button><button class="chip" data-mode="Content">Content</button><button class="chip locked" data-mode="Clinical" disabled>Clinical · Locked</button>
+        <button class="chip active" data-mode="Brain Dump">Brain Dump</button><button class="chip" data-mode="Research">Research</button><button class="chip" data-mode="Operations">Operations</button><button class="chip" data-mode="Teaching">Teaching</button><button class="chip" data-mode="Content">Content</button><button class="chip" data-mode="Clinical">Clinical</button>
+      </div>
+      <div id="clinicalFields" class="clinical-panel hidden">
+        <div class="section-label">Protected clinical routing</div>
+        <div class="formgrid">
+          <div class="field"><label for="clinicalPatient">Patient</label><select id="clinicalPatient"><option value="">Select a patient</option></select></div>
+          <div class="field"><label>Destination</label><input value="24-Hour Documentation" disabled></div>
+        </div>
+        <div id="clinicalConsentStatus" class="consent-state" data-state="blocked">Select a patient to check recording consent.</div>
+        <label id="clinicalAgreementLabel" class="helper"><input id="clinicalAgreement" type="checkbox"> Everyone who may be heard agrees to recording and AI-assisted transcription for this visit.</label>
+        <div class="helper">Typed clinical drafts require a patient. Audio additionally requires verified signed consent and current-session agreement.</div>
       </div>
       <div class="capture-stage">
         <button id="micBtn" class="mic" aria-label="Start recording"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 10.5a6.5 6.5 0 0 0 13 0M12 17v4M9 21h6"/></svg></button>
         <div id="recordLabel" class="record-label">Tap to capture</div><div id="timer" class="timer">00:00</div><div id="recordStatus" class="status" aria-live="polite">Non-PHI audio is sent for transcription, then discarded by default.</div>
       </div>
-      <div class="transcript-wrap"><div class="section-label">What are you thinking?</div><textarea id="transcript" class="textarea" placeholder="Speak or type here. You can also paste a thought, meeting note, or idea."></textarea><label class="helper"><input id="liveSpeech" type="checkbox" checked> Also try browser live speech-to-text while recording (optional; non-PHI only)</label><label class="helper"><input id="keepAudio" type="checkbox"> Keep this recording on this device only (never upload it)</label><div class="helper">After stop, the recording is transcribed, the organization preview appears, and raw audio is discarded unless device-only retention was selected.</div></div>
+      <div class="transcript-wrap"><div class="section-label">What are you thinking?</div><textarea id="transcript" class="textarea" placeholder="Speak or type here. You can also paste a thought, meeting note, or idea."></textarea><label id="liveSpeechLabel" class="helper"><input id="liveSpeech" type="checkbox" checked> Also try browser live speech-to-text while recording (optional; non-PHI only)</label><label id="keepAudioLabel" class="helper"><input id="keepAudio" type="checkbox"> Keep this recording on this device only (never upload it)</label><div id="audioHelper" class="helper">After stop, the recording is transcribed, the organization preview appears, and raw audio is discarded unless device-only retention was selected.</div></div>
       <div class="formgrid">
-        <div class="field"><label for="project">Project</label><select id="project"><option value="Auto">Auto-detect</option><option>PSCM</option><option>PREVENT-ND</option><option>CharmEd Minds</option><option>Mind & Mood</option><option>Flow</option><option>BHW Operations</option><option>EduMedia</option><option>Research</option><option>Personal work</option></select></div>
+        <div id="projectField" class="field"><label for="project">Project</label><select id="project"><option value="Auto">Auto-detect</option><option>PSCM</option><option>PREVENT-ND</option><option>CharmEd Minds</option><option>Mind & Mood</option><option>Flow</option><option>BHW Operations</option><option>EduMedia</option><option>Research</option><option>Personal work</option></select></div>
         <div class="field"><label for="title">Title</label><input id="title" placeholder="Auto from your words"></div>
       </div>
       <button id="organizeBtn" class="secondary">Preview organization</button><div id="organized" class="organized hidden"></div><button id="saveBtn" class="primary">Save to Memory</button>
@@ -85,13 +107,14 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
   </section>
   <section id="libraryView" class="hidden">
     <div class="card"><div class="section-label">Search your thinking</div><div class="searchbox"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M16 16l5 5"/></svg><input id="search" placeholder="Search PSCM, IgA, workflow, content…"></div><div class="filters" id="filters"></div><div id="memoryList" class="memory-list"></div></div>
-    <div class="card"><div class="section-label">Offline cache</div><div class="helper">Firestore-backed BHW Memory is the source of truth. This device keeps an IndexedDB cache so Capture still works offline.</div><button id="exportBtn" class="secondary">Export text memory as JSON</button><button id="clearBtn" class="secondary" style="border-color:rgba(219,122,115,.35);color:#ffc3be">Clear this device cache</button></div>
+    <div class="card"><div class="section-label">Offline cache</div><div class="helper">Non-clinical BHW Memory keeps an IndexedDB cache so Capture still works offline. Clinical drafts and clinical references never enter this cache or the JSON export.</div><button id="exportBtn" class="secondary">Export non-clinical text memory as JSON</button><button id="clearBtn" class="secondary" style="border-color:rgba(219,122,115,.35);color:#ffc3be">Clear this device cache</button></div>
   </section>
 </div>
 <div id="detailSheet" class="sheet hidden" role="dialog" aria-modal="true">
-  <div class="sheet-card"><div class="sheet-head"><div><div id="detailMeta" class="section-label"></div><h2 id="detailTitle"></h2></div><button id="detailClose" class="iconbtn close">×</button></div><div id="detailBadges" class="badges"></div><div id="detailSummary" class="organized"></div><div id="detailText" class="detail-text"></div><audio id="detailAudio" controls class="hidden" style="width:100%;margin-top:12px"></audio><div class="detail-actions"><button id="copyBtn" class="copybtn">Copy summary</button><button id="deleteBtn" class="dangerbtn">Delete everywhere</button></div></div>
+  <div class="sheet-card"><div class="sheet-head"><div><div id="detailMeta" class="section-label"></div><h2 id="detailTitle"></h2></div><button id="detailClose" class="iconbtn close">×</button></div><div id="detailBadges" class="badges"></div><div id="detailSummary" class="organized"></div><div id="detailText" class="detail-text"></div><audio id="detailAudio" controls class="hidden" style="width:100%;margin-top:12px"></audio><div class="detail-actions"><a id="openEncounterBtn" class="copybtn open-encounter hidden" href="/provider/workflow.html">Open 24-Hour Documentation</a><button id="copyBtn" class="copybtn">Copy summary</button><button id="deleteBtn" class="dangerbtn">Delete everywhere</button></div></div>
 </div>
-<script type="module" src="/bhw-capture.js?v=20260824-1"></script>
+<script type="module" src="/bhw-capture.js?v=20260825-1"></script>
 </body>
 </html>
+
 

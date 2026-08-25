@@ -9,6 +9,12 @@ import {
   crewosSigninUrl,
   validateCrewSession,
 } from "/bhw-capture-auth.mjs";
+import {
+  CLINICAL_LOCKED,
+  clinicalSessionValid,
+  createClinicalCaptureClient,
+  reauthenticateClinical,
+} from "/bhw-capture-clinical.mjs";
 
 (function () {
   "use strict";
@@ -47,6 +53,15 @@ import {
   var syncTimer = null;
   var device = null;
   var crewUser = null;
+  var clinicalSession = null;
+  var clinicalClient = null;
+  var clinicalConfig = null;
+  var clinicalPatients = [];
+  var clinicalConsent = null;
+  var clinicalReferences = new Map();
+  var clinicalLockTimer = null;
+  var clinicalDraftId = "";
+  var clinicalDraftPatientId = "";
 
   var $ = function (id) { return document.getElementById(id); };
   function esc(value) {
@@ -69,10 +84,189 @@ import {
     return String(error && error.message ? error.message : "Sync unavailable").replace(/\s+/g, " ").slice(0, 180);
   }
 
+  function isClinical() {
+    return currentMode === "Clinical";
+  }
+
+  function selectedClinicalPatient() {
+    return clinicalPatients.find(function (patient) { return patient.bhwPatientId === $("clinicalPatient").value; }) || null;
+  }
+
+  function clinicalPatientLabel(bhwPatientId) {
+    var patient = clinicalPatients.find(function (item) { return item.bhwPatientId === bhwPatientId; });
+    return patient ? patient.displayName + " · " + patient.bhwPatientId : bhwPatientId;
+  }
+
+  function clinicalReferenceEntry(reference) {
+    return {
+      id: "clinical:" + reference.id,
+      referenceId: reference.id,
+      clinicalReference: true,
+      createdAt: Date.parse(reference.createdAt) || Date.now(),
+      updatedAt: Date.parse(reference.updatedAt || reference.createdAt) || Date.now(),
+      mode: "Clinical",
+      title: reference.title || "Clinical capture",
+      project: "24-Hour Documentation",
+      tags: ["protected"],
+      actions: [],
+      summary: "Protected draft for " + clinicalPatientLabel(reference.bhwPatientId),
+      transcript: "",
+      encounterId: reference.encounterId,
+      bhwPatientId: reference.bhwPatientId,
+      syncStatus: "protected",
+    };
+  }
+
+  function setModeUi(mode) {
+    currentMode = mode;
+    var clinical = mode === "Clinical";
+    document.querySelectorAll("[data-mode]").forEach(function (item) { item.classList.toggle("active", item.dataset.mode === mode); });
+    $("clinicalFields").classList.toggle("hidden", !clinical);
+    $("projectField").classList.toggle("hidden", clinical);
+    $("liveSpeechLabel").classList.toggle("hidden", clinical);
+    $("keepAudioLabel").classList.toggle("hidden", clinical);
+    if (clinical) {
+      $("liveSpeech").checked = false;
+      $("keepAudio").checked = false;
+      $("captureNotice").innerHTML = "<b>Protected Clinical mode.</b> Patient-linked text routes directly to the protected 24-hour documentation queue. It is not written to the ordinary BHW Memory endpoint, offline cache, or JSON export.";
+      $("recordStatus").textContent = "Select a patient and confirm consent before recording. Raw audio is always discarded.";
+      $("audioHelper").textContent = "Clinical audio uses BHW’s protected Google Cloud transcription route and is discarded after transcription.";
+      $("saveBtn").textContent = "Send to 24-Hour Documentation";
+      $("transcript").placeholder = "Speak or type the patient-linked clinical draft here.";
+    } else {
+      $("captureNotice").innerHTML = "<b>Non-PHI modes.</b> Do not include patient information unless you enter Clinical and complete the additional verification. Non-clinical text synchronizes to BHW Memory; retained audio stays only on this device.";
+      $("recordStatus").textContent = "Non-PHI audio is sent for transcription, then discarded by default.";
+      $("audioHelper").textContent = "After stop, the recording is transcribed, the organization preview appears, and raw audio is discarded unless device-only retention was selected.";
+      $("saveBtn").textContent = "Save to Memory";
+      $("transcript").placeholder = "Speak or type here. You can also paste a thought, meeting note, or idea.";
+      $("liveSpeech").checked = true;
+    }
+    $("organized").classList.add("hidden");
+  }
+
+  function scheduleClinicalLock() {
+    if (clinicalLockTimer) clearTimeout(clinicalLockTimer);
+    if (!clinicalSessionValid(clinicalSession)) return;
+    var delay = Math.max(0, clinicalSession.expiresAt - Date.now());
+    clinicalLockTimer = setTimeout(function () { lockClinical(true); }, delay);
+  }
+
+  function lockClinical(preserveDraft) {
+    if (clinicalLockTimer) clearTimeout(clinicalLockTimer);
+    clinicalLockTimer = null;
+    clinicalSession = null;
+    clinicalClient = null;
+    clinicalConfig = null;
+    clinicalConsent = null;
+    clinicalPatients = [];
+    clinicalReferences.clear();
+    $("clinicalPatient").innerHTML = '<option value="">Select a patient</option>';
+    $("clinicalAgreement").checked = false;
+    $("clinicalConsentStatus").dataset.state = "blocked";
+    $("clinicalConsentStatus").textContent = "Select a patient to check recording consent.";
+    if (currentDetail && currentDetail.clinicalReference) closeDetail();
+    renderLibrary();
+    if (!preserveDraft || !isClinical()) return;
+    showClinicalGate("Clinical access expired. Re-enter your CrewOS PIN to continue this draft.");
+  }
+
+  function showClinicalGate(message) {
+    $("clinicalGateCopy").textContent = message || "Re-enter your CrewOS PIN. Clinical access lasts 15 minutes and is recorded under your staff identity.";
+    $("clinicalGateError").textContent = "";
+    $("clinicalPin").value = "";
+    $("clinicalGate").classList.remove("hidden");
+    $("shell").setAttribute("aria-hidden", "true");
+    setTimeout(function () { $("clinicalPin").focus(); }, 80);
+  }
+
+  function hideClinicalGate() {
+    $("clinicalGate").classList.add("hidden");
+    $("shell").setAttribute("aria-hidden", "false");
+  }
+
+  async function refreshClinicalReferences() {
+    if (!clinicalClient || !clinicalSessionValid(clinicalSession)) return;
+    var references = await clinicalClient.listReferences();
+    clinicalReferences.clear();
+    references.forEach(function (reference) { clinicalReferences.set(reference.id, reference); });
+  }
+
+  function populateClinicalPatients() {
+    $("clinicalPatient").innerHTML = '<option value="">Select a patient</option>' + clinicalPatients.map(function (patient) {
+      return '<option value="' + esc(patient.bhwPatientId) + '">' + esc(patient.displayName + " · " + patient.bhwPatientId) + "</option>";
+    }).join("");
+    var pinnedPatientAvailable = clinicalDraftPatientId && clinicalPatients.some(function (patient) {
+      return patient.bhwPatientId === clinicalDraftPatientId;
+    });
+    $("clinicalPatient").value = pinnedPatientAvailable ? clinicalDraftPatientId : "";
+    $("clinicalPatient").disabled = Boolean(pinnedPatientAvailable);
+    $("clinicalAgreement").checked = false;
+    $("clinicalConsentStatus").dataset.state = "blocked";
+    $("clinicalConsentStatus").textContent = "Select a patient to check recording consent.";
+  }
+
+  async function refreshClinicalConsent() {
+    clinicalConsent = null;
+    $("clinicalAgreement").checked = false;
+    var patient = selectedClinicalPatient();
+    if (!patient) {
+      $("clinicalConsentStatus").dataset.state = "blocked";
+      $("clinicalConsentStatus").textContent = "Select a patient to check recording consent.";
+      return;
+    }
+    $("clinicalConsentStatus").dataset.state = "checking";
+    $("clinicalConsentStatus").textContent = "Checking signed recording consent…";
+    try {
+      clinicalConsent = await clinicalClient.recordingConsent(patient.bhwPatientId);
+      $("clinicalConsentStatus").dataset.state = clinicalConsent.eligible ? "ready" : "blocked";
+      $("clinicalConsentStatus").textContent = clinicalConsent.eligible
+        ? "Signed recording and AI-transcription consent is current (" + (clinicalConsent.sourceType || "verified form") + ")."
+        : "Recording is blocked until signed recording and AI-transcription consent is verified in the Patient Registry.";
+    } catch (error) {
+      if (error.code === CLINICAL_LOCKED) showClinicalGate();
+      $("clinicalConsentStatus").dataset.state = "blocked";
+      $("clinicalConsentStatus").textContent = "Consent could not be verified: " + errorText(error);
+    }
+  }
+
+  async function handleClinicalUnlock() {
+    var pin = $("clinicalPin").value.replace(/\D/g, "");
+    if (pin.length < 4 || pin.length > 8) {
+      $("clinicalGateError").textContent = "Enter your 4–8 digit CrewOS PIN.";
+      return;
+    }
+    $("clinicalUnlockBtn").disabled = true;
+    $("clinicalUnlockBtn").textContent = "Verifying…";
+    $("clinicalGateError").textContent = "";
+    try {
+      clinicalSession = await reauthenticateClinical({ pin: pin });
+      clinicalClient = await createClinicalCaptureClient(fetch, { getClinicalSession: function () { return clinicalSession; } });
+      if (!clinicalClient) throw new Error("Protected clinical cloud access is not configured for this site");
+      clinicalConfig = await clinicalClient.config();
+      if (!clinicalConfig.enabled) throw new Error("Clinical Capture has not been enabled in the protected cloud service");
+      var loaded = await Promise.all([clinicalClient.listPatients(), clinicalClient.listReferences()]);
+      clinicalPatients = loaded[0];
+      clinicalReferences.clear();
+      loaded[1].forEach(function (reference) { clinicalReferences.set(reference.id, reference); });
+      populateClinicalPatients();
+      if (clinicalDraftPatientId) await refreshClinicalConsent();
+      setModeUi("Clinical");
+      scheduleClinicalLock();
+      hideClinicalGate();
+    } catch (error) {
+      lockClinical(false);
+      $("clinicalGateError").textContent = errorText(error);
+    } finally {
+      $("clinicalUnlockBtn").disabled = false;
+      $("clinicalUnlockBtn").textContent = "Verify & open Clinical";
+    }
+  }
+
   function showAuthGate(message, allowRetry) {
     $("authStatus").textContent = message || "Sign in with your CrewOS staff account to continue.";
     $("authRetry").hidden = !allowRetry;
     $("authGate").classList.remove("hidden");
+    $("clinicalGate").classList.add("hidden");
     $("gate").classList.add("hidden");
     $("shell").setAttribute("aria-hidden", "true");
   }
@@ -126,8 +320,12 @@ import {
 
   function unlock() {
     $("gate").classList.add("hidden");
-    $("shell").setAttribute("aria-hidden", "false");
     sessionStorage.setItem("bhw_capture_unlocked", "1");
+    if (isClinical() && !clinicalSessionValid(clinicalSession)) {
+      showClinicalGate("Re-enter your CrewOS PIN to resume the protected clinical draft.");
+      return;
+    }
+    $("shell").setAttribute("aria-hidden", "false");
     scheduleSync(40);
   }
 
@@ -436,6 +634,7 @@ import {
     return text.replace(/\s+/g, " ").trim().split(/[.!?]+\s*/).filter(Boolean);
   }
   function inferProject(text) {
+    if (isClinical()) return "24-Hour Documentation";
     var lower = text.toLowerCase();
     var rules = [
       ["PREVENT-ND", ["prevent-nd", "prevent nd", "neurodevelopment", "before psychiatry"]],
@@ -501,7 +700,7 @@ import {
     var box = $("organized");
     try {
       if (!text) {
-        box.innerHTML = '<h3>Add a transcript first</h3><div class="kv"><b>Status</b><span>Record, type, or paste a non-PHI thought, then preview again.</span></div>';
+        box.innerHTML = '<h3>Add a transcript first</h3><div class="kv"><b>Status</b><span>' + (isClinical() ? "Record, type, or paste the patient-linked draft, then preview again." : "Record, type, or paste a non-PHI thought, then preview again.") + "</span></div>";
         box.classList.remove("hidden");
         return null;
       }
@@ -532,34 +731,44 @@ import {
     spoken = String(spoken || "").trim();
     return base && spoken ? base + "\n\n" + spoken : (base || spoken);
   }
-  async function transcribeRecording(blob, runId) {
+  async function transcribeRecording(blob, runId, protectedPatientId) {
     if (!blob || !blob.size) {
       $("recordStatus").textContent = "The recording was empty. Try again or type your thought.";
       return;
     }
-    if (blob.size > MAX_TRANSCRIPTION_BYTES) {
+    var maxBytes = isClinical() ? Number(clinicalConfig && clinicalConfig.maxAudioBytes) || 9 * 1024 * 1024 : MAX_TRANSCRIPTION_BYTES;
+    if (blob.size > maxBytes) {
       $("recordStatus").textContent = "Recording ready, but it is too large for automatic transcription. Shorten it or type a transcript.";
       if ($("transcript").value.trim()) renderPreview();
       return;
     }
     setCaptureBusy(true);
     $("recordLabel").textContent = "Transcribing…";
-    $("recordStatus").textContent = "Sending this non-PHI recording for server transcription…";
+    $("recordStatus").textContent = isClinical()
+      ? "Sending this recording through the protected Google Cloud transcription path…"
+      : "Sending this non-PHI recording for server transcription…";
     try {
-      var response = await fetch("/.netlify/functions/bhw-capture-transcribe", {
-        method: "POST",
-        headers: { "Content-Type": cleanAudioType(blob.type), "X-BHW-Capture-Non-PHI": "true" },
-        body: blob,
-      });
-      var data = {};
-      try { data = await response.json(); } catch { /* response had no JSON */ }
-      if (!response.ok) throw new Error(data.error || "Transcription service returned " + response.status);
+      var data;
+      if (isClinical()) {
+        if (!clinicalSessionValid(clinicalSession) || !clinicalClient) throw Object.assign(new Error("Clinical mode is locked"), { code: CLINICAL_LOCKED });
+        if (!protectedPatientId) throw new Error("Select a patient before transcribing");
+        data = await clinicalClient.transcribe(blob, protectedPatientId);
+      } else {
+        var response = await fetch("/.netlify/functions/bhw-capture-transcribe", {
+          method: "POST",
+          headers: { "Content-Type": cleanAudioType(blob.type), "X-BHW-Capture-Non-PHI": "true" },
+          body: blob,
+        });
+        data = {};
+        try { data = await response.json(); } catch { /* response had no JSON */ }
+        if (!response.ok) throw new Error(data.error || "Transcription service returned " + response.status);
+      }
       if (runId !== transcriptionRun) return;
       var spoken = String(data.transcript || "").trim();
       if (!spoken) throw new Error("No speech was detected");
       $("transcript").value = combineTranscript(recordingTextBase, spoken);
       var organized = renderPreview();
-      var kept = $("keepAudio").checked;
+      var kept = !isClinical() && $("keepAudio").checked;
       if (!kept) {
         audioBlob = null;
         chunks = [];
@@ -567,8 +776,9 @@ import {
       $("recordStatus").textContent = "Transcript ready" + (organized ? " · organization generated" : "") + (kept ? " · audio kept on this device only." : " · raw audio discarded.");
     } catch (error) {
       if (runId !== transcriptionRun) return;
+      if (error.code === CLINICAL_LOCKED) showClinicalGate();
       if ($("transcript").value.trim()) renderPreview();
-      $("recordStatus").textContent = "Automatic transcription was unavailable (" + errorText(error) + "). Type or paste the non-PHI text before saving.";
+      $("recordStatus").textContent = "Automatic transcription was unavailable (" + errorText(error) + "). Type or paste the " + (isClinical() ? "clinical draft" : "non-PHI text") + " before saving.";
     } finally {
       if (runId === transcriptionRun) {
         setCaptureBusy(false);
@@ -578,6 +788,7 @@ import {
   }
   function speechCtor() { return window.SpeechRecognition || window.webkitSpeechRecognition || null; }
   function startSpeech() {
+    if (isClinical()) return;
     var SpeechRecognition = speechCtor();
     if (!SpeechRecognition || !$("liveSpeech").checked) {
       if ($("liveSpeech").checked && !SpeechRecognition) $("recordStatus").textContent = "Live speech-to-text is not available in this browser; server transcription will still run.";
@@ -621,10 +832,36 @@ import {
   }
   async function startRecording() {
     if (transcriptionBusy) return;
+    var protectedPatientId = "";
+    if (isClinical()) {
+      if (!clinicalSessionValid(clinicalSession) || !clinicalClient) {
+        showClinicalGate();
+        return;
+      }
+      var protectedPatient = selectedClinicalPatient();
+      if (!protectedPatient) {
+        $("recordStatus").textContent = "Select a patient before recording.";
+        return;
+      }
+      if (!clinicalConsent || !clinicalConsent.eligible) {
+        $("recordStatus").textContent = "Recording is blocked until signed consent is verified for this patient.";
+        return;
+      }
+      if (!$("clinicalAgreement").checked) {
+        $("recordStatus").textContent = "Confirm current-session agreement from everyone who may be heard.";
+        return;
+      }
+      if (!clinicalConfig || !clinicalConfig.realPatientTranscriptionEnabled) {
+        $("recordStatus").textContent = "Real-patient transcription is not enabled in the protected cloud service.";
+        return;
+      }
+      protectedPatientId = protectedPatient.bhwPatientId;
+    }
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
       $("recordStatus").textContent = "This browser cannot record audio here. You can still type or paste a thought.";
       return;
     }
+    setCaptureBusy(true);
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
       chunks = [];
@@ -636,6 +873,11 @@ import {
       var options = {};
       if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) options.mimeType = "audio/webm;codecs=opus";
       var activeRecorder = new MediaRecorder(stream, options);
+      if (protectedPatientId) {
+        clinicalDraftPatientId = protectedPatientId;
+        $("clinicalPatient").value = protectedPatientId;
+        $("clinicalPatient").disabled = true;
+      }
       recorder = activeRecorder;
       activeRecorder.ondataavailable = function (event) { if (event.data && event.data.size) chunks.push(event.data); };
       activeRecorder.onstop = function () {
@@ -644,16 +886,20 @@ import {
         if (stream) stream.getTracks().forEach(function (track) { track.stop(); });
         stream = null;
         if (recorder === activeRecorder) recorder = null;
-        transcribeRecording(audioBlob, runId);
+        transcribeRecording(audioBlob, runId, protectedPatientId);
       };
       activeRecorder.start(1000);
+      setCaptureBusy(false);
       startedAt = Date.now();
       timerId = setInterval(function () { $("timer").textContent = fmtTime(Date.now() - startedAt); }, 250);
       $("micBtn").classList.add("recording");
       $("recordLabel").textContent = "Recording · tap to stop";
-      $("recordStatus").textContent = "Listening… non-PHI only.";
+      $("recordStatus").textContent = isClinical() ? "Listening… protected Clinical mode." : "Listening… non-PHI only.";
       startSpeech();
     } catch (error) {
+      setCaptureBusy(false);
+      if (stream) stream.getTracks().forEach(function (track) { track.stop(); });
+      stream = null;
       $("recordStatus").textContent = "Microphone permission was not available: " + errorText(error);
     }
   }
@@ -666,7 +912,7 @@ import {
     timerId = null;
     $("micBtn").classList.remove("recording");
     $("recordLabel").textContent = "Finishing recording…";
-    $("recordStatus").textContent = "Preparing automatic non-PHI transcription…";
+    $("recordStatus").textContent = isClinical() ? "Preparing protected clinical transcription…" : "Preparing automatic non-PHI transcription…";
   }
   function resetCapture() {
     if (recorder && recorder.state === "recording") stopRecording();
@@ -677,8 +923,15 @@ import {
     $("project").value = "Auto";
     $("organized").classList.add("hidden");
     $("timer").textContent = "00:00";
-    $("recordStatus").textContent = "Non-PHI audio is sent for transcription, then discarded by default.";
     $("keepAudio").checked = false;
+    $("clinicalPatient").value = "";
+    $("clinicalAgreement").checked = false;
+    clinicalConsent = null;
+    clinicalDraftId = "";
+    clinicalDraftPatientId = "";
+    $("clinicalPatient").disabled = false;
+    $("clinicalConsentStatus").dataset.state = "blocked";
+    $("clinicalConsentStatus").textContent = "Select a patient to check recording consent.";
     audioBlob = null;
     captureHadAudio = false;
     chunks = [];
@@ -687,10 +940,50 @@ import {
     recordingTextBase = "";
     titlePinned = false;
     projectPinned = false;
-    currentMode = "Brain Dump";
-    document.querySelectorAll("[data-mode]").forEach(function (item) { item.classList.toggle("active", item.dataset.mode === "Brain Dump"); });
+    setModeUi("Brain Dump");
   }
+
+  async function saveClinicalCapture() {
+    if (transcriptionBusy) { alert("Wait for transcription to finish before saving."); return; }
+    if (!clinicalSessionValid(clinicalSession) || !clinicalClient) { showClinicalGate(); return; }
+    if (recorder && recorder.state === "recording") { alert("Stop the recording before saving."); return; }
+    var patient = selectedClinicalPatient();
+    if (!patient) { alert("Select the patient for this clinical draft."); return; }
+    if (clinicalDraftPatientId && patient.bhwPatientId !== clinicalDraftPatientId) {
+      alert("This recorded draft is locked to its original patient. Discard it before selecting another patient.");
+      return;
+    }
+    var text = $("transcript").value.trim();
+    if (!text) { alert("Add a transcript or typed clinical draft before saving."); return; }
+    var organized = organize();
+    var captureId = clinicalDraftId || (clinicalDraftId = uid());
+    setCaptureBusy(true);
+    $("recordStatus").textContent = "Sending the protected draft to 24-Hour Documentation…";
+    try {
+      var result = await clinicalClient.saveCapture({
+        id: captureId,
+        createdAt: new Date().toISOString(),
+        bhwPatientId: patient.bhwPatientId,
+        title: organized.title,
+        sourceTranscript: text,
+        sourceKind: captureHadAudio ? (recordingTextBase ? "mixed" : "voice") : "typed",
+        durationMs: recordedDurationMs,
+      });
+      if (result.reference) clinicalReferences.set(result.reference.id, result.reference);
+      audioBlob = null;
+      chunks = [];
+      resetCapture();
+      document.querySelector('[data-tab="library"]').click();
+    } catch (error) {
+      if (error.code === CLINICAL_LOCKED) showClinicalGate();
+      $("recordStatus").textContent = "Protected save failed: " + errorText(error) + ". This draft remains only in the current screen; do not close it until saved.";
+    } finally {
+      setCaptureBusy(false);
+    }
+  }
+
   async function saveCapture() {
+    if (isClinical()) return saveClinicalCapture();
     if (transcriptionBusy) { alert("Wait for transcription to finish before saving."); return; }
     var text = $("transcript").value.trim();
     if (!text) { alert("Add a transcript or typed non-PHI thought before saving. Raw audio is not stored in BHW Memory."); return; }
@@ -738,13 +1031,14 @@ import {
     });
   }
   function syncBadge(entry) {
+    if (entry.clinicalReference) return '<span class="badge">protected</span>';
     if (entry.syncStatus === "synced") return '<span class="badge">synced</span>';
     if (entry.syncStatus === "local-only") return '<span class="badge">device only</span>';
     if (entry.syncStatus === "error") return '<span class="badge">retry needed</span>';
     return '<span class="badge">pending sync</span>';
   }
   async function renderLibrary() {
-    var entries = await allEntries();
+    var entries = (await allEntries()).concat(Array.from(clinicalReferences.values()).map(clinicalReferenceEntry));
     var query = $("search").value.trim().toLowerCase();
     await renderFilters(entries);
     var shown = entries.filter(function (entry) {
@@ -757,21 +1051,27 @@ import {
       return;
     }
     $("memoryList").innerHTML = shown.map(function (entry) {
-      return '<button class="memory" data-id="' + entry.id + '"><div class="memory-top"><h3>' + esc(entry.title) + '</h3><span class="date">' + esc(fmtDate(entry.createdAt)) + '</span></div><div class="badges"><span class="badge project">' + esc(entry.project) + '</span><span class="badge">' + esc(entry.mode) + "</span>" + syncBadge(entry) + (entry.audio ? '<span class="badge">device audio</span>' : "") + (entry.tags || []).slice(0, 3).map(function (tag) { return '<span class="badge">' + esc(tag) + "</span>"; }).join("") + "</div><p>" + esc(entry.summary || entry.transcript) + "</p></button>";
+      return '<button class="memory' + (entry.clinicalReference ? " clinical-memory" : "") + '" data-id="' + entry.id + '"><div class="memory-top"><h3>' + esc(entry.title) + '</h3><span class="date">' + esc(fmtDate(entry.createdAt)) + '</span></div><div class="badges"><span class="badge project">' + esc(entry.project) + '</span><span class="badge">' + esc(entry.mode) + "</span>" + syncBadge(entry) + (entry.audio ? '<span class="badge">device audio</span>' : "") + (entry.tags || []).slice(0, 3).map(function (tag) { return '<span class="badge">' + esc(tag) + "</span>"; }).join("") + "</div><p>" + esc(entry.summary || entry.transcript) + "</p></button>";
     }).join("");
     Array.from($("memoryList").querySelectorAll("[data-id]")).forEach(function (button) {
       button.onclick = function () { openDetail(button.dataset.id); };
     });
   }
   async function openDetail(id) {
-    var entry = await getEntry(id);
+    var protectedReference = id.indexOf("clinical:") === 0
+      ? clinicalReferences.get(id.slice("clinical:".length)) : null;
+    var entry = protectedReference ? clinicalReferenceEntry(protectedReference) : await getEntry(id);
     if (!entry || entry.deletedAt) return;
     currentDetail = entry;
-    $("detailMeta").textContent = fmtDate(entry.createdAt) + " · " + entry.mode + " · " + (entry.syncStatus === "synced" ? "Cloud synced" : entry.syncStatus === "local-only" ? "Device only" : "Sync pending");
+    $("detailMeta").textContent = fmtDate(entry.createdAt) + " · " + entry.mode + " · " + (entry.clinicalReference ? "Protected cloud reference" : entry.syncStatus === "synced" ? "Cloud synced" : entry.syncStatus === "local-only" ? "Device only" : "Sync pending");
     $("detailTitle").textContent = entry.title;
     $("detailBadges").innerHTML = '<span class="badge project">' + esc(entry.project) + "</span>" + syncBadge(entry) + (entry.tags || []).map(function (tag) { return '<span class="badge">' + esc(tag) + "</span>"; }).join("");
-    $("detailSummary").innerHTML = '<div class="kv"><b>Summary</b><span>' + esc(entry.summary || "—") + "</span><b>Actions</b><span>" + (entry.actions && entry.actions.length ? '<ul class="actions">' + entry.actions.map(function (action) { return "<li>" + esc(action) + "</li>"; }).join("") + "</ul>" : "—") + "</span></div>";
-    $("detailText").textContent = entry.transcript || "No text transcript was saved.";
+    $("detailSummary").innerHTML = entry.clinicalReference
+      ? '<div class="kv"><b>Patient</b><span>' + esc(clinicalPatientLabel(entry.bhwPatientId)) + '</span><b>Encounter</b><span>' + esc(entry.encounterId || "Protected draft") + "</span></div>"
+      : '<div class="kv"><b>Summary</b><span>' + esc(entry.summary || "—") + "</span><b>Actions</b><span>" + (entry.actions && entry.actions.length ? '<ul class="actions">' + entry.actions.map(function (action) { return "<li>" + esc(action) + "</li>"; }).join("") + "</ul>" : "—") + "</span></div>";
+    $("detailText").textContent = entry.clinicalReference
+      ? "The clinical transcript is stored only inside the protected encounter packet. Open 24-Hour Documentation to review and complete it."
+      : entry.transcript || "No text transcript was saved.";
     var audio = $("detailAudio");
     if (entry.audio) {
       audio.src = URL.createObjectURL(entry.audio);
@@ -780,6 +1080,12 @@ import {
       audio.removeAttribute("src");
       audio.classList.add("hidden");
     }
+    $("openEncounterBtn").classList.toggle("hidden", !entry.clinicalReference);
+    $("openEncounterBtn").href = entry.clinicalReference
+      ? "/provider/workflow.html?encounter=" + encodeURIComponent(entry.encounterId || "")
+      : "/provider/workflow.html";
+    $("copyBtn").classList.toggle("hidden", Boolean(entry.clinicalReference));
+    $("deleteBtn").classList.toggle("hidden", Boolean(entry.clinicalReference));
     $("detailSheet").classList.remove("hidden");
   }
   function closeDetail() {
@@ -823,6 +1129,14 @@ import {
     $("pinInput").addEventListener("input", function () { this.value = this.value.replace(/\D/g, "").slice(0, 6); });
     $("pinInput").addEventListener("keydown", function (event) { if (event.key === "Enter") handlePin(); });
     $("pinBtn").onclick = handlePin;
+    $("clinicalPin").addEventListener("input", function () { this.value = this.value.replace(/\D/g, "").slice(0, 8); });
+    $("clinicalPin").addEventListener("keydown", function (event) { if (event.key === "Enter") handleClinicalUnlock(); });
+    $("clinicalUnlockBtn").onclick = handleClinicalUnlock;
+    $("clinicalCancelBtn").onclick = function () {
+      if (isClinical() && $("transcript").value.trim() && !confirm("Discard the unsaved clinical draft and leave Clinical mode?")) return;
+      if (isClinical()) resetCapture();
+      hideClinicalGate();
+    };
     $("crewSigninBtn").href = crewosSigninUrl();
     $("authRetry").onclick = async function () {
       $("authRetry").hidden = true;
@@ -834,15 +1148,21 @@ import {
         return;
       }
       clearCrewSession();
+      lockClinical(false);
       sessionStorage.removeItem("bhw_capture_unlocked");
       crewUser = null;
       $("sessionBar").hidden = true;
       location.replace(crewosSigninUrl());
     };
-    $("lockBtn").onclick = function () { sessionStorage.removeItem("bhw_capture_unlocked"); openGate(); };
+    $("lockBtn").onclick = function () {
+      lockClinical(false);
+      sessionStorage.removeItem("bhw_capture_unlocked");
+      openGate();
+    };
     document.addEventListener("visibilitychange", function () {
       if (document.hidden) hiddenAt = Date.now();
       else if (hiddenAt && Date.now() - hiddenAt > 5 * 60 * 1000) {
+        lockClinical(false);
         sessionStorage.removeItem("bhw_capture_unlocked");
         openGate();
       } else scheduleSync(50);
@@ -850,9 +1170,21 @@ import {
     document.querySelectorAll("[data-mode]").forEach(function (button) {
       button.onclick = function () {
         if (button.disabled) return;
-        currentMode = button.dataset.mode;
-        document.querySelectorAll("[data-mode]").forEach(function (item) { item.classList.toggle("active", item === button); });
-        $("organized").classList.add("hidden");
+        if ((recorder && recorder.state === "recording") || transcriptionBusy) {
+          alert("Stop the recording and wait for transcription before changing capture mode.");
+          return;
+        }
+        var nextMode = button.dataset.mode;
+        if (nextMode === "Clinical") {
+          if (clinicalSessionValid(clinicalSession) && clinicalClient) setModeUi("Clinical");
+          else showClinicalGate();
+          return;
+        }
+        if (isClinical()) {
+          if ($("transcript").value.trim() && !confirm("Discard the unsaved clinical draft before leaving Clinical mode?")) return;
+          resetCapture();
+        }
+        setModeUi(nextMode);
       };
     });
     document.querySelectorAll(".tab").forEach(function (button) {
@@ -861,9 +1193,18 @@ import {
         var capture = button.dataset.tab === "capture";
         $("captureView").classList.toggle("hidden", !capture);
         $("libraryView").classList.toggle("hidden", capture);
-        if (!capture) { renderLibrary(); scheduleSync(30); }
+        if (!capture) {
+          if (clinicalSessionValid(clinicalSession) && clinicalClient) {
+            refreshClinicalReferences().then(renderLibrary).catch(function (error) {
+              if (error.code === CLINICAL_LOCKED) lockClinical(false);
+              renderLibrary();
+            });
+          } else renderLibrary();
+          scheduleSync(30);
+        }
       };
     });
+    $("clinicalPatient").addEventListener("change", refreshClinicalConsent);
     $("organizeBtn").onclick = renderPreview;
     $("micBtn").onclick = function () { if (recorder && recorder.state === "recording") stopRecording(); else startRecording(); };
     $("saveBtn").onclick = saveCapture;
@@ -875,6 +1216,7 @@ import {
     $("detailClose").onclick = closeDetail;
     $("detailSheet").addEventListener("click", function (event) { if (event.target === $("detailSheet")) closeDetail(); });
     $("deleteBtn").onclick = async function () {
+      if (currentDetail && currentDetail.clinicalReference) return;
       if (!currentDetail || !confirm("Delete this memory from BHW Memory and every synced device?")) return;
       var tombstone = {
         id: currentDetail.id,
@@ -891,7 +1233,7 @@ import {
       scheduleSync(10);
     };
     $("copyBtn").onclick = async function () {
-      if (!currentDetail) return;
+      if (!currentDetail || currentDetail.clinicalReference) return;
       var text = currentDetail.title + "\n\n" + (currentDetail.summary || currentDetail.transcript || "") + (currentDetail.actions && currentDetail.actions.length ? "\n\nActions:\n- " + currentDetail.actions.join("\n- ") : "");
       try {
         await navigator.clipboard.writeText(text);
@@ -945,4 +1287,5 @@ import {
     startLocalCache();
   });
 })();
+
 

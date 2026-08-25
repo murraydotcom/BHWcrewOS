@@ -91,21 +91,30 @@ test("Capture reuses the CrewOS token exchange for list, save, and delete", asyn
   assert.ok(cloudRequests.some(({ url, options }) => url.endsWith("/v1/memories/memory-12345678") && options.method === "DELETE"));
 });
 
-test("Capture keeps the local PIN, non-PHI warning, locked Clinical mode, and explicit audio opt-in", async () => {
+test("Capture keeps non-PHI caching separate from reauthenticated protected Clinical mode", async () => {
   const [html, app, index] = await Promise.all([
     readFile(new URL("../bhw-capture.html", import.meta.url), "utf8"),
     readFile(new URL("../bhw-capture.js", import.meta.url), "utf8"),
     readFile(new URL("../index.html", import.meta.url), "utf8"),
   ]);
-  assert.match(html, /Non-PHI only/);
-  assert.match(html, /data-mode="Clinical" disabled/);
+  assert.match(html, /Non-PHI modes/);
+  assert.match(html, /data-mode="Clinical">Clinical/);
+  assert.doesNotMatch(html, /data-mode="Clinical" disabled/);
+  assert.match(html, /id="clinicalGate"/);
+  assert.match(html, /current-session agreement/);
+  assert.match(html, /Clinical drafts and clinical references never enter this cache/);
   assert.match(html, /id="keepAudio" type="checkbox"/);
   assert.doesNotMatch(html, /id="keepAudio"[^>]*checked/);
   assert.match(html, /id="authGate"/);
   assert.match(html, /Sign in with CrewOS/);
-  assert.match(html, /type="module" src="\/bhw-capture\.js\?v=20260824-1"/);
+  assert.match(html, /type="module" src="\/bhw-capture\.js\?v=20260825-1"/);
   assert.match(app, /bhw_capture_pin_v1/);
   assert.match(app, /validateCrewSession/);
+  assert.match(app, /reauthenticateClinical/);
+  assert.match(app, /clinicalClient\.saveCapture/);
+  assert.match(app, /clinicalDraftId \|\| \(clinicalDraftId = uid\(\)\)/);
+  assert.match(app, /Stop the recording and wait for transcription before changing capture mode/);
+  assert.match(app, /Send to 24-Hour Documentation/);
   assert.match(app, /var dbPromise = null/);
   assert.match(app, /CACHE_STARTUP_TIMEOUT_MS/);
   assert.match(app, /await openDB\(\);/);
@@ -124,4 +133,5 @@ test("Capture falls back to a text-only cache when IndexedDB is unavailable", as
   assert.match(app, /Object\.assign\(\{\}, entry, \{ audio: null, audioType: null \}\)/);
   assert.match(app, /keepAudio"\)\.disabled = true/);
 });
+
 
