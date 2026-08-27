@@ -4,6 +4,7 @@ import { addRequiredClinicalFindings, auditTasks, clinicalAuditSummary, normaliz
 import { normalizeStructuredEncounter } from "./structured-encounter.mjs";
 import { normalizeEncounterSnapshot, normalizeNotePlan } from "./note-composer.mjs";
 import { medicationAuthorizationCandidates } from "./medication-prior-auth.mjs";
+import { buildMedicationEpaCases } from "./medication-epa-workbench.mjs";
 
 export const WORKFLOW_STATUS = Object.freeze({
   VISIT_COMPLETE: "visit_complete",
@@ -98,6 +99,16 @@ export function buildEncounterPacket(input = {}) {
       planName: String(input.coverage?.planName || "").trim(),
       pbm: String(input.coverage?.pbm || "").trim(),
       memberId: String(input.coverage?.memberId || input.memberId || "").trim(),
+      payerProfileId: String(input.coverage?.payerProfileId || "").trim(),
+      payerFamily: String(input.coverage?.payerFamily || "").trim(),
+      lineOfBusiness: String(input.coverage?.lineOfBusiness || "").trim(),
+      benefitAdministratorId: String(input.coverage?.benefitAdministratorId || "").trim(),
+      bin: String(input.coverage?.bin || "").trim(),
+      pcn: String(input.coverage?.pcn || "").trim(),
+      groupNumber: String(input.coverage?.groupNumber || "").trim(),
+      rxGroup: String(input.coverage?.rxGroup || "").trim(),
+      medicareContractId: String(input.coverage?.medicareContractId || "").trim(),
+      medicarePbpId: String(input.coverage?.medicarePbpId || "").trim(),
     },
     sourceTranscript: String(input.sourceTranscript || ""),
     note,
@@ -112,6 +123,7 @@ export function buildEncounterPacket(input = {}) {
     clinicalAudit: normalizeClinicalAudit(input.clinicalAudit),
     auditTrail: Array.isArray(input.auditTrail) ? input.auditTrail.slice() : [],
   };
+  packet.medicationEpaCases = buildMedicationEpaCases(packet, input.medicationEpaCases);
   if (packet.clinicalAudit.status !== "not_run") {
     packet.clinicalAudit = addRequiredClinicalFindings(packet.clinicalAudit, packet);
   }
@@ -131,6 +143,7 @@ export function buildEncounterPacket(input = {}) {
 export function refreshEncounterIntelligence(encounter, now = new Date()) {
   Object.assign(encounter, normalizeStructuredEncounter(encounter, encounter.note));
   encounter.outputs = detectOutputs(encounter.note, encounter);
+  encounter.medicationEpaCases = buildMedicationEpaCases(encounter, encounter.medicationEpaCases, now);
   const previousTasks = [].concat(encounter.tasks || []);
   const work = materializeEncounterWork(encounter, previousTasks, encounter.documents, now);
   encounter.outputs = work.outputs;
