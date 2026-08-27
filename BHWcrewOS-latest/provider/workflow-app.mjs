@@ -36,6 +36,19 @@ import {
 } from "../engine/structured-encounter.mjs";
 import { buildMedicationAuthorizationReadiness, validateMedicationAuthorizationHandoff } from "../engine/medication-prior-auth.mjs";
 import {
+  BENEFIT_ADMINISTRATORS,
+  COVERAGE_EVIDENCE_STATUSES,
+  COVERAGE_SOURCE_TYPES,
+  EPA_CASE_STATUSES,
+  EPA_SUBMISSION_METHODS,
+  PAYER_CATALOG,
+  isMedicationEpaCaseComplete,
+  medicationEpaCaseUrgency,
+  medicationEpaSummary,
+  providerQuestionSummary,
+  updateMedicationEpaCase,
+} from "../engine/medication-epa-workbench.mjs";
+import {
   PRIMARY_NOTE_TEMPLATES,
   NOTE_MODULES,
   ENCOUNTER_CONTEXT_FIELDS,
@@ -115,6 +128,7 @@ function persist() {
       encounterSnapshot: row.encounterSnapshot,
       noteDraftMeta: row.noteDraftMeta,
       coverage: row.coverage,
+      medicationEpaCases: row.medicationEpaCases,
       codes: row.codes,
       diagnoses: row.diagnoses,
       medications: row.medications,
@@ -305,15 +319,22 @@ function sync(row, { invalidateApproval = true } = {}) {
 function filteredRows() {
   return rows.filter((row) => {
     const urgency = urgencyFor(row);
+    const medicationPa = medicationEpaSummary(row.medicationEpaCases || []);
     if (filter === "all") return true;
-    if (filter === "urgent") return ["critical", "overdue"].includes(urgency.level);
+    if (filter === "urgent") return ["critical", "overdue"].includes(urgency.level) || medicationPa.overdue > 0;
     if (filter === "provider") return [WORKFLOW_STATUS.READY_FOR_PROVIDER, WORKFLOW_STATUS.NEEDS_CLARIFICATION].includes(row.status);
     return row.status !== WORKFLOW_STATUS.CLOSED;
-  }).sort((left, right) => urgencyFor(right).hours - urgencyFor(left).hours);
+  }).sort((left, right) => medicationEpaSummary(right.medicationEpaCases || []).overdue - medicationEpaSummary(left.medicationEpaCases || []).overdue || urgencyFor(right).hours - urgencyFor(left).hours);
 }
 
 function renderKpis() {
   const summary = summarizeQueue(rows);
+  const medicationPa = rows.reduce((combined, row) => {
+    const item = medicationEpaSummary(row.medicationEpaCases || []);
+    combined.open += item.open;
+    combined.overdue += item.overdue;
+    return combined;
+  }, { open: 0, overdue: 0 });
   const data = [
     [summary.total, "Queue encounters", ""],
     [summary.ready, "Ready for review", ""],
@@ -321,6 +342,7 @@ function renderKpis() {
     [summary.dueSoon, "Due within 4h", summary.dueSoon ? "alert" : ""],
     [summary.overdue, "Over 24h", summary.overdue ? "alert" : ""],
     [summary.charmSaved, "Charm drafts saved", ""],
+    [medicationPa.overdue, `PA follow-ups overdue (${medicationPa.open} open)`, medicationPa.overdue ? "alert" : ""],
   ];
   $("kpis").innerHTML = data.map(([value, label, className]) => `<div class="kpi ${className}"><div class="v">${value}</div><div class="l">${label}</div></div>`).join("");
 }
@@ -329,7 +351,8 @@ function renderQueue() {
   const list = filteredRows();
   $("queue").innerHTML = list.length ? list.map((row) => {
     const urgency = urgencyFor(row);
-    return `<div class="enc ${row.id === selected ? "on" : ""}" data-id="${esc(row.id)}"><div><div class="enc-title">${esc(row.id)} · ${esc(row.provider)}</div><div class="enc-meta">${row.bhwPatientId ? `${esc(row.bhwPatientId)} · ` : ""}${esc(row.visitType)} · ${esc(row.payer)} · ${ago(urgency.hours)} since visit</div><div class="status">${esc(STATUS_LABELS[row.status])} · Owner: ${esc(row.owner)}${row.note ? '<span class="session-flag">note loaded</span>' : ""}</div></div><span class="badge ${urgency.level}">${esc(urgency.label)}</span></div>`;
+    const medicationPa = medicationEpaSummary(row.medicationEpaCases || []);
+    return `<div class="enc ${row.id === selected ? "on" : ""}" data-id="${esc(row.id)}"><div><div class="enc-title">${esc(row.id)} · ${esc(row.provider)}</div><div class="enc-meta">${row.bhwPatientId ? `${esc(row.bhwPatientId)} · ` : ""}${esc(row.visitType)} · ${esc(row.payer)} · ${ago(urgency.hours)} since visit</div><div class="status">${esc(STATUS_LABELS[row.status])} · Owner: ${esc(row.owner)}${row.note ? '<span class="session-flag">note loaded</span>' : ""}</div></div><div class="queue-badges"><span class="badge ${urgency.level}">${esc(urgency.label)}</span>${medicationPa.total ? `<span class="badge ${medicationPa.overdue ? "overdue" : medicationPa.open ? "ontrack" : "complete"}">PA ${medicationPa.complete}/${medicationPa.total}${medicationPa.overdue ? ` · ${medicationPa.overdue} overdue` : ""}</span>` : ""}</div></div>`;
   }).join("") : `<div class="empty"><b>No encounters in this view.</b><br>Add the first real encounter using its encounter ID—not the patient name.<br><button class="btn primary" id="emptyAdd">+ Add encounter</button></div>`;
   document.querySelectorAll(".enc").forEach((element) => {
     element.onclick = () => {
@@ -478,6 +501,101 @@ function renderCoding(row) {
   }).join("")}${corrections.length ? `<div class="notice"><b>${corrections.length} provider-confirmed coding fact${corrections.length === 1 ? " is" : "s are"} ready.</b> Append the exact facts to the note and rerun both MDM and time checks before any code can be applied.</div><button class="btn primary" id="applyCodingCorrections">Append confirmed coding facts + rerun</button>` : ""}`;
 }
 
+function optionList(entries, current) {
+  const items = Array.isArray(entries) ? entries.map((item) => [item.id, item.label]) : Object.entries(entries);
+  return items.map(([value, label]) => `<option value="${esc(value)}" ${value === current ? "selected" : ""}>${esc(label)}</option>`).join("");
+}
+
+function localDateTime(value) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "";
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
+}
+
+function renderEpaQuestion(question, kind) {
+  const suggested = question.source === "encounter_suggestion";
+  return `<div class="epa-question" data-question-kind="${esc(kind)}" data-question-id="${esc(question.id)}">
+    <div class="output-head"><div><b>${esc(question.label)}</b>${suggested ? '<p class="privacy">Suggested from the encounter—provider must verify it before attesting.</p>' : ""}</div><select class="epa-question-disposition" aria-label="Question status">${optionList({ unanswered: "Needs answer", answered: "Answered", not_applicable: "Not applicable" }, question.disposition)}</select></div>
+    <textarea class="epa-question-answer" rows="2" placeholder="Enter the documented answer; do not infer missing clinical facts.">${esc(question.answer)}</textarea>
+  </div>`;
+}
+
+function renderMedicationEpaWorkbench(row) {
+  const cases = row.medicationEpaCases || [];
+  if (!cases.length) return "";
+  const summary = medicationEpaSummary(cases);
+  return `<section class="epa-workbench"><div class="output-head"><div><h4>Medication prior-authorization workbench</h4><p>Prepare the clinical answers once, hand them to staff, and track the external PA through a decision.</p></div><span class="badge ${summary.overdue ? "warning" : summary.open ? "ontrack" : "complete"}">${summary.open} open${summary.overdue ? ` · ${summary.overdue} overdue` : ""}</span></div>
+    <div class="notice"><b>This is the BHW preparation and tracking record—not a live benefit response.</b> Staff must confirm current coverage in an authorized payer/PBM, pharmacy, Surescripts, CoverMyMeds, or Charm workflow before marking PA required or not required. Dated formularies can help prepare a case but do not confirm the patient's current benefit.</div>
+    ${cases.map((caseItem) => {
+      const profile = caseItem.coverageProfile || {};
+      const evidence = caseItem.coverageEvidence || {};
+      const review = caseItem.providerReview || {};
+      const questionnaire = caseItem.payerQuestionnaire || {};
+      const submission = caseItem.submission || {};
+      const urgency = medicationEpaCaseUrgency(caseItem);
+      const questions = providerQuestionSummary(caseItem);
+      const events = [].concat(caseItem.events || []).slice().reverse();
+      return `<article class="epa-case urgency-${esc(urgency.level)}" data-epa-case-id="${esc(caseItem.id)}">
+        <div class="output-head"><div><span class="code-chip">${esc(caseItem.action || "medication")}</span> <b>${esc(caseItem.medicationName)}</b><p>${esc(caseItem.sourceText)}</p></div><div class="epa-badges"><span class="badge ${urgency.level === "complete" ? "complete" : urgency.overdue ? "warning" : "ontrack"}">${esc(urgency.label)}</span><span class="badge ${questions.missing ? "warning" : "complete"}">${questions.complete}/${questions.total} answers</span></div></div>
+
+        <details open><summary>Payer and prescription benefit identity</summary><div class="epa-grid">
+          <div class="field"><label>Payer / line of business</label><select data-epa-field="payerProfileId">${optionList(PAYER_CATALOG, profile.payerProfileId)}</select></div>
+          <div class="field"><label>Payer name on card</label><input data-epa-field="payer" value="${esc(profile.payer)}" placeholder="Exact name from card or eligibility"></div>
+          <div class="field"><label>Plan name</label><input data-epa-field="planName" value="${esc(profile.planName)}"></div>
+          <div class="field"><label>Member ID</label><input data-epa-field="memberId" value="${esc(profile.memberId)}"></div>
+          <div class="field"><label>BIN</label><input data-epa-field="bin" value="${esc(profile.bin)}"></div>
+          <div class="field"><label>PCN</label><input data-epa-field="pcn" value="${esc(profile.pcn)}"></div>
+          <div class="field"><label>Rx group</label><input data-epa-field="rxGroup" value="${esc(profile.rxGroup)}"></div>
+          <div class="field"><label>Medical group number</label><input data-epa-field="groupNumber" value="${esc(profile.groupNumber)}"></div>
+          <div class="field"><label>PBM / benefit administrator</label><select data-epa-field="benefitAdministratorId">${optionList(BENEFIT_ADMINISTRATORS, profile.benefitAdministratorId)}</select></div>
+          <div class="field"><label>PBM name</label><input data-epa-field="pbm" value="${esc(profile.pbm)}" placeholder="CarelonRx or other administrator"></div>
+          <div class="field"><label>Medicare contract ID</label><input data-epa-field="medicareContractId" value="${esc(profile.medicareContractId)}" placeholder="H####"></div>
+          <div class="field"><label>Medicare PBP ID</label><input data-epa-field="medicarePbpId" value="${esc(profile.medicarePbpId)}"></div>
+        </div></details>
+
+        <details open><summary>Provider clinical answers</summary><p class="privacy">Questions are anticipated from the documented medication and diagnosis context. They are not represented as the payer's exact questionnaire.</p>${caseItem.questions.map((question) => renderEpaQuestion(question, "common")).join("")}</details>
+
+        <details><summary>Exact payer questions</summary><div class="epa-grid">
+          <div class="field"><label>Question source / key</label><input data-epa-field="questionnaireSource" value="${esc(questionnaire.source)}" placeholder="Portal, key ID, fax, or call reference"></div>
+          <div class="field"><label>Received</label><input type="datetime-local" data-epa-field="questionnaireReceivedAt" value="${esc(localDateTime(questionnaire.receivedAt))}"></div>
+        </div><div class="field"><label>Paste exact questions—one per line</label><textarea data-epa-field="questionnaireRawText" rows="5" placeholder="Paste the real payer questions here. Save once to turn them into answer fields.">${esc(questionnaire.rawText)}</textarea></div>
+        ${questionnaire.questions?.length ? questionnaire.questions.map((question) => renderEpaQuestion(question, "payer")).join("") : '<p class="privacy">No exact payer questionnaire has been captured yet. The packet can still be prepared with the anticipated questions above.</p>'}</details>
+
+        <details open><summary>Provider review and staff handoff</summary><div class="epa-grid">
+          <div class="field"><label>Provider name</label><input data-epa-field="attestedBy" value="${esc(review.attestedBy)}"></div>
+          <div class="field"><label>Case stage</label><select data-epa-field="status">${optionList(EPA_CASE_STATUSES, caseItem.status)}</select></div>
+          <div class="field epa-span"><label class="epa-attestation"><input type="checkbox" data-epa-field="attested" ${review.attested ? "checked" : ""}> I verified that these answers are supported by this encounter or the patient's record and are appropriate to give the MA/front desk for the external PA. I did not infer undocumented facts.</label></div>
+        </div></details>
+
+        <details><summary>Coverage check evidence</summary><div class="epa-grid">
+          <div class="field"><label>Result</label><select data-epa-field="evidenceStatus">${optionList(COVERAGE_EVIDENCE_STATUSES, evidence.status)}</select></div>
+          <div class="field"><label>Source type</label><select data-epa-field="evidenceSourceType">${optionList(COVERAGE_SOURCE_TYPES, evidence.sourceType)}</select></div>
+          <div class="field"><label>Source label / reference</label><input data-epa-field="evidenceSourceLabel" value="${esc(evidence.sourceLabel)}"></div>
+          <div class="field"><label>Authorized source URL</label><input type="url" data-epa-field="evidenceSourceUrl" value="${esc(evidence.sourceUrl)}"></div>
+          <div class="field"><label>Checked</label><input type="datetime-local" data-epa-field="evidenceCheckedAt" value="${esc(localDateTime(evidence.checkedAt))}"></div>
+          <div class="field"><label>Formulary/criteria effective date</label><input type="date" data-epa-field="evidenceEffectiveDate" value="${esc(evidence.effectiveDate)}"></div>
+          <div class="field"><label>Verified by</label><input data-epa-field="evidenceVerifiedBy" value="${esc(evidence.verifiedBy)}"></div>
+          <div class="field epa-span"><label>Restrictions / evidence notes</label><textarea data-epa-field="evidenceNotes" rows="3">${esc(evidence.notes)}</textarea></div>
+        </div></details>
+
+        <details><summary>External submission, decision, and follow-up</summary><div class="epa-grid">
+          <div class="field"><label>Submission method</label><select data-epa-field="submissionMethod">${optionList(EPA_SUBMISSION_METHODS, submission.method)}</select></div>
+          <div class="field"><label>Confirmation / PA reference</label><input data-epa-field="submissionReference" value="${esc(submission.reference)}"></div>
+          <div class="field"><label>Submitted</label><input type="datetime-local" data-epa-field="submittedAt" value="${esc(localDateTime(submission.submittedAt))}"></div>
+          <div class="field"><label>Follow up</label><input type="datetime-local" data-epa-field="followUpAt" value="${esc(localDateTime(submission.followUpAt))}"></div>
+          <div class="field"><label>Next workbench action due</label><input type="datetime-local" data-epa-field="nextActionAt" value="${esc(localDateTime(caseItem.nextActionAt))}"></div>
+          <div class="field"><label>Decision received</label><input type="datetime-local" data-epa-field="decisionAt" value="${esc(localDateTime(submission.decisionAt))}"></div>
+          <div class="field"><label>Authorization expires</label><input type="datetime-local" data-epa-field="expirationAt" value="${esc(localDateTime(submission.expirationAt))}"></div>
+          <div class="field epa-span"><label>Decision reason / next step</label><textarea data-epa-field="decisionReason" rows="3">${esc(submission.decisionReason)}</textarea></div>
+          <div class="field epa-span"><label>Staff notes</label><textarea data-epa-field="submissionNotes" rows="3">${esc(submission.notes)}</textarea></div>
+        </div></details>
+        <div class="actions"><button class="btn primary epa-case-save" data-epa-case-id="${esc(caseItem.id)}">Save PA workbench</button></div>
+        ${events.length ? `<details><summary>PA activity history</summary><div class="audit">${events.map((event) => `<div class="audit-row"><b>${esc(event.text)}</b><div>${new Date(event.at).toLocaleString()}</div></div>`).join("")}</div></details>` : ""}
+      </article>`;
+    }).join("")}</section>`;
+}
+
 function renderOutputs(row) {
   const tasks = row.tasks || [];
   const documents = row.documents || [];
@@ -488,7 +606,7 @@ function renderOutputs(row) {
   const medicationNotice = medicationPa.candidates.length
     ? `<div class="notice"><b>Medication PA readiness: ${medicationAnswered}/${medicationTotal} common clinical answers found for ${medicationPa.candidates.length} new or changed medication request${medicationPa.candidates.length === 1 ? "" : "s"}.</b> Coverage has not been checked. The prescriber should complete or mark the remaining items not applicable, review the packet, and then use <b>Ready for MA/front desk</b>. Staff still verify the live formulary/benefit and answer any payer-specific follow-up questions.</div>`
     : "";
-  return `${medicationNotice}<div class="notice"><b>${tasks.length - completed} open task${tasks.length - completed === 1 ? "" : "s"}; ${documents.length} generated draft${documents.length === 1 ? "" : "s"}.</b> Drafts live in this encounter packet and synchronize to the protected queue. Edit them here, download when needed, and mark the work complete.</div><h4>Completion tasks</h4>${tasks.length ? tasks.map((task) => `<label class="task ${task.status === "complete" ? "done" : ""}"><input type="checkbox" class="task-toggle" data-task-id="${esc(task.id)}" ${task.status === "complete" ? "checked" : ""}><span><b>${esc(task.title)}</b><small>${esc(task.reason)} · Owner: ${esc(task.owner)} · Suggested role: ${esc(task.recommendedRole)} · Due ${new Date(task.dueAt).toLocaleString()}</small></span></label>`).join("") : '<p class="privacy">Paste or update the note to generate work tasks.</p>'}<h4>Generated documents and forms</h4>${documents.length ? documents.map((document) => `<div class="document-card"><div class="output-head"><div><b>${esc(document.title)}</b><p>${esc(document.reason)}</p></div><span class="badge ${document.status === "complete" ? "complete" : "warning"}">${esc(document.status)}</span></div><textarea class="document-content" data-document-id="${esc(document.id)}" rows="12">${esc(document.content)}</textarea><div class="actions"><button class="btn document-save" data-document-id="${esc(document.id)}">Save draft</button><button class="btn document-ready" data-document-id="${esc(document.id)}" ${document.status === "complete" ? "disabled" : ""}>${document.type === "medication_authorization" ? "Ready for MA/front desk" : "Mark ready"}</button><button class="btn primary document-complete" data-document-id="${esc(document.id)}" ${document.status === "complete" ? "disabled" : ""}>Complete</button><button class="btn document-download" data-document-id="${esc(document.id)}">Download .txt</button></div></div>`).join("") : '<p class="privacy">No generated document is required from the language detected in this note.</p>'}`;
+  return `${medicationNotice}${renderMedicationEpaWorkbench(row)}<div class="notice"><b>${tasks.length - completed} open task${tasks.length - completed === 1 ? "" : "s"}; ${documents.length} generated draft${documents.length === 1 ? "" : "s"}.</b> Drafts live in this encounter packet and synchronize to the protected queue. Edit them here, download when needed, and mark the work complete.</div><h4>Completion tasks</h4>${tasks.length ? tasks.map((task) => `<label class="task ${task.status === "complete" ? "done" : ""}"><input type="checkbox" class="task-toggle" data-task-id="${esc(task.id)}" ${task.status === "complete" ? "checked" : ""}><span><b>${esc(task.title)}</b><small>${esc(task.reason)} · Owner: ${esc(task.owner)} · Suggested role: ${esc(task.recommendedRole)} · Due ${new Date(task.dueAt).toLocaleString()}</small></span></label>`).join("") : '<p class="privacy">Paste or update the note to generate work tasks.</p>'}<h4>Generated documents and forms</h4>${documents.length ? documents.map((document) => `<div class="document-card"><div class="output-head"><div><b>${esc(document.title)}</b><p>${esc(document.reason)}</p></div><span class="badge ${document.status === "complete" ? "complete" : "warning"}">${esc(document.status)}</span></div><textarea class="document-content" data-document-id="${esc(document.id)}" rows="12">${esc(document.content)}</textarea><div class="actions"><button class="btn document-save" data-document-id="${esc(document.id)}">Save draft</button><button class="btn document-ready" data-document-id="${esc(document.id)}" ${document.status === "complete" ? "disabled" : ""}>${document.type === "medication_authorization" ? "Ready for MA/front desk" : "Mark ready"}</button><button class="btn primary document-complete" data-document-id="${esc(document.id)}" ${document.status === "complete" ? "disabled" : ""}>Complete</button><button class="btn document-download" data-document-id="${esc(document.id)}">Download .txt</button></div></div>`).join("") : '<p class="privacy">No generated document is required from the language detected in this note.</p>'}`;
 }
 
 function renderCharm(row) {
@@ -811,13 +929,111 @@ function wireDetail(row) {
     };
   });
 
+  document.querySelectorAll(".epa-case-save").forEach((button) => {
+    button.onclick = () => {
+      const card = button.closest(".epa-case");
+      const caseItem = row.medicationEpaCases?.find((item) => item.id === button.dataset.epaCaseId);
+      if (!card || !caseItem) return;
+      const value = (name) => card.querySelector(`[data-epa-field="${name}"]`)?.value || "";
+      const checked = (name) => Boolean(card.querySelector(`[data-epa-field="${name}"]`)?.checked);
+      const profileEntry = PAYER_CATALOG.find((item) => item.id === value("payerProfileId")) || PAYER_CATALOG[0];
+      const questionPatch = (question, kind) => {
+        const questionCard = [...card.querySelectorAll(`.epa-question[data-question-kind="${kind}"]`)].find((element) => element.dataset.questionId === question.id);
+        if (!questionCard) return question;
+        return {
+          ...question,
+          answer: questionCard.querySelector(".epa-question-answer")?.value || "",
+          disposition: questionCard.querySelector(".epa-question-disposition")?.value || "unanswered",
+          source: kind === "common" ? "provider" : question.source === "encounter_suggestion" ? "provider" : question.source,
+        };
+      };
+      const result = updateMedicationEpaCase(caseItem, {
+        status: value("status"),
+        coverageProfile: {
+          payerProfileId: profileEntry.id,
+          payerFamily: profileEntry.family,
+          lineOfBusiness: profileEntry.lineOfBusiness,
+          payer: value("payer"),
+          planName: value("planName"),
+          memberId: value("memberId"),
+          bin: value("bin"),
+          pcn: value("pcn"),
+          rxGroup: value("rxGroup"),
+          groupNumber: value("groupNumber"),
+          benefitAdministratorId: value("benefitAdministratorId"),
+          pbm: value("pbm"),
+          medicareContractId: value("medicareContractId"),
+          medicarePbpId: value("medicarePbpId"),
+        },
+        questions: caseItem.questions.map((question) => questionPatch(question, "common")),
+        payerQuestionnaire: {
+          source: value("questionnaireSource"),
+          receivedAt: value("questionnaireReceivedAt"),
+          rawText: value("questionnaireRawText"),
+          questions: [].concat(caseItem.payerQuestionnaire?.questions || []).map((question) => questionPatch(question, "payer")),
+        },
+        providerReview: {
+          attested: checked("attested"),
+          attestedBy: value("attestedBy"),
+          attestedAt: caseItem.providerReview?.attestedAt,
+        },
+        coverageEvidence: {
+          status: value("evidenceStatus"),
+          sourceType: value("evidenceSourceType"),
+          sourceLabel: value("evidenceSourceLabel"),
+          sourceUrl: value("evidenceSourceUrl"),
+          checkedAt: value("evidenceCheckedAt"),
+          effectiveDate: value("evidenceEffectiveDate"),
+          verifiedBy: value("evidenceVerifiedBy"),
+          notes: value("evidenceNotes"),
+        },
+        submission: {
+          method: value("submissionMethod"),
+          reference: value("submissionReference"),
+          submittedAt: value("submittedAt"),
+          followUpAt: value("followUpAt"),
+          decisionAt: value("decisionAt"),
+          expirationAt: value("expirationAt"),
+          decisionReason: value("decisionReason"),
+          notes: value("submissionNotes"),
+        },
+        nextActionAt: value("nextActionAt"),
+      });
+      if (!result.ok) {
+        showToast(result.reasons.join(" "), 9000);
+        return;
+      }
+      row.medicationEpaCases = row.medicationEpaCases.map((item) => item.id === caseItem.id ? result.caseItem : item);
+      row.coverage = { ...(row.coverage || {}), ...result.caseItem.coverageProfile };
+      const allComplete = row.medicationEpaCases.length && row.medicationEpaCases.every(isMedicationEpaCaseComplete);
+      row.tasks.filter((task) => task.type === "medication_authorization").forEach((task) => {
+        task.status = allComplete ? "complete" : "open";
+        task.completedAt = allComplete ? new Date().toISOString() : "";
+      });
+      if (allComplete) row.documents.filter((document) => document.type === "medication_authorization").forEach((document) => {
+        document.status = "complete";
+        document.updatedAt = new Date().toISOString();
+      });
+      log(row, `${result.caseItem.medicationName} PA workbench saved as ${EPA_CASE_STATUSES[result.caseItem.status]}`);
+      persist();
+      render();
+      showToast(result.caseItem.status === "ready_for_staff" ? "Provider answers are ready for the MA/front desk benefit check." : "Medication PA workbench saved.");
+    };
+  });
+
   document.querySelectorAll(".task-toggle").forEach((checkbox) => {
     checkbox.onchange = () => {
       const task = row.tasks.find((item) => item.id === checkbox.dataset.taskId);
       if (!task) return;
       if (checkbox.checked && task.type === "medication_authorization") {
+        const epaCases = row.medicationEpaCases || [];
+        if (epaCases.length && !epaCases.every(isMedicationEpaCaseComplete)) {
+          checkbox.checked = false;
+          showToast("Keep this task open until every medication PA case is approved, confirmed not required, or closed with its tracked outcome.");
+          return;
+        }
         const handoff = row.documents.find((item) => item.id === task.documentId);
-        if (!handoff || handoff.status === "draft") {
+        if (!epaCases.length && (!handoff || handoff.status === "draft")) {
           checkbox.checked = false;
           showToast("Review the medication PA packet and use Ready for MA/front desk before completing this task.");
           return;
@@ -840,6 +1056,13 @@ function wireDetail(row) {
       const validation = validateMedicationAuthorizationHandoff(content);
       if (!validation.valid) {
         showToast(validation.reasons.join(" "));
+        return;
+      }
+    }
+    if (documentItem.type === "medication_authorization" && status === "complete") {
+      const epaCases = row.medicationEpaCases || [];
+      if (epaCases.length && !epaCases.every(isMedicationEpaCaseComplete)) {
+        showToast("The handoff can be marked ready now, but it stays open until the external PA outcome is tracked in the workbench.");
         return;
       }
     }
