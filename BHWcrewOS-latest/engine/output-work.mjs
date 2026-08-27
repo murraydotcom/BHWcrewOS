@@ -1,8 +1,11 @@
-const DOCUMENT_TYPES = new Set(["instructions", "referral", "authorization", "letter", "dme", "care_plan", "program", "order"]);
+import { medicationAuthorizationDocument } from "./medication-prior-auth.mjs";
+
+const DOCUMENT_TYPES = new Set(["instructions", "referral", "authorization", "medication_authorization", "letter", "dme", "care_plan", "program", "order"]);
 
 const roleFor = (type) => ({
   referral: "Care team",
   authorization: "RCM",
+  medication_authorization: "MA / Front Desk",
   letter: "Provider",
   dme: "Provider",
   care_plan: "Care team",
@@ -52,6 +55,7 @@ function medicationAvsList(encounter = {}) {
 }
 
 export function generatedDocumentText(type, encounter = {}) {
+  if (type === "medication_authorization") return medicationAuthorizationDocument(encounter);
   const header = `Encounter ${encounter.id || encounter.encounterId || ""}\nProvider: ${encounter.provider || "Amaris"}\nDate: ${new Date(encounter.completedAt || Date.now()).toLocaleDateString("en-US")}\n`;
   const diagnoses = [].concat(encounter.diagnoses || []).join(", ") || "[add supported diagnosis]";
   const source = supportingExcerpt(type, encounter.note);
@@ -101,7 +105,7 @@ export function materializeEncounterWork(encounter = {}, existingTasks = [], exi
       type: output.type,
       title: output.label,
       reason: output.reason,
-      owner: previous?.owner || encounter.owner || "Amaris",
+      owner: previous?.owner || (output.type === "medication_authorization" ? "MA / Front Desk" : encounter.owner || "Amaris"),
       recommendedRole: roleFor(output.type),
       dueAt: previous?.dueAt || dueAt(encounter.completedAt, now),
       status: previous?.status || "open",

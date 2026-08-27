@@ -71,6 +71,7 @@ export function parseQueue(raw, clinicalById = {}) {
         noteBuilderInput: sessionClinical?.noteBuilderInput,
         encounterSnapshot: sessionClinical?.encounterSnapshot,
         noteDraftMeta: sessionClinical?.noteDraftMeta,
+        coverage: sessionClinical?.coverage,
         codes: cleanList(sessionClinical?.codes),
         diagnoses: cleanList(sessionClinical?.diagnoses),
         medications: Array.isArray(sessionClinical?.medications) ? sessionClinical.medications : [],

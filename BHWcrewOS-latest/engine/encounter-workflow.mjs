@@ -3,6 +3,7 @@ import { materializeEncounterWork } from "./output-work.mjs";
 import { addRequiredClinicalFindings, auditTasks, clinicalAuditSummary, normalizeClinicalAudit } from "./clinical-audit.mjs";
 import { normalizeStructuredEncounter } from "./structured-encounter.mjs";
 import { normalizeEncounterSnapshot, normalizeNotePlan } from "./note-composer.mjs";
+import { medicationAuthorizationCandidates } from "./medication-prior-auth.mjs";
 
 export const WORKFLOW_STATUS = Object.freeze({
   VISIT_COMPLETE: "visit_complete",
@@ -52,13 +53,15 @@ export function urgencyFor(encounter, now = new Date()) {
 export function detectOutputs(noteText = "", structuredInput = {}) {
   const note = String(noteText);
   const structured = normalizeStructuredEncounter(structuredInput, note);
+  const medicationPaCandidates = medicationAuthorizationCandidates({ ...structured, note });
   const items = [];
   const add = (type, label, reason) => {
     if (!items.some((item) => item.type === type && item.label === label)) items.push({ type, label, reason });
   };
 
   if (structured.referrals.length || /refer(red|ral)?|consult (with|to)|specialist/i.test(note)) add("referral", "Referral order / letter", "Referral language detected in the plan.");
-  if (/prior auth|authorization|not covered|step therapy/i.test(note)) add("authorization", "Prior-authorization support", "Coverage or authorization language detected.");
+  if (medicationPaCandidates.length) add("medication_authorization", "Medication PA readiness + staff handoff", "A new, changed, or coverage-flagged medication was detected. Capture the common clinical answers now, then route the reviewed packet to the MA/front desk for the patient-specific benefit check.");
+  if (/prior auth|authorization|not covered|step therapy/i.test(note) && !medicationPaCandidates.length) add("authorization", "Prior-authorization support", "Coverage or authorization language detected.");
   if (/work note|school note|return to work|excuse/i.test(note)) add("letter", "Work or school note", "Work/school documentation was discussed.");
   if (/dme|wheelchair|walker|cane|brace|cpap|supplies/i.test(note)) add("dme", "DME order / medical necessity", "Durable medical equipment was discussed.");
   if (/care plan|self-management|goal/i.test(note)) add("care_plan", "Patient care plan", "Care-plan or goal language detected.");
@@ -90,6 +93,12 @@ export function buildEncounterPacket(input = {}) {
     noteBuilderInput: input.noteBuilderInput && typeof input.noteBuilderInput === "object" ? { ...input.noteBuilderInput } : {},
     noteDraftMeta: input.noteDraftMeta && typeof input.noteDraftMeta === "object" ? { ...input.noteDraftMeta } : null,
     payer: String(input.payer || "Unknown payer"),
+    coverage: {
+      payer: String(input.coverage?.payer || input.payer || "Unknown payer").trim(),
+      planName: String(input.coverage?.planName || "").trim(),
+      pbm: String(input.coverage?.pbm || "").trim(),
+      memberId: String(input.coverage?.memberId || input.memberId || "").trim(),
+    },
     sourceTranscript: String(input.sourceTranscript || ""),
     note,
     codes,
