@@ -16,6 +16,7 @@ import {
   transitionPatientRequest,
   transitionTask,
 } from "./domain.mjs";
+import { selectUniqueActivePatient } from "./patient-identity.mjs";
 
 function receiptId(scope, key) {
   return crypto.createHash("sha256").update(`${scope}:${key}`).digest("hex");
@@ -42,7 +43,83 @@ export class FirestoreOperationsRepository {
     this.communications = this.db.collection(COLLECTIONS.communications);
     this.auditEvents = this.db.collection(COLLECTIONS.auditEvents);
     this.patients = this.db.collection(COLLECTIONS.patients);
+    this.patientContacts = this.db.collection(COLLECTIONS.patientContacts);
+    this.verificationEvents = this.db.collection(COLLECTIONS.verificationEvents);
     this.intakeReceipts = this.db.collection(COLLECTIONS.intakeReceipts);
+  }
+
+  async resolvePatientIdentity(identity, { identityReference, now = new Date().toISOString() } = {}) {
+    const attemptRef = this.verificationEvents.doc(identityReference);
+    const attemptDoc = await attemptRef.get();
+    const attemptState = attemptDoc.exists ? attemptDoc.data() : {};
+    const nowMs = new Date(now).getTime();
+    if (attemptState.lockedUntil && new Date(attemptState.lockedUntil).getTime() > nowMs) {
+      throw apiError(429, "identity_locked", "identity matching is temporarily locked; please contact BHW or try again later");
+    }
+
+    const contacts = new Map();
+    const addSnapshot = (snapshot) => snapshot.docs.forEach((doc) => {
+      const value = doc.data();
+      if (value.active !== false && value.bhwPatientId) contacts.set(doc.id, value);
+    });
+    if (identity.email) {
+      addSnapshot(await this.patientContacts.where("emailNormalized", "==", identity.email).limit(5).get());
+      if (!contacts.size) addSnapshot(await this.patientContacts.where("email", "==", identity.email).limit(5).get());
+    }
+    if (identity.phone) addSnapshot(await this.patientContacts.where("phoneE164", "==", identity.phone).limit(5).get());
+
+    const candidateIds = [...new Set([...contacts.values()].map((contact) => contact.bhwPatientId))];
+    const candidateDocs = candidateIds.length
+      ? await this.db.getAll(...candidateIds.map((id) => this.patients.doc(id)))
+      : [];
+    const patient = selectUniqueActivePatient(
+      candidateDocs.map((doc) => doc.data()?.patient || doc.data()),
+      identity.dateOfBirth,
+    );
+
+    if (!patient) {
+      const attempts = Math.max(0, Number(attemptState.attempts) || 0) + 1;
+      const locked = attempts >= 5;
+      const batch = this.db.batch();
+      const auditEventId = `AUD-${crypto.randomUUID()}`;
+      batch.set(attemptRef, {
+        identityReference,
+        attempts: locked ? 0 : attempts,
+        lockedUntil: locked ? new Date(nowMs + 30 * 60 * 1000).toISOString() : "",
+        lastFailedAt: now,
+        source: "care-connect",
+      }, { merge: true });
+      batch.create(this.auditEvents.doc(auditEventId), {
+        auditEventId,
+        schemaVersion: 1,
+        eventType: "patient-identity.match-failed",
+        actorType: "integration",
+        actorId: "care-connect",
+        identityReference,
+        occurredAt: now,
+      });
+      await batch.commit();
+      return null;
+    }
+
+    const batch = this.db.batch();
+    const auditEventId = `AUD-${crypto.randomUUID()}`;
+    batch.set(attemptRef, { attempts: 0, lockedUntil: "", lastSucceededAt: now, source: "care-connect" }, { merge: true });
+    batch.create(this.auditEvents.doc(auditEventId), {
+      auditEventId,
+      schemaVersion: 1,
+      eventType: "patient-identity.matched",
+      actorType: "integration",
+      actorId: "care-connect",
+      bhwPatientId: patient.bhwPatientId,
+      identityReference,
+      occurredAt: now,
+    });
+    await batch.commit();
+    return {
+      bhwPatientId: patient.bhwPatientId,
+      preferredName: cleanText(patient.preferredName || patient.legalFirstName || "Patient", 100),
+    };
   }
 
   async createPatientRequest(bundle, { scope, key, payloadHash }) {

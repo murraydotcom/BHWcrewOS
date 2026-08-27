@@ -8,6 +8,13 @@ import {
   transitionPatientRequest,
   transitionTask,
 } from "../cloud/operations-api/domain.mjs";
+import {
+  normalizePatientEmail,
+  normalizePatientPhone,
+  patientIdentityReference,
+  sanitizePatientIdentity,
+  selectUniqueActivePatient,
+} from "../cloud/operations-api/patient-identity.mjs";
 
 const FIXED_NOW = "2026-08-25T12:00:00.000Z";
 
@@ -41,6 +48,8 @@ class MemoryRepository {
     this.communications = new Map();
     this.receipts = new Map();
     this.auditCount = 0;
+    this.identityMatch = { bhwPatientId: "BHW0000", preferredName: "Synthetic" };
+    this.identityCalls = [];
   }
 
   async createPatientRequest(bundle, receipt) {
@@ -69,6 +78,11 @@ class MemoryRepository {
   async listPatientRequests() { return [...this.requests.values()]; }
   async listTasks() { return [...this.tasks.values()]; }
   async listCommunications() { return [...this.communications.values()]; }
+
+  async resolvePatientIdentity(identity, options) {
+    this.identityCalls.push({ identity, options });
+    return this.identityMatch;
+  }
 
   async updatePatientRequestStatus(id, input, actor, options) {
     const result = transitionPatientRequest(await this.getPatientRequest(id), input, actor, options);
@@ -100,6 +114,7 @@ function fixture() {
   const environment = {
     CREWOS_OPERATIONS_TOKEN_SECRET: "synthetic-crew-secret",
     CARE_CONNECT_INTAKE_SECRET: "synthetic-intake-secret",
+    CARE_CONNECT_PATIENT_IDENTITY_SECRET: "synthetic-patient-identity-secret",
     CARE_CONNECT_CLIENT_ID: "care-connect",
     FRONT_DESK_INTAKE_SECRET: "synthetic-front-desk-secret",
     FRONT_DESK_CLIENT_ID: "front-desk-os",
@@ -152,6 +167,18 @@ function frontDeskBulkRequest(records, secret = "synthetic-front-desk-secret") {
   });
 }
 
+function identityRequest(body, secret = "synthetic-patient-identity-secret") {
+  return new Request("https://operations.example.test/v1/patient-identity/resolve", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${secret}`,
+      "Content-Type": "application/json",
+      "X-BHW-Client-Id": "care-connect",
+    },
+    body: JSON.stringify(body),
+  });
+}
+
 function intakeRequest(body, key = "cc:synthetic-0001", secret = "synthetic-intake-secret") {
   return new Request("https://operations.example.test/v1/intake/patient-requests", {
     method: "POST",
@@ -175,6 +202,73 @@ const syntheticIntake = {
   routing: { targetSystem: "crewos", assignedTeam: "front-desk" },
   sourceMetadata: { sourceRecordId: "synthetic-submission-0001" },
 };
+
+test("patient identity contract normalizes one verified direct contact and DOB", () => {
+  assert.equal(normalizePatientEmail(" Synthetic.Patient@Example.Test "), "synthetic.patient@example.test");
+  assert.equal(normalizePatientPhone("(443) 555-0100"), "+14435550100");
+  assert.deepEqual(sanitizePatientIdentity({
+    verifiedEmail: "Synthetic.Patient@Example.Test",
+    dateOfBirth: "1980-01-02",
+  }), {
+    email: "synthetic.patient@example.test",
+    phone: "",
+    dateOfBirth: "1980-01-02",
+  });
+  assert.throws(() => sanitizePatientIdentity({
+    verifiedEmail: "synthetic.patient@example.test",
+    verifiedPhone: "+14435550100",
+    dateOfBirth: "1980-01-02",
+  }), /exactly one verified/);
+  assert.throws(() => sanitizePatientIdentity({ verifiedEmail: "bad", dateOfBirth: "1980-01-02" }), /exactly one verified/);
+  assert.throws(() => sanitizePatientIdentity({ verifiedPhone: "+14435550100", dateOfBirth: "1980-02-31" }), /valid date of birth/);
+  const reference = patientIdentityReference({ email: "synthetic.patient@example.test" }, "synthetic-secret");
+  assert.equal(reference.length, 64);
+  assert.doesNotMatch(reference, /synthetic|example/);
+  const candidate = { bhwPatientId: "BHW0000", patientStatus: "active", dateOfBirth: "1980-01-02" };
+  assert.equal(selectUniqueActivePatient([candidate], "1980-01-02"), candidate);
+  assert.equal(selectUniqueActivePatient([candidate, { ...candidate }], "1980-01-02"), null);
+  assert.equal(selectUniqueActivePatient([{ ...candidate, patientStatus: "inactive" }], "1980-01-02"), null);
+});
+
+test("Care Connect resolves one Google patient only after verified-contact authentication", async () => {
+  const { app, repository } = fixture();
+  const response = await app(identityRequest({
+    verifiedEmail: "synthetic.patient@example.test",
+    dateOfBirth: "1980-01-02",
+  }));
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    ok: true,
+    patient: { bhwPatientId: "BHW0000", preferredName: "Synthetic" },
+  });
+  assert.equal(repository.identityCalls.length, 1);
+  assert.deepEqual(repository.identityCalls[0].identity, {
+    email: "synthetic.patient@example.test",
+    phone: "",
+    dateOfBirth: "1980-01-02",
+  });
+  assert.equal(repository.identityCalls[0].options.identityReference.length, 64);
+
+  const denied = await app(identityRequest({
+    verifiedEmail: "synthetic.patient@example.test",
+    dateOfBirth: "1980-01-02",
+  }, "synthetic-intake-secret"));
+  assert.equal(denied.status, 401);
+  assert.equal(repository.identityCalls.length, 1);
+});
+
+test("ambiguous or missing Google patient matches fail closed without identity details", async () => {
+  const { app, repository } = fixture();
+  repository.identityMatch = null;
+  const response = await app(identityRequest({
+    verifiedPhone: "+14435550100",
+    dateOfBirth: "1980-01-02",
+  }));
+  assert.equal(response.status, 403);
+  const body = await response.json();
+  assert.equal(body.code, "identity_not_matched");
+  assert.doesNotMatch(JSON.stringify(body), /443|1980|BHW\d{4}/);
+});
 
 test("audit events remain metadata-only", () => {
   const bundle = buildPatientRequestBundle(syntheticIntake, { type: "integration", id: "care-connect", role: "intake" }, {

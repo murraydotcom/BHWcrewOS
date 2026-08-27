@@ -2,6 +2,8 @@ export const SCHEMA_VERSION = 1;
 
 export const COLLECTIONS = Object.freeze({
   patients: "patients",
+  patientContacts: "patientContacts",
+  verificationEvents: "verificationEvents",
   patientRequests: "patientRequests",
   tasks: "tasks",
   communications: "communications",

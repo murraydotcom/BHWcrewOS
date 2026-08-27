@@ -11,7 +11,8 @@ import {
   requireIdempotencyKey,
 } from "./schema.mjs";
 import { buildPatientRequestBundle } from "./domain.mjs";
-import { verifyCrewToken, verifyIntakeClient } from "./auth.mjs";
+import { verifyCrewToken, verifyIntakeClient, verifyPatientIdentityClient } from "./auth.mjs";
+import { patientIdentityReference, sanitizePatientIdentity } from "./patient-identity.mjs";
 
 const MAX_BODY_BYTES = 64 * 1024;
 const MAX_BULK_BODY_BYTES = 2 * 1024 * 1024;
@@ -105,6 +106,15 @@ function workflowActor(actor = {}) {
     name: actor.name || actor.id || "CrewOS",
     role: actor.role || "staff",
   };
+}
+
+function patientIdentityActor(request, environment) {
+  return verifyPatientIdentityClient(
+    request.headers.get("authorization"),
+    environment.CARE_CONNECT_PATIENT_IDENTITY_SECRET,
+    request.headers.get("x-bhw-client-id"),
+    environment.CARE_CONNECT_CLIENT_ID || "care-connect",
+  );
 }
 
 export function createOperationsApp({
@@ -330,6 +340,19 @@ export function createOperationsApp({
           { ...body, idempotencyKey },
           { sub: `integration:${actor.id}`, name: "Front Desk OS", role: "front-desk", source: "front-desk-os" },
         )) }, cors);
+      }
+
+      if (url.pathname === "/v1/patient-identity/resolve" && request.method === "POST") {
+        patientIdentityActor(request, environment);
+        const identity = sanitizePatientIdentity(await readJson(request));
+        const match = await repository.resolvePatientIdentity(identity, {
+          identityReference: patientIdentityReference(identity, environment.CARE_CONNECT_PATIENT_IDENTITY_SECRET),
+          now: now().toISOString(),
+        });
+        if (!match) {
+          throw apiError(403, "identity_not_matched", "we could not securely match this sign-in to one patient record; please contact BHW");
+        }
+        return json(200, { ok: true, patient: match }, cors);
       }
 
       const actor = staffActor(request, environment, now);

@@ -54,4 +54,15 @@ export function verifyIntakeClient(header, expectedSecret, clientHeader, expecte
   return { type: "integration", id: clientId, role: "intake" };
 }
 
+export function verifyPatientIdentityClient(header, expectedSecret, clientHeader, expectedClientId = "care-connect") {
+  if (!expectedSecret) throw apiError(503, "patient_identity_not_configured", "Care Connect patient identity matching is not configured");
+  const supplied = bearer(header);
+  if (!safeEqual(supplied, expectedSecret)) throw apiError(401, "unauthorized", "valid patient identity authorization is required");
+  const clientId = cleanText(clientHeader, 80, { required: true, field: "X-BHW-Client-Id" }).toLowerCase();
+  if (clientId !== String(expectedClientId || "care-connect").toLowerCase()) {
+    throw apiError(403, "client_not_allowed", "patient identity client is not allowed");
+  }
+  return { type: "integration", id: clientId, role: "patient-identity" };
+}
+
 export { STAFF_AUDIENCE };
