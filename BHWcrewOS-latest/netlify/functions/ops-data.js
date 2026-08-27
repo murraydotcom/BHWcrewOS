@@ -2,6 +2,16 @@
 // Returns only what the signed-in person's divisions permit. Admins see all.
  
 const { DB, queryDb, P, getSession, visibleDivisions, json } = require("./_lib");
+const zlib = require("zlib");
+
+function parseStoredAnswer(raw) {
+  const value = String(raw || "");
+  if (!value) return {};
+  if (value.startsWith("gz:")) {
+    return JSON.parse(zlib.gunzipSync(Buffer.from(value.slice(3), "base64")).toString("utf8"));
+  }
+  return JSON.parse(value);
+}
  
 function shapeReferral(pg) {
   const p = pg.properties;
@@ -166,16 +176,28 @@ exports.handler = async (event) => {
       const cmPages = await queryDb(DB.charmed);
       charmed = cmPages.map((pg) => {
         const p = pg.properties;
+        let storedTail = {};
+        try { storedTail = parseStoredAnswer(P.text(p["Answers S6"])); } catch { storedTail = {}; }
+        const hasInPersonStep = storedTail && storedTail.__cmWorkflowV2 === 1;
+        const legacyTailStatus = P.sel(p["S6 Results & Recs"]) || "Not Started";
         return {
           id: pg.id,
           patient: P.rel(p["Patient"])[0] || null,
           date: P.date(p["Date"]),
           status: P.sel(p["Status"]),
           ageGroup: P.sel(p["Age Group"]),
-          steps: ["S1 Intake","S2 School & Attention","S3 Social & Sensory","S4 Wellbeing & Context","S5 Screeners","S6 Results & Recs"].map(k => P.sel(p[k]) || "Not Started"),
+          steps: [
+            ...["S1 Intake","S2 School & Attention","S3 Social & Sensory","S4 Wellbeing & Context","S5 Screeners"].map(k => P.sel(p[k]) || "Not Started"),
+            hasInPersonStep ? (storedTail.stepStatus?.inPerson || "Not Started") : "Not Started",
+            hasInPersonStep ? (storedTail.stepStatus?.results || "Not Started") : legacyTailStatus,
+          ],
           flags: P.multi(p["Flags"]),
           screeners: P.multi(p["Suggested Screeners"]),
-          answers: [1,2,3,4,5,6].map(i => { try { return JSON.parse(P.text(p[`Answers S${i}`]) || "{}"); } catch { return {}; } }),
+          answers: [
+            ...[1,2,3,4,5].map(i => { try { return JSON.parse(P.text(p[`Answers S${i}`]) || "{}"); } catch { return {}; } }),
+            hasInPersonStep ? (storedTail.inPerson || {}) : {},
+            hasInPersonStep ? (storedTail.results || {}) : storedTail,
+          ],
         };
       }).sort((a,b) => (b.date||"").localeCompare(a.date||""));
     }
