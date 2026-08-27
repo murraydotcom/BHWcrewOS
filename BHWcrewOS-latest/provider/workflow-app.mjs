@@ -34,6 +34,7 @@ import {
   normalizeStructuredEncounter,
   structuredLines,
 } from "../engine/structured-encounter.mjs";
+import { buildMedicationAuthorizationReadiness, validateMedicationAuthorizationHandoff } from "../engine/medication-prior-auth.mjs";
 import {
   PRIMARY_NOTE_TEMPLATES,
   NOTE_MODULES,
@@ -113,6 +114,7 @@ function persist() {
       noteBuilderInput: row.noteBuilderInput,
       encounterSnapshot: row.encounterSnapshot,
       noteDraftMeta: row.noteDraftMeta,
+      coverage: row.coverage,
       codes: row.codes,
       diagnoses: row.diagnoses,
       medications: row.medications,
@@ -480,15 +482,23 @@ function renderOutputs(row) {
   const tasks = row.tasks || [];
   const documents = row.documents || [];
   const completed = tasks.filter((task) => task.status === "complete").length;
-  return `<div class="notice"><b>${tasks.length - completed} open task${tasks.length - completed === 1 ? "" : "s"}; ${documents.length} generated draft${documents.length === 1 ? "" : "s"}.</b> Drafts live in this encounter packet and synchronize to the protected queue. Edit them here, download when needed, and mark the work complete.</div><h4>Completion tasks</h4>${tasks.length ? tasks.map((task) => `<label class="task ${task.status === "complete" ? "done" : ""}"><input type="checkbox" class="task-toggle" data-task-id="${esc(task.id)}" ${task.status === "complete" ? "checked" : ""}><span><b>${esc(task.title)}</b><small>${esc(task.reason)} · Owner: ${esc(task.owner)} · Suggested role: ${esc(task.recommendedRole)} · Due ${new Date(task.dueAt).toLocaleString()}</small></span></label>`).join("") : '<p class="privacy">Paste or update the note to generate work tasks.</p>'}<h4>Generated documents and forms</h4>${documents.length ? documents.map((document) => `<div class="document-card"><div class="output-head"><div><b>${esc(document.title)}</b><p>${esc(document.reason)}</p></div><span class="badge ${document.status === "complete" ? "complete" : "warning"}">${esc(document.status)}</span></div><textarea class="document-content" data-document-id="${esc(document.id)}" rows="12">${esc(document.content)}</textarea><div class="actions"><button class="btn document-save" data-document-id="${esc(document.id)}">Save draft</button><button class="btn document-ready" data-document-id="${esc(document.id)}" ${document.status === "complete" ? "disabled" : ""}>Mark ready</button><button class="btn primary document-complete" data-document-id="${esc(document.id)}" ${document.status === "complete" ? "disabled" : ""}>Complete</button><button class="btn document-download" data-document-id="${esc(document.id)}">Download .txt</button></div></div>`).join("") : '<p class="privacy">No generated document is required from the language detected in this note.</p>'}`;
+  const medicationPa = buildMedicationAuthorizationReadiness(row);
+  const medicationAnswered = medicationPa.candidates.reduce((sum, item) => sum + item.documented, 0);
+  const medicationTotal = medicationPa.candidates.reduce((sum, item) => sum + item.total, 0);
+  const medicationNotice = medicationPa.candidates.length
+    ? `<div class="notice"><b>Medication PA readiness: ${medicationAnswered}/${medicationTotal} common clinical answers found for ${medicationPa.candidates.length} new or changed medication request${medicationPa.candidates.length === 1 ? "" : "s"}.</b> Coverage has not been checked. The prescriber should complete or mark the remaining items not applicable, review the packet, and then use <b>Ready for MA/front desk</b>. Staff still verify the live formulary/benefit and answer any payer-specific follow-up questions.</div>`
+    : "";
+  return `${medicationNotice}<div class="notice"><b>${tasks.length - completed} open task${tasks.length - completed === 1 ? "" : "s"}; ${documents.length} generated draft${documents.length === 1 ? "" : "s"}.</b> Drafts live in this encounter packet and synchronize to the protected queue. Edit them here, download when needed, and mark the work complete.</div><h4>Completion tasks</h4>${tasks.length ? tasks.map((task) => `<label class="task ${task.status === "complete" ? "done" : ""}"><input type="checkbox" class="task-toggle" data-task-id="${esc(task.id)}" ${task.status === "complete" ? "checked" : ""}><span><b>${esc(task.title)}</b><small>${esc(task.reason)} · Owner: ${esc(task.owner)} · Suggested role: ${esc(task.recommendedRole)} · Due ${new Date(task.dueAt).toLocaleString()}</small></span></label>`).join("") : '<p class="privacy">Paste or update the note to generate work tasks.</p>'}<h4>Generated documents and forms</h4>${documents.length ? documents.map((document) => `<div class="document-card"><div class="output-head"><div><b>${esc(document.title)}</b><p>${esc(document.reason)}</p></div><span class="badge ${document.status === "complete" ? "complete" : "warning"}">${esc(document.status)}</span></div><textarea class="document-content" data-document-id="${esc(document.id)}" rows="12">${esc(document.content)}</textarea><div class="actions"><button class="btn document-save" data-document-id="${esc(document.id)}">Save draft</button><button class="btn document-ready" data-document-id="${esc(document.id)}" ${document.status === "complete" ? "disabled" : ""}>${document.type === "medication_authorization" ? "Ready for MA/front desk" : "Mark ready"}</button><button class="btn primary document-complete" data-document-id="${esc(document.id)}" ${document.status === "complete" ? "disabled" : ""}>Complete</button><button class="btn document-download" data-document-id="${esc(document.id)}">Download .txt</button></div></div>`).join("") : '<p class="privacy">No generated document is required from the language detected in this note.</p>'}`;
 }
 
 function renderCharm(row) {
   const gate = canQueueCharmEntry(row);
+  const openDownstream = [].concat(row.tasks || []).filter((task) => task.status !== "complete").length;
   return `<div class="notice"><b>Supervised Charm Draft Bridge</b><br>Copy one approved packet to the no-network browser extension. It can fill detected draft text fields, but it never saves or signs the chart.</div>
     <div class="approval"><label><input type="checkbox" id="providerApproved" ${row.providerApproved ? "checked" : ""}> I reviewed the clinical note, diagnoses, codes, modifiers, units, and generated documents. They are approved for draft entry.</label></div>
     <ul class="guardrails"><li>Personally match both patient and encounter before entry.</li><li>Never add unsupported findings or change clinical meaning.</li><li>The bridge never signs, prescribes, saves, submits a claim, or releases information.</li><li>Review every highlighted field in CharmHealth before saving it yourself.</li></ul>
-    <div class="actions"><button class="btn" id="copyApprovedNote" ${gate.allowed ? "" : "disabled"}>Copy approved note</button><button class="btn bronze" id="copyCharm" ${gate.allowed ? "" : "disabled"}>Copy Charm packet</button><a class="btn link" href="charm-bridge-setup.html">Bridge setup</a><button class="btn" id="markCharmSaved" ${gate.allowed ? "" : "disabled"}>Confirm Charm draft saved</button><button class="btn primary" id="closeEncounter" ${row.charmDraftSaved ? "" : "disabled"}>Close workflow</button>${row.charmDraftSaved ? '<span class="badge complete">Draft verified in Charm</span>' : ""}</div>
+    <div class="actions"><button class="btn" id="copyApprovedNote" ${gate.allowed ? "" : "disabled"}>Copy approved note</button><button class="btn bronze" id="copyCharm" ${gate.allowed ? "" : "disabled"}>Copy Charm packet</button><a class="btn link" href="charm-bridge-setup.html">Bridge setup</a><button class="btn" id="markCharmSaved" ${gate.allowed ? "" : "disabled"}>Confirm Charm draft saved</button><button class="btn primary" id="closeEncounter" ${row.charmDraftSaved ? "" : "disabled"}>${openDownstream ? "Close documentation; keep tasks open" : "Close workflow"}</button>${row.charmDraftSaved ? '<span class="badge complete">Draft verified in Charm</span>' : ""}</div>
+    ${row.charmDraftSaved && openDownstream ? `<p class="privacy">${openDownstream} downstream task${openDownstream === 1 ? " remains" : "s remain"}. Closing documentation will leave the encounter in Orders/forms pending until staff complete them.</p>` : ""}
     ${gate.allowed ? "" : `<p class="privacy">${esc(gate.reasons.join(" "))}</p>`}`;
 }
 
@@ -805,8 +815,17 @@ function wireDetail(row) {
     checkbox.onchange = () => {
       const task = row.tasks.find((item) => item.id === checkbox.dataset.taskId);
       if (!task) return;
+      if (checkbox.checked && task.type === "medication_authorization") {
+        const handoff = row.documents.find((item) => item.id === task.documentId);
+        if (!handoff || handoff.status === "draft") {
+          checkbox.checked = false;
+          showToast("Review the medication PA packet and use Ready for MA/front desk before completing this task.");
+          return;
+        }
+      }
       task.status = checkbox.checked ? "complete" : "open";
       task.completedAt = checkbox.checked ? new Date().toISOString() : "";
+      if (row.charmDraftSaved) row.status = row.tasks.every((item) => item.status === "complete") ? WORKFLOW_STATUS.CLOSED : WORKFLOW_STATUS.DOWNSTREAM_PENDING;
       log(row, `${task.title} task marked ${task.status}`);
       persist();
       render();
@@ -817,6 +836,13 @@ function wireDetail(row) {
     const documentItem = row.documents.find((item) => item.id === button.dataset.documentId);
     const content = button.closest(".document-card")?.querySelector(".document-content")?.value;
     if (!documentItem || typeof content !== "string") return;
+    if (documentItem.type === "medication_authorization" && status === "ready") {
+      const validation = validateMedicationAuthorizationHandoff(content);
+      if (!validation.valid) {
+        showToast(validation.reasons.join(" "));
+        return;
+      }
+    }
     const changed = documentItem.content !== content || documentItem.status !== status;
     documentItem.content = content;
     documentItem.status = status;
@@ -832,6 +858,7 @@ function wireDetail(row) {
         task.status = "complete";
         task.completedAt = new Date().toISOString();
       }
+      if (row.charmDraftSaved) row.status = row.tasks.every((item) => item.status === "complete") ? WORKFLOW_STATUS.CLOSED : WORKFLOW_STATUS.DOWNSTREAM_PENDING;
     }
     log(row, `${documentItem.title} saved as ${status}`);
     persist();
@@ -927,8 +954,11 @@ function wireDetail(row) {
   };
 
   $("closeEncounter").onclick = () => {
-    row.status = WORKFLOW_STATUS.CLOSED;
-    log(row, "Encounter workflow closed after Charm draft verification");
+    const openTasks = row.tasks.filter((task) => task.status !== "complete");
+    row.status = openTasks.length ? WORKFLOW_STATUS.DOWNSTREAM_PENDING : WORKFLOW_STATUS.CLOSED;
+    log(row, openTasks.length
+      ? `Documentation closed after Charm draft verification; ${openTasks.length} downstream task${openTasks.length === 1 ? " remains" : "s remain"}`
+      : "Encounter workflow closed after Charm draft verification");
     persist();
     render();
   };
@@ -1080,12 +1110,19 @@ $("create").onclick = async () => {
     showToast("Enter the visit completion date and time.");
     return;
   }
+  const selectedPatient = patients.find((patient) => patient.bhwPatientId === bhwPatientId);
   const draft = {
     bhwPatientId,
     provider: $("mProvider").value.trim() || "Amaris",
     owner: "Amaris",
     completedAt: completedAt.toISOString(),
     payer: $("mPayer").value,
+    coverage: {
+      payer: $("mPayer").value || selectedPatient?.primaryPayer || "",
+      planName: selectedPatient?.insurancePlanName || selectedPatient?.primaryPayer || $("mPayer").value || "",
+      pbm: selectedPatient?.pbm || "",
+      memberId: selectedPatient?.memberId || "",
+    },
     visitType: PRIMARY_NOTE_TEMPLATES[$("mPrimary").value]?.label || "Established Office Visit",
     notePlan: normalizeNotePlan({
       primaryTemplate: $("mPrimary").value,
@@ -1156,7 +1193,16 @@ async function initializeCloudQueue() {
     }
     renderPatientOptions();
     if (remoteRows.length) {
-      rows = remoteRows.map((row) => buildEncounterPacket(row));
+      rows = remoteRows.map((row) => {
+        const patient = patients.find((item) => item.bhwPatientId === row.bhwPatientId);
+        const registryCoverage = patient ? Object.fromEntries(Object.entries({
+          payer: patient.primaryPayer || row.payer || "",
+          planName: patient.insurancePlanName || patient.primaryPayer || "",
+          pbm: patient.pbm || "",
+          memberId: patient.memberId || "",
+        }).filter(([, value]) => String(value || "").trim())) : {};
+        return buildEncounterPacket({ ...row, coverage: { ...(row.coverage || {}), ...registryCoverage } });
+      });
       selected = rows.some((row) => row.id === selected) ? selected : (rows[0]?.id || null);
     } else if (rows.length) {
       await client.saveAll(rows);

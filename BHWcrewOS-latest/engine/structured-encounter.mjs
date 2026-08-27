@@ -1,3 +1,5 @@
+import { medicationAction } from "./medication-prior-auth.mjs";
+
 const clean = (value) => String(value ?? "").replace(/\s+/g, " ").trim();
 
 const CONTROLLED_TERMS = [
@@ -49,6 +51,7 @@ export function normalizeMedication(value, index = 0) {
     name,
     doseFrequency,
     sourceText,
+    action: clean(typeof value === "object" ? value?.action : "") || medicationAction(sourceText),
     controlled: typeof value === "object" && typeof value?.controlled === "boolean"
       ? value.controlled
       : isControlledMedicationText(`${name} ${sourceText}`),
