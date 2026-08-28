@@ -7,6 +7,7 @@
 //   minutes-log, minutes-charm (toggle In CharmHealth)
 //   availability-submit
 //   booking-create (requires Can Schedule; enforces room rules + conflicts)
+//   patient-select (link an existing Cloud patient to the transitional Index)
 
 const { DB, DIVISIONS, httpJson, queryDb, createPage, updatePage, P, W, getSession, visibleDivisions, json } = require("./_lib");
 const { cloudRequest, listCloudPatients } = require("./lib/cloud-patients");
@@ -15,6 +16,40 @@ const { cloudRequest, listCloudPatients } = require("./lib/cloud-patients");
 // registrations are also mirrored to the Notion master and lean Patient Index
 // so existing operational relations continue to work.
 const MASTER_DB = process.env.MASTER_DB_ID || "2cf580758d3080f0825de4bbfb6c7528";
+
+const normalizePatientName = (value) => String(value || "").toLowerCase().replace(/[^a-z]/g, "");
+
+function indexInsurance(patient) {
+  const value = `${patient.primaryPayer || patient.payer || ""} ${patient.insurancePlanName || patient.insurance || ""}`.toLowerCase();
+  if (/dual|qmb|medicare.*medicaid|medicaid.*medicare/.test(value)) return "Medicare + Medicaid";
+  if (/cigna/.test(value)) return "Cigna";
+  if (/aetna/.test(value)) return "Aetna";
+  if (/united|uhc|optum/.test(value)) return "UnitedHealthcare";
+  if (/tricare/.test(value)) return "Tricare";
+  if (/hopkins|ehp|priority partners/.test(value)) return "Johns Hopkins EHP";
+  if (/carefirst|bcbs|blue\s*cross|bluechoice/.test(value)) return "CareFirst BCBS";
+  if (/medicaid|physicians care|amerigroup|molina/.test(value)) return "Medicaid";
+  if (/medicare/.test(value)) return "Medicare";
+  if (/self.?pay|cash/.test(value)) return "Self-Pay";
+  return "";
+}
+
+function patientIndexProperties(patient) {
+  const insurance = indexInsurance(patient);
+  const props = {
+    "Patient Name": W.title(patient.name),
+    "DOB": W.date(patient.dob),
+    "Status": W.sel("Active"),
+  };
+  if (insurance) props["Insurance"] = W.sel(insurance);
+  if (patient.memberId) props["Insurance Member ID"] = W.text(patient.memberId);
+  if (patient.mrn) props["CharmHealth Chart #"] = W.text(patient.mrn);
+  if (patient.medicareMbi) props["Medicare MBI"] = W.text(patient.medicareMbi);
+  if (patient.email) props["Email"] = { email: patient.email };
+  if (patient.guardianEmail) props["Guardian Email"] = { email: patient.guardianEmail };
+  if (patient.programs?.length) props["Active Divisions"] = { multi_select: patient.programs.map((name) => ({ name })) };
+  return props;
+}
 
 function sendEmail(to, subject, html) {
   return new Promise((resolve, reject) => {
@@ -351,6 +386,44 @@ exports.handler = async (event) => {
           ...props,
         });
         return json(200, { ok: true, id: page.id });
+      }
+
+      case "patient-select": {
+        const bhwPatientId = String(b.bhwPatientId || "").trim().toUpperCase();
+        if (!/^BHW\d+$/i.test(bhwPatientId)) return json(400, { error: "Choose a patient from the Master Patient List" });
+
+        const [idxPages, cloudPatients] = await Promise.all([queryDb(DB.patients), listCloudPatients(session)]);
+        const patient = cloudPatients.find((item) => String(item.bhwPatientId || "").toUpperCase() === bhwPatientId);
+        if (!patient) return json(404, { error: "That patient is no longer available in the Master Patient List. Search again." });
+        if (!patient.name || !patient.dob) return json(409, { error: "This Patient Master record needs a name and birthday before CrewOS can safely link it." });
+
+        const exactIndexMatches = idxPages.filter((pg) =>
+          normalizePatientName(P.title(pg.properties["Patient Name"])) === normalizePatientName(patient.name)
+          && P.date(pg.properties["DOB"]) === patient.dob
+        );
+        if (exactIndexMatches.length > 1) {
+          return json(409, { error: "CrewOS has more than one record with this exact name and birthday. Please resolve the duplicate Patient Index records before selecting this patient." });
+        }
+
+        let indexId = exactIndexMatches[0]?.id || "";
+        let linked = false;
+        if (!indexId) {
+          const index = await createPage(DB.patients, patientIndexProperties(patient));
+          indexId = index.id;
+          linked = true;
+        }
+
+        return json(200, {
+          ok: true,
+          id: indexId,
+          name: patient.name,
+          bhwId: patient.bhwPatientId,
+          dob: patient.dob,
+          chart: patient.mrn || "",
+          insurance: indexInsurance(patient),
+          memberId: patient.memberId || "",
+          linked,
+        });
       }
 
       case "patient-create": {
