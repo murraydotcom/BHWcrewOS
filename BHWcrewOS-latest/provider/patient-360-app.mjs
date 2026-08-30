@@ -12,7 +12,18 @@ const dateText = (value, withTime = false) => {
 };
 const conceptText = (concept = {}) => concept.text || concept.coding?.[0]?.display || concept.coding?.[0]?.code || "Not labeled";
 const statusText = (value) => String(value || "not assessed").replace(/-/g, " ");
-const titleText = (item = {}) => item.title || item.description || conceptText(item.code) || item.resourceType || "Unlabeled item";
+const titleText = (item = {}) => {
+  const codedTitle = item.medicationCodeableConcept
+    || item.vaccineCode
+    || item.code
+    || item.type?.[0]
+    || item.category?.[0];
+  return item.title
+    || item.description
+    || item.medicationReference?.display
+    || (codedTitle ? conceptText(codedTitle) : "")
+    || statusText(item.resourceType || "Unlabeled item");
+};
 
 function securityText(item = {}) {
   return JSON.stringify({
