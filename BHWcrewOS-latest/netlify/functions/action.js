@@ -10,12 +10,21 @@
 //   patient-select (link an existing Cloud patient to the transitional Index)
 
 const { DB, DIVISIONS, httpJson, queryDb, createPage, updatePage, P, W, getSession, visibleDivisions, json } = require("./_lib");
-const { cloudRequest, listCloudPatients } = require("./lib/cloud-patients");
+const { cloudRequest, listCloudPatients, findCloudPatient } = require("./lib/cloud-patients");
+const zlib = require("zlib");
 
 // Google Cloud is the authoritative patient list. During migration, new
 // registrations are also mirrored to the Notion master and lean Patient Index
 // so existing operational relations continue to work.
 const MASTER_DB = process.env.MASTER_DB_ID || "2cf580758d3080f0825de4bbfb6c7528";
+
+function encodeCmWorkflow(value) {
+  const encoded = `gz:${zlib.gzipSync(JSON.stringify(value)).toString("base64")}`;
+  if (encoded.length > 1850) {
+    throw Object.assign(new Error("The in-person screening record is too long to save safely. Shorten the free-text notes, then try again."), { status: 400 });
+  }
+  return encoded;
+}
 
 const normalizePatientName = (value) => String(value || "").toLowerCase().replace(/[^a-z]/g, "");
 
@@ -49,28 +58,6 @@ function patientIndexProperties(patient) {
   if (patient.guardianEmail) props["Guardian Email"] = { email: patient.guardianEmail };
   if (patient.programs?.length) props["Active Divisions"] = { multi_select: patient.programs.map((name) => ({ name })) };
   return props;
-}
-
-function sendEmail(to, subject, html) {
-  return new Promise((resolve, reject) => {
-    const key = (process.env.RESEND_API_KEY || "").trim();
-    if (!key) return reject(new Error("RESEND_API_KEY is not set in Netlify environment variables"));
-    const from = (process.env.RESEND_FROM || "").trim();
-    if (!from) return reject(new Error("RESEND_FROM is not set (e.g. BHW Medical Group <care@yourdomain.com>)"));
-    const https = require("https");
-    const data = JSON.stringify({ from, to: [to], subject, html });
-    const req = https.request({
-      hostname: "api.resend.com", path: "/emails", method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "Content-Length": Buffer.byteLength(data) },
-    }, (res) => {
-      let out = ""; res.on("data", (ch) => (out += ch));
-      res.on("end", () => {
-        if (res.statusCode >= 200 && res.statusCode < 300) resolve(JSON.parse(out || "{}"));
-        else reject(new Error(`Email service ${res.statusCode}: ${out.slice(0, 300)}`));
-      });
-    });
-    req.on("error", reject); req.write(data); req.end();
-  });
 }
 
 let awvPropsEnsured = false;
@@ -334,11 +321,28 @@ exports.handler = async (event) => {
       }
 
       case "cm-save": {
-        const cmProp = { 1:"S1 Intake", 2:"S2 School & Attention", 3:"S3 Social & Sensory", 4:"S4 Wellbeing & Context", 5:"S5 Screeners", 6:"S6 Results & Recs" }[b.step];
+        // The legacy assessment store has six answer slots. Keep the new
+        // in-person visit and results as a versioned pair in slot six until
+        // the protected Google Cloud assessment endpoint is available.
+        const cmProp = { 1:"S1 Intake", 2:"S2 School & Attention", 3:"S3 Social & Sensory", 4:"S4 Wellbeing & Context", 5:"S5 Screeners" }[b.step];
         const props = {};
         if (cmProp) {
           props[cmProp] = W.sel(b.stepStatus || "Complete");
           props[`Answers S${b.step}`] = W.text(JSON.stringify(b.answers || {}));
+        }
+        if (b.step === 6 || b.step === 7) {
+          const workflowAnswers = b.workflowAnswers || {};
+          const workflowStepStatus = b.workflowStepStatus || {};
+          props["S6 Results & Recs"] = W.sel(workflowStepStatus.results === "Complete" ? "Complete" : "In Progress");
+          props["Answers S6"] = W.text(encodeCmWorkflow({
+            __cmWorkflowV2: 1,
+            inPerson: workflowAnswers.inPerson || {},
+            results: workflowAnswers.results || {},
+            stepStatus: {
+              inPerson: workflowStepStatus.inPerson || "Not Started",
+              results: workflowStepStatus.results || "Not Started",
+            },
+          }));
         }
         if (b.ageGroup) props["Age Group"] = W.sel(b.ageGroup);
         if (b.flags) props["Flags"] = { multi_select: b.flags.map((n) => ({ name: n })) };
@@ -651,64 +655,37 @@ exports.handler = async (event) => {
       }
 
       case "cm-send-screeners": {
-        // Email the selected screener form links, log it, advance the flow.
-        const { assessmentId, kind, to, screeners, audience } = b;
-        if (!assessmentId || !to || !screeners || !screeners.length) {
-          return json(400, { error: "Need the assessment, a recipient email, and at least one screener" });
+        // Store the assignment in Patient 360 and let the protected Cloud Run
+        // service send one PHI-free portal invitation through Google Workspace.
+        const { assessmentId, patientId, kind, screeners, audience } = b;
+        const nowMs = Date.now();
+        const authTime = Number(session.authTime) || 0;
+        if (session.scope !== "clinical" || !authTime || authTime > nowMs + 60_000 || nowMs - authTime > 15 * 60 * 1000) {
+          return json(403, { error: "Clinical mode is locked. Verify your CrewOS PIN again." });
         }
-        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) return json(400, { error: "That email address doesn't look right" });
-        const linkRows = await queryDb(DB.screenerLinks);
-        const links = linkRows.map((pg) => ({
-          name: P.title(pg.properties["Screener"]),
-          url: pg.properties["Form URL"]?.url || "",
-          audience: P.sel(pg.properties["Audience"]) || "Any",
-          active: P.check(pg.properties["Active"]),
-        })).filter((l) => l.active && l.url);
-        const matched = [], missing = [];
-        for (const s of screeners) {
-          const nameMatch = (l) =>
-            l.name.toLowerCase().includes(s.toLowerCase().split("/")[0].trim()) ||
-            s.toLowerCase().includes(l.name.toLowerCase().replace(/\s*\((parent|teacher|self)\)\s*/i, "").trim());
-          const candidates = links.filter(nameMatch);
-          // Prefer the version built for this recipient (Parent/Teacher/Self), then Any, then whatever exists
-          const hit = candidates.find((l) => l.audience === (audience || "Any"))
-                   || candidates.find((l) => l.audience === "Any")
-                   || candidates[0];
-          if (hit) matched.push({ screener: s, url: hit.url });
-          else missing.push(s);
+        if (!assessmentId || !patientId || !screeners || !screeners.length) {
+          return json(400, { error: "Need the assessment, Patient 360 record, and at least one screener" });
         }
-        if (!matched.length) {
-          return json(400, { error: `No form links found for: ${missing.join(", ")}. Add them to the Screener Form Links database in Notion first.` });
+        if (kind === "peds") {
+          const supervised = screeners.filter((name) => /DIAL-4|Shaywitz|DIBELS|Acadience|\bRAN\b|\bRAS\b|CTOPP|FAW|Handwriting|Nessy|Dynamo|NIH Toolbox|THS-R|ETCH|DASH|Beery|WIAT|KTEA|Woodcock-Johnson/i.test(String(name)));
+          if (supervised.length) {
+            return json(400, { error: `In-person or performance measures cannot be emailed: ${supervised.join(", ")}` });
+          }
         }
-        const audienceWord = audience === "Teacher" ? "the student's teacher" : audience === "Self" ? "you" : "your child";
-        const html = `
-          <div style="font-family:Lora,Georgia,serif;max-width:560px;margin:0 auto;color:#0B1228">
-            <div style="background:#0B1228;color:#FAF7F2;padding:24px 26px;border-radius:14px 14px 0 0;text-align:center">
-              <img src="https://bhwcrewos.netlify.app/assets/charmed-minds-logo.png" alt="CharmEd Minds" width="84" height="84" style="border-radius:50%;display:block;margin:0 auto 10px">
-              <div style="font-family:Montserrat,Arial,sans-serif;font-size:20px;font-weight:800;letter-spacing:1px">CHARMED MINDS</div>
-              <div style="font-family:Lora,Georgia,serif;font-style:italic;font-size:13px;color:#F2B134;margin-top:4px">Bright minds supported with strategy.</div>
-            </div>
-            <div style="border:1px solid #E9E2D6;border-top:none;padding:24px 26px;border-radius:0 0 14px 14px;background:#FAF7F2">
-              <p>Hello,</p>
-              <p>As part of the CharmEd Minds assessment, we're asking ${audienceWord} to complete the following questionnaire${matched.length > 1 ? "s" : ""}. Each takes just a few minutes, and your answers help us build the clearest picture:</p>
-              ${matched.map((m) => `<p style="margin:14px 0"><a href="${m.url}" style="background:#F2B134;color:#0B1228;text-decoration:none;padding:11px 22px;border-radius:24px;font-family:Montserrat,Arial,sans-serif;font-size:14px;font-weight:700">Complete: ${m.screener}</a></p>`).join("")}
-              <p>Please complete ${matched.length > 1 ? "these" : "this"} within the next few days. If anything is unclear, just reply or call the office — we're happy to help.</p>
-              <p style="color:#114766;font-size:13px">— The CharmEd Minds team at BHW Medical Group<br>2131 Maryland Ave, Baltimore, MD 21218</p>
-              <p style="font-family:Montserrat,Arial,sans-serif;font-size:10px;letter-spacing:2px;color:#2CA7A6;text-align:center;margin-top:18px">COGNITION · CONFIDENCE · STRATEGY · GROWTH</p>
-            </div>
-          </div>`;
-        await sendEmail(to, `CharmEd Minds — ${matched.length} questionnaire${matched.length > 1 ? "s" : ""} to complete`, html);
-        // Log + advance the assessment
-        const dbId = kind === "adult" ? DB.charmedAdult : DB.charmed;
-        const pages = await queryDb(dbId);
-        const pg = pages.find((x) => x.id === assessmentId);
-        const prevNotes = pg ? P.text(pg.properties["Notes"]) : "";
-        const stamp = `📤 ${today()}: emailed ${matched.map((m) => m.screener).join(", ")} to ${to}${missing.length ? ` (no link on file for: ${missing.join(", ")})` : ""}`;
-        await updatePage(assessmentId, {
-          "Status": W.sel("Screeners Pending"),
-          "Notes": W.text(`${prevNotes ? prevNotes + "\n" : ""}${stamp}`.slice(0, 1900)),
+        const patient = await findCloudPatient(patientId, session);
+        if (!patient?.bhwPatientId) return json(409, { error: "This assessment is not linked to a Patient 360 record yet" });
+        const result = await cloudRequest(`/v1/patients/${encodeURIComponent(patient.bhwPatientId)}/charmed/screening-invitations`, {
+          actor: session,
+          method: "POST",
+          body: {
+            assessmentId,
+            kind,
+            audience: audience || (kind === "adult" ? "Self" : "Parent"),
+            screenings: screeners,
+            staffApprovalAttestation: true,
+          },
         });
-        return json(200, { ok: true, sent: matched.map((m) => m.screener), missing });
+        return json(200, { ok: true, sent: screeners, eventId: result.eventId, destination: result.destination });
       }
 
       case "awv-sign": {

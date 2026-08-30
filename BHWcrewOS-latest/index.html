@@ -1212,7 +1212,7 @@ async function awvComplete(){
   }catch(e){ toast("⚠ "+e.message); }
 }
 
-/* ============ CharmEd Minds Peds Assessment Wizard (6 steps, from the Peds Flowsheet) ============ */
+/* ============ CharmEd Minds Peds Assessment Wizard (7 steps, from the Peds Flowsheet) ============ */
 const CM_FLOW = [
  {t:"Assessment Intake", icon:"🧠", items:[
   {k:"age", q:"Age group", t:"radio", o:["0-3 years","4-6 years","7-10 years","11-13 years","14-18 years"]},
@@ -1256,13 +1256,25 @@ const CM_FLOW = [
   {k:"goal2", q:"Goal 2", t:"text"},
   {k:"goal3", q:"Goal 3", t:"text"},
  ]},
- {t:"Screeners & Forms", icon:"📤", items:[
-  {i:"Suggested screeners load automatically from the age group and intake answers — toggle to match clinical judgment. This list saves to Notion for the APD task queue."},
-  {k:"screeners", q:"Screeners to load", t:"multi", o:["ASQ-3/ASQ-SE","DIAL-4","CAST","Vanderbilt","SRS-2 Short","Sensory Screen","PSC","SDQ","DIBELS/Acadience","RAN/RAS","CTOPP-2","Dyslexia/Dysgraphia/Dyscalculia","PHQ-9/GAD-7","AQ-10","RAADS-14","ASRS","Writing Sample","Trauma Screening"]},
-  {h:"Assign Google Forms"},
-  {k:"forms", q:"Forms sent", t:"multi", o:["Parent forms sent","Teacher forms sent","Self-report (teen) sent"]},
-  {k:"uploads", q:"Responses uploaded to the patient assessment in Notion", t:"multi", o:["Parent responses","Teacher responses","Self-report"]},
-  {k:"screennotes", q:"Screening notes — clinical observations, parent/teacher comments", t:"text"},
+ {t:"Send Before Visit", icon:"📤", items:[
+  {i:"Only questionnaires, rating scales, and record requests belong here. Suggested items load from age and intake answers; licensed tools must use the approved vendor link and must never be copied into a BHW form."},
+  {k:"screeners", q:"Questionnaires and records to send", t:"multi", o:["ASQ-3 / ASQ:SE-2 (licensed link)","CAST parent questionnaire","Vanderbilt Parent","Vanderbilt Teacher","SRS-2 Short (licensed link)","Sensory questionnaire","PSC Parent","PSC Youth Self-Report","SDQ Parent","SDQ Teacher","SDQ Self-Report","CLDQ Parent (ages 6–18)","HPSQ Teacher (ages 7–14)","PHQ-A","GAD-7","Trauma questionnaire","School records / IEP / 504 request"]},
+  {h:"Track completion"},
+  {k:"forms", q:"Links sent", t:"multi", o:["Parent/guardian links sent","Teacher links sent","Youth self-report links sent","School records request sent"]},
+  {k:"uploads", q:"Responses received in the protected assessment record", t:"multi", o:["Parent/guardian responses","Teacher responses","Youth self-report","School records / IEP / 504","Recent academic benchmark data"]},
+  {k:"screennotes", q:"Questionnaire and records notes", t:"text"},
+ ]},
+ {t:"In-Person Screening Visit", icon:"✍️", items:[
+  {i:"Complete performance-based and supervised measures here — never email these as forms. This is a risk-screening visit, not a diagnosis. Use only tools covered by current BHW qualifications, licensing, manuals, and vendor administration rules."},
+  {i:"HealthMeasures / PROMIS CATs remain planned, not active, until the sandbox security review and production license are complete."},
+  {k:"visitstatus", q:"Visit status", t:"radio", o:["Scheduled","Completed","Deferred — needs rescheduling","Referred directly for formal evaluation"]},
+  {k:"visitdate", q:"Visit date", t:"text"},
+  {k:"examiner", q:"Examiner", t:"text"},
+  {h:"Age- and concern-matched screen"},
+  {k:"inpersonTools", q:"Supervised measures completed or reviewed", t:"multi", o:["Hearing and vision status confirmation","Developmental / language / early-literacy observation (under 6)","DIAL-4 (ages 2:6–5:11; licensed)","Shaywitz DyslexiaScreen teacher rating review (K–3)","Shaywitz DyslexiaScreen Form 4 (ages 14–18)","DIBELS / Acadience benchmark review","RAN / RAS performance screen","CLDQ parent results review (ages 6–18)","FAW Screening Form (K–college; supervised)","Handwriting sample: copy, alphabet, dictation, and composition","HPSQ / HPSQ-C results review (ages 7–14)","Nessy Number Sense (ages 4–8; supplementary)","Dynamo Maths (ages 6–11; note UK norms)","NIH Toolbox Cognition Battery (age 3+; access confirmed)"]},
+  {k:"domains", q:"Observed risk domains", t:"multi", o:["No elevated learning risk on this screen","Reading / dyslexia risk","Writing / dysgraphia risk","Math / dyscalculia risk","Language risk","Graphomotor / visual-motor risk","Attention / executive-function contribution","Processing-speed / memory contribution","Hearing / vision contribution","Results are inconclusive"]},
+  {k:"expanded", q:"If indicated, expanded evaluation or referral — not part of the basic screen", t:"multi", o:["CTOPP-2 phonological-processing evaluation","Full FAW written-language evaluation","THS-R handwriting evaluation (ages 6–18:11)","ETCH handwriting evaluation (ages 6–12)","DASH-2 handwriting-speed evaluation (ages 8–25; non-US norms)","Beery VMI visual-motor evaluation (age 2+)","WIAT / KTEA / Woodcock-Johnson achievement testing","Speech-language evaluation","Occupational therapy evaluation","Audiology evaluation","Vision evaluation","Psychoeducational / neuropsychological evaluation"]},
+  {k:"inpersonnotes", q:"Direct observations, scores, validity notes, and interpretation", t:"text"},
  ]},
  {t:"Results & Recommendations", icon:"⭐", items:[
   {k:"adhd", q:"ADHD likelihood", t:"radio", o:["Low likelihood","Possible — Inattentive","Possible — Hyperactive","Possible — Combined","Diagnosed","Not assessed"]},
@@ -1270,23 +1282,32 @@ const CM_FLOW = [
   {k:"asd", q:"ASD risk", t:"radio", o:["Low risk","Mild concerns","Moderate concerns","High concerns","Diagnosed","Not assessed"]},
   {k:"efprofile", q:"EF weakness profile", t:"multi", o:["Working memory","Task initiation","Planning/organization","Time management","Emotional regulation","Flexibility","Sustained attention","Response inhibition"]},
   {k:"efsev", q:"EF severity", t:"radio", o:["Mild","Moderate","Significant"]},
-  {k:"learning", q:"Learning disorder flags", t:"multi", o:["Reading (Dyslexia)","Math (Dyscalculia)","Writing (Dysgraphia)","Language processing","Visual processing","Auditory processing","Memory issues","Slow processing speed"]},
+  {k:"learning", q:"Learning-risk flags from screening (not a diagnosis)", t:"multi", o:["Reading / dyslexia risk","Math / dyscalculia risk","Writing / dysgraphia risk","Language processing risk","Visual-motor risk","Auditory / hearing contribution","Memory contribution","Slow processing-speed contribution"]},
   {k:"sensimpact", q:"Sensory impact on functioning", t:"radio", o:["Minimal","Moderate","Significant"]},
   {k:"emotional", q:"Emotional concerns", t:"multi", o:["Anxiety","Depression","Mood dysregulation","Oppositional behavior","Social difficulties","Low self-esteem","Perfectionism","School avoidance"]},
   {k:"trauma", q:"Trauma considerations", t:"multi", o:["No known trauma","Potential ACEs","Medical trauma","Attachment concerns","Known trauma history","Requires trauma-informed approach"]},
   {k:"strengths", q:"Strengths", t:"text"},
   {k:"summary", q:"Clinical summary", t:"text"},
-  {k:"recs", q:"Recommended next steps", t:"multi", o:["Accommodations & supports","Therapy referrals","School consultation","Parent coaching","Medication evaluation","Follow-up assessment","Other specialist referral"]},
+  {k:"recs", q:"Recommended next steps", t:"multi", o:["Structured literacy / dyslexia intervention","Handwriting instruction / OT intervention","SRSD / written-expression intervention","Math / number-sense intervention","School IEP / 504 evaluation","Formal psychoeducational / neuropsychological evaluation","Speech-language / audiology / vision referral","Accommodations & supports","Therapy referrals","School consultation","Parent coaching","Medication evaluation","Follow-up assessment","Other specialist referral"]},
+  {k:"programs", q:"Optional learning supports to discuss with family", t:"multi", o:["Nessy","Lexia Core5 / PowerUp","Bookshare","Learning Ally","Read&Write","Microsoft Immersive Reader","Assistive technology evaluation"]},
   {k:"recpriority", q:"Highest-priority recommendation & why", t:"text"},
  ]},
 ];
 
 const CM_AGE_SCREENERS = {
-  "0-3 years": ["ASQ-3/ASQ-SE","DIAL-4"],
-  "4-6 years": ["DIAL-4","CAST","SDQ","Sensory Screen","PSC","Vanderbilt"],
-  "7-10 years": ["Vanderbilt","CAST","SRS-2 Short","PSC","SDQ","Sensory Screen","DIBELS/Acadience","RAN/RAS","CTOPP-2"],
-  "11-13 years": ["Vanderbilt","SRS-2 Short","PSC","SDQ","PHQ-9/GAD-7"],
-  "14-18 years": ["ASRS","AQ-10","RAADS-14","SRS-2 Short","PHQ-9/GAD-7","Writing Sample"],
+  "0-3 years": ["ASQ-3 / ASQ:SE-2 (licensed link)"],
+  "4-6 years": ["ASQ-3 / ASQ:SE-2 (licensed link)","CAST parent questionnaire","PSC Parent","SDQ Parent"],
+  "7-10 years": ["Vanderbilt Parent","Vanderbilt Teacher","CAST parent questionnaire","SRS-2 Short (licensed link)","PSC Parent","SDQ Parent","SDQ Teacher"],
+  "11-13 years": ["Vanderbilt Parent","Vanderbilt Teacher","SRS-2 Short (licensed link)","PSC Parent","PSC Youth Self-Report","SDQ Parent","SDQ Teacher","SDQ Self-Report","PHQ-A","GAD-7"],
+  "14-18 years": ["Vanderbilt Parent","Vanderbilt Teacher","SRS-2 Short (licensed link)","PSC Youth Self-Report","SDQ Self-Report","PHQ-A","GAD-7"],
+};
+
+const CM_AGE_INPERSON = {
+  "0-3 years": ["Hearing and vision status confirmation","Developmental / language / early-literacy observation (under 6)"],
+  "4-6 years": ["Hearing and vision status confirmation","Developmental / language / early-literacy observation (under 6)","DIAL-4 (ages 2:6–5:11; licensed)","Nessy Number Sense (ages 4–8; supplementary)"],
+  "7-10 years": ["Hearing and vision status confirmation","DIBELS / Acadience benchmark review","RAN / RAS performance screen","CLDQ parent results review (ages 6–18)","Nessy Number Sense (ages 4–8; supplementary)","Dynamo Maths (ages 6–11; note UK norms)"],
+  "11-13 years": ["Hearing and vision status confirmation","DIBELS / Acadience benchmark review","RAN / RAS performance screen","CLDQ parent results review (ages 6–18)"],
+  "14-18 years": ["Hearing and vision status confirmation","Shaywitz DyslexiaScreen Form 4 (ages 14–18)","RAN / RAS performance screen","CLDQ parent results review (ages 6–18)"],
 };
 
 let CM = null;
@@ -1297,12 +1318,12 @@ function cmCard(){
   const done = D.charmed.filter(e=>e.status==="Complete").slice(0,5);
   return `<div class="card">
     <h2>Peds assessment — guided flowsheet <span class="grow"></span><button class="btn sm" onclick="cmStart()">▶ Start new assessment</button></h2>
-    <p class="lede">The CharmEd Minds flowsheet as one guided flow: intake → school & attention → social & sensory → wellbeing → screeners (auto-suggested by age) → results & recommendations. Saves after every step.</p>
+    <p class="lede">The CharmEd Minds flow separates what can be sent before the visit from supervised in-person screening: intake → school & attention → social & sensory → wellbeing → questionnaires & records → in-person screening → results & recommendations. Saves after every step.</p>
     ${open.length ? `<div class="tbl-wrap"><table><thead><tr><th>Patient</th><th>Age</th><th>Stage</th><th>Progress</th><th></th></tr></thead><tbody>
       ${open.map(e=>`<tr><td><b>${esc(patLabel(e.patient))}</b></td><td>${esc(e.ageGroup||"—")}</td>
         <td><span class="pill info">${esc(e.status)}</span></td>
         <td>${e.steps.map((s,i)=>`<span class="pill ${s==="Complete"?"ok":s==="In Progress"?"warn":"gray"}">${i+1}</span>`).join(" ")}</td>
-        <td style="white-space:nowrap"><button class="btn sm" onclick="cmResume('${e.id}')">Resume</button>${(e.screeners||[]).length&&["Intake","Screeners Pending"].includes(e.status)?` <button class="btn sm sec" onclick="cmSendOpen('${e.id}','peds')">📤 Send</button>`:""}</td></tr>`).join("")}
+        <td style="white-space:nowrap"><button class="btn sm" onclick="cmResume('${e.id}')">Resume</button>${(e.screeners||[]).length&&["Intake","Screeners Pending","In-Person Screening","In-Person Complete"].includes(e.status)?` <button class="btn sm sec" onclick="cmSendOpen('${e.id}','peds')">📤 Send</button>`:""}</td></tr>`).join("")}
     </tbody></table></div>` : `<div class="empty">No assessments in progress.</div>`}
     ${done.length ? `<p class="lede" style="margin-top:12px">Recently completed: ${done.map(e=>esc(patLabel(e.patient))+" ("+esc(e.date)+")").join(" · ")}</p>` : ""}
   </div>`;
@@ -1319,23 +1340,36 @@ async function cmBegin(){
   if(!pid){ document.getElementById("f-err").textContent="Pick a patient."; return; }
   try{
     const res = await api(API_ACT, {action:"cm-save", patientId:pid, step:1, stepStatus:"In Progress", answers:{}});
-    CM = { id: res.id, patientId: pid, answers: [{},{},{},{},{},{}], step: 0 };
+    CM = { id: res.id, patientId: pid, answers: [{},{},{},{},{},{},{}], stepStates:["In Progress","Not Started","Not Started","Not Started","Not Started","Not Started","Not Started"], step: 0 };
     cmRender();
   }catch(e){ document.getElementById("f-err").textContent = e.message; }
 }
 function cmResume(id){
   const e = D.charmed.find(x=>x.id===id); if(!e) return;
   const step = e.steps.findIndex(s=>s!=="Complete");
-  CM = { id: e.id, patientId: e.patient, answers: e.answers.map(a=>a||{}), step: step<0?5:step };
+  CM = { id: e.id, patientId: e.patient, answers: Array.from({length:7},(_,i)=>e.answers?.[i]||{}), stepStates:Array.from({length:7},(_,i)=>e.steps?.[i]||"Not Started"), step: step<0?6:step };
   cmRender();
+}
+async function apiWithToken(url, body, token){
+  const res = await fetch(url, {
+    method: body ? "POST" : "GET",
+    headers: { "Content-Type":"application/json", Authorization:`Bearer ${token}` },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const data = await res.json().catch(()=>({error:"Server error"}));
+  if(!res.ok) throw new Error(data.error||"Request failed");
+  return data;
 }
 
 function cmRender(){
   const s = CM_FLOW[CM.step];
   const A = CM.answers[CM.step];
-  // pre-seed screener suggestions when arriving at step 5
+  // Pre-seed sendable questionnaires at step 5 and supervised tools at step 6.
   if(CM.step===4 && !A.screeners){
     A.screeners = cmSuggestScreeners();
+  }
+  if(CM.step===5 && !A.inpersonTools){
+    A.inpersonTools = cmSuggestInPerson();
   }
   const bar = CM_FLOW.map((st,i)=>`<button class="awv-step ${i===CM.step?"on":""} ${CM.answers[i]&&Object.keys(CM.answers[i]).length?"has":""}" onclick="cmGo(${i})">${i+1}</button>`).join("");
   const items = s.items.map(it=>{
@@ -1346,8 +1380,9 @@ function cmRender(){
     if(it.t==="multi") return `<div class="awv-q"><div class="awv-l">${esc(it.q)}</div><div class="needs">${it.o.map(o=>`<button class="chip ${(v||[]).includes(o)?"on":""}" onclick="cmSet('${it.k}',${JSON.stringify(o).replace(/"/g,"&quot;")},true)">${esc(o)}</button>`).join("")}</div></div>`;
     return `<div class="awv-q"><div class="awv-l">${esc(it.q)}</div><input type="text" value="${esc(v??"")}" onchange="cmVal('${it.k}',this.value)"></div>`;
   }).join("");
-  const hint = CM.step===4 ? `<p class="lede" style="margin-top:8px">Suggested for <b>${esc(CM.answers[0].age||"age not set")}</b>${cmMaskCount()>=3?" · 2e flags present — autism screeners kept in the mix":""}.</p>` : "";
-  openModal(`<h3>${s.icon} Step ${CM.step+1} of 6 — ${esc(s.t)}</h3>
+  const hint = CM.step===4 ? `<p class="lede" style="margin-top:8px">Sendable items suggested for <b>${esc(CM.answers[0].age||"age not set")}</b>${cmMaskCount()>=3?" · 2e flags present — autism questionnaires kept in the mix":""}.</p>`
+    : CM.step===5 ? `<p class="lede" style="margin-top:8px">In-person measures suggested for <b>${esc(CM.answers[0].age||"age not set")}</b> and the academic concerns selected earlier. Confirm current license, qualifications, and manual before administration.</p>` : "";
+  openModal(`<h3>${s.icon} Step ${CM.step+1} of 7 — ${esc(s.t)}</h3>
   <div class="msub">${esc(patLabel(CM.patientId))} · saves when you tap Next</div>
   <div class="awv-bar">${bar}</div>
   <div class="f awv-body">${items}</div>
@@ -1356,7 +1391,7 @@ function cmRender(){
   <div class="macts">
     <button class="btn sec" onclick="cmSave('In Progress',false)">Save & close</button>
     ${CM.step>0?`<button class="btn sec" onclick="cmGo(${CM.step-1})">← Back</button>`:""}
-    <button class="btn" onclick="cmSave('Complete',true)">${CM.step<5?"Next →":"Finish → Summary"}</button>
+    <button class="btn" onclick="cmSave('Complete',true)">${CM.step<6?"Next →":"Finish → Summary"}</button>
   </div>`);
   const body = document.querySelector(".mcard"); if(body) body.style.maxWidth = "720px";
 }
@@ -1374,42 +1409,105 @@ function cmSuggestScreeners(){
   const age = CM.answers[0].age;
   let list = [...(CM_AGE_SCREENERS[age] || [])];
   const academic = CM.answers[1].academic || [];
-  if(academic.some(a=>["Reading","Writing","Spelling"].includes(a)) && !list.includes("Dyslexia/Dysgraphia/Dyscalculia")) list.push("Dyslexia/Dysgraphia/Dyscalculia");
+  if(academic.some(a=>["Reading","Writing","Spelling","Math","Comprehension","Behind grade level"].includes(a)) && ["7-10 years","11-13 years","14-18 years"].includes(age)) list.push("CLDQ Parent (ages 6–18)");
+  if(academic.includes("Writing") && ["7-10 years","11-13 years"].includes(age)) list.push("HPSQ Teacher (ages 7–14)");
+  if(academic.length && !academic.includes("No concerns")) list.push("School records / IEP / 504 request");
   const famhx = CM.answers[3].famhx || [];
-  if(famhx.includes("Trauma history") || (CM.answers[3].stressors||[]).some(s=>["Loss","Illness","Housing stress"].includes(s))) list.push("Trauma Screening");
-  if(cmMaskCount()>=3){ ["CAST","SRS-2 Short"].forEach(x=>{ if(!list.includes(x)) list.push(x); }); }
+  if(famhx.includes("Trauma history") || (CM.answers[3].stressors||[]).some(s=>["Loss","Illness","Housing stress"].includes(s))) list.push("Trauma questionnaire");
+  if(cmMaskCount()>=3){ ["CAST parent questionnaire","SRS-2 Short (licensed link)"].forEach(x=>{ if(!list.includes(x)) list.push(x); }); }
+  return [...new Set(list)];
+}
+
+function cmScreeningReasons(answers){
+  const a1=answers?.[0]||{}, a2=answers?.[1]||{}, a3=answers?.[2]||{}, a4=answers?.[3]||{};
+  const reasons=[];
+  const add=(reason)=>{ if(!reasons.includes(reason)) reasons.push(reason); };
+  if(a1.age) add(`Age-matched screening (${a1.age})`);
+  if((a1.concerns||[]).includes("Attention/Focus difficulties") || (a2.ef||[]).length || (a2.teacher||[]).some(x=>["Attention","Hyperactivity","Impulsivity","Difficulty following directions"].includes(x))) add("Attention or executive-function concern");
+  if((a1.concerns||[]).includes("Academic struggles") || (a2.academic||[]).some(x=>x!=="No concerns")) add("Academic or learning concern");
+  if((a1.concerns||[]).includes("Social communication issues") || (a3.social||[]).some(x=>x!=="No social concerns") || (a3.comm||[]).some(x=>x!=="No concerns") || (a3.masking||[]).length>=3) add("Social-communication or masking concern");
+  if((a1.concerns||[]).includes("Sensory processing concerns") || (a3.sensory||[]).some(x=>x!=="No sensory concerns")) add("Sensory concern");
+  if((a4.mh||[]).some(x=>x!=="No mental health concerns")) add("Emotional or behavioral-health concern");
+  if((a4.famhx||[]).includes("Trauma history") || (a4.stressors||[]).some(x=>["Loss","Illness","Housing stress"].includes(x))) add("Trauma or significant-stressor history");
+  return reasons;
+}
+
+function cmSuggestInPerson(){
+  const age = CM.answers[0].age;
+  let list = [...(CM_AGE_INPERSON[age] || [])];
+  const academic = CM.answers[1].academic || [];
+  const add = (...items)=>items.forEach(x=>{ if(!list.includes(x)) list.push(x); });
+  if(academic.some(a=>["Reading","Spelling","Comprehension","Behind grade level"].includes(a))){
+    if(["4-6 years","7-10 years"].includes(age)) add("Shaywitz DyslexiaScreen teacher rating review (K–3)");
+    add("DIBELS / Acadience benchmark review","RAN / RAS performance screen");
+  }
+  if(academic.includes("Writing")) add("FAW Screening Form (K–college; supervised)","Handwriting sample: copy, alphabet, dictation, and composition");
+  if(academic.includes("Writing") && ["7-10 years","11-13 years"].includes(age)) add("HPSQ / HPSQ-C results review (ages 7–14)");
+  if(academic.includes("Math")){
+    if(["4-6 years","7-10 years"].includes(age)) add("Nessy Number Sense (ages 4–8; supplementary)");
+    if(["7-10 years","11-13 years"].includes(age)) add("Dynamo Maths (ages 6–11; note UK norms)");
+  }
+  if(academic.includes("Slow processing") || (CM.answers[1].ef||[]).some(x=>["Forgets instructions","Difficulty completing tasks"].includes(x))) add("NIH Toolbox Cognition Battery (age 3+; access confirmed)");
   return list;
 }
 
 function cmFlags(){
-  const a3=CM.answers[2], a4=CM.answers[3], a6=CM.answers[5];
+  const a3=CM.answers[2], a4=CM.answers[3], inPerson=CM.answers[5], results=CM.answers[6];
   const f=[];
   if(cmMaskCount()>=3) f.push("High-masking/2e profile");
   const mh=(a4.mh||[]).filter(x=>x!=="No mental health concerns");
-  if(mh.length>=2 || a4.stress==="High" || (a6.emotional||[]).length>=2) f.push("Mental health concerns");
-  if((a6.trauma||[]).some(x=>x!=="No known trauma")) f.push("Trauma-informed approach");
+  if(mh.length>=2 || a4.stress==="High" || (results.emotional||[]).length>=2) f.push("Mental health concerns");
+  if((results.trauma||[]).some(x=>x!=="No known trauma")) f.push("Trauma-informed approach");
   if((a4.sleep||[]).includes("Snoring / mouth breathing")) f.push("Sleep concerns — medical");
   if((a4.medical||[]).some(x=>x!=="None reported")) f.push("Medical follow-up");
-  if((a6.adhd||"").startsWith("Possible")||a6.adhd==="Diagnosed") f.push("ADHD possible");
-  if(["Mild concerns","Moderate concerns","High concerns","Diagnosed"].includes(a6.asd)) f.push("ASD concerns");
-  if((a6.learning||[]).length) f.push("Learning disorder flags");
-  if(a6.efsev==="Significant") f.push("EF significant");
-  if(a6.sensimpact==="Significant") f.push("Sensory significant");
+  if((results.adhd||"").startsWith("Possible")||results.adhd==="Diagnosed") f.push("ADHD possible");
+  if(["Mild concerns","Moderate concerns","High concerns","Diagnosed"].includes(results.asd)) f.push("ASD concerns");
+  if((results.learning||[]).length || (inPerson.domains||[]).some(x=>/ risk$/.test(x))) f.push("Learning-risk screen positive");
+  if((inPerson.inpersonTools||[]).length && !["Completed","Referred directly for formal evaluation"].includes(inPerson.visitstatus)) f.push("In-person screen pending");
+  if(results.efsev==="Significant") f.push("EF significant");
+  if(results.sensimpact==="Significant") f.push("Sensory significant");
   if((a4.support||[]).includes("Limited support")) f.push("Limited support system");
   return f;
 }
 
 async function cmSave(stepStatus, advance){
-  const statusByStep = {5:"Screeners Pending", 6:"Scores Ready"};
+  if(advance && CM.step===5){
+    const visit = CM.answers[5] || {};
+    if(!["Completed","Referred directly for formal evaluation"].includes(visit.visitstatus)){
+      const el=document.getElementById("f-err"); if(el) el.textContent="Complete the in-person screen or document a direct formal-evaluation referral before continuing.";
+      return;
+    }
+    if(visit.visitstatus==="Completed" && !(visit.inpersonTools||[]).length){
+      const el=document.getElementById("f-err"); if(el) el.textContent="Select at least one supervised measure or review item completed at the visit.";
+      return;
+    }
+  }
+  if(advance && CM.step===6 && (CM.stepStates?.[5]||"Not Started")!=="Complete"){
+    const el=document.getElementById("f-err"); if(el) el.textContent="Finish the in-person screening step before finalizing results.";
+    return;
+  }
+  // Once the history/context steps are complete, queue the need-matched
+  // recommendations for staff review. Nothing is sent without the PIN-gated
+  // confirmation in cmSendGo.
+  if(advance && stepStatus==="Complete" && CM.step===3 && !CM.answers[4].screeners){
+    CM.answers[4].screeners = cmSuggestScreeners();
+  }
+  CM.stepStates = CM.stepStates || Array(7).fill("Not Started");
+  CM.stepStates[CM.step] = stepStatus;
+  const statusByStep = {4:"Screeners Pending", 5:"Screeners Pending", 6:"In-Person Complete", 7:"Scores Ready"};
   const body = { action:"cm-save", id:CM.id, step:CM.step+1, stepStatus,
     answers:CM.answers[CM.step], flags:cmFlags(),
     ageGroup: CM.answers[0].age || undefined,
     screeners: CM.answers[4].screeners || undefined };
+  if(CM.step>=5){
+    body.workflowAnswers = {inPerson:CM.answers[5]||{}, results:CM.answers[6]||{}};
+    body.workflowStepStatus = {inPerson:CM.stepStates[5]||"Not Started", results:CM.stepStates[6]||"Not Started"};
+  }
   if(advance && stepStatus==="Complete" && statusByStep[CM.step+1]) body.status = statusByStep[CM.step+1];
   try{
     await api(API_ACT, body);
     if(!advance){ closeModal(); refreshSoft(); return; }
-    if(CM.step<5){ CM.step++; cmRender(); }
+    if(CM.step<6){ CM.step++; cmRender(); }
     else cmSummary();
   }catch(e){ const el=document.getElementById("f-err"); if(el) el.textContent=e.message; }
 }
@@ -1421,16 +1519,17 @@ function cmSummary(){
     acts.push(`<button class="btn sm warn" onclick="closeModal();openHandoffForm('CharmEd Minds');setTimeout(()=>{document.getElementById('f-to').value='Mind & Mood Recovery';document.getElementById('f-pat').value='${CM.patientId}';},50)">→ Warm handoff to Mind & Mood</button>`);
   if(flags.includes("Sleep concerns — medical")||flags.includes("Medical follow-up"))
     acts.push(`<button class="btn sm" onclick="closeModal();openReferralForm('CharmEd Minds');setTimeout(()=>{document.getElementById('f-to').value='Primary Care';document.getElementById('f-pat').value='${CM.patientId}';},50)">→ Medical referral to Primary Care</button>`);
-  if((CM.answers[5].recs||[]).includes("Medication evaluation"))
+  if((CM.answers[6].recs||[]).includes("Medication evaluation"))
     acts.push(`<button class="btn sm sec" onclick="closeModal();openReferralForm('CharmEd Minds');setTimeout(()=>{document.getElementById('f-to').value='Primary Care';document.getElementById('f-pat').value='${CM.patientId}';document.getElementById('f-det').value='Medication evaluation recommended from CharmEd assessment.';},50)">→ Med evaluation referral</button>`);
-  acts.push(`<button class="btn sm warn" onclick="closeModal();cmSendOpen('${CM.id}','peds')">📤 Email the screeners now</button>`);
+  if((CM.answers[4].screeners||[]).length) acts.push(`<button class="btn sm warn" onclick="closeModal();cmSendOpen('${CM.id}','peds')">📤 Email the questionnaires now</button>`);
   acts.push(`<button class="btn sm" onclick="closeModal();cpEnroll('${CM.patientId}')">→ Enroll in 12-week program</button>`);
   openModal(`<h3>⭐ Assessment Summary</h3><div class="msub">${esc(patLabel(CM.patientId))} — flags, routing, and stage.</div>
   <div class="f">
     <div class="awv-q"><div class="awv-l">Flags</div>${flags.length?flags.map(f=>`<span class="pill ${/Mental|Trauma/.test(f)?"alert":/Medical|Sleep|EF|Learning/.test(f)?"warn":"info"}">${esc(f)}</span> `).join(""):'<span class="pill ok">None</span>'}</div>
-    <div class="awv-q"><div class="awv-l">Screeners queued</div>${(CM.answers[4].screeners||[]).map(s=>`<span class="pill gray">${esc(s)}</span>`).join(" ")||"—"}</div>
+    <div class="awv-q"><div class="awv-l">Questionnaires and records queued</div>${(CM.answers[4].screeners||[]).map(s=>`<span class="pill gray">${esc(s)}</span>`).join(" ")||"—"}</div>
+    <div class="awv-q"><div class="awv-l">In-person measures</div>${(CM.answers[5].inpersonTools||[]).map(s=>`<span class="pill gray">${esc(s)}</span>`).join(" ")||"—"}</div>
     ${acts.length?`<div class="awv-q"><div class="awv-l">Suggested next steps</div><div style="display:flex;gap:8px;flex-wrap:wrap">${acts.join("")}</div></div>`:""}
-    <p class="lede">Stage is now <b>Scores Ready</b>. After the feedback session with the family, mark the assessment complete.</p>
+    <p class="lede">Stage is now <b>Scores Ready</b>. These findings describe screening risk, not a learning-disorder diagnosis. After clinician review and the family feedback session, mark the assessment complete.</p>
     <div class="macts">
       <button class="btn sec" onclick="cmStage('Feedback Session')">Mark Feedback Session</button>
       <button class="btn" onclick="cmStage('Complete')">Mark Complete</button>
@@ -1499,7 +1598,7 @@ const CMA_FLOW = [
   {k:"pattern", q:"Pattern", t:"radio", o:["Lifelong","Gradual worsening","Sudden change","After illness or injury","Situational (stress-related)"]},
  ]},
  {t:"Screeners & Routing", icon:"📤", items:[
-  {i:"Suggested screeners load automatically from the intake answers — toggle to match clinical judgment. Saves to Notion for the APD task queue."},
+  {i:"Suggested screeners load automatically from the intake answers — toggle to match clinical judgment. The selection saves to the CharmEd Minds assessment queue."},
   {k:"screeners", q:"Screeners to load", t:"multi", o:["AQ-10","RAADS-14","ASRS","W-FIRS-S","GAD-7","PHQ-9","Adult EF Checklist","Adult Sensory Profile — Short","Adult Dyslexia Screener","Adult Dysgraphia Screener","Adult Dyscalculia Screener","Gentle ACE/Trauma Screen","Cognitive Red Flags Checklist","MOCA Pre-Screen (Provider)"]},
   {k:"forms", q:"Forms sent", t:"multi", o:["Self-report forms sent","Informant form sent (if applicable)"]},
   {k:"screennotes", q:"Notes — observations, context", t:"text"},
@@ -1620,11 +1719,30 @@ function cmaSuggestScreeners(){
   return [...new Set(list)];
 }
 
+function cmaScreeningReasons(answers){
+  const a1=answers?.[0]||{}, a2=answers?.[1]||{}, a3=answers?.[2]||{}, a4=answers?.[3]||{}, a5=answers?.[4]||{};
+  const reasons=[];
+  const add=(reason)=>{ if(!reasons.includes(reason)) reasons.push(reason); };
+  if((a1.referral||[]).length || (a1.difficulties||[]).some(x=>x!=="None")) add("Reported functional, academic, or work difficulty");
+  if((a2.ef||[]).length || ["Moderate","Severe"].includes(a2.efimpact)) add("Attention or executive-function concern");
+  if((a2.social||[]).some(x=>x!=="No concerns") || (a2.sensory||[]).length) add("Social-communication or sensory concern");
+  if((a3.mh||[]).some(x=>x!=="None")) add("Mental-health concern");
+  if((a3.cog||[]).some(x=>x!=="None") || (a5.changes||[]).length) add("Cognitive or memory change");
+  if((a4.tbi||[]).some(x=>x!=="No known brain injuries") || (a4.subimpact||[]).some(x=>x!=="No noticeable impact")) add("Brain-injury or substance-cognition history");
+  if((a5.oxy||[]).some(x=>x!=="None") || (a5.vasc||[]).some(x=>x!=="No known vascular issues") || (a5.vascrisk||[]).some(x=>x!=="None")) add("Sleep, oxygenation, or vascular contributor");
+  return reasons;
+}
+
 async function cmaSave(stepStatus, advance){
+  // Queue recommendations after the final history step; staff still chooses
+  // the items and re-authenticates before any invitation is sent.
+  if(advance && stepStatus==="Complete" && CMA.step===4 && !CMA.answers[5].screeners){
+    CMA.answers[5].screeners = cmaSuggestScreeners();
+  }
   const body = { action:"cma-save", id:CMA.id, step:CMA.step+1, stepStatus,
     answers:CMA.answers[CMA.step], flags:cmaFlags(),
     screeners: CMA.answers[5].screeners || undefined };
-  if(advance && stepStatus==="Complete" && CMA.step===5) body.status = "Screeners Pending";
+  if(advance && stepStatus==="Complete" && [4,5].includes(CMA.step)) body.status = "Screeners Pending";
   try{
     await api(API_ACT, body);
     if(!advance){ closeModal(); refreshSoft(); return; }
@@ -2276,40 +2394,48 @@ function prevStartAwv(patientId){
 }
 
 
-/* ============ Screener sending (email via Resend) ============ */
+/* ============ Questionnaire sending (approved remote links only) ============ */
 function cmSendOpen(assessmentId, kind){
   const list = kind==="adult" ? D.charmedAdult : D.charmed;
   const e = (list||[]).find(x=>x.id===assessmentId); if(!e) return;
-  const pat = (D.patients||[]).find(p=>p.id===e.patient) || {};
-  const prefill = kind==="adult" ? (pat.email||"") : (pat.guardianEmail||pat.email||"");
   const screeners = e.screeners || [];
-  openModal(`<h3>📤 Send screeners</h3>
-  <div class="msub">${esc(patLabel(e.patient))} · emails the form links, logs it on the assessment, and moves the stage to Screeners Pending</div>
+  const reasons = kind==="adult" ? cmaScreeningReasons(e.answers) : cmScreeningReasons(e.answers);
+  const registryNote = kind==="peds"
+    ? "Only approved links from the CharmEd Minds screening-link registry are sent. Supervised performance measures from step 6 never appear here; anything without an active link is skipped and noted."
+    : "Only approved links from the CharmEd Minds screening-link registry are sent; anything without an active link is skipped and noted.";
+  openModal(`<h3>📤 Send questionnaires</h3>
+  <div class="msub">${esc(patLabel(e.patient))} · assigns approved remote links in Patient 360 and sends one secure portal invitation</div>
   <div class="f">
-    <label>Send to (${kind==="adult"?"patient":"parent/guardian"} email)</label>
-    <input type="email" id="ss-to" value="${esc(prefill)}" placeholder="name@email.com">
+    <p class="lede">The recipient address comes from the protected Patient 360 record. Screening names and results are never placed in the email.</p>
+    <div class="awv-q"><div class="awv-l">Why this review was triggered</div>${reasons.length?reasons.map(r=>`<span class="pill info">${esc(r)}</span>`).join(" "):'<span class="pill gray">Routine clinician review</span>'}</div>
     <label>Recipient is</label>
     <div class="needs" id="ss-aud">
-      ${["Parent","Self","Teacher"].map((a,i)=>`<button class="chip ${ (kind==="adult"?a==="Self":a==="Parent") ?"on":""}" type="button" data-a="${a}" onclick="[...document.querySelectorAll('#ss-aud .chip')].forEach(c=>c.classList.remove('on'));this.classList.add('on')">${a}</button>`).join("")}
+      ${["Parent","Self"].map((a)=>`<button class="chip ${ (kind==="adult"?a==="Self":a==="Parent") ?"on":""}" type="button" data-a="${a}" onclick="[...document.querySelectorAll('#ss-aud .chip')].forEach(c=>c.classList.remove('on'));this.classList.add('on')">${a}</button>`).join("")}
     </div>
-    <label>Screeners to send (from this assessment)</label>
+    <label>Questionnaires and record requests to send</label>
     <div class="needs" id="ss-list">
-      ${screeners.length?screeners.map(s=>`<button class="chip on" type="button" data-s="${esc(s)}" onclick="this.classList.toggle('on')">${esc(s)}</button>`).join(""):'<span class="pill warn">No screeners selected yet — finish step 5 first</span>'}
+      ${screeners.length?screeners.map(s=>`<button class="chip on" type="button" data-s="${esc(s)}" onclick="this.classList.toggle('on')">${esc(s)}</button>`).join(""):'<span class="pill warn">No sendable questionnaires selected yet — finish step 5 first</span>'}
     </div>
-    <p class="lede">Links come from the <b>Screener Form Links</b> database in Notion — anything without a link on file gets skipped and noted.</p>
+    <label>Verify your CrewOS PIN to send</label>
+    <input type="password" id="ss-pin" inputmode="numeric" autocomplete="current-password" maxlength="8" placeholder="PIN">
+    <p class="lede">${registryNote}</p>
     <div class="ferr" id="f-err"></div>
-    <div class="macts"><button class="btn sec" onclick="closeModal()">Cancel</button><button class="btn" onclick="cmSendGo('${assessmentId}','${kind}')">📤 Send now</button></div>
+    <div class="macts"><button class="btn sec" onclick="closeModal()">Not indicated</button><button class="btn" onclick="cmSendGo('${assessmentId}','${kind}')">Approve & send selected links</button></div>
   </div>`);
 }
 async function cmSendGo(assessmentId, kind){
-  const to = document.getElementById("ss-to").value.trim();
   const screeners = [...document.querySelectorAll("#ss-list .chip.on")].map(c=>c.dataset.s);
   const audEl = document.querySelector("#ss-aud .chip.on");
-  if(!to){ document.getElementById("f-err").textContent = "Enter the recipient's email."; return; }
-  if(!screeners.length){ document.getElementById("f-err").textContent = "Pick at least one screener."; return; }
+  const pin = document.getElementById("ss-pin").value.trim();
+  const list = kind==="adult" ? D.charmedAdult : D.charmed;
+  const assessment = (list||[]).find(x=>x.id===assessmentId);
+  if(!assessment?.patient){ document.getElementById("f-err").textContent = "This assessment is not linked to a patient."; return; }
+  if(!screeners.length){ document.getElementById("f-err").textContent = "Pick at least one questionnaire or record request."; return; }
+  if(!/^\d{4,8}$/.test(pin)){ document.getElementById("f-err").textContent = "Enter your CrewOS PIN to verify Clinical access."; return; }
   try{
-    const r = await api(API_ACT, {action:"cm-send-screeners", assessmentId, kind, to, screeners, audience: audEl?audEl.dataset.a:"Parent"});
-    toast(`✓ Sent ${r.sent.length} screener${r.sent.length>1?"s":""}${r.missing&&r.missing.length?` — no link on file for ${r.missing.join(", ")}`:""}`);
+    const auth = await apiWithToken(API_AUTH, {action:"clinical-login", pin}, TOKEN);
+    const r = await apiWithToken(API_ACT, {action:"cm-send-screeners", assessmentId, patientId:assessment.patient, kind, screeners, audience: audEl?audEl.dataset.a:"Parent"}, auth.token);
+    toast(`✓ Assigned ${r.sent.length} screening${r.sent.length>1?"s":""} and sent the secure portal invitation`);
     closeModal(); refreshSoft();
   }catch(e){ document.getElementById("f-err").textContent = e.message; }
 }
