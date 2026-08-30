@@ -19,6 +19,7 @@ const titleText = (item = {}) => {
     || item.type?.[0]
     || item.category?.[0];
   return item.title
+    || item.label
     || item.description
     || item.medicationReference?.display
     || (codedTitle ? conceptText(codedTitle) : "")
@@ -199,6 +200,7 @@ function renderLegacy(record) {
   const goals = resourcesOf(resources, "Goal");
   const serviceRequests = resourcesOf(resources, "ServiceRequest");
   const clinicalImpressions = resourcesOf(resources, "ClinicalImpression");
+  const careTeams = resourcesOf(resources, "CareTeam");
   const systems = Array.isArray(record.systems) ? record.systems.filter(isDisplayable) : [];
   const unresolvedTasks = tasks.filter((item) => !["completed", "cancelled", "failed", "rejected"].includes(String(item.status).toLowerCase()));
   const urgentItems = resources.filter((item) => ["stat", "asap", "urgent", "critical"].includes(String(item.priority || item.status).toLowerCase()));
@@ -300,7 +302,7 @@ function safeNotice(context) {
   return `<div class="safe-notice"><b>Safe pilot record:</b> locked to BHW0000 with no real-patient or production Firestore query. ${sourceOmitted} restricted source record(s) and ${frontendOmitted} additional presentation item(s) were withheld. Blank sections mean not documented or not connected - never "normal" or "absent."</div>`;
 }
 
-function overviewPage(context) {
+function overviewPageLegacy(context) {
   const { conditions, observations, reports, medications, encounters, unresolvedTasks, carePlans, goals, timeline, systems, clinicalImpressions, serviceRequests, resources, gaps, urgentItems, record, sourceOmitted, frontendOmitted } = context;
   const assessedSystems = systems.filter((item) => String(item.status || "").toLowerCase() !== "not-assessed").length;
   const latest = timeline[0];
@@ -314,6 +316,71 @@ function overviewPage(context) {
     <article class="overview-card gold"><h3>Clinical Data</h3><p>The complete digital spine: problems, medicines, results, encounters and records.</p><div class="overview-facts"><span><b>${resources.length}</b> displayed FHIR resources</span><span><b>${observations.length + reports.length}</b> result or report resource(s)</span></div><a class="btn primary" href="patient-360-data.html">Open clinical data</a></article>
     <article class="overview-card"><h3>Sources & Boundaries</h3><p>Provenance, schema, withheld information and still-missing connections.</p><div class="overview-facts"><span>Schema ${esc(record.schemaVersion || "not supplied")}</span><span><b>${sourceOmitted + frontendOmitted}</b> withheld item(s)</span></div><a class="btn primary" href="patient-360-sources.html">Open sources</a></article>
   </div></section>`;
+}
+
+function itemContains(item, terms) {
+  const haystack = JSON.stringify(item || {}).toLowerCase();
+  return terms.some((term) => haystack.includes(term));
+}
+
+function compactItems(items, formatter, empty, limit = 3) {
+  if (!items.length) return `<p class="overview-empty">${esc(empty)}</p>`;
+  return `<ul class="clinical-list">${items.slice(0, limit).map((item) => `<li>${formatter(item)}</li>`).join("")}</ul>${items.length > limit ? `<span class="more-note">+${items.length-limit} more in the detailed page</span>` : ""}`;
+}
+
+function trendGraphic(observations) {
+  const numeric = observations.filter((item) => Number.isFinite(Number(item.valueQuantity?.value)));
+  if (!numeric.length) return `<div class="trend-empty"><span>No numeric laboratory results are connected.</span></div>`;
+  const focusLabel = conceptText(numeric[0].code);
+  const series = numeric.filter((item) => conceptText(item.code) === focusLabel).sort((a,b) => new Date(a.effectiveDateTime || a.issued || 0) - new Date(b.effectiveDateTime || b.issued || 0));
+  const values = series.map((item) => Number(item.valueQuantity.value));
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max-min || 1;
+  const points = values.map((value,index) => {
+    const x = series.length === 1 ? 150 : 24 + (index * 252 / (series.length-1));
+    const y = 92 - ((value-min)/range)*58;
+    return [x,y];
+  });
+  const last = series.at(-1);
+  return `<div class="trend-heading"><div><b>${esc(focusLabel)}</b><span>${esc(last.valueQuantity.value)} ${esc(last.valueQuantity.unit || "")}</span></div><span>${series.length > 1 ? `${series.length} trended results` : "1 result - trend needs another point"}</span></div><svg class="trend-svg" viewBox="0 0 300 120" role="img" aria-label="${esc(focusLabel)} result trend"><line x1="20" y1="96" x2="282" y2="96"/><line x1="20" y1="20" x2="20" y2="96"/><polyline points="${points.map(([x,y]) => `${x},${y}`).join(" ")}"/>${points.map(([x,y]) => `<circle cx="${x}" cy="${y}" r="5"/>`).join("")}</svg><div class="trend-foot"><span>${esc(dateText(series[0].effectiveDateTime || series[0].issued))}</span><span>${esc(dateText(last.effectiveDateTime || last.issued))}</span></div>`;
+}
+
+function bodyFigure(context) {
+  const activeSystems = context.systems.filter((item) => String(item.status || "").toLowerCase() !== "not-assessed");
+  const focus = activeSystems[0];
+  return `<div class="body-center"><div class="body-caption"><span>Whole-person atlas</span><b>${activeSystems.length ? `${activeSystems.length} active system focus` : "No active system focus returned"}</b></div><svg class="body-svg" viewBox="0 0 220 430" role="img" aria-label="Whole-person body-system overview"><defs><linearGradient id="bodyFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#dcebee"/><stop offset="1" stop-color="#e8e1ef"/></linearGradient></defs><circle class="body-shape" cx="110" cy="40" r="27"/><path class="body-shape" d="M82 81 Q110 67 138 81 L153 205 Q137 225 130 228 L145 386 Q146 411 128 411 L110 255 92 411 Q74 411 75 386 L90 228 Q73 218 67 205Z"/><path class="body-limb" d="M81 92 L44 211 Q39 229 49 233 Q58 234 64 217 L94 126"/><path class="body-limb" d="M139 92 L176 211 Q181 229 171 233 Q162 234 156 217 L126 126"/><circle class="body-focus-dot" cx="110" cy="163" r="28"/><circle class="body-focus-ring" cx="110" cy="163" r="40"/></svg><div class="body-focus-copy"><b>${esc(focus?.label || "Body-system focus not documented")}</b><span>${esc(focus?.summary || "Open the atlas to review documented and unassessed systems.")}</span><a href="patient-360-atlas.html">Open full body-system atlas</a></div></div>`;
+}
+
+function overviewPage(context) {
+  const { patient, conditions, observations, medications, encounters, tasks, carePlans, allergies, reports, goals, serviceRequests, clinicalImpressions, timeline, careTeams } = context;
+  const activeMedications = medications.filter((item) => !["stopped","cancelled","completed","entered-in-error"].includes(String(item.status).toLowerCase()));
+  const specialists = compact([
+    ...careTeams.flatMap((team) => team.participant || []).map((participant) => participant.member?.display || participant.role?.[0]?.text),
+    ...encounters.flatMap((encounter) => encounter.participant || []).map((participant) => participant.individual?.display),
+  ]).filter((value,index,array) => array.indexOf(value) === index);
+  const screenings = [...observations, ...reports, ...serviceRequests].filter((item) => itemContains(item,["screen","mammogram","colonoscopy","cervical","depression","preventive"]));
+  const labDue = [...serviceRequests, ...tasks].filter((item) => itemContains(item,["laboratory","lab order","blood draw","recheck","repeat test","repeat panel"]));
+  const nutrition = [...carePlans, ...goals, ...tasks].filter((item) => itemContains(item,["nutrition","diet","food plan","meal plan","weight management"]));
+  const sdoh = [...observations, ...serviceRequests, ...tasks].filter((item) => itemContains(item,["housing","food insecurity","transportation","financial","caregiver","social determinant","utility"]));
+  const triggers = [...clinicalImpressions, ...timeline].filter((item) => itemContains(item,["trigger","infection","stress","sleep loss","exposure","trauma","hormonal"]));
+  const priorities = goals.length ? goals : conditions;
+  const latestTimeline = timeline.slice(0,4);
+  return `<section class="worksheet health-overview"><div class="worksheet-heading"><span class="section-number overview">360</span><h2>Whole-Person Health Snapshot</h2><p>What is active, important, due, and shaping this patient's health now</p></div>
+    <div class="health360-map"><div class="health-column">
+      <article class="health-callout coral"><div class="callout-head"><span>Active symptoms & diagnoses</span><a href="patient-360-data.html">Problem list</a></div>${compactItems(conditions,(item)=>`<b>${esc(conceptText(item.code))}</b><small>${esc(statusText(item.clinicalStatus?.coding?.[0]?.code || item.status || "recorded"))}</small>`,"No active condition or symptom record is connected.")}</article>
+      <article class="health-callout teal"><div class="callout-head"><span>Active medications</span><a href="patient-360-data.html">Medications</a></div>${compactItems(activeMedications,(item)=>`<b>${esc(titleText(item))}</b><small>${esc(item.dosageInstruction?.[0]?.text || "Directions not recorded")}</small>`,"No active medication request is connected.")}</article>
+      <article class="health-callout gold"><div class="callout-head"><span>Allergies & intolerances</span><a href="patient-360-data.html">Allergies</a></div>${compactItems(allergies,(item)=>`<b>${esc(titleText(item))}</b><small>${esc(item.criticality || "Criticality not recorded")}</small>`,"No allergy record is connected - this does not mean no known allergies.")}</article>
+      <article class="health-callout purple"><div class="callout-head"><span>Individual priorities</span><a href="patient-360-plan.html">Care plan</a></div>${compactItems(priorities,(item)=>`<b>${esc(titleText(item))}</b><small>${esc(item.description || "Patient-defined priority not separately documented")}</small>`,"Patient-defined priorities and functional goals are not documented.")}</article>
+    </div>${bodyFigure(context)}<div class="health-column">
+      <article class="health-callout teal"><div class="callout-head"><span>Specialists & care team</span><a href="patient-360-sources.html">Sources</a></div>${specialists.length ? `<ul class="clinical-list">${specialists.slice(0,4).map((name)=>`<li><b>${esc(name)}</b></li>`).join("")}</ul>` : `<p class="overview-empty">No specialist or CareTeam roster is connected.</p>`}</article>
+      <article class="health-callout green"><div class="callout-head"><span>Screening & prevention</span><a href="patient-360-data.html">Results</a></div>${compactItems(screenings,(item)=>`<b>${esc(titleText(item))}</b><small>${esc(dateText(item.effectiveDateTime || item.authoredOn || item.issued))}</small>`,"No structured health-screening status or due list is connected.")}</article>
+      <article class="health-callout coral"><div class="callout-head"><span>SDOH needs</span><a href="patient-360-context.html">Context</a></div>${compactItems(sdoh,(item)=>`<b>${esc(titleText(item))}</b><small>${esc(item.status || "recorded")}</small>`,"No structured SDOH need or protective resource is connected.")}</article>
+      <article class="health-callout purple"><div class="callout-head"><span>Triggers & patterns</span><a href="patient-360-mechanism.html">Mechanism</a></div>${compactItems(triggers,(item)=>`<b>${esc(titleText(item))}</b><small>Requires clinician validation</small>`,"No clinician-validated triggers or amplifying patterns are documented.")}</article>
+    </div></div>
+    <div class="overview-clinical-grid"><section class="panel lab-panel"><div class="panel-head"><h3>Important labs & trends</h3><a class="btn" href="patient-360-data.html">All results</a></div><div class="panel-body">${trendGraphic(observations)}</div></section><section class="panel"><div class="panel-head"><h3>What is due next</h3><span class="badge warning">Verify orders</span></div><div class="panel-body due-grid"><div><span>Next laboratory work</span>${compactItems(labDue,(item)=>`<b>${esc(titleText(item))}</b><small>${esc(dateText(item.occurrenceDateTime || item.authoredOn))}</small>`,"No next-lab order or due date is connected.",2)}</div><div><span>Screening or prevention</span>${compactItems(screenings,(item)=>`<b>${esc(titleText(item))}</b><small>${esc(item.status || "recorded")}</small>`,"No screening due status is connected.",2)}</div></div></section></div>
+    <div class="overview-clinical-grid"><section class="panel"><div class="panel-head"><h3>Nutrition & individualized plan</h3><a class="btn" href="patient-360-plan.html">Full care plan</a></div><div class="panel-body personalized-grid"><div><span>Nutrition plan</span>${compactItems(nutrition,(item)=>`<b>${esc(titleText(item))}</b><small>${esc(item.description || item.status || "recorded")}</small>`,"No structured individualized nutrition plan is connected.",2)}</div><div><span>Patient-specific details</span><ul class="clinical-list"><li><b>${esc(patient.gender || "Gender not recorded")}</b><small>Recorded administrative gender</small></li><li><b>${esc(carePlans[0] ? titleText(carePlans[0]) : "Health Blueprint not connected")}</b><small>Current individualized care framework</small></li></ul></div></div></section><section class="panel"><div class="panel-head"><h3>Prominent timeline</h3><a class="btn" href="patient-360-timeline.html">Full timeline</a></div><div class="panel-body prominent-timeline">${latestTimeline.length ? latestTimeline.map((event)=>`<div><time>${esc(dateText(event.date))}</time><span><b>${esc(event.label || event.type)}</b><small>${esc(event.type || "Clinical event")}</small></span></div>`).join("") : `<p class="overview-empty">No high-value timeline events are connected.</p>`}</div></section></div>
+  </section>`;
 }
 
 function atlasPage(context) {
@@ -369,13 +436,14 @@ function render(record) {
   const goals = resourcesOf(resources, "Goal");
   const serviceRequests = resourcesOf(resources, "ServiceRequest");
   const clinicalImpressions = resourcesOf(resources, "ClinicalImpression");
+  const careTeams = resourcesOf(resources, "CareTeam");
   const systems = Array.isArray(record.systems) ? record.systems.filter(isDisplayable) : [];
   const unresolvedTasks = tasks.filter((item) => !["completed", "cancelled", "failed", "rejected"].includes(String(item.status).toLowerCase()));
   const urgentItems = resources.filter((item) => ["stat", "asap", "urgent", "critical"].includes(String(item.priority || item.status).toLowerCase()));
   const gaps = [[allergies.length,"allergies"],[immunizations.length,"immunizations"],[procedures.length,"procedures"],[documents.length,"source documents"],[clinicalImpressions.length,"clinician mechanism synthesis"]].filter(([count]) => !count).map(([, label]) => label);
   const sourceOmitted = Number(record.restrictedRecordsOmitted || 0);
   const displayName = normalizePatientName(patient.name?.[0] || {});
-  const context = { record, resources, patient, displayName, conditions, observations, medications, encounters, tasks, carePlans, systems, allergies, reports, procedures, immunizations, documents, goals, serviceRequests, clinicalImpressions, unresolvedTasks, urgentItems, timeline, frontendOmitted, sourceOmitted, gaps };
+  const context = { record, resources, patient, displayName, conditions, observations, medications, encounters, tasks, carePlans, systems, allergies, reports, procedures, immunizations, documents, goals, serviceRequests, clinicalImpressions, careTeams, unresolvedTasks, urgentItems, timeline, frontendOmitted, sourceOmitted, gaps };
   const pageRenderers = { overview: overviewPage, atlas: atlasPage, timeline: timelinePage, mechanism: mechanismPage, context: contextPage, plan: planPage, data: dataPage, sources: sourcesPage };
   const header = view === "overview" ? fullHero(context) : compactHeader(context);
   $("content").innerHTML = `${header}${pageNavigation(view)}${safeNotice(context)}${(pageRenderers[view] || overviewPage)(context)}`;
