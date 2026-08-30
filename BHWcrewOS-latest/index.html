@@ -1418,6 +1418,20 @@ function cmSuggestScreeners(){
   return [...new Set(list)];
 }
 
+function cmScreeningReasons(answers){
+  const a1=answers?.[0]||{}, a2=answers?.[1]||{}, a3=answers?.[2]||{}, a4=answers?.[3]||{};
+  const reasons=[];
+  const add=(reason)=>{ if(!reasons.includes(reason)) reasons.push(reason); };
+  if(a1.age) add(`Age-matched screening (${a1.age})`);
+  if((a1.concerns||[]).includes("Attention/Focus difficulties") || (a2.ef||[]).length || (a2.teacher||[]).some(x=>["Attention","Hyperactivity","Impulsivity","Difficulty following directions"].includes(x))) add("Attention or executive-function concern");
+  if((a1.concerns||[]).includes("Academic struggles") || (a2.academic||[]).some(x=>x!=="No concerns")) add("Academic or learning concern");
+  if((a1.concerns||[]).includes("Social communication issues") || (a3.social||[]).some(x=>x!=="No social concerns") || (a3.comm||[]).some(x=>x!=="No concerns") || (a3.masking||[]).length>=3) add("Social-communication or masking concern");
+  if((a1.concerns||[]).includes("Sensory processing concerns") || (a3.sensory||[]).some(x=>x!=="No sensory concerns")) add("Sensory concern");
+  if((a4.mh||[]).some(x=>x!=="No mental health concerns")) add("Emotional or behavioral-health concern");
+  if((a4.famhx||[]).includes("Trauma history") || (a4.stressors||[]).some(x=>["Loss","Illness","Housing stress"].includes(x))) add("Trauma or significant-stressor history");
+  return reasons;
+}
+
 function cmSuggestInPerson(){
   const age = CM.answers[0].age;
   let list = [...(CM_AGE_INPERSON[age] || [])];
@@ -1472,9 +1486,15 @@ async function cmSave(stepStatus, advance){
     const el=document.getElementById("f-err"); if(el) el.textContent="Finish the in-person screening step before finalizing results.";
     return;
   }
+  // Once the history/context steps are complete, queue the need-matched
+  // recommendations for staff review. Nothing is sent without the PIN-gated
+  // confirmation in cmSendGo.
+  if(advance && stepStatus==="Complete" && CM.step===3 && !CM.answers[4].screeners){
+    CM.answers[4].screeners = cmSuggestScreeners();
+  }
   CM.stepStates = CM.stepStates || Array(7).fill("Not Started");
   CM.stepStates[CM.step] = stepStatus;
-  const statusByStep = {5:"Screeners Pending", 6:"In-Person Complete", 7:"Scores Ready"};
+  const statusByStep = {4:"Screeners Pending", 5:"Screeners Pending", 6:"In-Person Complete", 7:"Scores Ready"};
   const body = { action:"cm-save", id:CM.id, step:CM.step+1, stepStatus,
     answers:CM.answers[CM.step], flags:cmFlags(),
     ageGroup: CM.answers[0].age || undefined,
@@ -1699,11 +1719,30 @@ function cmaSuggestScreeners(){
   return [...new Set(list)];
 }
 
+function cmaScreeningReasons(answers){
+  const a1=answers?.[0]||{}, a2=answers?.[1]||{}, a3=answers?.[2]||{}, a4=answers?.[3]||{}, a5=answers?.[4]||{};
+  const reasons=[];
+  const add=(reason)=>{ if(!reasons.includes(reason)) reasons.push(reason); };
+  if((a1.referral||[]).length || (a1.difficulties||[]).some(x=>x!=="None")) add("Reported functional, academic, or work difficulty");
+  if((a2.ef||[]).length || ["Moderate","Severe"].includes(a2.efimpact)) add("Attention or executive-function concern");
+  if((a2.social||[]).some(x=>x!=="No concerns") || (a2.sensory||[]).length) add("Social-communication or sensory concern");
+  if((a3.mh||[]).some(x=>x!=="None")) add("Mental-health concern");
+  if((a3.cog||[]).some(x=>x!=="None") || (a5.changes||[]).length) add("Cognitive or memory change");
+  if((a4.tbi||[]).some(x=>x!=="No known brain injuries") || (a4.subimpact||[]).some(x=>x!=="No noticeable impact")) add("Brain-injury or substance-cognition history");
+  if((a5.oxy||[]).some(x=>x!=="None") || (a5.vasc||[]).some(x=>x!=="No known vascular issues") || (a5.vascrisk||[]).some(x=>x!=="None")) add("Sleep, oxygenation, or vascular contributor");
+  return reasons;
+}
+
 async function cmaSave(stepStatus, advance){
+  // Queue recommendations after the final history step; staff still chooses
+  // the items and re-authenticates before any invitation is sent.
+  if(advance && stepStatus==="Complete" && CMA.step===4 && !CMA.answers[5].screeners){
+    CMA.answers[5].screeners = cmaSuggestScreeners();
+  }
   const body = { action:"cma-save", id:CMA.id, step:CMA.step+1, stepStatus,
     answers:CMA.answers[CMA.step], flags:cmaFlags(),
     screeners: CMA.answers[5].screeners || undefined };
-  if(advance && stepStatus==="Complete" && CMA.step===5) body.status = "Screeners Pending";
+  if(advance && stepStatus==="Complete" && [4,5].includes(CMA.step)) body.status = "Screeners Pending";
   try{
     await api(API_ACT, body);
     if(!advance){ closeModal(); refreshSoft(); return; }
@@ -2350,6 +2389,7 @@ function cmSendOpen(assessmentId, kind){
   const list = kind==="adult" ? D.charmedAdult : D.charmed;
   const e = (list||[]).find(x=>x.id===assessmentId); if(!e) return;
   const screeners = e.screeners || [];
+  const reasons = kind==="adult" ? cmaScreeningReasons(e.answers) : cmScreeningReasons(e.answers);
   const registryNote = kind==="peds"
     ? "Only approved links from the CharmEd Minds screening-link registry are sent. Supervised performance measures from step 6 never appear here; anything without an active link is skipped and noted."
     : "Only approved links from the CharmEd Minds screening-link registry are sent; anything without an active link is skipped and noted.";
@@ -2357,6 +2397,7 @@ function cmSendOpen(assessmentId, kind){
   <div class="msub">${esc(patLabel(e.patient))} · assigns approved remote links in Patient 360 and sends one secure portal invitation</div>
   <div class="f">
     <p class="lede">The recipient address comes from the protected Patient 360 record. Screening names and results are never placed in the email.</p>
+    <div class="awv-q"><div class="awv-l">Why this review was triggered</div>${reasons.length?reasons.map(r=>`<span class="pill info">${esc(r)}</span>`).join(" "):'<span class="pill gray">Routine clinician review</span>'}</div>
     <label>Recipient is</label>
     <div class="needs" id="ss-aud">
       ${["Parent","Self"].map((a)=>`<button class="chip ${ (kind==="adult"?a==="Self":a==="Parent") ?"on":""}" type="button" data-a="${a}" onclick="[...document.querySelectorAll('#ss-aud .chip')].forEach(c=>c.classList.remove('on'));this.classList.add('on')">${a}</button>`).join("")}
@@ -2369,7 +2410,7 @@ function cmSendOpen(assessmentId, kind){
     <input type="password" id="ss-pin" inputmode="numeric" autocomplete="current-password" maxlength="8" placeholder="PIN">
     <p class="lede">${registryNote}</p>
     <div class="ferr" id="f-err"></div>
-    <div class="macts"><button class="btn sec" onclick="closeModal()">Cancel</button><button class="btn" onclick="cmSendGo('${assessmentId}','${kind}')">📤 Send approved links</button></div>
+    <div class="macts"><button class="btn sec" onclick="closeModal()">Not indicated</button><button class="btn" onclick="cmSendGo('${assessmentId}','${kind}')">Approve & send selected links</button></div>
   </div>`);
 }
 async function cmSendGo(assessmentId, kind){

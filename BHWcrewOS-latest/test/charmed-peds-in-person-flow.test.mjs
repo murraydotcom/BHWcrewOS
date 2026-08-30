@@ -51,6 +51,16 @@ test("server refuses to email pediatric supervised measures", () => {
   assert.doesNotMatch(action, /RESEND_API_KEY|api\.resend\.com/);
 });
 
+test("screening need queues are created before the send step and remain staff approved", () => {
+  assert.match(html, /CM\.step===3 && !CM\.answers\[4\]\.screeners/);
+  assert.match(html, /CMA\.step===4 && !CMA\.answers\[5\]\.screeners/);
+  assert.match(html, /const statusByStep = \{4:"Screeners Pending"/);
+  assert.match(html, /Why this review was triggered/);
+  assert.match(html, /Approve & send selected links/);
+  assert.match(html, /Verify your CrewOS PIN to send/);
+  assert.doesNotMatch(html, /auto(?:matically)?[^\n]{0,40}send/i);
+});
+
 test("save adapter preserves legacy records while storing seven-step progress", () => {
   assert.match(action, /__cmWorkflowV2: 1/);
   assert.match(action, /encodeCmWorkflow/);
