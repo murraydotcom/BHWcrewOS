@@ -692,7 +692,13 @@ async function load() {
       workflowConnection.encounters = Array.isArray(result.visitNotes) ? result.visitNotes : [];
       workflowConnection.pendingDraftCount = Math.max(0, Number(result.pendingDraftCount) || 0);
     } catch (error) {
-      workflowConnection = { connected: false, encounters: [], error: error.message || "The encounter queue could not be read." };
+      workflowConnection = {
+        connected: false,
+        encounters: [],
+        error: error.status === 404
+          ? "The patient-specific note connection is waiting for the RCM API update."
+          : (error.message || "The encounter queue could not be read."),
+      };
     }
     render(body.healthRecord, workflowConnection);
     $("status").className = "badge complete";
