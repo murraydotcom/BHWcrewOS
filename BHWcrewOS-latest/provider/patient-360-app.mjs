@@ -354,14 +354,19 @@ function patientBodyProfile(patient = {}) {
   return null;
 }
 
+const BODY_PROFILES = [
+  { sex: "male", label: "Male", asset: "patient-360-body-neutral.png" },
+  { sex: "female", label: "Female", asset: "patient-360-body-curved.png" },
+];
+
 function bodyFigure(context) {
   const activeSystems = context.systems.filter((item) => String(item.status || "").toLowerCase() !== "not-assessed");
   const focus = activeSystems[0];
   const bodyProfile = patientBodyProfile(context.patient);
   const bodyDisplay = bodyProfile
     ? `<input class="outline-radio" type="radio" name="body-view" id="body-view-front" checked><input class="outline-radio" type="radio" name="body-view" id="body-view-back"><div class="outline-picker" aria-label="Body view"><label for="body-view-front">Front</label><label for="body-view-back">Back</label></div><div class="body-image-stage ${bodyProfile.sex}" role="img" aria-label="${bodyProfile.label} body outline"><div class="body-image body-view-front"><img src="${bodyProfile.asset}" alt=""></div><div class="body-image body-view-back"><img src="${bodyProfile.asset}" alt=""></div><div class="body-focus-marker" aria-hidden="true"></div></div>`
-    : `<div class="body-sex-unavailable"><b>Body outline not selected</b><span>A recorded male or female value is needed to choose the appropriate front and back outline.</span></div>`;
-  return `<div class="body-center"><div class="body-caption"><span>Whole-person atlas · ${esc(bodyProfile ? `${bodyProfile.label} outline` : "outline unavailable")}</span><b>${activeSystems.length ? `${activeSystems.length} active system focus` : "No active system focus returned"}</b></div>${bodyDisplay}<div class="body-focus-copy"><b>${esc(focus?.label || "Body-system focus not documented")}</b><span>${esc(focus?.summary || "Open the atlas to review documented and unassessed systems.")}</span><a href="patient-360-atlas.html">Open full body-system atlas</a></div></div>`;
+    : `<input class="outline-radio" type="radio" name="body-view" id="body-view-front" checked><input class="outline-radio" type="radio" name="body-view" id="body-view-back"><div class="outline-picker" aria-label="Body view"><label for="body-view-front">Front</label><label for="body-view-back">Back</label></div><div class="body-outline-pair" role="group" aria-label="Male and female body outlines">${BODY_PROFILES.map((profile) => `<div class="body-outline-option"><span>${profile.label} outline</span><div class="body-mini-stage ${profile.sex}" role="img" aria-label="${profile.label} body outline"><div class="body-image body-view-front"><img src="${profile.asset}" alt=""></div><div class="body-image body-view-back"><img src="${profile.asset}" alt=""></div></div></div>`).join("")}</div>`;
+  return `<div class="body-center"><div class="body-caption"><span>Whole-person atlas · ${esc(bodyProfile ? `${bodyProfile.label} outline` : "both outlines available")}</span><b>${activeSystems.length ? `${activeSystems.length} active system focus` : "No active system focus returned"}</b></div>${bodyDisplay}${bodyProfile ? "" : '<p class="body-outline-note">Gender or anatomy is not specified, so both outline sets remain available.</p>'}<div class="body-focus-copy"><b>${esc(focus?.label || "Body-system focus not documented")}</b><span>${esc(focus?.summary || "Open the atlas to review documented and unassessed systems.")}</span><a href="patient-360-atlas.html">Open full body-system atlas</a></div></div>`;
 }
 
 function evidenceCodes(value) {
@@ -522,11 +527,42 @@ function ctlsSchematic(events) {
 function anatomicalLocationMap(context) {
   const profile = patientBodyProfile(context.patient);
   const events = locationEvents(context);
-  const bodyCards = profile
-    ? `<article class="atlas-map-card"><h4>Anterior</h4><div class="atlas-anatomy-stage ${profile.sex}"><div class="body-image atlas-anterior"><img src="${profile.asset}" alt=""></div>${bodyMarkers(events, "anterior")}</div></article><article class="atlas-map-card"><h4>Posterior</h4><div class="atlas-anatomy-stage ${profile.sex}"><div class="body-image atlas-posterior"><img src="${profile.asset}" alt=""></div>${bodyMarkers(events, "posterior")}</div></article>`
-    : `<article class="atlas-map-card"><h4>Anterior</h4><div class="atlas-body-unavailable">Recorded male or female value needed.</div></article><article class="atlas-map-card"><h4>Posterior</h4><div class="atlas-body-unavailable">Recorded male or female value needed.</div></article>`;
+  const profiles = profile ? [profile] : BODY_PROFILES;
+  const bodyCards = profiles.flatMap((item) => [
+    `<article class="atlas-map-card"><h4>${profile ? "Anterior" : `${item.label} · Anterior`}</h4><div class="atlas-anatomy-stage ${item.sex}"><div class="body-image atlas-anterior"><img src="${item.asset}" alt=""></div>${bodyMarkers(events, "anterior")}</div></article>`,
+    `<article class="atlas-map-card"><h4>${profile ? "Posterior" : `${item.label} · Posterior`}</h4><div class="atlas-anatomy-stage ${item.sex}"><div class="body-image atlas-posterior"><img src="${item.asset}" alt=""></div>${bodyMarkers(events, "posterior")}</div></article>`,
+  ]).join("");
   const rows = events.length ? events.map((event) => `<tr><td><span class="atlas-number-key">${event.number}</span></td><td>${esc(dateText(event.date))}</td><td>${esc(event.location)}</td><td>${esc(event.finding)}</td><td>${evidencePills(evidenceCodes(event.state))}<span>${esc(statusText(event.state))}</span></td></tr>`).join("") : `<tr><td colspan="5" class="atlas-table-empty">No structured anatomical body-site events are connected. Add only source-documented locations.</td></tr>`;
   return `<div class="atlas-map-grid">${bodyCards}<article class="atlas-map-card"><h4>CTLS <small>number each mark to the key</small></h4>${ctlsSchematic(events)}</article></div><div class="atlas-location-key"><h4>Location event key</h4><div class="table-wrap"><table class="atlas-location-table"><thead><tr><th>#</th><th>Date</th><th>Location</th><th>Event / finding</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+}
+
+function workflowVisitNotes(context) {
+  const rows = Array.isArray(context.workflowEncounters) ? context.workflowEncounters : [];
+  const withNotes = rows.filter((row) => String(row.note || "").trim());
+  return {
+    attached: withNotes.filter((row) => row.providerApproved),
+    pending: withNotes.filter((row) => !row.providerApproved),
+  };
+}
+
+function workflowNoteStatus(row) {
+  if (row.charmDraftSaved) return "Provider approved · Charm draft saved; signing not confirmed here";
+  if (row.providerApproved) return "Provider approved · Charm handoff pending";
+  return "24-Hour Documentation draft · provider approval pending";
+}
+
+function visitDocumentationPanel(context, { full = false } = {}) {
+  const { attached, pending } = workflowVisitNotes(context);
+  const connection = context.workflowConnection || {};
+  let content = "";
+  if (!connection.connected) {
+    content = `<div class="empty-note"><b>24-Hour Documentation is not connected to this view.</b><br>${esc(connection.error || "Refresh after the protected encounter queue reconnects.")}</div>`;
+  } else if (!attached.length) {
+    content = `<div class="empty-note"><b>No provider-approved visit note is attached yet.</b><br>${pending.length ? `${pending.length} note draft(s) are still in 24-Hour Documentation review.` : "No matching note packet was returned for this BHW Patient ID."}</div>`;
+  } else {
+    content = `<div class="visit-note-list">${attached.slice(0, full ? attached.length : 3).map((row) => `<article class="visit-note-card"><div class="visit-note-head"><div><b>${esc(row.visitType || "Visit note")}</b><span>${esc(row.id || "Encounter ID unavailable")} · ${esc(dateText(row.completedAt, true))}</span></div><span class="badge complete">Attached</span></div><p>${esc(workflowNoteStatus(row))}</p>${full ? `<details><summary>View provider-approved note</summary><div class="visit-note-content">${esc(row.note)}</div></details>` : ""}</article>`).join("")}</div>${!full && attached.length > 3 ? `<span class="more-note">+${attached.length - 3} more attached note(s) in Clinical Data</span>` : ""}`;
+  }
+  return `<section class="panel visit-documentation"><div class="panel-head"><div><h3>Visit documentation</h3><span class="panel-subtitle">Automatically matched from the 24-Hour Work Queue by BHW Patient ID</span></div><a class="btn" href="workflow.html">Open 24-Hour Documentation</a></div><div class="panel-body">${content}<div class="record-boundary"><b>Record boundary</b><span>This is a read-only attachment for longitudinal review. CharmHealth remains the legal medical record; a saved Charm draft is not the same as a signed note.</span></div></div></section>`;
 }
 
 function overviewPage(context) {
@@ -557,6 +593,7 @@ function overviewPage(context) {
     </div></div>
     <div class="overview-clinical-grid"><section class="panel lab-panel"><div class="panel-head"><h3>Important labs & trends</h3><a class="btn" href="patient-360-data.html">All results</a></div><div class="panel-body">${trendGraphic(observations)}</div></section><section class="panel"><div class="panel-head"><h3>What is due next</h3><span class="badge warning">Verify orders</span></div><div class="panel-body due-grid"><div><span>Next laboratory work</span>${compactItems(labDue,(item)=>`<b>${esc(titleText(item))}</b><small>${esc(dateText(item.occurrenceDateTime || item.authoredOn))}</small>`,"No next-lab order or due date is connected.",2)}</div><div><span>Screening or prevention</span>${compactItems(screenings,(item)=>`<b>${esc(titleText(item))}</b><small>${esc(item.status || "recorded")}</small>`,"No screening due status is connected.",2)}</div></div></section></div>
     <div class="overview-clinical-grid"><section class="panel"><div class="panel-head"><h3>Nutrition & individualized plan</h3><a class="btn" href="patient-360-plan.html">Full care plan</a></div><div class="panel-body personalized-grid"><div><span>Nutrition plan</span>${compactItems(nutrition,(item)=>`<b>${esc(titleText(item))}</b><small>${esc(item.description || item.status || "recorded")}</small>`,"No structured individualized nutrition plan is connected.",2)}</div><div><span>Patient-specific details</span><ul class="clinical-list"><li><b>${esc(patient.gender && patient.gender !== "unknown" ? patient.gender : "Administrative gender not recorded")}</b><small>Identity details should remain patient-confirmed</small></li><li><b>${esc(carePlans[0] ? titleText(carePlans[0]) : "Health Blueprint not connected")}</b><small>Current individualized care framework</small></li></ul></div></div></section><section class="panel"><div class="panel-head"><h3>Prominent timeline</h3><a class="btn" href="patient-360-timeline.html">Full timeline</a></div><div class="panel-body prominent-timeline">${latestTimeline.length ? latestTimeline.map((event)=>`<div><time>${esc(dateText(event.date))}</time><span><b>${esc(event.label || event.type)}</b><small>${esc(event.type || "Clinical event")}</small></span></div>`).join("") : `<p class="overview-empty">No high-value timeline events are connected.</p>`}</div></section></div>
+    ${visitDocumentationPanel(context)}
   </section>`;
 }
 
@@ -598,7 +635,7 @@ function planPage(context) {
 
 function dataPage(context) {
   const { conditions, medications, allergies, observations, reports, procedures, immunizations, documents, encounters, serviceRequests, tasks, carePlans, goals } = context;
-  return `<section class="worksheet"><div class="worksheet-heading"><span class="section-number gold">6</span><h2>Digital Clinical Data Spine</h2><p>The complete structured record behind the overview</p></div><div class="data-grid">${dataCard("Conditions & problem list", conditions, (item) => renderResourceItem(item, compact([item.clinicalStatus?.coding?.[0]?.code, item.verificationStatus?.coding?.[0]?.code, item.onsetDateTime ? `onset ${dateText(item.onsetDateTime)}` : ""]).join(" - ")), "No condition resource is connected.")}${dataCard("Medications", medications, (item) => renderResourceItem(item, medicationDetail(item)), "No medication requests are available.")}${dataCard("Allergies & intolerances", allergies, (item) => renderResourceItem(item, compact([item.clinicalStatus?.coding?.[0]?.code, item.criticality]).join(" - ")), "No allergy resource is connected.")}${dataCard("Results & trends", [...observations, ...reports], (item) => renderResourceItem(item, item.resourceType === "Observation" ? observationDetail(item) : compact([item.status, dateText(item.effectiveDateTime)]).join(" - ")), "No result or diagnostic report is connected.")}${dataCard("Procedures & imaging", procedures, (item) => renderResourceItem(item, compact([item.status, dateText(item.performedDateTime)]).join(" - ")), "No procedure or imaging resource is connected.")}${dataCard("Immunizations", immunizations, (item) => renderResourceItem(item, compact([item.status, dateText(item.occurrenceDateTime)]).join(" - ")), "No immunization resource is connected.")}${dataCard("Documents & provenance", documents, (item) => renderResourceItem(item, compact([item.status, dateText(item.date)]).join(" - ")), "No source document reference is connected.")}${dataCard("Encounters", encounters, (item) => renderResourceItem(item, compact([item.status, dateText(item.period?.start)]).join(" - ")), "No encounter resource is connected.")}${dataCard("Orders, referrals & tasks", [...serviceRequests, ...tasks], (item) => renderResourceItem(item, compact([item.resourceType, item.status, item.intent]).join(" - ")), "No structured order, referral or task is connected.")}${dataCard("Care plans & goals", [...carePlans, ...goals], (item) => renderResourceItem(item, compact([item.resourceType, item.status, item.intent]).join(" - ")), "No care-plan or goal resource is connected.")}</div></section>`;
+  return `<section class="worksheet"><div class="worksheet-heading"><span class="section-number gold">6</span><h2>Digital Clinical Data Spine</h2><p>The complete structured record behind the overview</p></div>${visitDocumentationPanel(context, { full: true })}<div class="data-grid">${dataCard("Conditions & problem list", conditions, (item) => renderResourceItem(item, compact([item.clinicalStatus?.coding?.[0]?.code, item.verificationStatus?.coding?.[0]?.code, item.onsetDateTime ? `onset ${dateText(item.onsetDateTime)}` : ""]).join(" - ")), "No condition resource is connected.")}${dataCard("Medications", medications, (item) => renderResourceItem(item, medicationDetail(item)), "No medication requests are available.")}${dataCard("Allergies & intolerances", allergies, (item) => renderResourceItem(item, compact([item.clinicalStatus?.coding?.[0]?.code, item.criticality]).join(" - ")), "No allergy resource is connected.")}${dataCard("Results & trends", [...observations, ...reports], (item) => renderResourceItem(item, item.resourceType === "Observation" ? observationDetail(item) : compact([item.status, dateText(item.effectiveDateTime)]).join(" - ")), "No result or diagnostic report is connected.")}${dataCard("Procedures & imaging", procedures, (item) => renderResourceItem(item, compact([item.status, dateText(item.performedDateTime)]).join(" - ")), "No procedure or imaging resource is connected.")}${dataCard("Immunizations", immunizations, (item) => renderResourceItem(item, compact([item.status, dateText(item.occurrenceDateTime)]).join(" - ")), "No immunization resource is connected.")}${dataCard("Documents & provenance", documents, (item) => renderResourceItem(item, compact([item.status, dateText(item.date)]).join(" - ")), "No source document reference is connected.")}${dataCard("Encounters", encounters, (item) => renderResourceItem(item, compact([item.status, dateText(item.period?.start)]).join(" - ")), "No encounter resource is connected.")}${dataCard("Orders, referrals & tasks", [...serviceRequests, ...tasks], (item) => renderResourceItem(item, compact([item.resourceType, item.status, item.intent]).join(" - ")), "No structured order, referral or task is connected.")}${dataCard("Care plans & goals", [...carePlans, ...goals], (item) => renderResourceItem(item, compact([item.resourceType, item.status, item.intent]).join(" - ")), "No care-plan or goal resource is connected.")}</div></section>`;
 }
 
 function sourcesPage(context) {
@@ -606,7 +643,7 @@ function sourcesPage(context) {
   return `<section class="worksheet"><div class="worksheet-heading"><span class="section-number">7</span><h2>Source Integrity & Record Boundaries</h2><p>What is connected, withheld, validated and still missing</p></div><div class="panel"><div class="panel-head"><h3>FHIR bundle and provenance</h3>${badge("source traceability")}</div><div class="panel-body"><div class="source-strip"><div class="source-cell"><span>Bundle type</span><b>${esc(record.fhir?.type || "not supplied")}</b></div><div class="source-cell"><span>Schema version</span><b>${esc(record.schemaVersion || "not supplied")}</b></div><div class="source-cell"><span>Displayed resources</span><b>${resources.length}</b></div><div class="source-cell"><span>Restricted / withheld</span><b>${sourceOmitted + frontendOmitted}</b></div></div><div class="empty-note" style="margin-top:14px"><b>Future longitudinal connections:</b> verified EHR encounters, CRISP events, medications and fill history, payer data, laboratory and imaging feeds, vital trends, immunizations, referrals, documents, patient-reported outcomes, SDOH, care-team validation, source timestamps, corrections and consent boundaries.</div></div></div></section>`;
 }
 
-function render(record) {
+function render(record, workflowConnection = { connected: false, encounters: [] }) {
   const view = document.body.dataset.p360View || "overview";
   const originalResources = allResources(record);
   const resources = originalResources.filter(isDisplayable);
@@ -635,7 +672,7 @@ function render(record) {
   const gaps = [[allergies.length,"allergies"],[immunizations.length,"immunizations"],[procedures.length,"procedures"],[documents.length,"source documents"],[clinicalImpressions.length,"clinician mechanism synthesis"]].filter(([count]) => !count).map(([, label]) => label);
   const sourceOmitted = Number(record.restrictedRecordsOmitted || 0);
   const displayName = normalizePatientName(patient.name?.[0] || {});
-  const context = { record, resources, patient, displayName, conditions, observations, medications, encounters, tasks, carePlans, systems, allergies, reports, procedures, immunizations, documents, goals, serviceRequests, clinicalImpressions, careTeams, unresolvedTasks, urgentItems, timeline, frontendOmitted, sourceOmitted, gaps };
+  const context = { record, resources, patient, displayName, conditions, observations, medications, encounters, tasks, carePlans, systems, allergies, reports, procedures, immunizations, documents, goals, serviceRequests, clinicalImpressions, careTeams, unresolvedTasks, urgentItems, timeline, frontendOmitted, sourceOmitted, gaps, workflowConnection, workflowEncounters: workflowConnection.encounters || [] };
   const pageRenderers = { overview: overviewPage, atlas: atlasPage, timeline: timelinePage, mechanism: mechanismPage, context: contextPage, plan: planPage, data: dataPage, sources: sourcesPage };
   const header = view === "overview" ? fullHero(context) : compactHeader(context);
   $("content").innerHTML = `${header}${pageNavigation(view)}${safeNotice(context)}${(pageRenderers[view] || overviewPage)(context)}`;
@@ -649,7 +686,14 @@ async function load() {
     if (!client) throw new Error("Google Cloud is not configured for this site.");
     const body = await client.healthRecord(PATIENT_ID);
     if (!body?.healthRecord) throw new Error("The synthetic Health Core record was not returned.");
-    render(body.healthRecord);
+    let workflowConnection = { connected: true, encounters: [] };
+    try {
+      const encounterRows = await client.list();
+      workflowConnection.encounters = encounterRows.filter((row) => String(row.bhwPatientId || "").toUpperCase() === PATIENT_ID);
+    } catch (error) {
+      workflowConnection = { connected: false, encounters: [], error: error.message || "The encounter queue could not be read." };
+    }
+    render(body.healthRecord, workflowConnection);
     $("status").className = "badge complete";
     $("status").textContent = "Health Core connected";
   } catch (error) {
