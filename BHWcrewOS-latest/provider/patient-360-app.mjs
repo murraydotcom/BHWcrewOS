@@ -346,21 +346,187 @@ function trendGraphic(observations) {
   return `<div class="trend-heading"><div><b>${esc(focusLabel)}</b><span>${esc(last.valueQuantity.value)} ${esc(last.valueQuantity.unit || "")}</span></div><span>${series.length > 1 ? `${series.length} trended results` : "1 result - trend needs another point"}</span></div><svg class="trend-svg" viewBox="0 0 300 120" role="img" aria-label="${esc(focusLabel)} result trend"><line x1="20" y1="96" x2="282" y2="96"/><line x1="20" y1="20" x2="20" y2="96"/><polyline points="${points.map(([x,y]) => `${x},${y}`).join(" ")}"/>${points.map(([x,y]) => `<circle cx="${x}" cy="${y}" r="5"/>`).join("")}</svg><div class="trend-foot"><span>${esc(dateText(series[0].effectiveDateTime || series[0].issued))}</span><span>${esc(dateText(last.effectiveDateTime || last.issued))}</span></div>`;
 }
 
+function patientBodyProfile(patient = {}) {
+  const birthSex = patient.extension?.find((item) => String(item?.url || "").toLowerCase().includes("birthsex"))?.valueCode;
+  const recordedSex = String(patient.sexAtBirth || patient.birthSex || birthSex || patient.gender || "").trim().toLowerCase();
+  if (["f", "female"].includes(recordedSex)) return { sex: "female", label: "Female", asset: "patient-360-body-curved.png" };
+  if (["m", "male"].includes(recordedSex)) return { sex: "male", label: "Male", asset: "patient-360-body-neutral.png" };
+  return null;
+}
+
 function bodyFigure(context) {
   const activeSystems = context.systems.filter((item) => String(item.status || "").toLowerCase() !== "not-assessed");
   const focus = activeSystems[0];
-  const patient = context.patient || {};
-  const birthSex = patient.extension?.find((item) => String(item?.url || "").toLowerCase().includes("birthsex"))?.valueCode;
-  const recordedSex = String(patient.sexAtBirth || patient.birthSex || birthSex || patient.gender || "").trim().toLowerCase();
-  const bodyProfile = ["f", "female"].includes(recordedSex)
-    ? { sex: "female", label: "Female", asset: "patient-360-body-curved.png" }
-    : ["m", "male"].includes(recordedSex)
-      ? { sex: "male", label: "Male", asset: "patient-360-body-neutral.png" }
-      : null;
+  const bodyProfile = patientBodyProfile(context.patient);
   const bodyDisplay = bodyProfile
     ? `<input class="outline-radio" type="radio" name="body-view" id="body-view-front" checked><input class="outline-radio" type="radio" name="body-view" id="body-view-back"><div class="outline-picker" aria-label="Body view"><label for="body-view-front">Front</label><label for="body-view-back">Back</label></div><div class="body-image-stage ${bodyProfile.sex}" role="img" aria-label="${bodyProfile.label} body outline"><div class="body-image body-view-front"><img src="${bodyProfile.asset}" alt=""></div><div class="body-image body-view-back"><img src="${bodyProfile.asset}" alt=""></div><div class="body-focus-marker" aria-hidden="true"></div></div>`
     : `<div class="body-sex-unavailable"><b>Body outline not selected</b><span>A recorded male or female value is needed to choose the appropriate front and back outline.</span></div>`;
   return `<div class="body-center"><div class="body-caption"><span>Whole-person atlas · ${esc(bodyProfile ? `${bodyProfile.label} outline` : "outline unavailable")}</span><b>${activeSystems.length ? `${activeSystems.length} active system focus` : "No active system focus returned"}</b></div>${bodyDisplay}<div class="body-focus-copy"><b>${esc(focus?.label || "Body-system focus not documented")}</b><span>${esc(focus?.summary || "Open the atlas to review documented and unassessed systems.")}</span><a href="patient-360-atlas.html">Open full body-system atlas</a></div></div>`;
+}
+
+function evidenceCodes(value) {
+  const source = typeof value === "string" ? value : compact([
+    value?.status,
+    value?.priority,
+    value?.clinicalStatus?.coding?.[0]?.code,
+    value?.verificationStatus?.coding?.[0]?.code,
+  ]).join(" ");
+  const status = String(source || "").toLowerCase();
+  if (!status || status === "not-assessed") return [];
+  const codes = new Set(["D"]);
+  if (/suspect|provisional|differential|unconfirmed/.test(status)) codes.add("S");
+  if (/historical|history|inactive/.test(status)) codes.add("H");
+  if (/active|current|needs-attention/.test(status)) codes.add("A");
+  if (/improv|remission/.test(status)) codes.add("I");
+  if (/resolved|completed/.test(status)) codes.add("R");
+  if (/urgent|critical|stat|asap|destabili/.test(status)) codes.add("U");
+  return [...codes];
+}
+
+function evidencePills(codes) {
+  const names = { D: "documented", S: "suspected", H: "historical", A: "active", I: "improving", R: "resolved", U: "urgent / destabilizing" };
+  return `<span class="atlas-evidence-codes">${codes.map((code) => `<span title="${esc(names[code])}">${code}</span>`).join("")}</span>`;
+}
+
+function itemState(item) {
+  return compact([
+    item?.clinicalStatus?.coding?.[0]?.code,
+    item?.verificationStatus?.coding?.[0]?.code,
+    item?.status,
+    item?.priority,
+  ]).join(" ");
+}
+
+function resourceDomainText(item) {
+  const extensions = Array.isArray(item?.extension) ? item.extension : [];
+  const extensionValues = extensions.flatMap((entry) => compact([
+    entry?.valueCode,
+    entry?.valueString,
+    entry?.valueCodeableConcept ? conceptText(entry.valueCodeableConcept) : "",
+  ]));
+  return compact([
+    titleText(item),
+    ...(Array.isArray(item?.physiologicDomains) ? item.physiologicDomains : []),
+    item?.physiologicDomain,
+    ...extensionValues,
+  ]).join(" ").toLowerCase();
+}
+
+function matchesSystem(item, aliases) {
+  const text = resourceDomainText(item);
+  return aliases.some((alias) => text.includes(alias));
+}
+
+function sweepCell(entries, emptyText) {
+  if (!entries.length) return `<span class="atlas-cell-empty">${esc(emptyText)}</span>`;
+  const seen = new Set();
+  return `<div class="atlas-sweep-items">${entries.filter((entry) => {
+    const key = `${entry.text}|${entry.codes.join("")}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, 4).map((entry) => `<div>${evidencePills(entry.codes)}<span>${esc(entry.text)}</span></div>`).join("")}</div>`;
+}
+
+function bodySystemSweepRows(context) {
+  const definitions = [
+    ["Brain / neurologic / cognition", ["brain", "neuro", "nervous system", "cognition", "stress regulation"]],
+    ["Eyes / ears / ENT", ["eyes", "ears", "ent", "upper airway"]],
+    ["Heart / vascular / lungs", ["heart", "vascular", "blood vessels", "circulation", "lungs", "cardiopulmonary"]],
+    ["GI / liver / pancreas", ["gi", "gastro", "liver", "pancreas", "microbiome"]],
+    ["Endocrine / metabolic", ["endocrine", "energy & metabolism", "metabolic", "hormone regulation"]],
+    ["Renal / GU", ["renal", "kidney", "genitourinary", "urinary"]],
+    ["Immune / inflammatory / infectious", ["immune", "inflamm", "infectious", "infection"]],
+    ["Musculoskeletal / pain / spine", ["musculoskeletal", "pain", "spine", "joint", "muscle"]],
+    ["Skin / barrier", ["skin", "hair", "barrier", "dermat"]],
+    ["Reproductive / hormonal", ["reproductive", "sexual health", "gynec", "menstrual"]],
+    ["Behavioral health / SUD", ["behavioral", "substance", "sud", "mental health"]],
+    ["Whole-body / other", ["whole-body", "whole body", "other", "function"]],
+  ];
+  return definitions.map(([label, aliases]) => {
+    const systems = context.systems.filter((system) => aliases.some((alias) => String(system.label || "").toLowerCase().includes(alias)));
+    const relatedConditions = context.conditions.filter((condition) => matchesSystem(condition, aliases));
+    const past = relatedConditions.filter((condition) => /resolved|inactive|remission|history/.test(itemState(condition).toLowerCase())).map((condition) => ({
+      text: compact([conceptText(condition.code), condition.onsetDateTime ? `onset ${dateText(condition.onsetDateTime)}` : ""]).join(" · "),
+      codes: evidenceCodes(itemState(condition) || "historical"),
+    }));
+    const now = [
+      ...systems.filter((system) => String(system.status || "").toLowerCase() !== "not-assessed").map((system) => ({
+        text: compact([system.summary, system.focus?.length ? `Focus: ${system.focus.join("; ")}` : ""]).join(" · ") || "Structured system entry returned without a summary.",
+        codes: evidenceCodes(system.status || "documented"),
+      })),
+      ...relatedConditions.filter((condition) => !/resolved|inactive|remission|history/.test(itemState(condition).toLowerCase())).map((condition) => ({
+        text: conceptText(condition.code),
+        codes: evidenceCodes(itemState(condition) || "documented"),
+      })),
+    ];
+    return `<tr><th scope="row">${esc(label)}</th><td>${sweepCell(past, "No distinct historical entry connected.")}</td><td>${sweepCell(now, "No current structured entry connected.")}</td></tr>`;
+  }).join("");
+}
+
+function bodySiteTexts(item) {
+  const sites = Array.isArray(item?.bodySite) ? item.bodySite : item?.bodySite ? [item.bodySite] : [];
+  return sites.map((site) => typeof site === "string" ? site : conceptText(site)).filter((site) => site && site !== "Not labeled");
+}
+
+function locationEvents(context) {
+  const events = [...context.conditions, ...context.observations, ...context.procedures].flatMap((item) => bodySiteTexts(item).map((location) => ({
+    date: item.onsetDateTime || item.recordedDate || item.effectiveDateTime || item.performedDateTime || item.issued || item.authoredOn || "",
+    location,
+    finding: item.resourceType === "Condition" ? conceptText(item.code) : titleText(item),
+    state: itemState(item) || "documented",
+  })));
+  const seen = new Set();
+  return events.filter((event) => {
+    const key = `${event.date}|${event.location}|${event.finding}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, 20).map((event, index) => ({ ...event, number: index + 1 }));
+}
+
+function bodyMarkerPosition(location) {
+  const text = String(location || "").toLowerCase();
+  const posterior = /posterior|back|spine|cervical|thoracic|lumbar|sacral/.test(text);
+  let y = 170;
+  if (/head|brain|skull|scalp|eye|ear|face/.test(text)) y = 38;
+  else if (/neck|cervical|throat/.test(text)) y = 72;
+  else if (/chest|thorax|thoracic|heart|lung|shoulder|breast/.test(text)) y = 116;
+  else if (/abdomen|abdominal|stomach|liver|pancreas|gi/.test(text)) y = 170;
+  else if (/pelvis|pelvic|hip|renal|kidney|bladder|reproductive|lumbar|sacral/.test(text)) y = 215;
+  else if (/thigh|knee/.test(text)) y = 260;
+  else if (/leg|calf|ankle|foot/.test(text)) y = 310;
+  else if (/arm|elbow|wrist|hand/.test(text)) y = 160;
+  const x = /\bleft\b/.test(text) ? 76 : /\bright\b/.test(text) ? 142 : 109;
+  return { view: posterior ? "posterior" : "anterior", x, y };
+}
+
+function bodyMarkers(events, view) {
+  return events.map((event) => ({ event, position: bodyMarkerPosition(event.location) })).filter(({ position }) => position.view === view).map(({ event, position }) => `<span class="atlas-map-marker" style="left:${position.x}px;top:${position.y}px" title="${esc(`${event.number}. ${event.location}: ${event.finding}`)}">${event.number}</span>`).join("");
+}
+
+function ctlsRegion(location) {
+  const text = String(location || "").toLowerCase();
+  if (/cervical|\bc[1-7]\b/.test(text)) return { label: "C", y: 60 };
+  if (/thoracic|\bt(?:[1-9]|1[0-2])\b/.test(text)) return { label: "T", y: 142 };
+  if (/lumbar|\bl[1-5]\b/.test(text)) return { label: "L", y: 238 };
+  if (/sacral|sacrum|\bs[1-5]\b/.test(text)) return { label: "S", y: 306 };
+  return null;
+}
+
+function ctlsSchematic(events) {
+  const markers = events.map((event, index) => ({ event, region: ctlsRegion(event.location), index })).filter(({ region }) => region).map(({ event, region, index }) => `<g class="ctls-marker" transform="translate(${82 + (index % 3) * 15} ${region.y})"><circle r="10"></circle><text text-anchor="middle" y="3.5">${event.number}</text></g>`).join("");
+  return `<svg class="ctls-map" viewBox="0 0 140 340" role="img" aria-label="Cervical thoracic lumbar sacral spine schematic"><path class="ctls-spine" d="M70 22 C54 48 62 78 70 98 C80 124 60 150 70 178 C81 207 58 235 69 263 C75 280 71 306 70 327"/><g class="ctls-segment"><rect x="28" y="28" width="28" height="58" rx="12"/><text x="42" y="61">C</text><rect x="28" y="96" width="28" height="91" rx="12"/><text x="42" y="146">T</text><rect x="28" y="197" width="28" height="75" rx="12"/><text x="42" y="239">L</text><rect x="28" y="282" width="28" height="44" rx="12"/><text x="42" y="309">S</text></g>${markers}</svg>`;
+}
+
+function anatomicalLocationMap(context) {
+  const profile = patientBodyProfile(context.patient);
+  const events = locationEvents(context);
+  const bodyCards = profile
+    ? `<article class="atlas-map-card"><h4>Anterior</h4><div class="atlas-anatomy-stage ${profile.sex}"><div class="body-image atlas-anterior"><img src="${profile.asset}" alt=""></div>${bodyMarkers(events, "anterior")}</div></article><article class="atlas-map-card"><h4>Posterior</h4><div class="atlas-anatomy-stage ${profile.sex}"><div class="body-image atlas-posterior"><img src="${profile.asset}" alt=""></div>${bodyMarkers(events, "posterior")}</div></article>`
+    : `<article class="atlas-map-card"><h4>Anterior</h4><div class="atlas-body-unavailable">Recorded male or female value needed.</div></article><article class="atlas-map-card"><h4>Posterior</h4><div class="atlas-body-unavailable">Recorded male or female value needed.</div></article>`;
+  const rows = events.length ? events.map((event) => `<tr><td><span class="atlas-number-key">${event.number}</span></td><td>${esc(dateText(event.date))}</td><td>${esc(event.location)}</td><td>${esc(event.finding)}</td><td>${evidencePills(evidenceCodes(event.state))}<span>${esc(statusText(event.state))}</span></td></tr>`).join("") : `<tr><td colspan="5" class="atlas-table-empty">No structured anatomical body-site events are connected. Add only source-documented locations.</td></tr>`;
+  return `<div class="atlas-map-grid">${bodyCards}<article class="atlas-map-card"><h4>CTLS <small>number each mark to the key</small></h4>${ctlsSchematic(events)}</article></div><div class="atlas-location-key"><h4>Location event key</h4><div class="table-wrap"><table class="atlas-location-table"><thead><tr><th>#</th><th>Date</th><th>Location</th><th>Event / finding</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
 }
 
 function overviewPage(context) {
@@ -395,7 +561,22 @@ function overviewPage(context) {
 }
 
 function atlasPage(context) {
-  return `<section class="worksheet"><div class="worksheet-heading"><span class="section-number">1</span><h2>Patient History & Body-System Atlas</h2><p>What happened, where, when, and what remains active?</p></div><div class="panel"><div class="panel-head"><h3>Physiologic systems sweep</h3><span class="badge neutral">Past, current and unresolved</span></div><div class="panel-body atlas">${systemCards(context.systems)}</div></div></section>`;
+  const patientGoals = context.goals.filter((goal) => String(goal.expressedBy?.reference || "").startsWith("Patient/"));
+  const primaryConcern = patientGoals.length
+    ? patientGoals.map(titleText).join(" · ")
+    : context.conditions.length
+      ? `Patient's own words are not connected. Active coded concern(s): ${context.conditions.slice(0, 3).map((item) => conceptText(item.code)).join(" · ")}`
+      : "No patient-authored concern or active coded problem is connected.";
+  const goalSummary = patientGoals.length
+    ? patientGoals.map(titleText).join(" · ")
+    : context.goals.length
+      ? `Structured goal(s) exist, but patient authorship is not identified: ${context.goals.slice(0, 3).map(titleText).join(" · ")}`
+      : "No patient-defined function, participation, symptom or quality-of-life goal is connected.";
+  const functionItems = context.observations.filter((item) => /function|mobility|activity|participation|adl|promis|ability/.test(titleText(item).toLowerCase()));
+  const functionSummary = functionItems.length ? functionItems.slice(0, 3).map((item) => `${titleText(item)} · ${observationDetail(item)}`).join(" · ") : "No structured functional change measure is connected.";
+  const safetySummary = context.urgentItems.length ? context.urgentItems.slice(0, 4).map((item) => `${titleText(item)} · ${statusText(item.priority || item.status)}`).join(" · ") : "No structured urgent or destabilizing flag was returned. This is not clinical clearance; verify red flags and rapid change directly.";
+  const evidenceKey = [["D","documented"],["S","suspected"],["H","historical"],["A","active"],["I","improving"],["R","resolved"],["U","urgent / destabilizing"]];
+  return `<section class="worksheet atlas-worksheet"><div class="worksheet-heading"><span class="section-number">1</span><h2>Patient History & Body-System Atlas</h2><p>Map the patient's story from concern and function to location, time and system involvement</p></div><div class="atlas-intake-grid"><article class="atlas-prompt-card"><span>Primary concern / reason for mapping</span><b>${esc(primaryConcern)}</b><small>Patient's words; problem requiring longitudinal review</small></article><article class="atlas-prompt-card"><span>Patient-defined goals</span><b>${esc(goalSummary)}</b><small>Function, participation, symptoms or quality-of-life priorities</small></article><article class="atlas-prompt-card"><span>Current functional change</span><b>${esc(functionSummary)}</b><small>What is newly limited, declining, fluctuating or improved?</small></article><article class="atlas-prompt-card urgent"><span>Safety / urgent concerns</span><b>${esc(safetySummary)}</b><small>Red flags, rapid change, instability or required escalation</small></article></div><section class="panel atlas-map-panel"><div class="panel-head"><h3>Anatomical location map</h3><span class="badge neutral">Number documented marks to the key</span></div><div class="panel-body">${anatomicalLocationMap(context)}</div></section><section class="panel atlas-sweep-panel"><div class="panel-head"><h3>Body-system sweep</h3><span class="badge neutral">Past and now</span></div><div class="panel-body"><div class="table-wrap"><table class="atlas-sweep-table"><thead><tr><th>Body system</th><th>Past</th><th>Now</th></tr></thead><tbody>${bodySystemSweepRows(context)}</tbody></table></div></div></section><div class="atlas-evidence-key"><b>Evidence key</b>${evidenceKey.map(([code, label]) => `<span><strong>${code}</strong>${esc(label)}</span>`).join("")}</div></section>`;
 }
 
 function timelinePage(context) {
