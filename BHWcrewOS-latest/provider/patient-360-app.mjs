@@ -541,7 +541,7 @@ function workflowVisitNotes(context) {
   const withNotes = rows.filter((row) => String(row.note || "").trim());
   return {
     attached: withNotes.filter((row) => row.providerApproved),
-    pending: withNotes.filter((row) => !row.providerApproved),
+    pendingCount: Math.max(0, Number(context.workflowConnection?.pendingDraftCount) || 0),
   };
 }
 
@@ -552,13 +552,13 @@ function workflowNoteStatus(row) {
 }
 
 function visitDocumentationPanel(context, { full = false } = {}) {
-  const { attached, pending } = workflowVisitNotes(context);
+  const { attached, pendingCount } = workflowVisitNotes(context);
   const connection = context.workflowConnection || {};
   let content = "";
   if (!connection.connected) {
     content = `<div class="empty-note"><b>24-Hour Documentation is not connected to this view.</b><br>${esc(connection.error || "Refresh after the protected encounter queue reconnects.")}</div>`;
   } else if (!attached.length) {
-    content = `<div class="empty-note"><b>No provider-approved visit note is attached yet.</b><br>${pending.length ? `${pending.length} note draft(s) are still in 24-Hour Documentation review.` : "No matching note packet was returned for this BHW Patient ID."}</div>`;
+    content = `<div class="empty-note"><b>No provider-approved visit note is attached yet.</b><br>${pendingCount ? `${pendingCount} note draft(s) are still in 24-Hour Documentation review.` : "No matching note packet was returned for this BHW Patient ID."}</div>`;
   } else {
     content = `<div class="visit-note-list">${attached.slice(0, full ? attached.length : 3).map((row) => `<article class="visit-note-card"><div class="visit-note-head"><div><b>${esc(row.visitType || "Visit note")}</b><span>${esc(row.id || "Encounter ID unavailable")} · ${esc(dateText(row.completedAt, true))}</span></div><span class="badge complete">Attached</span></div><p>${esc(workflowNoteStatus(row))}</p>${full ? `<details><summary>View provider-approved note</summary><div class="visit-note-content">${esc(row.note)}</div></details>` : ""}</article>`).join("")}</div>${!full && attached.length > 3 ? `<span class="more-note">+${attached.length - 3} more attached note(s) in Clinical Data</span>` : ""}`;
   }
@@ -688,8 +688,9 @@ async function load() {
     if (!body?.healthRecord) throw new Error("The synthetic Health Core record was not returned.");
     let workflowConnection = { connected: true, encounters: [] };
     try {
-      const encounterRows = await client.list();
-      workflowConnection.encounters = encounterRows.filter((row) => String(row.bhwPatientId || "").toUpperCase() === PATIENT_ID);
+      const result = await client.patientVisitNotes(PATIENT_ID);
+      workflowConnection.encounters = Array.isArray(result.visitNotes) ? result.visitNotes : [];
+      workflowConnection.pendingDraftCount = Math.max(0, Number(result.pendingDraftCount) || 0);
     } catch (error) {
       workflowConnection = { connected: false, encounters: [], error: error.message || "The encounter queue could not be read." };
     }
