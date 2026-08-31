@@ -42,8 +42,56 @@
   .banner.demo{display:block;background:#fbf1dd;border:1px solid #e6d6ad;color:#8a6a26}
   .banner.err{display:block;background:#f6e2e2;border:1px solid #e6bcbc;color:var(--urgent)}
 
-  /* layout */
-  .layout{display:grid;grid-template-columns:1fr 240px;gap:20px;align-items:start}
+  /* unified request command center */
+  .layout{display:grid;grid-template-columns:minmax(330px,420px) minmax(0,1fr);gap:16px;align-items:start}
+  .queuepanel,.detailpanel{background:var(--white);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+  .queuepanel{min-height:640px}
+  .queuehead{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);background:#fcfaf6}
+  .queuehead h2{font-size:.9rem;font-weight:800}
+  .queuehead .summary{margin-left:auto;font-size:.67rem;color:var(--ink-soft);font-weight:700}
+  .feed{padding:10px;display:flex;flex-direction:column;gap:8px}
+  .requestrow{width:100%;text-align:left;background:var(--white);border:1px solid var(--line-2);border-radius:13px;padding:12px;cursor:pointer;font-family:inherit;color:inherit;transition:.12s}
+  .requestrow:hover{border-color:var(--river);transform:translateY(-1px)}
+  .requestrow.on{border-color:var(--teal);box-shadow:0 0 0 2px rgba(79,154,149,.12);background:#fbfdfd}
+  .requestrow.urgent{border-left:4px solid var(--urgent)}
+  .requestrow .top{display:flex;align-items:center;gap:8px}
+  .requestrow .type{font-size:.78rem;font-weight:800;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .requestrow .patient{font-size:.84rem;font-weight:800;color:var(--teal-deep);margin-top:8px}
+  .requestrow .meta{font-size:.65rem;color:var(--ink-soft);font-weight:600;margin-top:4px;display:flex;gap:6px;flex-wrap:wrap}
+  .requestrow .ownerline{display:flex;align-items:center;gap:7px;margin-top:9px;font-size:.68rem;font-weight:700;color:var(--ink-soft)}
+  .routechip{display:inline-flex;align-items:center;padding:3px 7px;border-radius:20px;background:#edf3f5;color:#426a78;font-size:.61rem;font-weight:800}
+  .detailpanel{position:sticky;top:14px;min-height:640px}
+  .detail-empty{min-height:640px;display:grid;place-items:center;text-align:center;color:var(--ink-mute);padding:40px}
+  .detail-empty b{display:block;color:var(--ink-soft);font-size:.92rem;margin-bottom:6px}
+  .detailhead{padding:18px;border-bottom:1px solid var(--line);background:linear-gradient(145deg,#f7fbfb,#fcfaf6)}
+  .detailhead .eyebrow{font-size:.62rem;font-weight:800;color:var(--teal-deep);text-transform:uppercase;letter-spacing:.08em}
+  .detailhead h2{font-size:1.16rem;margin-top:5px}
+  .detailhead .requestid{font-size:.62rem;color:var(--ink-mute);font-weight:700;margin-top:4px}
+  .detailmeta{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+  .detailactions{display:flex;gap:7px;flex-wrap:wrap;padding:12px 18px;border-bottom:1px solid var(--line);background:#fff}
+  .detailactions .group-label{width:100%;font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-mute);margin-bottom:1px}
+  .detailgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.8fr);min-height:420px}
+  .detailsection{padding:16px 18px;min-width:0}
+  .detailsection+ .detailsection{border-left:1px solid var(--line)}
+  .detailsection h3{font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-mute);margin-bottom:12px}
+  .historyitem,.commitem{position:relative;padding:0 0 14px 18px;margin-left:4px;border-left:2px solid var(--line)}
+  .historyitem:last-child,.commitem:last-child{padding-bottom:0}
+  .historyitem:before,.commitem:before{content:'';position:absolute;left:-6px;top:1px;width:10px;height:10px;border-radius:50%;background:var(--river);box-shadow:0 0 0 3px #fff}
+  .historyitem .label,.commitem .label{font-size:.73rem;font-weight:800}
+  .historyitem .when,.commitem .when{font-size:.61rem;color:var(--ink-mute);font-weight:600;margin-top:2px}
+  .commitem .copy{font-size:.69rem;line-height:1.4;color:var(--ink-soft);margin-top:4px;white-space:pre-wrap;word-break:break-word}
+  .commitem.suppressed:before{background:var(--gold)}
+  .commitem.sent:before{background:var(--ok)}
+  .commitem.failed:before{background:var(--urgent)}
+  .detailreply{padding:0 18px 18px}
+  .detailreply .replybox{margin:0}
+  .mirror-note{display:inline-flex;align-items:center;gap:6px;font-size:.62rem;font-weight:800;color:var(--teal-deep);background:#eaf2f1;border:1px solid #cfe4e1;border-radius:20px;padding:6px 10px}
+  .mirror-note:before{content:'';width:7px;height:7px;border-radius:50%;background:var(--ok)}
+  .filters input,.filters select{font:inherit;font-size:.72rem;font-weight:700;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.14);color:#fff;border-radius:9px;padding:7px 9px;outline:none}
+  .filters input{width:180px;margin-left:auto}
+  .filters input::placeholder{color:rgba(255,255,255,.72)}
+  .filters select{max-width:165px}
+  .filters select option{color:var(--ink);background:#fff}
 
   /* timeline */
   .dategroup{display:grid;grid-template-columns:66px 1fr;gap:16px;margin-bottom:6px}
@@ -135,10 +183,10 @@
   .srow .ct{margin-left:auto;font-size:.66rem;font-weight:800;color:#fff;background:var(--teal);min-width:20px;height:20px;padding:0 6px;border-radius:20px;display:grid;place-items:center}
   .srow .ct.zero{background:#d7dee1;color:#7d8990}
   .srow.allrow{border-top:1px solid var(--line-2);border-radius:0;margin-bottom:6px;padding-top:12px;font-weight:800}
-  @media(max-width:960px){.layout{grid-template-columns:1fr}.staffrail{position:static}}
+  @media(max-width:960px){.layout{grid-template-columns:1fr}.detailpanel{position:static}.detailgrid{grid-template-columns:1fr}.detailsection+ .detailsection{border-left:0;border-top:1px solid var(--line)}}
   @media(max-width:640px){
     .wrap{padding:12px 10px 50px}.right .opencount{display:none}.backlink{padding:8px 10px}
-    .filters{overflow-x:auto}.filters .flabel,.filters .live{display:none}.filters button{flex:0 0 auto;padding:7px 12px}
+    .filters{overflow-x:auto}.filters .flabel,.filters .live{display:none}.filters button{flex:0 0 auto;padding:7px 12px}.filters input{min-width:150px;margin-left:8px}.filters select{min-width:135px}
     .dategroup{grid-template-columns:44px 1fr;gap:8px}.datenode .d{font-size:1.35rem}.datenode .w{padding:3px 6px}
     .rc-head{padding:12px 10px;gap:8px}.av.lg{width:38px;height:38px}.stagepill{padding:5px 8px;font-size:.55rem}
     .rc-body{padding-left:10px;padding-right:10px}.rc-foot{padding:10px;align-items:flex-start;flex-direction:column}.rc-acts{margin-left:0;width:100%;flex-wrap:wrap}
@@ -154,10 +202,11 @@
     <div class="logo"><img src="/assets/bhw-medical-logo.png" alt="BHW" style="height:28px" onerror="this.style.display='none'"></div>
     <div>
       <h1>Patient Requests</h1>
-      <div class="sub">Shared journey · every request, its steps, and who owns it · <span id="me">not signed in</span></div>
+      <div class="sub">One Google-backed queue · staff work happens here · Google Chat mirrors alerts and quick actions · <span id="me">not signed in</span></div>
     </div>
     <div class="right">
       <div class="opencount"><span class="n" id="ocN">–</span><span class="l" id="ocL">open<br>requests</span></div>
+      <span class="mirror-note">Chat mirror connected</span>
       <a class="backlink" href="/bhw-front-desk.html">← Front Desk</a>
     </div>
   </header>
@@ -169,16 +218,20 @@
     <button data-f="yesterday" onclick="setFilter('yesterday',this)">Yesterday</button>
     <button data-f="unclaimed" onclick="setFilter('unclaimed',this)">Unclaimed</button>
     <button data-f="done"     onclick="setFilter('done',this)">Completed</button>
-    <span class="live"><span class="pulse"></span><span>live · 45s</span></span>
+    <input id="requestSearch" type="search" placeholder="Search requests" aria-label="Search requests">
+    <select id="teamFilter" aria-label="Filter by routed team"><option value="">All routed teams</option></select>
+    <span class="live"><span class="pulse"></span><span>Google live · 45s</span></span>
   </div>
 
   <div class="banner" id="banner"></div>
 
   <div class="layout">
-    <main class="feed" id="feed"></main>
-    <aside class="staffrail">
-      <h3><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg> Search by staff</h3>
-      <div id="staffrows"></div>
+    <section class="queuepanel" aria-label="Patient request work queue">
+      <div class="queuehead"><h2>Work queue</h2><span class="summary" id="queueSummary">Loading…</span></div>
+      <main class="feed" id="feed"></main>
+    </section>
+    <aside class="detailpanel" id="detailPanel" aria-live="polite">
+      <div class="detail-empty"><div><b>Select a request</b>Actions, status history, and communication records stay together here.</div></div>
     </aside>
   </div>
 
@@ -199,15 +252,30 @@
 
 <script>
 const API='/.netlify/functions';
-const DASH_KEY='02142022';   // shared key for frontdesk-data — matches the function's DASH_KEY env (same as Front Desk)
 let TOKEN=sessionStorage.getItem('crewos_token')||'';
 let ITEMS=[];
 let FILTER='all';
-let STAFF=''; // selected staff name filter
+let STAFF=''; // retained for roster compatibility; routing filters use TEAM
+let TEAM='';
+let SEARCH='';
+let SELECTED=new URLSearchParams(location.search).get('request')||'';
+let DETAIL_LOAD=0;
 let ROSTER=[]; // active staff names, pulled from the crewOS Staff & Roles roster
+let CLOUD_CLIENT_PROMISE=null;
+
+async function cloudClient(){
+  if(!CLOUD_CLIENT_PROMISE) CLOUD_CLIENT_PROMISE=import('/provider/cloud-queue.mjs')
+    .then(({createEncounterCloudClient})=>createEncounterCloudClient())
+    .then(client=>{if(!client)throw new Error('Google workflow backend is not configured');return client;});
+  return CLOUD_CLIENT_PROMISE;
+}
 
 // ---- journey model ----
-function stageOf(status){
+function stageOf(status,category){
+  const c=(category||'').toLowerCase();
+  if(c==='completed') return 'done';
+  if(c==='in_progress'||c==='waiting'||c==='escalated') return 'prog';
+  if(c==='received') return 'new';
   const s=(status||'').toLowerCase();
   if(/done|resolved|complete|closed/.test(s)) return 'done';
   if(/progress|working/.test(s))              return 'prog';
@@ -270,7 +338,7 @@ function journeyOf(it){
   if(Array.isArray(it.journey)&&it.journey.length) return it.journey;
   const steps=[{dot:isHot(it)?'urgent':'recv',time:fmtTime(it.received),
      text:`Request received via <b>${srcLabel(it.source)}</b>`, who:''}];
-  const st=stageOf(it.status);
+  const st=stageOf(it.status,it.statusCategory);
   if(it.assigned) steps.push({dot:'update',time:'',text:`Claimed`,who:it.assigned});
   if(st==='prog') steps.push({dot:'prog',time:'',text:`In progress`,who:it.assigned});
   if(st==='done') steps.push({dot:'done',time:'',text:`Completed`,who:it.assigned});
@@ -281,8 +349,12 @@ function journeyOf(it){
 function todayKey(){ return dayKey(); }
 function yesterdayKey(){ const d=new Date(); d.setDate(d.getDate()-1); return dayKey(d.toISOString()); }
 function passFilter(it){
-  const st=stageOf(it.status);
-  if(STAFF && (it.assigned||'')!==STAFF) return false;
+  const st=stageOf(it.status,it.statusCategory);
+  if(TEAM && (it.assignedTeam||it.serviceLine||'')!==TEAM) return false;
+  if(SEARCH){
+    const hay=[it.name,it.id,it.requestType,it.statusLabel,it.status,it.assignedTeam,it.serviceLine,it.assigned,it.source].join(' ').toLowerCase();
+    if(!hay.includes(SEARCH))return false;
+  }
   if(FILTER==='done')      return st==='done';
   if(FILTER==='unclaimed') return st!=='done' && !it.assigned;
   if(FILTER==='today')     return dayKey(it.received)===todayKey();
@@ -291,97 +363,157 @@ function passFilter(it){
 }
 
 // ---- render ----
+const UI_WORKFLOWS={
+  medication:{label:'Medication request',milestones:[['Waiting on clinician','waiting_on_clinician'],['Waiting on pharmacy','waiting_on_pharmacy']],outcomes:[['Complete','refill_completed'],['Needs visit','needs_visit']]},
+  referral:{label:'Referral request',milestones:[['Referral sent','referral_sent'],['Ready to schedule','ready_to_schedule']],outcomes:[['Scheduled','scheduled'],['Close','closed_without_scheduling']]},
+  prior_auth:{label:'Prior authorization',milestones:[['PA submitted','pa_submitted']],outcomes:[['Approved','pa_approved'],['Denied','pa_denied']]},
+  billing:{label:'Billing request',milestones:[['With RCM','rcm_referred'],['Waiting on payer','waiting_on_payer']],outcomes:[['Resolve','billing_resolved']]},
+  general:{label:'Patient request',milestones:[['Waiting','waiting']],outcomes:[['Resolve','completed']]},
+};
+function uiType(it){
+  const value=String(it.requestType||it.type||'general').toLowerCase().replaceAll('-','_');
+  if(['refill','medication_refill','medication'].includes(value))return 'medication';
+  if(['prior_authorization','prior_auth','pa'].includes(value))return 'prior_auth';
+  if(['billing_rcm','billing','rcm'].includes(value))return 'billing';
+  return UI_WORKFLOWS[value]?value:'general';
+}
+function workflowUI(it){return UI_WORKFLOWS[uiType(it)];}
+function humanStatus(it){
+  return it.statusLabel||String(it.status||'received').replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
+}
+function routeName(it){return it.assignedTeam||it.serviceLine||'unrouted';}
 function render(){
-  const open=ITEMS.filter(i=>stageOf(i.status)!=='done').length;
-  const unclaimed=ITEMS.filter(i=>stageOf(i.status)!=='done'&&!i.assigned).length;
+  const open=ITEMS.filter(i=>stageOf(i.status,i.statusCategory)!=='done').length;
+  const unclaimed=ITEMS.filter(i=>stageOf(i.status,i.statusCategory)!=='done'&&!i.assigned).length;
   document.getElementById('ocN').textContent=open;
   document.getElementById('ocN').className='n'+(unclaimed?' warn':'');
   document.getElementById('ocL').innerHTML=unclaimed?`open · <b>${unclaimed} unclaimed</b>`:'open<br>requests';
   try{ localStorage.setItem('bhw_open_requests',String(open)); }catch(e){}
 
-  // staff rail (counts of OPEN requests per owner)
-  const roster={};
-  ITEMS.forEach(i=>{ if(i.assigned){ roster[i.assigned]=roster[i.assigned]||0; if(stageOf(i.status)!=='done') roster[i.assigned]++; } });
-  ROSTER.forEach(n=>{ if(!(n in roster)) roster[n]=roster[n]||0; });
-  const staffHTML=`<div class="srow allrow ${STAFF===''?'on':''}" onclick="setStaff('')"><span>Everyone</span><span class="ct ${open?'':'zero'}">${open}</span></div>`+
-    Object.keys(roster).sort().map(n=>`<div class="srow ${STAFF===n?'on':''}" onclick="setStaff('${n.replace(/'/g,"\\'")}')">
-      <span class="av sm">${initials(n)}</span><span class="nm">${n}</span><span class="ct ${roster[n]?'':'zero'}">${roster[n]}</span></div>`).join('');
-  document.getElementById('staffrows').innerHTML=staffHTML;
+  const teamSelect=document.getElementById('teamFilter');
+  const teams=[...new Set(ITEMS.map(routeName).filter(Boolean))].sort();
+  teamSelect.innerHTML='<option value="">All routed teams</option>'+teams.map(team=>`<option value="${esc(team)}">${esc(team)}</option>`).join('');
+  teamSelect.value=TEAM;
 
-  // feed grouped by date (desc)
   const shown=ITEMS.filter(passFilter);
-  const groups={};
-  shown.forEach(it=>{ const k=dayKey(it.received); (groups[k]=groups[k]||[]).push(it); });
-  const keys=Object.keys(groups).sort().reverse();
+  document.getElementById('queueSummary').textContent=`${shown.length} shown · ${unclaimed} unclaimed`;
   const feed=document.getElementById('feed');
-  if(!keys.length){ feed.innerHTML=`<div class="empty">No requests match this view.</div>`; return; }
-  feed.innerHTML=keys.map(k=>{
-    const d=new Date(k+'T00:00:00');
-    const day=d.getDate(), mon=d.toLocaleString('en',{month:'short'}).toUpperCase()+' '+d.getFullYear();
-    const wd=d.toLocaleString('en',{weekday:'short'}).toUpperCase();
-    const cards=groups[k].sort((a,b)=>(b.received||'').localeCompare(a.received||'')).map(cardHTML).join('');
-    return `<div class="dategroup">
-      <div class="datenode"><div class="d">${day}</div><div class="m">${mon}</div><div class="w">${wd}</div><div class="line"></div></div>
-      <div class="datecards">${cards}</div></div>`;
-  }).join('');
+  const sorted=shown.sort((a,b)=>(b.received||'').localeCompare(a.received||''));
+  if(!sorted.length) feed.innerHTML=`<div class="empty">No requests match this view.</div>`;
+  else feed.innerHTML=sorted.map(cardHTML).join('');
+  if(!SELECTED&&sorted[0])SELECTED=sorted[0].id;
+  renderDetail();
+}
+
+function completionControls(it,isDone){
+  if(isDone) return `<label class="chk on" title="Completed — click to reopen" onclick="toggleDone('${it.id}',true)">
+    <span class="box"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>Completed</label>`;
+  if(it.requestType==='prior_auth') return `<button class="btn done" onclick="resolveWith('${it.id}','pa_approved')">Approved</button>
+    <button class="btn" onclick="resolveWith('${it.id}','pa_denied')">Denied</button>`;
+  if(it.requestType==='referral') return `<button class="btn done" onclick="resolveWith('${it.id}','scheduled')">Scheduled</button>
+    <button class="btn" onclick="resolveWith('${it.id}','closed_without_scheduling')">Close</button>`;
+  return `<label class="chk" title="Mark this request complete" onclick="toggleDone('${it.id}',false)">
+    <span class="box"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>Complete</label>`;
 }
 
 function cardHTML(it){
-  const st=stageOf(it.status), hot=isHot(it);
-  const steps=journeyOf(it).map(s=>`
-    <div class="entry">
-      <span class="dot ${s.dot}"></span>
-      <div class="ebody">
-        ${s.time?`<div class="etime">${s.time}</div>`:''}
-        <div class="etext">${s.text}</div>
-        ${s.who?`<div class="ewho"><span class="av sm">${initials(s.who)}</span>${s.who}</div>`:''}
-      </div>
-      <div class="eic"><svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div>
-    </div>`).join('');
-  const owner = it.assigned
-    ? `<span class="owner"><span class="av sm">${initials(it.assigned)}</span>${it.assigned}</span>`
-    : `<span class="owner un"><span class="av sm un">?</span>Unclaimed — needs an owner</span>`;
-  const isDone = st==='done';
-  const claimBtn = (!isDone && !it.assigned) ? `<button class="btn" onclick="claim('${it.id}')">Claim</button>` : '';
-  const ph = String(it.phone||'').replace(/'/g,'');
-  const replyBtn = (ph && !isDone) ? `<button class="btn" onclick="openReply('${it.id}','${ph}','sms')">💬 Text back</button>` : '';
-  const acts = `${claimBtn}${replyBtn}
-    <label class="chk ${isDone?'on':''}" title="${isDone?'Completed — click to reopen':'Mark this request complete'}" onclick="toggleDone('${it.id}',${isDone})">
-      <span class="box"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>${isDone?'Completed':'Complete'}
-    </label>`;
-  const sum = it.summary && !(Array.isArray(it.journey)&&it.journey.length)
-    ? `<div class="entry"><span class="dot update"></span><div class="ebody"><div class="etext">${(it.summary||'').replace(/</g,'&lt;')}</div></div></div>` : '';
-  const faxUrl=/fax/i.test(it.source||'')?safeHttpsUrl(it.sourceUrl):'';
-  const faxDoc=faxUrl?`<div class="faxdoc">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></svg>
-    <div class="copy"><div class="title">Incoming fax PDF</div><div class="hint">Opens here in CrewOS</div></div>
-    <button class="btn view-fax" type="button" data-fax-url="${esc(faxUrl)}" data-fax-name="${esc((it.name||'Patient')+' — incoming fax')}">View fax PDF</button>
-  </div>`:'';
-  return `<div class="rcard ${hot?'urgent':''}">
-    <div class="rc-head">
-      <span class="av lg">${initials(it.name)}</span>
-      <div><div class="nm">${it.name||'Unknown patient'}</div><div class="rl">${srcLabel(it.source)}${it.phone?' · '+it.phone:''}</div></div>
-      <span class="stagepill ${st}">${STAGE_LABEL[st]}</span>
+  const st=stageOf(it.status,it.statusCategory), hot=isHot(it), id=encodeURIComponent(String(it.id));
+  const owner=it.assigned||'Unassigned';
+  return `<button type="button" class="requestrow ${hot?'urgent':''} ${SELECTED===it.id?'on':''}" onclick="selectRequest(decodeURIComponent('${id}'))">
+    <span class="top"><span class="type">${esc(workflowUI(it).label)}</span><span class="stagepill ${st}">${esc(humanStatus(it))}</span></span>
+    <span class="patient">${esc(it.name||'Patient')}</span>
+    <span class="meta"><span>${esc(srcLabel(it.source))}</span><span>·</span><span>${esc(fmtTime(it.received))}</span><span class="routechip">${esc(routeName(it))}</span></span>
+    <span class="ownerline"><span class="av sm ${it.assigned?'':'un'}">${it.assigned?initials(it.assigned):'?'}</span>${esc(owner)}</span>
+  </button>`;
+}
+
+function actionButton(label,it,action,details={},klass=''){
+  const id=encodeURIComponent(String(it.id));
+  const encoded=encodeURIComponent(JSON.stringify(details));
+  return `<button type="button" class="btn ${klass}" onclick="runRequestAction(decodeURIComponent('${id}'),'${action}',JSON.parse(decodeURIComponent('${encoded}')))">${esc(label)}</button>`;
+}
+function detailActions(it){
+  if(stageOf(it.status,it.statusCategory)==='done')return '<span class="routechip">Workflow complete</span>';
+  const ui=workflowUI(it), buttons=[];
+  if(!it.assigned)buttons.push(actionButton('Assign to me',it,'assign'));
+  if(!['in_progress','completed'].includes(it.statusCategory))buttons.push(actionButton('Start',it,'start',{},'p'));
+  for(const [label,status] of ui.milestones){
+    if(status!==it.status)buttons.push(actionButton(label,it,'milestone',{status}));
+  }
+  for(const [label,outcome] of ui.outcomes)buttons.push(actionButton(label,it,'resolve',{outcome},'done'));
+  buttons.push(`<button type="button" class="btn" onclick="escalateRequest(decodeURIComponent('${encodeURIComponent(String(it.id))}'))">Escalate</button>`);
+  if(it.canSms)buttons.push(`<button type="button" class="btn" onclick="openReply(decodeURIComponent('${encodeURIComponent(String(it.id))}'),'sms','detailReply')">Notify patient</button>`);
+  return buttons.join('');
+}
+function historyHTML(it){
+  const rows=Array.isArray(it.statusHistory)&&it.statusHistory.length?it.statusHistory.map(step=>({
+    label:String(step.label||step.status||'update').replaceAll('_',' '),when:step.at||'',who:step.actorName||''
+  })) : journeyOf(it).map(step=>({label:String(step.text||'').replace(/<[^>]+>/g,''),when:'',who:step.who||''}));
+  return rows.map(row=>`<div class="historyitem"><div class="label">${esc(row.label)}</div><div class="when">${esc(row.when?new Date(row.when).toLocaleString():row.who)}</div></div>`).join('')||'<div class="empty">No status history yet.</div>';
+}
+function renderDetail(){
+  const panel=document.getElementById('detailPanel');
+  const it=ITEMS.find(item=>item.id===SELECTED);
+  if(!it){panel.innerHTML='<div class="detail-empty"><div><b>Select a request</b>Actions, status history, and communication records stay together here.</div></div>';return;}
+  const st=stageOf(it.status,it.statusCategory), faxUrl=/fax/i.test(it.source||'')?safeHttpsUrl(it.sourceUrl):'';
+  const faxButton=faxUrl?`<button class="btn view-fax" type="button" data-fax-url="${esc(faxUrl)}" data-fax-name="${esc((it.name||'Patient')+' — incoming fax')}">View fax PDF</button>`:'';
+  panel.innerHTML=`
+    <div class="detailhead">
+      <div class="eyebrow">${esc(workflowUI(it).label)}</div>
+      <h2>${esc(it.name||'Patient')}</h2>
+      <div class="requestid">Request ${esc(it.id)}</div>
+      <div class="detailmeta"><span class="stagepill ${st}">${esc(humanStatus(it))}</span><span class="routechip">${esc(it.serviceLine||'general')}</span><span class="routechip">${esc(routeName(it))}</span><span class="routechip">${esc(it.priority||'routine')}</span></div>
     </div>
-    <div class="rc-body">${steps}${sum}${faxDoc}</div>
-    <div class="rc-foot">${owner}<span class="rc-acts">${acts}</span></div>
-    <div class="replyslot" id="rs-${it.id}"></div>
-  </div>`;
+    <div class="detailactions"><span class="group-label">Work this request</span>${detailActions(it)}${faxButton}</div>
+    <div class="detailgrid">
+      <section class="detailsection"><h3>Status history</h3>${historyHTML(it)}</section>
+      <section class="detailsection"><h3>Communications and delivery</h3><div id="communications"><div class="empty">Loading communication record…</div></div></section>
+    </div>
+    <div class="detailreply" id="detailReply"></div>`;
+  loadSelectedCommunications(it.id);
+}
+function selectRequest(id){
+  SELECTED=id;
+  const url=new URL(location.href);url.searchParams.set('request',id);history.replaceState({},'',url);
+  render();
+}
+function communicationHTML(rows){
+  if(!rows.length)return '<div class="empty">No communications recorded for this request.</div>';
+  return rows.slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))).map(row=>{
+    const channel=String(row.channel||row.transport||'communication').replaceAll('_',' ');
+    const direction=row.direction==='inbound'?'Inbound':'Outbound';
+    const status=String(row.status||row.providerStatus||'recorded').toLowerCase();
+    const reason=row.statusReason?` · ${row.statusReason}`:'';
+    const copy=row.content?`<div class="copy">${esc(row.content)}</div>`:'';
+    return `<div class="commitem ${esc(status)}"><div class="label">${esc(direction)} ${esc(channel)} · ${esc(status)}${esc(reason)}</div>${copy}<div class="when">${esc(row.createdAt?new Date(row.createdAt).toLocaleString():'')}</div></div>`;
+  }).join('');
+}
+async function loadSelectedCommunications(id){
+  const sequence=++DETAIL_LOAD;
+  try{
+    const rows=await (await cloudClient()).listPatientRequestCommunications(id);
+    if(sequence!==DETAIL_LOAD||id!==SELECTED)return;
+    const box=document.getElementById('communications');if(box)box.innerHTML=communicationHTML(rows);
+  }catch(e){
+    if(sequence!==DETAIL_LOAD||id!==SELECTED)return;
+    const box=document.getElementById('communications');if(box)box.innerHTML='<div class="empty">Communication history is unavailable right now.</div>';
+  }
 }
 
 // ---- reply (text back via Dialpad; fax back when the request came in by fax) ----
 const CANNED=[
   ['We got your message',"Hi, this is BHW Medical — we received your message and someone will follow up shortly. Thank you!"],
   ['Please call us',"Hi, this is BHW Medical. Please call us at 443-762-5343 so we can help. Thank you!"],
-  ['Rx in progress',"Hi, this is BHW Medical — your prescription request is in progress and we'll update you soon."],
+  ['Request in progress',"Hi, this is BHW Medical — your request is in progress and we'll post a secure update when it changes."],
 ];
-function openReply(id,to,mode){
-  const slot=document.getElementById('rs-'+id); if(!slot||slot.querySelector('.replybox'))return;
+function openReply(id,mode,slotId){
+  const slot=document.getElementById(slotId||('rs-'+id)); if(!slot||slot.querySelector('.replybox'))return;
   const isFax=mode==='fax';
   const opts=CANNED.map((c,i)=>`<option value="${i}">${c[0]}</option>`).join('');
   slot.innerHTML=`<div class="replybox">
     ${isFax?'':`<select class="canned"><option value="">Canned response…</option>${opts}</select>`}
-    <textarea rows="2" placeholder="${isFax?'Fax a note to '+to:'Text back to '+to} — sends from the BHW line"></textarea>
+    <textarea rows="2" placeholder="${isFax?'Fax a note':'Text back'} — sends from the BHW line"></textarea>
+    ${isFax?'':`<label class="chk"><input class="no-phi" type="checkbox"> I confirmed this text contains no patient name, diagnosis, medication name, date of birth, member ID, or other PHI.</label>`}
     <div class="rbtns"><button class="btn send">${isFax?'Send fax':'Send text'}</button><button class="btn cancel">Cancel</button></div>
   </div>`;
   const box=slot.querySelector('.replybox');
@@ -389,47 +521,73 @@ function openReply(id,to,mode){
   box.querySelector('.cancel').onclick=()=>{ slot.innerHTML=''; };
   box.querySelector('.send').onclick=async()=>{
     const msg=box.querySelector('textarea').value.trim(); if(!msg)return;
+    if(!isFax&&!box.querySelector('.no-phi').checked){box.querySelector('.send').textContent='Confirm no PHI first';return;}
     const s=box.querySelector('.send'); s.disabled=true; s.textContent='Sending…';
     try{
-      const r=await fetch(`${API}/frontdesk-data${DASH_KEY?`?key=${encodeURIComponent(DASH_KEY)}`:''}`,{
-        method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({action:isFax?'fax':'sms',pageId:id,to:to,text:msg})});
-      if(r.ok){ s.textContent='Sent ✓'; setTimeout(()=>{ slot.innerHTML=''; load(); },900); }
-      else{ const d=await r.json().catch(()=>({})); s.textContent=(d.detail?'Failed: '+String(d.detail).slice(0,40):'Failed — retry'); s.disabled=false; }
-    }catch(_){ s.textContent='Failed — retry'; s.disabled=false; }
+      if(isFax)throw new Error('Fax replies remain in Front Desk');
+      const result=await (await cloudClient()).sendPatientRequestSms(id,msg,{noPhiAttestation:true});
+      const status=result.status||'sent';
+      s.textContent=status==='queued'?'Queued for morning ✓':status==='suppressed'?'Not sent — check consent':'Sent ✓';
+      if(status==='sent'||status==='queued')setTimeout(()=>{ slot.innerHTML=''; load(); },1100); else s.disabled=false;
+    }catch(e){ s.textContent=String(e.message||'Failed — retry').slice(0,55); s.disabled=false; }
   };
 }
 
 function setFilter(f,btn){ FILTER=f; document.querySelectorAll('.filters button').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); render(); }
 function setStaff(n){ STAFF=n; render(); }
+function setTeam(value){TEAM=value;render();}
 
 // ---- data ----
 async function load(){
   const banner=document.getElementById('banner');
   try{
-    const r=await fetch(`${API}/frontdesk-data${DASH_KEY?`?key=${encodeURIComponent(DASH_KEY)}`:''}`,{headers:TOKEN?{Authorization:`Bearer ${TOKEN}`}:{}});
-    if(r.ok){ const d=await r.json(); if(Array.isArray(d.items)){ ITEMS=d.items; banner.className='banner'; render(); return; } }
-    throw new Error('no live feed');
+    const rows=await (await cloudClient()).listPatientRequests({status:'',limit:500});
+    ITEMS=rows.map(r=>({
+      ...r,
+      type:r.requestType,
+      name:r.patientName||'Patient',
+      assigned:r.assignedToName||'',
+      received:r.createdAt,
+      canSms:r.canSms===true,
+      journey:(r.statusHistory||[]).map((step,index)=>({
+        dot:step.category==='completed'?'done':step.category==='in_progress'||step.category==='waiting'?'prog':step.category==='escalated'?'urgent':index?'update':'recv',
+        time:fmtTime(step.at),
+        text:esc(String(step.status||'').replaceAll('_',' ')),
+        who:'',
+      })),
+    }));
+    banner.className='banner'; render();
+    window.dispatchEvent(new CustomEvent('bhw:requests-updated',{detail:{requests:ITEMS}}));
+    return;
   }catch(e){
     ITEMS=[]; banner.className='banner err';
-    banner.textContent='Couldn’t reach the live triage queue. Reload the page; if it keeps happening, open Front Desk and sign in to crewOS again.';
+    banner.textContent='Couldn’t reach the Google patient-request queue. Sign in to crewOS again, then reload.';
     render();
   }
 }
-async function post(action,body){
-  const r=await fetch(`${API}/action`,{method:'POST',headers:{'Content-Type':'application/json',...(TOKEN?{Authorization:`Bearer ${TOKEN}`}:{})},body:JSON.stringify({action,...body})});
-  return {ok:r.ok,status:r.status,d:await r.json().catch(()=>({}))};
+async function post(action,body={}){
+  try{return {ok:true,status:200,d:await (await cloudClient()).patientRequestAction(body.id,action,body)};}
+  catch(e){return {ok:false,status:Number(e.status)||500,d:{error:e.message}};}
+}
+async function runRequestAction(id,action,details={}){
+  if(!TOKEN){needAuth();return;}
+  const result=await post(action,{id,...details});
+  if(result.status===401){TOKEN='';sessionStorage.removeItem('crewos_token');needAuth();return;}
+  if(!result.ok){showActionError(result.d.error);return;}
+  await load();
 }
 function needAuth(){ const b=document.getElementById('banner'); b.className='banner err'; b.textContent='Sign in to crewOS first (open Front Desk and connect), then reload — claiming or completing a request records who did it.'; }
-async function claim(id){ if(!TOKEN){needAuth();return;} const {ok,status}=await post('request-status',{id,status:'In progress',claim:true}); if(status===401){TOKEN='';sessionStorage.removeItem('crewos_token');needAuth();return;} if(ok) load(); }
-async function advance(id,stage){ if(!TOKEN){needAuth();return;} const {ok,status}=await post('request-status',{id,status:STATUS_FOR[stage]}); if(status===401){TOKEN='';sessionStorage.removeItem('crewos_token');needAuth();return;} if(ok) load(); }
+async function claim(id){return runRequestAction(id,'assign');}
+async function advance(id,statusName){return runRequestAction(id,'milestone',{status:statusName});}
 // One-click complete box: check to resolve (stamps you as owner); uncheck to reopen.
 async function toggleDone(id,isDone){ if(!TOKEN){needAuth();return;}
-  const body=isDone?{id,status:STATUS_FOR.prog}:{id,status:STATUS_FOR.done,claim:true};
-  const {ok,status}=await post('request-status',body);
+  const {ok,status}=await post(isDone?'reopen':'resolve',{id});
   if(status===401){TOKEN='';sessionStorage.removeItem('crewos_token');needAuth();return;}
   if(ok) load();
 }
+async function resolveWith(id,outcome){return runRequestAction(id,'resolve',{outcome});}
+async function escalateRequest(id){ if(!TOKEN){needAuth();return;} const reason=prompt('Why does this request need escalation?'); if(!reason)return; return runRequestAction(id,'escalate',{reason}); }
+function showActionError(message){const b=document.getElementById('banner');b.className='banner err';b.textContent=message||'CrewOS could not apply that action.';}
 
 // (demo request fallback removed — the page shows the live triage queue or a clean empty/error state)
 
@@ -443,6 +601,8 @@ async function loadRoster(){
 }
 
 if(TOKEN){ document.getElementById('me').textContent='signed in'; }
+document.getElementById('requestSearch').addEventListener('input',event=>{SEARCH=event.target.value.trim().toLowerCase();render();});
+document.getElementById('teamFilter').addEventListener('change',event=>setTeam(event.target.value));
 loadRoster();
 load();
 setInterval(load,45000);
@@ -455,5 +615,6 @@ document.getElementById('faxPdfClose').addEventListener('click',closeFaxPdf);
 document.getElementById('faxPdfModal').addEventListener('click',e=>{if(e.target.id==='faxPdfModal')closeFaxPdf();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.getElementById('faxPdfModal').hidden)closeFaxPdf();});
 </script>
+<script type="module" src="/bhw-alert-center.mjs"></script>
 </body>
 </html>
