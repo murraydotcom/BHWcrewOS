@@ -349,7 +349,18 @@ function trendGraphic(observations) {
 function bodyFigure(context) {
   const activeSystems = context.systems.filter((item) => String(item.status || "").toLowerCase() !== "not-assessed");
   const focus = activeSystems[0];
-  return `<div class="body-center"><div class="body-caption"><span>Whole-person atlas</span><b>${activeSystems.length ? `${activeSystems.length} active system focus` : "No active system focus returned"}</b></div><input class="outline-radio" type="radio" name="body-outline" id="body-outline-neutral" checked><input class="outline-radio" type="radio" name="body-outline" id="body-outline-curved"><div class="outline-picker" aria-label="Body outline display"><label for="body-outline-neutral">Neutral outline</label><label for="body-outline-curved">Curved outline</label></div><div class="body-image-stage" role="img" aria-label="Anterior whole-person body outline"><div class="body-image body-image-neutral"><img src="patient-360-body-neutral.png" alt=""></div><div class="body-image body-image-curved"><img src="patient-360-body-curved.png" alt=""></div><div class="body-focus-marker" aria-hidden="true"></div></div><div class="body-focus-copy"><b>${esc(focus?.label || "Body-system focus not documented")}</b><span>${esc(focus?.summary || "Open the atlas to review documented and unassessed systems.")}</span><a href="patient-360-atlas.html">Open full body-system atlas</a></div></div>`;
+  const patient = context.patient || {};
+  const birthSex = patient.extension?.find((item) => String(item?.url || "").toLowerCase().includes("birthsex"))?.valueCode;
+  const recordedSex = String(patient.sexAtBirth || patient.birthSex || birthSex || patient.gender || "").trim().toLowerCase();
+  const bodyProfile = ["f", "female"].includes(recordedSex)
+    ? { sex: "female", label: "Female", asset: "patient-360-body-curved.png" }
+    : ["m", "male"].includes(recordedSex)
+      ? { sex: "male", label: "Male", asset: "patient-360-body-neutral.png" }
+      : null;
+  const bodyDisplay = bodyProfile
+    ? `<input class="outline-radio" type="radio" name="body-view" id="body-view-front" checked><input class="outline-radio" type="radio" name="body-view" id="body-view-back"><div class="outline-picker" aria-label="Body view"><label for="body-view-front">Front</label><label for="body-view-back">Back</label></div><div class="body-image-stage ${bodyProfile.sex}" role="img" aria-label="${bodyProfile.label} body outline"><div class="body-image body-view-front"><img src="${bodyProfile.asset}" alt=""></div><div class="body-image body-view-back"><img src="${bodyProfile.asset}" alt=""></div><div class="body-focus-marker" aria-hidden="true"></div></div>`
+    : `<div class="body-sex-unavailable"><b>Body outline not selected</b><span>A recorded male or female value is needed to choose the appropriate front and back outline.</span></div>`;
+  return `<div class="body-center"><div class="body-caption"><span>Whole-person atlas · ${esc(bodyProfile ? `${bodyProfile.label} outline` : "outline unavailable")}</span><b>${activeSystems.length ? `${activeSystems.length} active system focus` : "No active system focus returned"}</b></div>${bodyDisplay}<div class="body-focus-copy"><b>${esc(focus?.label || "Body-system focus not documented")}</b><span>${esc(focus?.summary || "Open the atlas to review documented and unassessed systems.")}</span><a href="patient-360-atlas.html">Open full body-system atlas</a></div></div>`;
 }
 
 function overviewPage(context) {
