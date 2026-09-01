@@ -264,8 +264,8 @@ let ROSTER=[]; // active staff names, pulled from the crewOS Staff & Roles roste
 let CLOUD_CLIENT_PROMISE=null;
 
 async function cloudClient(){
-  if(!CLOUD_CLIENT_PROMISE) CLOUD_CLIENT_PROMISE=import('/provider/cloud-queue.mjs')
-    .then(({createEncounterCloudClient})=>createEncounterCloudClient())
+  if(!CLOUD_CLIENT_PROMISE) CLOUD_CLIENT_PROMISE=import('/provider/operations-queue.mjs')
+    .then(({createOperationsCloudClient})=>createOperationsCloudClient())
     .then(client=>{if(!client)throw new Error('Google workflow backend is not configured');return client;});
   return CLOUD_CLIENT_PROMISE;
 }

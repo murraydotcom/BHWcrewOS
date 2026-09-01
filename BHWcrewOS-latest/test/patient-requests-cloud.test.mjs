@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { createEncounterCloudClient } from "../provider/cloud-queue.mjs";
+import { createOperationsCloudClient } from "../provider/operations-queue.mjs";
 
 test("Patient Requests is the command center and Google Chat is only a mirror", async () => {
   const html = await readFile(new URL("../bhw-requests.html", import.meta.url), "utf8");
@@ -21,7 +21,7 @@ test("Patient Requests is the command center and Google Chat is only a mirror", 
   assert.doesNotThrow(() => new Function(script));
 });
 
-test("Patient Requests reuses the existing CrewOS cloud token exchange and one Google queue", async () => {
+test("Patient Requests uses the dedicated Operations token exchange and one Google queue", async () => {
   const priorStorage = globalThis.sessionStorage;
   globalThis.sessionStorage = {
     getItem(key) { return key === "crewos_token" ? "synthetic-crew-session" : null; },
@@ -30,10 +30,10 @@ test("Patient Requests reuses the existing CrewOS cloud token exchange and one G
   const calls = [];
   const fetchImpl = async (url, options = {}) => {
     calls.push({ url: String(url), options });
-    if (url === "/.netlify/functions/rcm-cloud-config") {
+    if (url === "/.netlify/functions/operations-cloud-config") {
       return new Response(JSON.stringify({ enabled: true, apiBase: "https://api.example" }), { status: 200 });
     }
-    if (url === "/.netlify/functions/rcm-cloud-token") {
+    if (url === "/.netlify/functions/operations-cloud-token") {
       assert.equal(options.headers.Authorization, "Bearer synthetic-crew-session");
       return new Response(JSON.stringify({ token: "synthetic-cloud-token", expiresIn: 300 }), { status: 200 });
     }
@@ -57,7 +57,7 @@ test("Patient Requests reuses the existing CrewOS cloud token exchange and one G
   };
 
   try {
-    const client = await createEncounterCloudClient(fetchImpl);
+    const client = await createOperationsCloudClient(fetchImpl);
     const requests = await client.listPatientRequests({ status: "open" });
     assert.equal(requests[0].id, "synthetic-request-1");
     const started = await client.patientRequestAction("synthetic-request-1", "start", { idempotencyKey: "synthetic-start" });
@@ -67,7 +67,7 @@ test("Patient Requests reuses the existing CrewOS cloud token exchange and one G
       idempotencyKey: "synthetic-message",
     });
     assert.equal(sent.status, "sent");
-    assert.equal(calls.filter((call) => call.url === "/.netlify/functions/rcm-cloud-token").length, 1, "short-lived token is reused");
+    assert.equal(calls.filter((call) => call.url === "/.netlify/functions/operations-cloud-token").length, 1, "short-lived token is reused");
   } finally {
     globalThis.sessionStorage = priorStorage;
   }

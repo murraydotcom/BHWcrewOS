@@ -53,3 +53,23 @@ test("Care Connect browser bridge forwards synthetic intake through the server-s
   assert.equal(payload.routing.targetSystem, "crewos");
   assert.equal(payload.requester.displayName, "Synthetic Patient");
 });
+
+test("Care Connect bridge fails closed instead of writing a legacy Notion queue", async (t) => {
+  t.after(() => {
+    delete process.env.OPERATIONS_CLOUD_API_URL;
+    delete process.env.CARE_CONNECT_INTAKE_SECRET;
+    delete process.env.NOTION_TOKEN;
+    delete process.env.QUEUE_DB_ID;
+  });
+  delete process.env.OPERATIONS_CLOUD_API_URL;
+  delete process.env.CARE_CONNECT_INTAKE_SECRET;
+  process.env.NOTION_TOKEN = "synthetic-legacy-token";
+  process.env.QUEUE_DB_ID = "synthetic-legacy-queue";
+
+  const response = await portalHandler({
+    httpMethod: "POST",
+    headers: { origin: "https://careconnect.netlify.app" },
+    body: JSON.stringify({ name: "Synthetic Patient", message: "Synthetic request", hp: "" }),
+  });
+  assert.equal(response.statusCode, 503);
+});

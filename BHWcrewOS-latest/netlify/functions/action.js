@@ -51,7 +51,65 @@ function patientIndexProperties(patient) {
   return {
     "Patient Name": W.title(patient.name),
     "DOB": W.date(patient.dob),
+    // The Index's auto-number is only a local CrewOS relation number. Keep the
+    // authoritative RCM patient ID in the existing writable text property.
+    "Patient ID #": W.text(patient.bhwPatientId),
   };
+}
+
+function actionError(status, message) {
+  return Object.assign(new Error(message), { status });
+}
+
+// CrewOS forms may submit either an existing relation-page id or an
+// authoritative BHW Patient ID from the Cloud Registry. Resolve Cloud IDs only
+// when a legacy workflow actually needs a Notion relation; staff never have to
+// pre-link a patient before using a dropdown.
+async function resolvePatientIndex(patientId, session) {
+  const requestedId = String(patientId || "").trim();
+  if (!requestedId) throw actionError(400, "Pick a patient");
+  if (!/^BHW\d+$/i.test(requestedId)) {
+    return { indexId: requestedId, patient: null, linked: false, backfilled: false };
+  }
+
+  const bhwPatientId = requestedId.toUpperCase();
+  const [idxPages, cloudPatients] = await Promise.all([queryDb(DB.patients), listCloudPatients(session)]);
+  const patient = cloudPatients.find((item) => String(item.bhwPatientId || "").toUpperCase() === bhwPatientId);
+  if (!patient) throw actionError(404, "That patient is no longer available in the Patient Registry. Search again.");
+  if (!patient.name || !patient.dob) throw actionError(409, "This Patient Registry record needs a name and birthday before CrewOS can use it safely.");
+
+  const storedMasterId = (page) => P.text(page.properties["Patient ID #"]).trim().toUpperCase();
+  const idMatches = idxPages.filter((page) => storedMasterId(page) === bhwPatientId);
+  if (idMatches.length > 1) throw actionError(409, "CrewOS has more than one link for this Master Patient ID. Resolve the duplicate links before continuing.");
+
+  let index = idMatches[0] || null;
+  let backfilled = false;
+  if (!index) {
+    const blankIdentityMatches = idxPages.filter((page) =>
+      !storedMasterId(page)
+      && normalizePatientName(P.title(page.properties["Patient Name"])) === normalizePatientName(patient.name)
+      && P.date(page.properties["DOB"]) === patient.dob
+    );
+    const cloudIdentityMatches = cloudPatients.filter((item) =>
+      normalizePatientName(item.name) === normalizePatientName(patient.name)
+      && item.dob === patient.dob
+    );
+    if (blankIdentityMatches.length > 1 || (blankIdentityMatches.length && cloudIdentityMatches.length > 1)) {
+      throw actionError(409, "This name and birthday are not unique enough to link automatically. Review the Patient Registry identities first.");
+    }
+    index = blankIdentityMatches[0] || null;
+    if (index) {
+      await updatePage(index.id, { "Patient ID #": W.text(patient.bhwPatientId) });
+      backfilled = true;
+    }
+  }
+
+  let linked = false;
+  if (!index) {
+    index = await createPage(DB.patients, patientIndexProperties(patient));
+    linked = true;
+  }
+  return { indexId: index.id, patient, linked, backfilled };
 }
 
 let awvPropsEnsured = false;
@@ -89,9 +147,10 @@ exports.handler = async (event) => {
         if (!b.to || !DIVISIONS.includes(b.to)) return json(400, { error: "Pick a receiving division" });
         if (!b.from || !vis.includes(b.from)) return json(403, { error: "You can only send from your own division" });
         if (!b.patientId) return json(400, { error: "Pick a patient" });
+        const patientId = (await resolvePatientIndex(b.patientId, session)).indexId;
         const page = await createPage(DB.referrals, {
           "Referral": W.title(`${b.type || "Referral"} → ${b.to}`),
-          "Patient": W.rel([b.patientId]),
+          "Patient": W.rel([patientId]),
           "From Division": W.sel(b.from),
           "To Division": W.sel(b.to),
           "Sent By": W.rel([session.staffId]),
@@ -157,9 +216,10 @@ exports.handler = async (event) => {
         if (!b.from || !vis.includes(b.from)) return json(403, { error: "You can only hand off from your own division" });
         if (!b.patientId) return json(400, { error: "Pick a patient" });
         if (!b.summary) return json(400, { error: "A warm handoff needs a summary" });
+        const patientId = (await resolvePatientIndex(b.patientId, session)).indexId;
         const page = await createPage(DB.handoffs, {
           "Handoff": W.title(`${b.from} → ${b.to}`),
-          "Patient": W.rel([b.patientId]),
+          "Patient": W.rel([patientId]),
           "From Division": W.sel(b.from),
           "To Division": W.sel(b.to),
           "From Staff": W.rel([session.staffId]),
@@ -186,11 +246,12 @@ exports.handler = async (event) => {
       /* ---------------- Minutes ---------------- */
       case "minutes-log": {
         if (!b.program || !b.minutes) return json(400, { error: "Program and minutes required" });
+        const patientId = b.patientId ? (await resolvePatientIndex(b.patientId, session)).indexId : "";
         const page = await createPage(DB.minutes, {
           "Entry": W.title(`${b.program} · ${b.minutes} min · ${today()}`),
           "Staff": W.rel([session.staffId]),
           "Program": W.sel(b.program),
-          "Patient": W.rel(b.patientId ? [b.patientId] : []),
+          "Patient": W.rel(patientId ? [patientId] : []),
           "Date": W.date(b.date || today()),
           "Minutes": W.num(b.minutes),
           "Activity": W.sel(b.activity || "Coordination"),
@@ -303,9 +364,10 @@ exports.handler = async (event) => {
           return json(200, { ok: true, id: b.id });
         }
         if (!b.patientId) return json(400, { error: "Pick a patient to start an AWV" });
+        const patientId = (await resolvePatientIndex(b.patientId, session)).indexId;
         const page = await createPage(DB.awv, {
           "Encounter": W.title(`AWV · ${today()}`),
-          "Patient": W.rel([b.patientId]),
+          "Patient": W.rel([patientId]),
           "Conducted By": W.rel([session.staffId]),
           "Date": W.date(today()),
           "Status": W.sel("In Progress"),
@@ -348,9 +410,10 @@ exports.handler = async (event) => {
           return json(200, { ok: true, id: b.id });
         }
         if (!b.patientId) return json(400, { error: "Pick a patient to start an assessment" });
+        const patientId = (await resolvePatientIndex(b.patientId, session)).indexId;
         const page = await createPage(DB.charmed, {
           "Assessment": W.title(`CharmEd Assessment · ${today()}`),
-          "Patient": W.rel([b.patientId]),
+          "Patient": W.rel([patientId]),
           "Clinician": W.rel([session.staffId]),
           "Date": W.date(today()),
           "Status": W.sel("Intake"),
@@ -375,9 +438,10 @@ exports.handler = async (event) => {
           return json(200, { ok: true, id: b.id });
         }
         if (!b.patientId) return json(400, { error: "Pick a patient to start an assessment" });
+        const patientId = (await resolvePatientIndex(b.patientId, session)).indexId;
         const page = await createPage(DB.charmedAdult, {
           "Assessment": W.title(`Adult Assessment · ${today()}`),
-          "Patient": W.rel([b.patientId]),
+          "Patient": W.rel([patientId]),
           "Clinician": W.rel([session.staffId]),
           "Date": W.date(today()),
           "Status": W.sel("Intake"),
@@ -388,28 +452,8 @@ exports.handler = async (event) => {
 
       case "patient-select": {
         const bhwPatientId = String(b.bhwPatientId || "").trim().toUpperCase();
-        if (!/^BHW\d+$/i.test(bhwPatientId)) return json(400, { error: "Choose a patient from the Master Patient List" });
-
-        const [idxPages, cloudPatients] = await Promise.all([queryDb(DB.patients), listCloudPatients(session)]);
-        const patient = cloudPatients.find((item) => String(item.bhwPatientId || "").toUpperCase() === bhwPatientId);
-        if (!patient) return json(404, { error: "That patient is no longer available in the Master Patient List. Search again." });
-        if (!patient.name || !patient.dob) return json(409, { error: "This Patient Master record needs a name and birthday before CrewOS can safely link it." });
-
-        const exactIndexMatches = idxPages.filter((pg) =>
-          normalizePatientName(P.title(pg.properties["Patient Name"])) === normalizePatientName(patient.name)
-          && P.date(pg.properties["DOB"]) === patient.dob
-        );
-        if (exactIndexMatches.length > 1) {
-          return json(409, { error: "CrewOS has more than one record with this exact name and birthday. Please resolve the duplicate Patient Index records before selecting this patient." });
-        }
-
-        let indexId = exactIndexMatches[0]?.id || "";
-        let linked = false;
-        if (!indexId) {
-          const index = await createPage(DB.patients, patientIndexProperties(patient));
-          indexId = index.id;
-          linked = true;
-        }
+        if (!/^BHW\d+$/i.test(bhwPatientId)) return json(400, { error: "Choose a patient from the Patient Registry" });
+        const { indexId, patient, linked, backfilled } = await resolvePatientIndex(bhwPatientId, session);
 
         return json(200, {
           ok: true,
@@ -421,6 +465,7 @@ exports.handler = async (event) => {
           insurance: indexInsurance(patient),
           memberId: patient.memberId || "",
           linked,
+          backfilled,
         });
       }
 
@@ -526,13 +571,11 @@ exports.handler = async (event) => {
         //    relations keep working. crewOS references the Index id, so that's
         //    what we return as `id`.
         const indexProps = {
-          "Patient Name": W.title(name),
-          "DOB": W.date(b.dob),
+          ...patientIndexProperties({ name, dob: b.dob, bhwPatientId: ctlNo }),
           "Status": W.sel("Active"),
         };
         if (b.insurance) indexProps["Insurance"] = W.sel(b.insurance);
         if (b.memberId) indexProps["Insurance Member ID"] = W.text(b.memberId);
-        if (b.chart) indexProps["CharmHealth Chart #"] = W.text(b.chart);
         if (mbi) indexProps["Medicare MBI"] = W.text(mbi);
         if (b.email) indexProps["Email"] = { email: b.email };
         if (b.guardianEmail) indexProps["Guardian Email"] = { email: b.guardianEmail };
@@ -567,7 +610,7 @@ exports.handler = async (event) => {
           "Type": W.sel(b.type || (program === "TCM" ? "Episode" : "Monthly")),
           "Status": W.sel(b.status || "Open"),
         };
-        if (b.patientId) props["Patient"] = W.rel([b.patientId]);
+        if (b.patientId) props["Patient"] = W.rel([(await resolvePatientIndex(b.patientId, session)).indexId]);
         if (b.ctlNo) props["Patient Ctl No"] = W.text(b.ctlNo);
         if (b.month) props["Service Month"] = W.date(b.month + "-01");
         if (b.episodeDate) props["Episode / Discharge Date"] = W.date(b.episodeDate);
@@ -598,9 +641,10 @@ exports.handler = async (event) => {
           return json(200, { ok: true, id: b.id });
         }
         if (!b.patientId) return json(400, { error: "Pick a patient to enroll" });
+        const patientId = (await resolvePatientIndex(b.patientId, session)).indexId;
         const page = await createPage(DB.charmedProgram, {
           "Enrollment": W.title(`12-Week Program · ${today()}`),
-          "Patient": W.rel([b.patientId]),
+          "Patient": W.rel([patientId]),
           "Clinician": W.rel([session.staffId]),
           "Start Date": W.date(b.startDate || today()),
           "Baseline Date": W.date(b.baselineDate || today()),
@@ -637,9 +681,10 @@ exports.handler = async (event) => {
           return json(200, { ok: true, id: b.id });
         }
         if (!b.patientId) return json(400, { error: "Pick a resident to start a growth plan" });
+        const patientId = (await resolvePatientIndex(b.patientId, session)).indexId;
         const page = await createPage(DB.phplans, {
           "Plan": W.title(`Growth Plan · ${today()}`),
-          "Resident": W.rel([b.patientId]),
+          "Resident": W.rel([patientId]),
           "Case Lead": W.rel([session.staffId]),
           "Move-In Date": W.date(b.moveIn || today()),
           "Stage": W.sel("Month 1 — Stabilize & Assess"),
@@ -700,6 +745,6 @@ exports.handler = async (event) => {
         return json(400, { error: "Unknown action" });
     }
   } catch (err) {
-    return json(500, { error: err.message });
+    return json(err.status || 500, { error: err.message });
   }
 };
