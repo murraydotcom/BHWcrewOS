@@ -43,6 +43,21 @@ function consentSourceLabel(value) {
   return value === "new-patient-packet" ? "new-patient packet" : "previsit form";
 }
 
+function localDateTimeValue(value = "") {
+  const date = value ? new Date(value) : null;
+  if (!date || !Number.isFinite(date.getTime())) return "";
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
+}
+
+function populateConsentVerification(result) {
+  const consent = result?.consent || {};
+  $("consentSource").value = consent.sourceType === "new-patient-packet" ? "new-patient-packet" : "previsit-form";
+  $("consentSignedAt").value = localDateTimeValue(consent.signedAt);
+  $("consentVersion").value = consent.formVersion || "recording-ai-consent-v1";
+  $("consentEvidence").value = consent.evidenceReference || "";
+}
+
 function stopTracks() {
   stream?.getTracks().forEach((track) => track.stop());
   stream = null;
@@ -58,7 +73,8 @@ function canStart() {
     cloudClient
     && longRecordingEnabled
     && selectedPatientId()
-    && (isSynthetic() ? $("previsitConsent").checked : hasVerifiedConsent())
+    && $("previsitConsent").checked
+    && (isSynthetic() || hasVerifiedConsent())
     && $("sessionConsent").checked
     && !recorder
     && !audioBlob,
@@ -76,14 +92,13 @@ function updateConsentCopy() {
     $("previsitConsentText").textContent = "I confirm this is a staff role-play with no real patient or real patient information.";
     $("sessionConsentText").textContent = "Everyone who may be heard knows and agrees that the microphone is recording.";
   } else if (selected) {
-    $("previsitConsent").disabled = true;
-    $("previsitConsent").checked = hasVerifiedConsent();
+    $("previsitConsent").disabled = false;
     if (hasVerifiedConsent()) {
       const consent = verifiedConsent.consent;
       const signed = new Date(consent.signedAt).toLocaleDateString();
-      $("previsitConsentText").textContent = `Signed recording and AI-transcription consent verified from the ${consentSourceLabel(consent.sourceType)} on ${signed}.`;
+      $("previsitConsentText").textContent = `Signed recording and AI-transcription consent is current from the ${consentSourceLabel(consent.sourceType)} (${signed}). Check to confirm you reviewed it for today’s recording.`;
     } else {
-      $("previsitConsentText").textContent = "No current signed recording and AI-transcription consent is verified from the previsit form or new-patient packet.";
+      $("previsitConsentText").textContent = "I reviewed a signed previsit form or new-patient packet and confirmed that it authorizes visit recording and AI-assisted transcription. Check to verify it here.";
     }
     $("sessionConsentText").textContent = "The patient—and every other person who may be heard—agrees to recording for this visit.";
   } else {
@@ -92,7 +107,8 @@ function updateConsentCopy() {
     $("previsitConsentText").textContent = "Select a patient to review the required consent.";
     $("sessionConsentText").textContent = "Select a patient to confirm recording agreement for this visit.";
   }
-  $("sessionConsent").disabled = !selected || (!isSynthetic() && !hasVerifiedConsent());
+  $("consentVerification").hidden = !selected || isSynthetic() || hasVerifiedConsent() || !$("previsitConsent").checked;
+  $("sessionConsent").disabled = !selected;
   updateStartAvailability();
 }
 
@@ -110,7 +126,8 @@ async function refreshRecordingConsent() {
     const result = await cloudClient.recordingConsent(bhwPatientId);
     if (version !== consentLookupVersion || selectedPatientId() !== bhwPatientId) return null;
     verifiedConsent = result;
-    setState(result.eligible ? "Ready after today’s recording agreement" : "Signed consent must be verified in the Patient Registry");
+    populateConsentVerification(result);
+    setState(result.eligible ? "Check both consent boxes to record" : "Verify signed consent below, then check today’s recording agreement");
     updateConsentCopy();
     return result;
   } catch (error) {
@@ -148,7 +165,7 @@ function clearSession({ resetAttestations = true } = {}) {
   $("copy").disabled = true;
   $("patient").disabled = !cloudClient;
   if (resetAttestations) {
-    if (isSynthetic()) $("previsitConsent").checked = false;
+    $("previsitConsent").checked = false;
     $("sessionConsent").checked = false;
   }
   setState(selectedPatientId() ? "Ready after consent is confirmed" : "Select a patient");
@@ -202,9 +219,47 @@ for (const id of ["previsitConsent", "sessionConsent"]) {
       showToast("Recording stopped and discarded because recording agreement was withdrawn.");
       return;
     }
-    updateStartAvailability();
+    updateConsentCopy();
   };
 }
+
+$("saveRecordingConsent").onclick = async () => {
+  const bhwPatientId = selectedPatientId();
+  if (!bhwPatientId || isSynthetic() || recorder || audioBlob) return;
+  if (!$("previsitConsent").checked) {
+    showToast("Check the signed-consent verification statement first.");
+    return;
+  }
+  const signedAt = $("consentSignedAt").value;
+  const evidenceReference = $("consentEvidence").value.trim();
+  if (!signedAt || !evidenceReference) {
+    showToast("Patient signed date/time and the secure signed-form reference are required.");
+    return;
+  }
+  const button = $("saveRecordingConsent");
+  button.disabled = true;
+  setState("Saving signed consent to BHW Cloud…");
+  try {
+    await cloudClient.saveRecordingConsent(bhwPatientId, {
+      sourceType: $("consentSource").value,
+      signedAt: new Date(signedAt).toISOString(),
+      formVersion: $("consentVersion").value.trim() || "recording-ai-consent-v1",
+      evidenceReference,
+      status: "current",
+      verificationAttestation: true,
+    });
+    const current = await refreshRecordingConsent();
+    if (!current?.eligible) throw new Error("The saved consent did not become current. Review the signed form details.");
+    setState(`Saved to BHW Cloud · ${new Date().toLocaleString()} · check both consent boxes to record`);
+    showToast(`Signed consent saved to BHW Cloud from the ${consentSourceLabel(current.consent.sourceType)}.`);
+  } catch (error) {
+    showToast(error.message || "Signed consent could not be verified.");
+    setState("Not saved · signed consent verification needs attention");
+  } finally {
+    button.disabled = false;
+    updateConsentCopy();
+  }
+};
 
 $("start").onclick = async () => {
   if (!canStart()) {
@@ -214,7 +269,7 @@ $("start").onclick = async () => {
   try {
     if (!isSynthetic()) {
       const current = await refreshRecordingConsent();
-      if (!current?.eligible || !$("sessionConsent").checked) {
+      if (!current?.eligible || !$("previsitConsent").checked || !$("sessionConsent").checked) {
         showToast("Recording did not start because current signed consent could not be verified.");
         return;
       }
@@ -299,7 +354,7 @@ $("transcribe").onclick = async () => {
   if (recording.size > MAX_AUDIO_BYTES) {
     setState("Recording discarded · over 9 MB limit");
     lockSelection(false);
-    if (isSynthetic()) $("previsitConsent").checked = false;
+    $("previsitConsent").checked = false;
     $("sessionConsent").checked = false;
     updateConsentCopy();
     showToast("This recording was over the 9 MB limit and has been discarded. Please record a shorter visit.");
@@ -326,7 +381,7 @@ $("transcribe").onclick = async () => {
     discardAudio();
     if (requestVersion !== sessionVersion) return;
     lockSelection(false);
-    if (isSynthetic()) $("previsitConsent").checked = false;
+    $("previsitConsent").checked = false;
     $("sessionConsent").checked = false;
     updateConsentCopy();
     if (sessionExpired) setTimeout(signInAgain, 1200);
