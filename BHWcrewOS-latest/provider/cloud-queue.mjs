@@ -1,6 +1,40 @@
 const CONFIG_URL = "/.netlify/functions/rcm-cloud-config";
 const TOKEN_URL = "/.netlify/functions/rcm-cloud-token";
 export const CREW_SESSION_EXPIRED = "CREWHQ_SESSION_EXPIRED";
+const TCM_IMPORT_MAX_ROWS = 250;
+const TCM_IMPORT_TARGET_BYTES = 512 * 1024;
+
+function jsonByteLength(value) {
+  return new TextEncoder().encode(JSON.stringify(value)).byteLength;
+}
+
+// The protected cloud API rejects request bodies above 2 MiB. CRISP exports
+// can contain thousands of rows, so keep each request comfortably below that
+// ceiling while retaining events sequentially and idempotently.
+function tcmImportBatches(rows, metadata) {
+  const list = Array.isArray(rows) ? rows : [];
+  if (!list.length) return [];
+  const emptyBodyBytes = jsonByteLength({ ...metadata, rows: [] });
+  const batches = [];
+  let batch = [];
+  let batchBytes = emptyBodyBytes;
+
+  for (const row of list) {
+    const rowBytes = jsonByteLength(row) + 1;
+    if (emptyBodyBytes + rowBytes > TCM_IMPORT_TARGET_BYTES) {
+      throw new Error("One CRISP event row is too large to retain safely");
+    }
+    if (batch.length && (batch.length >= TCM_IMPORT_MAX_ROWS || batchBytes + rowBytes > TCM_IMPORT_TARGET_BYTES)) {
+      batches.push(batch);
+      batch = [];
+      batchBytes = emptyBodyBytes;
+    }
+    batch.push(row);
+    batchBytes += rowBytes;
+  }
+  if (batch.length) batches.push(batch);
+  return batches;
+}
 
 function sessionError(message = "CrewHQ session expired. Sign in again in this tab.") {
   return Object.assign(new Error(message), { status: 401, code: CREW_SESSION_EXPIRED });
@@ -144,11 +178,49 @@ export async function createEncounterCloudClient(fetchImpl = fetch) {
       const body = await request(`/v1/tcm/events?limit=${safeLimit}`);
       return Array.isArray(body.rows) ? body.rows : [];
     },
-    async importTcmEvents(rows, { source = "CrewHQ Panel and Discharges", sourceFile = "", manual = true } = {}) {
-      return request("/v1/tcm/events/import", {
-        method: "POST",
-        body: JSON.stringify({ source, sourceFile, manual, rows }),
-      });
+    async importTcmEvents(rows, {
+      source = "CrewHQ Panel and Discharges",
+      sourceFile = "",
+      manual = true,
+      onProgress = null,
+    } = {}) {
+      const metadata = { source, sourceFile, manual };
+      const batches = tcmImportBatches(rows, metadata);
+      const totals = { retained: 0, created: 0, updated: 0 };
+      let processed = 0;
+
+      for (let index = 0; index < batches.length; index += 1) {
+        const batch = batches[index];
+        try {
+          const saved = await request("/v1/tcm/events/import", {
+            method: "POST",
+            body: JSON.stringify({ ...metadata, rows: batch }),
+          });
+          totals.retained += Number(saved.retained) || 0;
+          totals.created += Number(saved.created) || 0;
+          totals.updated += Number(saved.updated) || 0;
+          processed += batch.length;
+          if (typeof onProgress === "function") {
+            onProgress({
+              processed,
+              total: Array.isArray(rows) ? rows.length : 0,
+              batch: index + 1,
+              batches: batches.length,
+              ...totals,
+            });
+          }
+        } catch (error) {
+          error.importProgress = {
+            processed,
+            total: Array.isArray(rows) ? rows.length : 0,
+            batch: index + 1,
+            batches: batches.length,
+            ...totals,
+          };
+          throw error;
+        }
+      }
+      return { ...totals, processed, total: Array.isArray(rows) ? rows.length : 0, batches: batches.length };
     },
     async savePatient(patient) {
       return request(`/v1/patients/${encodeURIComponent(patient.bhwPatientId)}`, {
