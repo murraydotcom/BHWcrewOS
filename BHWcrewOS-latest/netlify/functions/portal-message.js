@@ -1,8 +1,7 @@
 // netlify/functions/portal-message.js — public endpoint for a patient sending
 // a message to the office from a Care Connect patient page ("Message the
-// office"). Writes ONE row into the Patient Request Triage Queue with
-// Source "Portal Message", which Front Desk OS and the Patient Requests board
-// render in the "Texts & portal" bucket / New column.
+// office"). Writes ONE record to the Google Operations patientRequests queue.
+// It never falls back to the legacy Notion queue.
 //
 //   POST { name, phone, message, hp }  → { ok }
 //
@@ -10,14 +9,15 @@
 // (patients have no crewOS login) and hardened rather than gated: a hidden
 // honeypot rejects bots,
 // fields are length-bounded, a message is required, and it only ever creates
-// one queue row. The sender is matched to a patient by phone when possible so
-// the request lands attached to the right chart.
+// one queue record. Patient identity remains unmatched unless a trusted,
+// authenticated patient context supplies it elsewhere in the workflow.
 //
 // CORS: the Care Connect dashboards are a separate deploy, so cross-origin
 // POSTs are allowed from *.netlify.app and the BHW domains (reflected origin).
 
-const { matchPatientByPhone, createQueueEntry, digits } = require("./lib/triage");
 const { intakeConfigured, createCloudIntake } = require("./lib/operations-cloud");
+
+const digits = (value) => String(value || "").replace(/\D/g, "");
 
 const ORIGIN_OK = /^(https?:\/\/localhost(:\d+)?|https:\/\/([a-z0-9-]+\.)*netlify\.app|https:\/\/([a-z0-9-]+\.)*(bhwmedical\.org|mybhw\.(com|org)))$/i;
 
@@ -37,8 +37,7 @@ exports.handler = async (event) => {
   const origin = event.headers?.origin || event.headers?.Origin || "";
   if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: cors(origin), body: "" };
   if (event.httpMethod !== "POST") return res(405, { error: "POST only" }, origin);
-  const legacyConfigured = Boolean(process.env.NOTION_TOKEN && process.env.QUEUE_DB_ID);
-  if (!intakeConfigured() && !legacyConfigured)
+  if (!intakeConfigured())
     return res(503, { error: "Messaging isn't connected yet — please call the office." }, origin);
 
   let body;
@@ -55,47 +54,25 @@ exports.handler = async (event) => {
   if (!name && digits(phone).length < 7)
     return res(400, { error: "Please include your name or phone number so we can reach you." }, origin);
 
-  // Best-effort match to a chart by phone.
-  let match = { patientId: null, patientName: "", bhwPatientId: "" };
-  if (legacyConfigured && digits(phone).length >= 7) {
-    try { match = await matchPatientByPhone(phone); } catch { /* leave unmatched */ }
+  const patientName = name || "Patient (portal)";
+  const summary = name ? `${name}: ${message}` : message;
+  try {
+    const out = await createCloudIntake({
+      submissionId: body.submissionId,
+      body: {
+        bhwPatientId: "",
+        patientMatchStatus: "unmatched",
+        requestType: "general",
+        priority: "routine",
+        summary,
+        message,
+        requester: { displayName: patientName, callbackPhone: phone, preferredChannel: "portal" },
+        routing: { targetSystem: "crewos", assignedTeam: "front-desk" },
+        sourceMetadata: { sourceRecordId: String(body.submissionId || "").slice(0, 160), sourcePage: "care-connect-patient-page" },
+      },
+    });
+    return res(200, { ok: true, matched: false, requestId: out?.patientRequest?.patientRequestId || out?.patientRequest?.id || "" }, origin);
+  } catch {
+    return res(502, { error: "Couldn't send right now — please call the office." }, origin);
   }
-
-  const patientName = match.patientName || name || "Patient (portal)";
-  // When we couldn't match, keep the typed name visible in the summary too.
-  const summary = match.patientId || !name ? message : `${name}: ${message}`;
-
-  if (intakeConfigured()) {
-    try {
-      const out = await createCloudIntake({
-        submissionId: body.submissionId,
-        body: {
-          bhwPatientId: match.bhwPatientId || "",
-          patientMatchStatus: match.bhwPatientId ? "matched" : "unmatched",
-          requestType: "general",
-          priority: "routine",
-          summary,
-          message,
-          requester: { displayName: patientName, callbackPhone: phone, preferredChannel: "portal" },
-          routing: { targetSystem: "crewos", assignedTeam: "front-desk" },
-          sourceMetadata: { sourceRecordId: String(body.submissionId || "").slice(0, 160), sourcePage: "care-connect-patient-page" },
-        },
-      });
-      return res(200, { ok: true, matched: !!match.bhwPatientId, requestId: out?.patientRequest?.patientRequestId || "" }, origin);
-    } catch {
-      return res(502, { error: "Couldn't send right now — please call the office." }, origin);
-    }
-  }
-
-  const out = await createQueueEntry({
-    patientId: match.patientId,
-    patientName,
-    from: phone,
-    summary,
-    source: "Portal Message",
-    receivedISO: new Date().toISOString(),
-  });
-
-  if (!out.ok) return res(502, { error: "Couldn't send right now — please call the office." }, origin);
-  return res(200, { ok: true, matched: !!match.patientId }, origin);
 };
