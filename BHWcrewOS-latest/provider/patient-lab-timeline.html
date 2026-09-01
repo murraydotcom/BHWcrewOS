@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="/crew-provider-gate.js"></script>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>BHW Patient 360 - Laboratory Timeline</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="lab-intelligence.css">
+</head>
+<body data-lab-view="timeline">
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><h1>BHW Clinical Intelligence</h1><div>Physiologic patient navigation</div></div>
+    <div class="nav-label">Patient Operations</div>
+    <a class="nav" href="patient-registry.html">Patient Registry</a>
+    <a class="nav" href="patient-360.html">Patient 360</a>
+    <div class="nav-label">Lab Intelligence</div>
+    <a class="nav" href="lab-dashboard.html">Lab Dashboard</a>
+    <a class="nav active" href="patient-lab-timeline.html?patient=BHW0000">Patient Lab Timeline</a>
+    <div class="side-note">Patient 360 laboratory view.<br>BHW0000 only.<br><br>Original source history remains visible.</div>
+  </aside>
+  <main class="main">
+    <header class="top"><div class="crumb">Clinical Intelligence · Patient 360 · <b>Laboratory Timeline</b></div><div class="tools"><span class="status warning" id="connection-status">Loading</span><a class="button" href="lab-dashboard.html">Lab Dashboard</a><button id="refresh">Refresh</button><button id="print">Print</button><button id="theme">Theme</button></div></header>
+    <div class="content" id="lab-root">
+      <div class="notice" id="boundary-notice">Loading the synthetic pilot boundary.</div>
+      <div id="patient-header"></div>
+      <section class="panel"><div class="panel-head"><h2>Laboratory search and filters</h2><div class="filterbar"><input id="lab-search" type="search" aria-label="Search laboratory record" placeholder="Search test, report, status, source, or event"><select id="event-filter" aria-label="Filter laboratory event type"><option value="all">All event types</option><option value="order">Orders</option><option value="specimen">Specimens</option><option value="outside">Outside records</option><option value="report">Reports</option><option value="critical">Critical</option><option value="correction">Corrections</option><option value="review">Review</option></select></div></div></section>
+      <div class="timeline-layout section-gap">
+        <div>
+          <section class="panel"><div class="panel-head"><h2>Three-timepoint laboratory drift</h2><span class="status neutral">Descriptive only</span></div><div class="panel-body trends" id="trend-cards"></div></section>
+          <section class="panel section-gap"><div class="panel-head"><h2>Longitudinal laboratory events</h2><span class="status neutral">Newest first</span></div><div class="timeline-list" id="timeline-events"></div></section>
+        </div>
+        <aside><section class="panel" id="critical-panel"></section><section class="panel section-gap"><div class="panel-head"><h2>Source rules</h2></div><div class="panel-body"><p><b>Outside results:</b> two identity evidence types are required before patient linkage.</p><p><b>Corrections:</b> create a new revision and never overwrite the original value or report.</p><p><b>Derived values:</b> must remain labeled with formula, version, and source observations.</p><p class="meta">Blank sections mean undocumented or not connected—not normal or absent.</p></div></section></aside>
+      </div>
+      <section class="panel section-gap"><div class="panel-head"><h2>Active verified results</h2><span class="status neutral">Original laboratory intervals retained</span></div><div class="table-wrap"><table class="results-table"><thead><tr><th>Test</th><th>Result</th><th>Lab interval</th><th>Flag</th><th>Collected</th><th>Laboratory</th><th>Method</th><th>Verification</th></tr></thead><tbody id="result-rows"></tbody></table></div></section>
+    </div>
+  </main>
+</div>
+<script type="module" src="lab-intelligence.mjs"></script>
+</body>
+</html>
