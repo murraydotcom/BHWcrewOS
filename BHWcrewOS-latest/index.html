@@ -2394,11 +2394,15 @@ function cmSendOpen(assessmentId, kind){
   const e = (list||[]).find(x=>x.id===assessmentId); if(!e) return;
   const screeners = e.screeners || [];
   const reasons = kind==="adult" ? cmaScreeningReasons(e.answers) : cmScreeningReasons(e.answers);
+  const patient360Status = e.patientBhwId
+    ? `<span class="pill ok">Patient 360 matched · ${esc(e.patientBhwId)}</span>`
+    : `<span class="pill warn">Patient Registry match will be verified before sending</span>`;
   const registryNote = kind==="peds"
     ? "Only approved links from the CharmEd Minds screening-link registry are sent. Supervised performance measures from step 6 never appear here; anything without an active link is skipped and noted."
     : "Only approved links from the CharmEd Minds screening-link registry are sent; anything without an active link is skipped and noted.";
   openModal(`<h3>📤 Send questionnaires</h3>
   <div class="msub">${esc(patLabel(e.patient))} · assigns approved remote links in Patient 360 and sends one secure portal invitation</div>
+  <div style="margin:10px 0">${patient360Status}</div>
   <div class="f">
     <p class="lede">The recipient address comes from the protected Patient 360 record. Screening names and results are never placed in the email.</p>
     <div class="awv-q"><div class="awv-l">Why this review was triggered</div>${reasons.length?reasons.map(r=>`<span class="pill info">${esc(r)}</span>`).join(" "):'<span class="pill gray">Routine clinician review</span>'}</div>

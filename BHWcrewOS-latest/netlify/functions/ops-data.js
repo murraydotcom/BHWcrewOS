@@ -120,6 +120,12 @@ exports.handler = async (event) => {
       ? buildPatientDirectory(indexPatients, patientRegistry.patients)
       : fallbackIndexDirectory(indexPatients);
     const { patients, patientLabel } = directory;
+    const patientBhwIdByKey = {};
+    for (const patient of patients) {
+      for (const key of [patient.id, patient.relationId, patient.bhwId]) {
+        if (key && patient.bhwId) patientBhwIdByKey[key] = patient.bhwId;
+      }
+    }
  
     const rooms = roomPages.map((pg) => ({
       id: pg.id,
@@ -190,9 +196,11 @@ exports.handler = async (event) => {
         try { storedTail = parseStoredAnswer(P.text(p["Answers S6"])); } catch { storedTail = {}; }
         const hasInPersonStep = storedTail && storedTail.__cmWorkflowV2 === 1;
         const legacyTailStatus = P.sel(p["S6 Results & Recs"]) || "Not Started";
+        const patient = P.rel(p["Patient"])[0] || null;
         return {
           id: pg.id,
-          patient: P.rel(p["Patient"])[0] || null,
+          patient,
+          patientBhwId: patientBhwIdByKey[patient] || "",
           date: P.date(p["Date"]),
           status: P.sel(p["Status"]),
           ageGroup: P.sel(p["Age Group"]),
@@ -217,9 +225,11 @@ exports.handler = async (event) => {
       const cmaPages = await queryDb(DB.charmedAdult);
       charmedAdult = cmaPages.map((pg) => {
         const p = pg.properties;
+        const patient = P.rel(p["Patient"])[0] || null;
         return {
           id: pg.id,
-          patient: P.rel(p["Patient"])[0] || null,
+          patient,
+          patientBhwId: patientBhwIdByKey[patient] || "",
           date: P.date(p["Date"]),
           status: P.sel(p["Status"]),
           steps: ["S1 Concerns & Function","S2 EF, Social & Sensory","S3 Mental Health & Cognition","S4 Substance, Injury & Trauma","S5 Vascular, Sleep & Change","S6 Screeners"].map(k => P.sel(p[k]) || "Not Started"),
