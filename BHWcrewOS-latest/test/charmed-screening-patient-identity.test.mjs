@@ -40,7 +40,14 @@ function loadAction({ indexRows = [], cloudPatients = [cloudPatient] } = {}) {
     exports: {
       DB: { patients: "patients-db" },
       DIVISIONS: [],
-      httpJson: async () => ({}),
+      httpJson: async (method, url) => {
+        if (method === "GET" && url.includes("/v1/pages/")) {
+          const id = decodeURIComponent(url.split("/").pop());
+          const page = indexRows.find((row) => row.id === id);
+          return page ? { ok: true, status: 200, data: page } : { ok: false, status: 404, data: {} };
+        }
+        return { ok: true, status: 200, data: {} };
+      },
       queryDb: async (db) => db === "patients-db" ? indexRows : [],
       createPage: async () => ({ id: "unused" }),
       updatePage: async (id, properties) => { updates.push({ id, properties }); return {}; },
@@ -168,4 +175,5 @@ test("the send dialog shows Patient 360 readiness before staff approval", async 
   assert.match(html, /Patient 360 matched/);
   assert.match(html, /cm-screening-readiness/);
   assert.match(html, /Patient check needs review/);
+  assert.match(html, /Patient Registry check timed out/);
 });

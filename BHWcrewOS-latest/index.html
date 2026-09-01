@@ -2430,13 +2430,16 @@ async function cmVerifyPatient360(assessmentId, kind){
   status.className = "pill warn";
   status.textContent = "Checking Patient Registry match…";
   try{
-    const result = await api(API_ACT, {action:"cm-screening-readiness", patientId:assessment.patient});
-    if(!document.getElementById("ss-p360")) return;
+    const result = await Promise.race([
+      api(API_ACT, {action:"cm-screening-readiness", patientId:assessment.patient}),
+      new Promise((_, reject)=>setTimeout(()=>reject(new Error("Patient Registry check timed out. Close this window and try again.")), 15000)),
+    ]);
+    if(document.getElementById("ss-p360")!==status) return;
     assessment.patientBhwId = result.bhwPatientId;
     status.className = "pill ok";
     status.textContent = `Patient 360 matched · ${result.bhwPatientId}`;
   }catch(error){
-    if(!document.getElementById("ss-p360")) return;
+    if(document.getElementById("ss-p360")!==status) return;
     status.className = "pill alert";
     status.textContent = `Patient check needs review · ${error.message}`;
   }

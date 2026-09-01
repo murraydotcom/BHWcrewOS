@@ -131,11 +131,11 @@ async function resolvePatient360Patient(patientId, session, { backfill = true } 
   }
   if (directMatches.length === 1) return { patient: directMatches[0], backfilled: false };
 
-  const idxPages = await queryDb(DB.patients);
-  const index = idxPages.find((page) => page.id === requestedId);
-  if (!index) {
+  const indexResponse = await httpJson("GET", `https://api.notion.com/v1/pages/${encodeURIComponent(requestedId)}`);
+  if (!indexResponse.ok || !indexResponse.data?.properties) {
     throw actionError(409, "CrewOS could not match this assessment to the Patient Registry. Open Patient Registry and verify the patient's BHW ID.");
   }
+  const index = indexResponse.data;
 
   const storedMasterId = P.text(index.properties["Patient ID #"]).trim().toUpperCase();
   if (storedMasterId) {
@@ -165,6 +165,9 @@ async function resolvePatient360Patient(patientId, session, { backfill = true } 
   }
 
   const patient = identityMatches[0];
+  if (!backfill) return { patient, backfilled: false };
+
+  const idxPages = await queryDb(DB.patients);
   const duplicateLinks = idxPages.filter((page) =>
     page.id !== index.id
     && P.text(page.properties["Patient ID #"]).trim().toUpperCase() === String(patient.bhwPatientId || "").trim().toUpperCase()
@@ -173,8 +176,8 @@ async function resolvePatient360Patient(patientId, session, { backfill = true } 
     throw actionError(409, "CrewOS has more than one Patient Index record for this BHW ID. Review the duplicate patient links before sending.");
   }
 
-  if (backfill) await updatePage(index.id, { "Patient ID #": W.text(patient.bhwPatientId) });
-  return { patient, backfilled: backfill };
+  await updatePage(index.id, { "Patient ID #": W.text(patient.bhwPatientId) });
+  return { patient, backfilled: true };
 }
 
 let awvPropsEnsured = false;
