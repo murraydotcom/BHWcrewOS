@@ -100,7 +100,9 @@ exports.handler = async (event) => {
     const patients = patientPages.map((pg) => ({
       id: pg.id,
       name: P.title(pg.properties["Patient Name"]),
-      bhwId: P.uid(pg.properties["BHW ID"]),
+      // Prefer the authoritative RCM identity. BHW ID is an auto-number for
+      // this transitional Index and can differ from the Master Patient ID.
+      bhwId: P.text(pg.properties["Patient ID #"]) || P.uid(pg.properties["BHW ID"]),
       chart: P.text(pg.properties["CharmHealth Chart #"]),
       dob: P.date(pg.properties["DOB"]),
       insurance: P.sel(pg.properties["Insurance"]),
