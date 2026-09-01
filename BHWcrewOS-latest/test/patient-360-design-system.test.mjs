@@ -56,3 +56,13 @@ test("Patient 360 does not display the body-outline explanation", () => {
   assert.doesNotMatch(app, /Gender is not specified or they\/them pronouns are selected/);
   assert.doesNotMatch(app, /body-outline-note/);
 });
+
+test("Patient 360 overview omits internal labels and uses lighter headings", () => {
+  const app = fs.readFileSync(path.join(provider, "patient-360-app.mjs"), "utf8");
+  const css = fs.readFileSync(path.join(provider, "patient-360.css"), "utf8");
+  assert.doesNotMatch(app, /PSCM Complex Patient Navigator/);
+  assert.doesNotMatch(app, /FHIR R4-shaped/);
+  assert.doesNotMatch(app, /synthetic only/);
+  assert.match(css, /\.navigator-hero h1\{[^}]*font-weight:500/);
+  assert.match(css, /\.hero-aside h2\{font-weight:500\}/);
+});
