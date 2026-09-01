@@ -1,26 +1,26 @@
-# CrewOS Lab Intelligence synthetic screens
+# CrewOS laboratory operations boundary
 
-## Delivered views
+## Delivered view
 
-- `provider/lab-dashboard.html` is the laboratory operational front door. It shows only active work and open loops: critical results, missing or partial results, outside-result verification, and provider review.
-- `provider/patient-lab-timeline.html?patient=BHW0000` is a focused Patient 360 laboratory view. It does not replace or duplicate the Patient Dashboard or the general Patient 360 timeline.
+`provider/lab-dashboard.html` is the CrewOS operational front door for laboratory work. It contains queues and assignments only: critical-result closure, missing or partial results, outside-result verification, and provider review.
+
+The patient laboratory timeline was removed from CrewOS. Results, reports, correction lineage, trends, interpretations, justifications, orders, and Personal Health Blueprint source records belong to the Health Core EHR.
 
 ## Binding behavior
 
+- CrewOS is the operational system, not the EHR and not a second patient database.
 - The pilot accepts only reserved synthetic patient `BHW0000`.
-- The screen reads a local synthetic contract fixture and clearly reports that Firestore is not connected.
-- No write, order, approval, patient notification, Health Core publication, Care Connect delivery, or Labcorp transmission is available.
-- The directory summary remains 21 authoritative Physical entries, 49 specialty candidates, 8 escalation branches, and 70 total records.
-- Complete-template items and additions stay separately counted.
-- Original laboratory values, units, reference intervals, source laboratory, method, specimen, dates, report identity, and verification status remain visible.
-- Corrected values use a new result identity linked to the prior result. The active view does not delete the original revision.
-- Three-timepoint drift is descriptive only and explicitly requires provider interpretation.
-- Outside records remain unlinked until two identity evidence types are verified.
-- A critical event remains open until provider acknowledgment, clinical assessment, patient action or disposition, and documented provider closure are complete.
+- The fixture contains operational work items and opaque Health Core record references, but no clinical result payload.
+- Directory counts remain 21 authoritative Physical entries, 49 specialty candidates, 8 escalation branches, and 70 total records.
+- Complete-template items and additions remain separately counted.
+- Queue links cannot open Health Core until an MFA-capable provider session and end-to-end authorization path are approved.
+- No write, order, approval, patient notification, Care Connect delivery, or Labcorp transmission is available.
 
-## Live integration gate
+## Ownership map
 
-The screens must not be switched from the synthetic fixture to the Lab Intelligence Cloud Run API until CrewOS has a reviewed MFA-capable provider session exchange, the Firestore pilot is provisioned, and the private `BHW0000` read routes pass end-to-end authorization tests. A CrewOS PIN alone must not be represented as MFA.
+- Health Core EHR: canonical clinical facts, laboratory results and reports, timelines, trends, corrections, interpretations, orders, and care plans.
+- CrewOS: work queues, assignment, escalation, follow-up, and operational Patient 360 synthesis.
+- Care Connect: approved patient-facing explanations and Personal Health Blueprint delivery.
 
 ## Verification
 

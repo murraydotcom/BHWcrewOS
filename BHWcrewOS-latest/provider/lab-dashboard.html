@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <script src="/crew-provider-gate.js"></script>
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>BHW CrewOS - Lab Dashboard</title>
+  <title>BHW CrewOS - Laboratory Work Queues</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -13,21 +13,20 @@
 <body data-lab-view="dashboard">
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><h1>BHW Clinical Intelligence</h1><div>Physiologic patient navigation</div></div>
+    <div class="brand"><h1>BHW CrewOS</h1><div>Operational intelligence</div></div>
     <div class="nav-label">Patient Operations</div>
     <a class="nav" href="patient-registry.html">Patient Registry</a>
     <a class="nav" href="patient-360.html">Patient 360</a>
     <div class="nav-label">Lab Intelligence</div>
     <a class="nav active" href="lab-dashboard.html">Lab Dashboard</a>
-    <a class="nav" href="patient-lab-timeline.html?patient=BHW0000">Patient Lab Timeline</a>
     <a class="nav" href="workflow.html">24-Hour Work Queue</a>
-    <div class="side-note">Private synthetic pilot.<br>BHW0000 only.<br><br>No live Labcorp transmission.</div>
+    <div class="side-note">Operational queues only.<br>BHW0000 synthetic pilot.<br><br>The clinical laboratory record belongs to Health Core.</div>
   </aside>
   <main class="main">
-    <header class="top"><div class="crumb">Clinical Intelligence · <b>Lab Dashboard</b></div><div class="tools"><span class="status warning" id="connection-status">Loading</span><button id="refresh">Refresh</button><button id="theme">Theme</button></div></header>
+    <header class="top"><div class="crumb">Operational Intelligence · <b>Laboratory Work Queues</b></div><div class="tools"><span class="status warning" id="connection-status">Loading</span><button id="refresh">Refresh</button><button id="theme">Theme</button></div></header>
     <div class="content" id="lab-root">
       <div class="notice" id="boundary-notice">Loading the synthetic pilot boundary.</div>
-      <section class="hero"><div><span class="eyebrow">Operational front door</span><h1>Lab Dashboard</h1><p>See active laboratory work, open safety loops, source-verification needs, and provider review without duplicating Patient 360.</p></div><a class="button primary" href="patient-lab-timeline.html?patient=BHW0000">Open synthetic patient timeline</a></section>
+      <section class="hero"><div><span class="eyebrow">Operational front door</span><h1>Laboratory Work Queues</h1><p>See assignments and unresolved laboratory work. Results, trends, interpretations, orders, and correction history are opened and maintained in the Health Core EHR.</p></div><span class="status neutral">Health Core link pending</span></section>
       <section class="kpis" id="lab-kpis" aria-label="Laboratory queue counts"></section>
       <div class="dashboard-grid">
         <section class="panel"><div class="panel-head"><h2>Active laboratory work</h2><div class="filterbar"><input id="work-search" type="search" aria-label="Search laboratory work" placeholder="Search patient, status, or work item"><select id="queue-filter" aria-label="Filter laboratory queue"><option value="all">All queues</option><option value="critical">Critical</option><option value="missing">Missing / partial</option><option value="outside">Outside verification</option><option value="review">Provider review</option></select></div></div><div id="work-items"></div></section>
