@@ -27,9 +27,17 @@ export function assertSyntheticLabRecord(record, requestedPatientId = SYNTHETIC_
   if (record?.schemaVersion !== "bhw.lab-crewos-pilot.v1" || record?.boundary?.syntheticOnly !== true || record?.boundary?.bhwPatientId !== SYNTHETIC_PATIENT_ID) {
     throw new Error("Unsupported or unsafe Lab Intelligence pilot record.");
   }
-  const patientLinked = [record.patient, ...(record.dashboard?.workItems || []), ...(record.orders || [])]
-    .filter((item) => item?.bhwPatientId);
-  if (patientLinked.some((item) => item.bhwPatientId !== SYNTHETIC_PATIENT_ID)) throw new Error("The pilot record contains a non-synthetic patient link.");
+  const patientLinked = [
+    record.patient,
+    ...(record.dashboard?.workItems || []),
+    ...(record.orders || []),
+    ...(record.specimens || []),
+    ...(record.reports || []),
+    ...(record.results || []),
+    ...(record.criticalEvents || []),
+    ...(record.outsideIntakes || []),
+  ];
+  if (patientLinked.some((item) => item?.bhwPatientId !== SYNTHETIC_PATIENT_ID)) throw new Error("Every pilot ledger record must link only to BHW0000.");
   return record;
 }
 

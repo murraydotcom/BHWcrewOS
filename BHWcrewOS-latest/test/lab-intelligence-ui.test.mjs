@@ -23,6 +23,9 @@ test("Lab Dashboard fixture is locked to BHW0000 and the binding 21/49/8/70 dire
     vendorValidationStatus: "pending-live-labcorp-validation",
   });
   assert.throws(() => assertSyntheticLabRecord(record, "BHW1234"), /only BHW0000/);
+  const altered = structuredClone(record);
+  altered.results[0].bhwPatientId = "BHW1234";
+  assert.throws(() => assertSyntheticLabRecord(altered), /link only to BHW0000/);
 });
 
 test("Dashboard queues preserve critical, partial, outside-verification, and provider-review work", () => {

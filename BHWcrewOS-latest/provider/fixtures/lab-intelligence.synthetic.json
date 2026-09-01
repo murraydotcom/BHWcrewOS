@@ -95,6 +95,7 @@
   "orders": [
     {
       "orderId": "SYN-LAB-ORDER-1",
+      "bhwPatientId": "BHW0000",
       "status": "partial",
       "orderedAt": "2026-08-27T16:00:00.000Z",
       "orderedBy": "Synthetic Provider",
@@ -109,6 +110,7 @@
   "specimens": [
     {
       "specimenId": "SYN-SPECIMEN-1",
+      "bhwPatientId": "BHW0000",
       "orderId": "SYN-LAB-ORDER-1",
       "status": "received-by-lab",
       "specimenType": "whole blood and serum",
@@ -119,6 +121,7 @@
   "reports": [
     {
       "reportId": "SYN-REPORT-PARTIAL-1",
+      "bhwPatientId": "BHW0000",
       "orderId": "SYN-LAB-ORDER-1",
       "status": "partial",
       "laboratoryName": "Synthetic Reference Laboratory",
@@ -128,6 +131,7 @@
     },
     {
       "reportId": "SYN-REPORT-FINAL-1",
+      "bhwPatientId": "BHW0000",
       "orderId": "SYN-LAB-ORDER-1",
       "status": "final",
       "laboratoryName": "Synthetic Reference Laboratory",
@@ -137,6 +141,7 @@
     },
     {
       "reportId": "SYN-REPORT-CORRECTED-1",
+      "bhwPatientId": "BHW0000",
       "orderId": "SYN-LAB-ORDER-1",
       "status": "corrected",
       "laboratoryName": "Synthetic Reference Laboratory",
@@ -148,6 +153,7 @@
   "results": [
     {
       "resultId": "SYN-WBC-2024",
+      "bhwPatientId": "BHW0000",
       "testName": "WBC",
       "value": 10.6,
       "unit": "x10E3/uL",
@@ -167,6 +173,7 @@
     },
     {
       "resultId": "SYN-WBC-2025",
+      "bhwPatientId": "BHW0000",
       "testName": "WBC",
       "value": 10.9,
       "unit": "x10E3/uL",
@@ -186,6 +193,7 @@
     },
     {
       "resultId": "SYN-WBC-2026-ORIGINAL",
+      "bhwPatientId": "BHW0000",
       "testName": "WBC",
       "value": 11.8,
       "unit": "x10E3/uL",
@@ -206,6 +214,7 @@
     },
     {
       "resultId": "SYN-WBC-2026-CORRECTED",
+      "bhwPatientId": "BHW0000",
       "testName": "WBC",
       "value": 11.2,
       "unit": "x10E3/uL",
@@ -225,6 +234,7 @@
     },
     {
       "resultId": "SYN-ALT-2024",
+      "bhwPatientId": "BHW0000",
       "testName": "ALT",
       "value": 29,
       "unit": "IU/L",
@@ -244,6 +254,7 @@
     },
     {
       "resultId": "SYN-ALT-2025",
+      "bhwPatientId": "BHW0000",
       "testName": "ALT",
       "value": 42,
       "unit": "IU/L",
@@ -263,6 +274,7 @@
     },
     {
       "resultId": "SYN-ALT-2026",
+      "bhwPatientId": "BHW0000",
       "testName": "ALT",
       "value": 58,
       "unit": "IU/L",
@@ -282,6 +294,7 @@
     },
     {
       "resultId": "SYN-POTASSIUM-2026",
+      "bhwPatientId": "BHW0000",
       "testName": "Potassium",
       "value": 6.3,
       "unit": "mmol/L",
@@ -335,6 +348,7 @@
   "criticalEvents": [
     {
       "criticalEventId": "SYN-CRITICAL-1",
+      "bhwPatientId": "BHW0000",
       "resultId": "SYN-POTASSIUM-2026",
       "status": "clinician-acknowledged",
       "reportedAt": "2026-08-31T15:02:00.000Z",
@@ -347,6 +361,7 @@
   "outsideIntakes": [
     {
       "intakeId": "SYN-OUTSIDE-INTAKE-1",
+      "bhwPatientId": "BHW0000",
       "sourceType": "outside-pdf",
       "status": "received",
       "patientMatchStatus": "candidate-match",
