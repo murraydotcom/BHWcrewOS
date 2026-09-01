@@ -9,6 +9,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const staffPage = fs.readFileSync(path.join(root, "bhw-patient-materials.html"), "utf8");
 const patientPage = fs.readFileSync(path.join(root, "bhw-patient-material-viewer.html"), "utf8");
 const hqPage = fs.readFileSync(path.join(root, "hq.html"), "utf8");
+const patientRegistryApp = fs.readFileSync(path.join(root, "provider", "patient-registry-app.mjs"), "utf8");
+const patientRegistryPage = fs.readFileSync(path.join(root, "provider", "patient-registry.html"), "utf8");
 
 function assertInlineScriptsCompile(html, fileName) {
   const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)]
@@ -38,4 +40,30 @@ test("CrewHQ has a direct patient materials tile", () => {
 test("patient materials inline scripts compile", () => {
   assertInlineScriptsCompile(staffPage, "bhw-patient-materials.html");
   assertInlineScriptsCompile(patientPage, "bhw-patient-material-viewer.html");
+});
+
+test("staff page selects a verified Patient 360 record", () => {
+  assert.match(staffPage, /id="patientSearch"/);
+  assert.match(staffPage, /id="patientId" required/);
+  assert.match(staffPage, /rcm-cloud-config/);
+  assert.match(staffPage, /\/v1\/patients/);
+  assert.doesNotMatch(staffPage, /value="BHW0000"/);
+});
+
+test("staff page records sent communication, supports revocation, and offers longer links", () => {
+  assert.match(staffPage, /Record as sent/);
+  assert.match(staffPage, /staffAttestation:true/);
+  assert.match(staffPage, /\/sent`/);
+  assert.match(staffPage, /\/revoke`/);
+  assert.match(staffPage, /value="2160">3 months/);
+  assert.match(staffPage, /value="4320">6 months/);
+  assert.match(staffPage, /Carrier delivery is not yet confirmed/);
+});
+
+test("Patient 360 displays Education and Interactive Communication history", () => {
+  assert.match(patientRegistryApp, /Education &amp; Interactive Communication/);
+  assert.match(patientRegistryApp, /\/v1\/staff\/content-assignments\?patientId=/);
+  assert.match(patientRegistryApp, /Recorded sent means a staff member attested/);
+  assert.match(patientRegistryApp, /Opened and submitted are system-recorded/);
+  assert.match(patientRegistryPage, /communication-panel/);
 });
