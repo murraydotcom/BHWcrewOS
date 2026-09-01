@@ -116,7 +116,7 @@ async function resolvePatientIndex(patientId, session) {
 // Index. Resolve that relation to the authoritative Cloud/Patient 360 identity
 // before sending anything. A blank legacy ID may be backfilled only when exact
 // name + DOB identifies one Cloud patient and no duplicate Index link exists.
-async function resolvePatient360Patient(patientId, session) {
+async function resolvePatient360Patient(patientId, session, { backfill = true } = {}) {
   const requestedId = String(patientId || "").trim();
   if (!requestedId) throw actionError(400, "This assessment is not linked to a patient.");
 
@@ -173,8 +173,8 @@ async function resolvePatient360Patient(patientId, session) {
     throw actionError(409, "CrewOS has more than one Patient Index record for this BHW ID. Review the duplicate patient links before sending.");
   }
 
-  await updatePage(index.id, { "Patient ID #": W.text(patient.bhwPatientId) });
-  return { patient, backfilled: true };
+  if (backfill) await updatePage(index.id, { "Patient ID #": W.text(patient.bhwPatientId) });
+  return { patient, backfilled: backfill };
 }
 
 let awvPropsEnsured = false;
@@ -756,6 +756,15 @@ exports.handler = async (event) => {
           ...props,
         });
         return json(200, { ok: true, id: page.id });
+      }
+
+      case "cm-screening-readiness": {
+        if (!b.patientId) return json(400, { error: "This assessment is not linked to a patient." });
+        if (session.access !== "Admin" && !vis.includes("CharmEd Minds")) {
+          return json(403, { error: "CharmEd Minds access is required to verify this screening patient." });
+        }
+        const { patient } = await resolvePatient360Patient(b.patientId, session, { backfill: false });
+        return json(200, { ok: true, ready: true, bhwPatientId: patient.bhwPatientId });
       }
 
       case "cm-send-screeners": {
