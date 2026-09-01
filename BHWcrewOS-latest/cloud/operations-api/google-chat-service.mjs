@@ -34,10 +34,20 @@ function customMessageId(requestId) {
   return `client-bhw-${crypto.createHash("sha256").update(String(requestId)).digest("hex").slice(0, 32)}`;
 }
 
+function parameterObject(parameters) {
+  if (!parameters) return {};
+  if (Array.isArray(parameters)) {
+    return Object.fromEntries(parameters.filter((entry) => entry?.key).map((entry) => [entry.key, entry.value]));
+  }
+  return typeof parameters === "object" ? { ...parameters } : {};
+}
+
 export function chatActionParameters(event = {}) {
-  const parameters = event.common?.parameters || event.action?.parameters || event.common?.invokedFunctionParameters || {};
-  if (!Array.isArray(parameters)) return { ...parameters };
-  return Object.fromEntries(parameters.map((entry) => [entry.key, entry.value]));
+  return {
+    ...parameterObject(event.action?.parameters),
+    ...parameterObject(event.common?.invokedFunctionParameters),
+    ...parameterObject(event.common?.parameters),
+  };
 }
 
 export function chatActor(event = {}, roleMap = {}) {

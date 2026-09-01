@@ -61,10 +61,20 @@ function deliveryStatus(value) {
   return "unknown";
 }
 
+function parameterObject(parameters) {
+  if (!parameters) return {};
+  if (Array.isArray(parameters)) {
+    return Object.fromEntries(parameters.filter((entry) => entry?.key).map((entry) => [entry.key, entry.value]));
+  }
+  return typeof parameters === "object" ? { ...parameters } : {};
+}
+
 function chatActionParameters(event = {}) {
-  const parameters = event.common?.parameters || event.action?.parameters || event.common?.invokedFunctionParameters || {};
-  if (!Array.isArray(parameters)) return { ...parameters };
-  return Object.fromEntries(parameters.map((entry) => [entry.key, entry.value]));
+  return {
+    ...parameterObject(event.action?.parameters),
+    ...parameterObject(event.common?.invokedFunctionParameters),
+    ...parameterObject(event.common?.parameters),
+  };
 }
 
 function notificationOverrideFromEnvironment(environment, ruleId) {

@@ -109,12 +109,13 @@ test("Chat milestone actions pass the card status into the shared workflow", asy
     body: JSON.stringify({
       type: "CARD_CLICKED",
       eventId: "synthetic-chat-event",
-      common: { parameters: {
-        requestId: request.id,
-        requestVersion: "1",
-        workflowAction: "milestone",
-        status: "pa_submitted",
-      } },
+      common: { parameters: {} },
+      action: { parameters: [
+        { key: "requestId", value: request.id },
+        { key: "requestVersion", value: "1" },
+        { key: "workflowAction", value: "milestone" },
+        { key: "status", value: "pa_submitted" },
+      ] },
     }),
   }));
   assert.equal(response.requestStatus, "pa_submitted");
