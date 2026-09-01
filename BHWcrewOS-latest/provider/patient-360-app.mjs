@@ -1,4 +1,5 @@
 import { createEncounterCloudClient } from "./cloud-queue.mjs";
+import { BODY_PROFILES, patientBodyProfile } from "./patient-360-body-profile.mjs";
 
 const PATIENT_ID = "BHW0000";
 const THEME_KEY = "bhw_provider_theme_v1";
@@ -346,19 +347,6 @@ function trendGraphic(observations) {
   return `<div class="trend-heading"><div><b>${esc(focusLabel)}</b><span>${esc(last.valueQuantity.value)} ${esc(last.valueQuantity.unit || "")}</span></div><span>${series.length > 1 ? `${series.length} trended results` : "1 result - trend needs another point"}</span></div><svg class="trend-svg" viewBox="0 0 300 120" role="img" aria-label="${esc(focusLabel)} result trend"><line x1="20" y1="96" x2="282" y2="96"/><line x1="20" y1="20" x2="20" y2="96"/><polyline points="${points.map(([x,y]) => `${x},${y}`).join(" ")}"/>${points.map(([x,y]) => `<circle cx="${x}" cy="${y}" r="5"/>`).join("")}</svg><div class="trend-foot"><span>${esc(dateText(series[0].effectiveDateTime || series[0].issued))}</span><span>${esc(dateText(last.effectiveDateTime || last.issued))}</span></div>`;
 }
 
-function patientBodyProfile(patient = {}) {
-  const birthSex = patient.extension?.find((item) => String(item?.url || "").toLowerCase().includes("birthsex"))?.valueCode;
-  const recordedSex = String(patient.sexAtBirth || patient.birthSex || birthSex || patient.gender || "").trim().toLowerCase();
-  if (["f", "female"].includes(recordedSex)) return { sex: "female", label: "Female", asset: "patient-360-body-curved.png" };
-  if (["m", "male"].includes(recordedSex)) return { sex: "male", label: "Male", asset: "patient-360-body-neutral.png" };
-  return null;
-}
-
-const BODY_PROFILES = [
-  { sex: "male", label: "Male", asset: "patient-360-body-neutral.png" },
-  { sex: "female", label: "Female", asset: "patient-360-body-curved.png" },
-];
-
 function bodyFigure(context) {
   const activeSystems = context.systems.filter((item) => String(item.status || "").toLowerCase() !== "not-assessed");
   const focus = activeSystems[0];
@@ -366,7 +354,7 @@ function bodyFigure(context) {
   const bodyDisplay = bodyProfile
     ? `<input class="outline-radio" type="radio" name="body-view" id="body-view-front" checked><input class="outline-radio" type="radio" name="body-view" id="body-view-back"><div class="outline-picker" aria-label="Body view"><label for="body-view-front">Front</label><label for="body-view-back">Back</label></div><div class="body-image-stage ${bodyProfile.sex}" role="img" aria-label="${bodyProfile.label} body outline"><div class="body-image body-view-front"><img src="${bodyProfile.asset}" alt=""></div><div class="body-image body-view-back"><img src="${bodyProfile.asset}" alt=""></div><div class="body-focus-marker" aria-hidden="true"></div></div>`
     : `<input class="outline-radio" type="radio" name="body-view" id="body-view-front" checked><input class="outline-radio" type="radio" name="body-view" id="body-view-back"><div class="outline-picker" aria-label="Body view"><label for="body-view-front">Front</label><label for="body-view-back">Back</label></div><div class="body-outline-pair" role="group" aria-label="Male and female body outlines">${BODY_PROFILES.map((profile) => `<div class="body-outline-option"><span>${profile.label} outline</span><div class="body-mini-stage ${profile.sex}" role="img" aria-label="${profile.label} body outline"><div class="body-image body-view-front"><img src="${profile.asset}" alt=""></div><div class="body-image body-view-back"><img src="${profile.asset}" alt=""></div></div></div>`).join("")}</div>`;
-  return `<div class="body-center"><div class="body-caption"><span>Whole-person atlas · ${esc(bodyProfile ? `${bodyProfile.label} outline` : "both outlines available")}</span><b>${activeSystems.length ? `${activeSystems.length} active system focus` : "No active system focus returned"}</b></div>${bodyDisplay}${bodyProfile ? "" : '<p class="body-outline-note">Gender or anatomy is not specified, so both outline sets remain available.</p>'}<div class="body-focus-copy"><b>${esc(focus?.label || "Body-system focus not documented")}</b><span>${esc(focus?.summary || "Open the atlas to review documented and unassessed systems.")}</span><a href="patient-360-atlas.html">Open full body-system atlas</a></div></div>`;
+  return `<div class="body-center"><div class="body-caption"><span>Whole-person atlas · ${esc(bodyProfile ? `${bodyProfile.label} outline` : "both outlines available")}</span><b>${activeSystems.length ? `${activeSystems.length} active system focus` : "No active system focus returned"}</b></div>${bodyDisplay}${bodyProfile ? "" : '<p class="body-outline-note">Gender is not specified or they/them pronouns are selected, so both outline sets remain available.</p>'}<div class="body-focus-copy"><b>${esc(focus?.label || "Body-system focus not documented")}</b><span>${esc(focus?.summary || "Open the atlas to review documented and unassessed systems.")}</span><a href="patient-360-atlas.html">Open full body-system atlas</a></div></div>`;
 }
 
 function evidenceCodes(value) {
