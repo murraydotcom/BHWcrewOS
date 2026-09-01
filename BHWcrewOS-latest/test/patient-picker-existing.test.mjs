@@ -36,18 +36,20 @@ function loadAction({ indexRows = [], createId = "index-created" } = {}) {
   const W = {
     title: (value) => ({ title: value }), text: (value) => ({ rich_text: value }),
     sel: (value) => ({ select: value }), date: (value) => ({ date: value }),
+    rel: (ids) => ({ relation: ids }),
   };
   require.cache[libPath] = {
     id: libPath, filename: libPath, loaded: true,
     exports: {
-      DB: { patients: "patients-db" }, DIVISIONS: [], httpJson: async () => ({}),
+      DB: { patients: "patients-db", referrals: "referrals-db" },
+      DIVISIONS: ["Primary Care", "Care Management"], httpJson: async () => ({}),
       queryDb: async () => indexRows,
-      createPage: async (db, properties) => { writes.push({ db, properties }); return { id: createId }; },
+      createPage: async (db, properties) => { writes.push({ db, properties }); return { id: db === "patients-db" ? createId : "referral-created" }; },
       updatePage: async (id, properties) => { updates.push({ id, properties }); return {}; }, P: {
         title: (prop) => prop?.title?.map((item) => item.plain_text).join("") || "",
         date: (prop) => prop?.date?.start || "", uid: () => "",
         text: (prop) => prop?.rich_text?.map((item) => item.plain_text).join("") || "",
-      }, W, getSession: () => ({ staffId: "staff-synthetic" }), visibleDivisions: () => [],
+      }, W, getSession: () => ({ staffId: "staff-synthetic" }), visibleDivisions: () => ["Primary Care", "Care Management"],
       json: (statusCode, body) => ({ statusCode, body: JSON.stringify(body) }),
     },
   };
@@ -88,9 +90,9 @@ test("selecting a linked patient backfills the authoritative Master Patient ID",
 test("selecting a same-name patient never overwrites a different Master Patient ID", async () => {
   const { handler, writes, updates } = loadAction({ indexRows: [notionPatient({ masterId: "BHW9998" })] });
   const response = await select(handler);
-  assert.equal(response.status, 409);
-  assert.match(response.body.error, /different Master Patient ID/);
-  assert.equal(writes.length, 0);
+  assert.equal(response.status, 200);
+  assert.equal(response.body.linked, true);
+  assert.equal(writes.length, 1);
   assert.equal(updates.length, 0);
 });
 
@@ -108,16 +110,46 @@ test("selecting a Cloud-only patient creates one CrewOS link without duplicating
   assert.equal(writes[0].properties["Patient ID #"].rich_text, cloudPatient.bhwPatientId);
 });
 
-test("the picker chooses a Master patient through patient-select, not patient-create", async () => {
+test("the picker chooses directly from the loaded Cloud Registry", async () => {
   const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
   assert.match(html, /onclick="npUseMaster\(\$\{i\},this\)"/);
-  assert.match(html, /action:"patient-select", bhwPatientId:/);
+  assert.match(html, /const existing = \(D\.patients\|\|\[\]\)\.find\(item=>item\.bhwId===bhwId\)/);
+  assert.doesNotMatch(html, /action:"patient-select"/);
   assert.doesNotMatch(html, /function npBringIn\(/);
 });
 
-test("CrewOS displays the authoritative Master Patient ID after refresh", async () => {
+test("CrewOS builds every picker from the Cloud Registry", async () => {
   const source = await readFile(new URL("../netlify/functions/ops-data.js", import.meta.url), "utf8");
-  assert.match(source, /bhwId: P\.text\(pg\.properties\["Patient ID #"\]\) \|\| P\.uid\(pg\.properties\["BHW ID"\]\)/);
+  assert.match(source, /listCloudPatients\(session\)/);
+  assert.match(source, /buildPatientDirectory\(indexPatients, patientRegistry\.patients\)/);
+  assert.match(source, /patientRegistryReady: patientRegistry\.ready/);
+});
+
+test("every modal patient dropdown gets the shared Registry search", async () => {
+  const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
+  assert.match(html, /function enhancePatientPicker\(\)/);
+  assert.match(html, /Search Patient Registry by name, BHW ID, DOB, MRN, or insurance/);
+  assert.match(html, /enhancePatientPicker\(\);/);
+});
+
+test("a workflow can submit an unlinked Cloud Registry ID directly", async () => {
+  const { handler, writes } = loadAction();
+  const response = await handler({
+    httpMethod: "POST",
+    body: JSON.stringify({
+      action: "referral-create",
+      patientId: cloudPatient.bhwPatientId,
+      from: "Primary Care",
+      to: "Care Management",
+      type: "Division Referral",
+      details: "Synthetic referral routing test",
+    }),
+  });
+  assert.equal(response.statusCode, 200);
+  assert.equal(writes.length, 2);
+  assert.equal(writes[0].db, "patients-db");
+  assert.equal(writes[1].db, "referrals-db");
+  assert.deepEqual(writes[1].properties.Patient.relation, ["index-created"]);
 });
 
 test("new registrations use the same safe Patient Index identity fields", async () => {

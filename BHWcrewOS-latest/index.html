@@ -212,7 +212,9 @@ a.res .star{color:var(--clay);margin-right:6px}
 <circle cx="30" cy="70" r="20" stroke="#80abbd" stroke-width="3.2" stroke-dasharray="114 12" transform="rotate(150 30 70)"/>
 </g></svg>
   <div class="wordmark">BHW<b>crew</b><span class="os">OS</span></div>
-  <div class="whoami" id="whoami"></div><button class="btn sm" style="margin-left:10px;background:rgba(244,247,247,.12);color:#f4f7f7;border:1.5px solid var(--sand)" onclick="openContextPatient()">＋ Patient</button>
+  <div class="whoami" id="whoami"></div>
+  <a class="btn sm" style="margin-left:10px;background:rgba(244,247,247,.12);color:#f4f7f7;border:1.5px solid var(--sand);text-decoration:none" href="/provider/patient-registry.html">Patient Registry</a>
+  <button class="btn sm" style="background:rgba(244,247,247,.12);color:#f4f7f7;border:1.5px solid var(--sand)" onclick="openContextPatient()">＋ Patient</button>
   <div class="top-right">
     <a class="btn-ghost" href="/hq.html" style="text-decoration:none">← BHW HQ</a>
     <button class="btn-ghost" onclick="refresh()">Refresh</button>
@@ -329,6 +331,10 @@ function logout(){ TOKEN=""; sessionStorage.removeItem("crewos_token"); location
 /* ---------- data + render ---------- */
 async function refresh(){
   D = await api(API_DATA);
+  if(!D.patientRegistryReady && !window.__registryWarned){
+    window.__registryWarned = true;
+    toast(`Patient Registry unavailable — showing the linked CrewOS fallback only. ${D.patientRegistryError||""}`.trim());
+  }
   document.getElementById("whoami").textContent = `${D.user.name} · ${D.user.access}`;
   const me = (D.staff||[]).find(s=>s.id===D.user.staffId); D.user.roleHint = me ? me.role : "";
   const pendSig = awvPending();
@@ -1959,30 +1965,18 @@ function npSearch(){
   }, 280);
 }
 
-// Selecting a Master-List patient reuses their existing CrewOS Index row or
-// creates only that transitional link. It never creates another Cloud patient.
+// Every Master-List patient is already present in D.patients. Choosing here is
+// therefore a direct selection, not a copy/import/link operation.
 async function npUseMaster(i,button){
   const p = (window.__npHits||[])[i]; if(!p) return;
   const err = document.getElementById("np-err");
   err.textContent = "";
-  const oldLabel = button?.textContent || "Choose →";
-  if(button){ button.disabled = true; button.textContent = "Choosing…"; }
-  try{
-    const res = await api(API_ACT, {action:"patient-select", bhwPatientId:p.bhwPatientId||p.bhwId||p.id});
-    const directoryPatient = {
-      id:res.id, name:res.name, bhwId:res.bhwId, chart:res.chart||"", dob:res.dob||"",
-      insurance:res.insurance||"", memberId:res.memberId||"",
-    };
-    const existing = (D.patients||[]).find(item=>item.id===res.id);
-    if(existing) Object.assign(existing,directoryPatient); else D.patients.push(directoryPatient);
-    D.patientLabel[res.id] = `${res.name} (${res.bhwId})`;
-    npSelectInPicker(res.id, `${res.name} — ${res.bhwId}`);
-    npClose();
-    toast(res.linked ? "Patient connected to CrewOS and selected" : "Using the existing patient record");
-  }catch(e){
-    err.textContent = e.message;
-    if(button){ button.disabled = false; button.textContent = oldLabel; }
-  }
+  const bhwId = p.bhwPatientId||p.bhwId||p.id;
+  const existing = (D.patients||[]).find(item=>item.bhwId===bhwId);
+  if(!existing){ err.textContent = "That Patient Registry record is not in the current CrewOS directory. Refresh and try again."; return; }
+  npSelectInPicker(existing.id, `${existing.name} — ${existing.bhwId}`);
+  npClose();
+  toast("Selected from the Patient Registry");
 }
 
 async function npSubmit(force){
@@ -2015,8 +2009,8 @@ async function npSubmit(force){
       return;
     }
     // created — add to the live directory and select in any open picker
-    D.patients.push({ id: res.id, name: res.name, bhwId: "new", chart: body.chart||"", dob: body.dob, insurance: body.insurance||"" });
-    D.patientLabel[res.id] = `${res.name} (new)`;
+    D.patients.push({ id: res.id, relationId:res.id, name: res.name, bhwId:res.bhwId, chart: body.chart||"", dob: body.dob, insurance: body.insurance||"", registrySource:"cloud", selectable:true });
+    D.patientLabel[res.id] = `${res.name} (${res.bhwId})`;
     npSelectInPicker(res.id, res.name + " — just registered");
     toast(`✓ ${res.name} registered`);
     npClose();
@@ -2574,13 +2568,14 @@ function todayToggle(id, el){
 function openModal(html){
   document.getElementById("mcard").innerHTML=html;
   document.getElementById("modal").classList.add("open");
-  // Universal: any form with a patient picker gets a "+ New patient" link
+  // Every CrewOS workflow uses the same searchable Cloud Patient Registry.
   setTimeout(()=>{
     const s = document.getElementById("f-pat");
     if(s && !document.getElementById("np-link")){
+      enhancePatientPicker();
       const a = document.createElement("a");
       a.id = "np-link"; a.href = "javascript:void(0)";
-      a.textContent = "＋ New patient — register right here";
+      a.textContent = "＋ Register a truly new patient";
       a.style.cssText = "display:inline-block;margin:6px 0 2px;font-size:12.5px;font-weight:700;color:var(--clay-deep)";
       a.onclick = openNewPatient;
       s.insertAdjacentElement("afterend", a);
@@ -2590,7 +2585,49 @@ function openModal(html){
 function closeModal(){ document.getElementById("modal").classList.remove("open"); }
 document.getElementById("modal").addEventListener("click",e=>{ if(e.target.id==="modal") closeModal(); });
 
-function patientOptions(){ return D.patients.map(p=>`<option value="${p.id}">${esc(p.name)} — ${esc(p.bhwId)}</option>`).join(""); }
+function patientOptions(list){
+  return (list||D.patients||[]).map(p=>{
+    const status = p.status && p.status!=="active" ? ` · ${p.status}` : "";
+    return `<option value="${esc(p.id)}" ${p.selectable===false?"disabled":""}>${esc(p.name)} — ${esc(p.bhwId)}${esc(status)}</option>`;
+  }).join("");
+}
+function patientSearchText(p){
+  return [p.name,p.bhwId,p.dob,p.chart,p.insurance,p.insuranceLabel,p.memberId].join(" ").toLowerCase();
+}
+function enhancePatientPicker(){
+  const s=document.getElementById("f-pat");
+  if(!s||s.dataset.registryEnhanced) return;
+  s.dataset.registryEnhanced="true";
+  const input=document.createElement("input");
+  input.id="f-pat-search";
+  input.type="search";
+  input.autocomplete="off";
+  input.placeholder="Search Patient Registry by name, BHW ID, DOB, MRN, or insurance";
+  input.setAttribute("aria-label","Search Patient Registry");
+  const status=document.createElement("div");
+  status.id="f-pat-search-status";
+  status.className="lede";
+  status.style.cssText="margin:5px 0 7px";
+  s.insertAdjacentElement("beforebegin",input);
+  s.insertAdjacentElement("afterend",status);
+  const render=()=>{
+    const query=input.value.trim().toLowerCase();
+    const selected=s.value;
+    const all=D.patients||[];
+    const matches=query ? all.filter(p=>patientSearchText(p).includes(query)) : all;
+    s.innerHTML=`<option value="">${matches.length?"Select patient…":"No matching Registry patients"}</option>${patientOptions(matches)}`;
+    if(matches.some(p=>p.id===selected)) s.value=selected;
+    s.size=query ? Math.min(Math.max(matches.length+1,2),7) : 1;
+    status.textContent=`${matches.length} of ${all.length} Patient Registry records${D.patientRegistryReady?" · Google Cloud synced":" · fallback list"}`;
+  };
+  input.addEventListener("input",render);
+  s.addEventListener("change",()=>{
+    const p=(D.patients||[]).find(item=>item.id===s.value);
+    if(p) input.value=`${p.name} — ${p.bhwId}`;
+    s.size=1;
+  });
+  render();
+}
 function divisionOptions(list){ return list.map(d=>`<option>${esc(d)}</option>`).join(""); }
 
 function openReferralForm(from){
