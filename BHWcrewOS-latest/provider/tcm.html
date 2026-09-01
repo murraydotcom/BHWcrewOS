@@ -248,8 +248,15 @@ async function loadFile(file) {
     }
     RAW_ROWS = rows; LAST_FILE = { name: file.name, sheet };
     if (CLOUD) {
-      $("parseNote").textContent = `Retaining ${rows.length} CRISP event rows…`;
-      const saved = await CLOUD.importTcmEvents(rows, { source: "CrewHQ Panel and Discharges", sourceFile: file.name, manual: false });
+      $("parseNote").textContent = `Retaining ${rows.length} CRISP event rows in secure batches…`;
+      const saved = await CLOUD.importTcmEvents(rows, {
+        source: "CrewHQ Panel and Discharges",
+        sourceFile: file.name,
+        manual: false,
+        onProgress: ({ processed, total, batch, batches }) => {
+          $("parseNote").textContent = `Retaining CRISP events… ${processed} of ${total} saved (batch ${batch} of ${batches}).`;
+        },
+      });
       RAW_ROWS = await CLOUD.listTcmEvents();
       LAST_FILE = { name: "retained hospital history", sheet: "BHW Cloud" };
       rebuild();
@@ -262,8 +269,12 @@ async function loadFile(file) {
     }
     $("clearBtn").disabled = false; $("csvBtn").disabled = false;
   } catch (e) {
+    const progress = e.importProgress;
+    const partial = progress?.processed
+      ? ` <b>${progress.processed} of ${progress.total}</b> rows were retained before the interruption. Retrying the same file is safe; saved events will be updated rather than duplicated.`
+      : "";
     $("parseNote").innerHTML = `Couldn't import that file: ${esc(e.message)}. ` +
-      `Confirm that it is the CRISP Panel Details export with the required columns.`;
+      `Confirm that it is the CRISP Panel Details export with the required columns.${partial}`;
   }
 }
 
