@@ -133,6 +133,12 @@ export async function createEncounterCloudClient(fetchImpl = fetch) {
       const body = await request("/v1/patients");
       return Array.isArray(body.patients) ? body.patients : [];
     },
+    async healthRecord(bhwPatientId = "BHW0000") {
+      return request(`/v1/patients/${encodeURIComponent(bhwPatientId)}/health-record`);
+    },
+    async patientVisitNotes(bhwPatientId = "BHW0000") {
+      return request(`/v1/patients/${encodeURIComponent(bhwPatientId)}/visit-notes`);
+    },
     async listTcmEvents(limit = 1000) {
       const safeLimit = Math.max(1, Math.min(1000, Number(limit) || 1000));
       const body = await request(`/v1/tcm/events?limit=${safeLimit}`);

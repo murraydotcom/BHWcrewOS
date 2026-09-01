@@ -21,6 +21,7 @@
   <div class="brand"><h1>BHW CrewOS</h1><div>Operational Intelligence</div></div>
   <div class="nav-label">Patient Operations</div>
   <a class="nav active" href="patient-registry.html">◎ Patient Registry</a>
+  <a class="nav" href="patient-360.html">◉ Patient 360</a>
   <a class="nav" href="workflow.html">◷ 24-Hour Work Queue</a>
   <a class="nav" href="index.html">◈ Encounter Scrub</a>
   <a class="nav" href="claims.html">▦ Legacy Claims / Optum</a>
@@ -31,7 +32,7 @@
 <main class="main">
   <div class="top"><div class="crumb">Operational Intelligence · <b>Patient Registry</b></div><div class="tools"><a class="btn" href="/crewos">← CrewOS</a><a class="btn" href="/hq">BHW HQ</a><span id="cloudStatus" class="badge warning">Connecting…</span><button class="btn" id="theme">◐ Theme</button></div></div>
   <div class="content">
-    <div class="hero"><div><h2>Patient Registry</h2><p>One protected master record links BHW Patient ID, verified contact information, coverage, referrals, pre-visit work, encounters, and future care plans across CrewOS.</p></div><button class="btn primary" id="newPatient" disabled>+ Add patient</button></div>
+    <div class="hero"><div><h2>Patient Registry</h2><p>One protected master record links BHW Patient ID, verified contact information, coverage, referrals, pre-visit work, encounters, and future care plans across CrewOS.</p></div><div class="actions"><a class="btn" href="patient-360.html">Open synthetic Patient 360</a><button class="btn primary" id="newPatient" disabled>+ Add patient</button></div></div>
     <section class="kpis" id="kpis"></section>
     <section class="workspace">
       <div class="card"><div class="card-head"><h3>Patient master list</h3><div class="filters"><input class="search" id="search" placeholder="Search BHW ID, name, phone, payer…"><select class="search" id="statusFilter" style="width:auto"><option value="active">Active</option><option value="all">All statuses</option><option value="prospective">Prospective</option><option value="inactive">Inactive</option><option value="needs-review">Coverage needs review</option></select></div></div><div class="table-wrap"><table><thead><tr><th>BHW ID</th><th>Patient</th><th>DOB</th><th>Phone</th><th>Primary coverage</th><th>Status</th></tr></thead><tbody id="patientRows"></tbody></table></div></div>
@@ -45,4 +46,3 @@
 <script type="module" src="patient-registry-app.mjs"></script>
 </body>
 </html>
-

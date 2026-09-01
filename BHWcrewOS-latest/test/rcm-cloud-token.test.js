@@ -32,6 +32,7 @@ test("CrewOS session exchanges for a short-lived CrewHQ cloud token", async () =
   assert.equal(claims.iss, "bhw-crewhq");
   assert.equal(claims.sub, "crew:synthetic-staff-id");
   assert.equal(claims.aud, "bhw-rcm-cloud");
+  assert.equal(claims.healthRole, "crnp");
   assert.ok(claims.exp - claims.iat <= 300);
 });
 

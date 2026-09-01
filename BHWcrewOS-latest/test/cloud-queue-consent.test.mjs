@@ -32,6 +32,7 @@ test("CrewHQ keeps its protected token exchange while using consent-aware transc
   const client = await createEncounterCloudClient(createFetch(requests));
 
   await client.transcriptionConfig();
+  await client.patientVisitNotes("BHW12/34");
   await client.recordingConsent("BHW12/34");
   await client.saveRecordingConsent("BHW12/34", {
     sourceType: "previsit-form",
@@ -48,6 +49,9 @@ test("CrewHQ keeps its protected token exchange while using consent-aware transc
 
   const configRequest = requests.find(({ url }) => url.endsWith("/v1/transcription-config"));
   assert.equal(configRequest.options.headers.Authorization, "Bearer short-cloud-token");
+
+  const visitNotes = requests.find(({ url }) => url.endsWith("/v1/patients/BHW12%2F34/visit-notes"));
+  assert.ok(visitNotes, "Patient 360 requests only the selected patient's visit-note projection");
 
   const consentRead = requests.find(({ url }) => url.endsWith("/v1/patients/BHW12%2F34/recording-consent") && !url.includes("transcriptions"));
   assert.ok(consentRead, "patient ID is encoded in the consent endpoint");

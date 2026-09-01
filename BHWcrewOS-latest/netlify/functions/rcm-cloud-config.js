@@ -1,4 +1,5 @@
 const { json } = require("./_lib");
+// Deploy-preview context supplies the isolated Patient 360 RCM route.
 
 function safeApiBase(value) {
   try {
