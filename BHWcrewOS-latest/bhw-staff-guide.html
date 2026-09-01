@@ -13,12 +13,14 @@ header{display:flex;align-items:center;gap:14px;padding:6px 0 16px;border-bottom
 header img{height:46px;width:auto}
 header h1{font-family:var(--serif);font-weight:700;letter-spacing:-.01em;font-size:25px}
 header .sub{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--clay-deep);font-weight:700}
+.updated{margin-left:auto;text-align:right;font-size:10.5px;color:var(--soft);font-weight:600;line-height:1.4}
 .search{width:100%;font-size:15px;padding:13px 15px;border:1px solid var(--line);border-radius:11px;background:#fff;font-family:inherit;margin-bottom:8px}
 .hint{font-size:12px;color:var(--soft);margin-bottom:18px}
 .quick{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:11px;margin-bottom:22px}
 .qc{background:#fff;border:1px solid var(--line);border-left:4px solid var(--river);border-radius:12px;padding:13px 15px}
 .qc b{display:block;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--clay-deep);margin-bottom:3px}
-.qc span{font-size:14px;font-weight:600}
+.qc span{font-size:14px;font-weight:600;overflow-wrap:anywhere}
+.qc .url{font-size:12px;white-space:nowrap}
 .qc small{display:block;font-size:11.5px;color:var(--soft);font-weight:400;margin-top:2px}
 h2{font-family:var(--serif);font-weight:700;letter-spacing:-.01em;font-size:22px;margin:30px 0 4px;padding-top:14px;border-top:2px solid var(--sand)}
 h2 .n{color:var(--clay);font-weight:400;margin-right:8px}
@@ -49,6 +51,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
 <header>
   <img src="/assets/bhw-medical-logo.png" alt="BHW Medical" onerror="this.style.display='none'">
   <div><h1>Staff Guide — Where Everything Is</h1><div class="sub">BHW Medical Group · BHWcrewOS</div></div>
+  <div class="updated">Updated August 30, 2026<br>Patient Requests + alerts</div>
 </header>
 
 <button class="print" onclick="window.print()">Print this guide</button>
@@ -56,17 +59,17 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
 <div class="hint">Type what you're trying to do. Sections that don't match will hide.</div>
 
 <div class="quick">
-  <div class="qc"><b>Everything starts here</b><span>bhwcrewos.netlify.app</span><small>Sign in with your name + PIN</small></div>
-  <div class="qc" style="border-left-color:var(--clay)"><b>Main line — calls &amp; texts</b><span>(443) 762-5343</span><small>Every patient text and call</small></div>
-  <div class="qc" style="border-left-color:var(--sage)"><b>Fax — iFax</b><span>(833) 258-3941</span><small>Referrals, records, orders</small></div>
-  <div class="qc" style="border-left-color:var(--sand)"><b>Shared inbox</b><span>info@bhwmedical.org</span><small>Faxes, voicemails, portal alerts</small></div>
+  <div class="qc"><b>Everything starts here</b><span class="url">crewhq.bhwmedical.org/crewos</span><small>Sign in with your name + PIN</small></div>
+  <div class="qc" style="border-left-color:var(--clay)"><b>Your live work</b><span>Patient Requests + 🔔 alerts</span><small>One Google-backed queue</small></div>
+  <div class="qc" style="border-left-color:var(--sage)"><b>Main line — Dialpad</b><span>(443) 762-5343</span><small>Approved calls and patient texts</small></div>
+  <div class="qc" style="border-left-color:var(--sand)"><b>Fax — iFax</b><span>(833) 258-3941</span><small>Referrals, records, orders</small></div>
 </div>
 
 <h2><span class="n">01</span>Signing in &amp; your home page</h2>
 <div class="sec" data-k="login sign in pin password landing home page rail navigation">
   <h3>How to get in</h3>
   <ol>
-    <li>Go to <span class="path">bhwcrewos.netlify.app</span> on any phone, tablet, or computer.</li>
+    <li>Go to <span class="path">crewhq.bhwmedical.org/crewos</span> on any phone, tablet, or computer.</li>
     <li>Pick your name from the list, enter your PIN, tap <b>Sign in</b>.</li>
     <li>You land on <b>your</b> home page — the front desk role lands on Front Desk, the care coordinator on Chronic Care, primary care providers on Primary Care, and so on.</li>
   </ol>
@@ -82,7 +85,9 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
     <tr><td><b>Your division page</b><br>(Primary Care, Chronic Care, Mind &amp; Mood, CharmEd, Porter House, Flow)</td><td>Warm handoff inbox, referral queue, upcoming schedule, resources, and the tools built for that division</td><td>Everyone, on their own division</td></tr>
     <tr><td><b>Admin Master</b></td><td>Every division at once — open referrals, aging, full schedule, minutes rollup</td><td>Owner, operations lead</td></tr>
     <tr><td><b>My Space</b></td><td>Your role &amp; responsibilities, the office calendar, your availability</td><td>Everyone</td></tr>
-    <tr><td><b>Front Desk OS</b></td><td>Live inbox of calls/texts/faxes, patient lookup, referral finder, referral generator</td><td>Front desk role</td></tr>
+    <tr><td><b>Patient Requests</b></td><td>The authoritative staff work queue for patient calls, texts, portal messages, voicemails, referrals, prior authorizations, medication requests, billing requests, and general follow-up</td><td>Everyone, filtered by role and service line</td></tr>
+    <tr><td><b>🔔 CrewOS alerts</b></td><td>Unread, role-routed alerts for new unassigned, assigned-to-you, urgent, overdue, and escalated requests. Each alert opens the exact request.</td><td>Everyone while signed in</td></tr>
+    <tr><td><b>Front Desk OS</b></td><td>Patient lookup, referral finder/generator, fax tools, and front-desk operational snapshots. Work communication requests in Patient Requests so they are not duplicated.</td><td>Front desk role</td></tr>
     <tr><td><b>Panel &amp; Discharges</b></td><td>Utilization, HEDIS scorecard, hospital discharge tracking</td><td>Owner, care coordination role</td></tr>
     <tr><td><b>Positive ANA?</b></td><td>Analyze an ANA result, immune patterns, 100 conditions, management protocols</td><td>Providers</td></tr>
     <tr><td><b>Hormone Analysis</b></td><td>Lab-based hormone interpretation with ratios and patterns</td><td>Providers</td></tr>
@@ -96,13 +101,13 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
 <div class="sec" data-k="daily sweep morning routine schedule inbox check triage">
   <h3>Front desk day <span class="who">Front desk role</span></h3>
   <ol>
-    <li><b>9:00 — sweep the shared inbox.</b> Open <span class="path">info@bhwmedical.org</span> and work the labels top to bottom: 📞 voicemails, 📠 faxes, 💬 portal messages.</li>
-    <li><b>Log each one</b> into the Triage Queue — patient name, callback number, what they need, priority.</li>
-    <li><b>Work the Front Desk page by color.</b> Red first, then orange, then yellow. Green can wait.</li>
-    <li><b>Sweep again mid-afternoon</b> (about 3:00) so nothing sits overnight.</li>
-    <li><b>Before you leave:</b> every red and orange item is either done or has a first response logged.</li>
+    <li><b>At sign-in — open the 🔔 alert bell.</b> Review urgent, escalated, overdue, and unassigned work routed to Front Desk.</li>
+    <li><b>Open Patient Requests.</b> Assign each unclaimed front-desk request, then tap <b>Start</b> when work begins.</li>
+    <li><b>Work by urgency.</b> Urgent/escalated first, then overdue, then routine requests in received-time order.</li>
+    <li><b>Check the shared inbox once at 9:00 and again around 3:00</b> as a backup for anything that did not enter CrewOS automatically. Do not create a second request if it is already present.</li>
+    <li><b>Before you leave:</b> every urgent or escalated item is resolved, handed to the correct role, or has a documented next step.</li>
   </ol>
-  <div class="tip"><b>Most of the inbox fills itself now.</b> Patient texts, missed calls, voicemails (with a transcript), and inbound faxes create their own queue entries automatically — they appear in the Front Desk inbox without anyone logging them. The 9:00 shared-inbox sweep is now a backup check, not the main way things get in.</div>
+  <div class="tip"><b>Patient Requests is the one queue.</b> Patient texts, missed calls, voicemails, portal requests, and supported intake channels write into the Google-backed workflow. The shared-inbox sweep is a safety check—not a second worklist.</div>
 </div>
 <div class="sec" data-k="priority sla urgent high routine color red orange yellow green timeframe">
   <h3>What the colors mean</h3>
@@ -116,16 +121,74 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
   <div class="rule"><b>The clock stops when you tap Start</b> — not when you finish. If you've reached out and are waiting on the patient or a specialist, Start it so it stops screaming red while you wait.</div>
 </div>
 
-<h2><span class="n">04</span>Front Desk OS — the four things it does</h2>
-<div class="sec" data-k="inbox start done reply text message canned response sms">
-  <h3>1 · Today's inbox <span class="who">Front desk</span></h3>
-  <p>Three columns — calls &amp; voicemails, texts &amp; portal, faxes &amp; other. Each card has buttons:</p>
+<h2><span class="n">03b</span>Alerts &amp; Patient Requests — the one work queue</h2>
+<div class="sec" data-k="alerts bell unread popup toast role routed assigned urgent overdue escalated google chat mirror">
+  <h3>What the 🔔 alert bell means <span class="who">Everyone</span></h3>
   <ul>
-    <li><b>Start</b> — you're on it. Stops the SLA clock and stamps your first response.</li>
-    <li><b>✓ Done</b> — handled and closed.</li>
-    <li><b>💬 Reply</b> — text the patient back from the main line. Pick a canned response or type your own.</li>
+    <li>The bell appears in the CrewOS header while you are signed in. Its number is your <b>unread routed-alert count</b>, not the total number of requests in the practice.</li>
+    <li>You receive alerts for <b>new unassigned</b> work in your service line, requests <b>assigned to you</b>, and <b>urgent, overdue, or escalated</b> work you are allowed to handle.</li>
+    <li>Click an alert to open the exact record in <b>Patient Requests</b>. The alert itself contains workflow labels only—not patient names or request details.</li>
+    <li>Opening the alert panel marks the alert as read. It does <b>not</b> assign, start, resolve, or otherwise change the request.</li>
+    <li>Google Chat mirrors safe alerts and quick actions when configured. <b>CrewOS remains the authoritative work queue.</b></li>
   </ul>
-  <div class="tip"><b>The canned responses</b> cover Rx sent, refill received, appointment confirmed, we'll call you, records sent, and running behind. Pick one, edit if needed, send.</div>
+  <div class="rule"><b>Read is not resolved.</b> A bell count disappearing only means you opened the alert panel. The request stays open until the correct workflow action is recorded.</div>
+</div>
+
+<div class="sec" data-k="patient requests command center assign start milestone resolve escalate notify patient communications delivery status">
+  <h3>How to work a request <span class="who">Assigned role</span></h3>
+  <ol>
+    <li><b>Select the request</b> in the left work queue. The right side shows status history, route, owner, communications, and delivery results.</li>
+    <li>If it is unclaimed, tap <b>Assign to me</b>. Tap <b>Start</b> when you begin the work.</li>
+    <li>Choose the exact milestone that happened—do not skip ahead. Use <b>Escalate</b> when the request needs a higher role or cannot safely continue.</li>
+    <li>Use <b>Notify patient</b> only when it is available. Select or write a no-PHI message, confirm the no-PHI box, and send through the approved BHW line.</li>
+    <li>Check <b>Communications and delivery</b>. “Sent” means the channel accepted it. “Suppressed,” “queued,” or “failed” does not mean the patient received it.</li>
+  </ol>
+  <table>
+    <tr><th>Request</th><th>Milestones that must stay distinct</th><th>Primary owner</th></tr>
+    <tr><td><b>Medication</b></td><td>Waiting on clinician ≠ waiting on pharmacy; Complete and Needs visit are different outcomes</td><td>Medication/clinical team</td></tr>
+    <tr><td><b>Referral</b></td><td>Referral sent ≠ ready to schedule ≠ scheduled</td><td>Referral/care-coordination team</td></tr>
+    <tr><td><b>Prior authorization</b></td><td>PA submitted means awaiting a decision; it is never the same as Approved or Denied</td><td>Authorization/clinical team</td></tr>
+    <tr><td><b>Billing</b></td><td>With RCM ≠ waiting on payer ≠ resolved</td><td>RCM/billing team</td></tr>
+    <tr><td><b>General</b></td><td>Received → in progress → waiting or completed</td><td>Routed service line</td></tr>
+  </table>
+</div>
+
+<div class="sec" data-k="patient request responsibility raci accountable responsible consulted informed handoff">
+  <h3>Who owns what</h3>
+  <table>
+    <tr><th>Step</th><th>Responsible</th><th>Accountable</th><th>Consult / inform</th></tr>
+    <tr><td>Review and claim</td><td>Staff member in the routed team</td><td>Service-line lead</td><td>Front desk if intake details are missing</td></tr>
+    <tr><td>Clinical decision or medication outcome</td><td>Licensed clinician</td><td>Assigned provider</td><td>Medication/authorization staff</td></tr>
+    <tr><td>Referral scheduling status</td><td>Referral/care coordinator</td><td>Care-coordination lead</td><td>Provider and patient as appropriate</td></tr>
+    <tr><td>Billing request</td><td>RCM/billing specialist</td><td>Operations lead</td><td>Front desk; provider when clinical documentation is needed</td></tr>
+    <tr><td>Patient notification</td><td>Person recording the milestone</td><td>Service-line lead</td><td>Patient through the approved channel</td></tr>
+  </table>
+</div>
+
+<div class="sec" data-k="exceptions duplicate stale suppressed consent quiet hours automation not enabled urgent emergency downtime">
+  <h3>Exceptions and edge cases</h3>
+  <table>
+    <tr><th>What you see</th><th>What to do</th></tr>
+    <tr><td><b>The same request appears in Chat and CrewOS</b></td><td>That is one request shown in two places. Work it once; confirm the status in CrewOS.</td></tr>
+    <tr><td><b>“This action was already applied”</b></td><td>Do not repeat it. Refresh Patient Requests and use the current status.</td></tr>
+    <tr><td><b>SMS suppressed / consent unavailable / phone match ambiguous</b></td><td>Do not claim the patient was notified. Use the approved fallback workflow or ask the service-line lead.</td></tr>
+    <tr><td><b>Queued for quiet hours</b></td><td>Leave it queued. The system rechecks consent and suppression before release.</td></tr>
+    <tr><td><b>“automation-not-enabled”</b></td><td>No SMS was sent. Tell the operations lead; do not retry repeatedly.</td></tr>
+    <tr><td><b>Urgent/emergency symptoms or safety concern</b></td><td>Follow the emergency rule in section 10 first. The queue never replaces 988/911 or immediate provider notification.</td></tr>
+  </table>
+</div>
+
+<h2><span class="n">04</span>Front Desk OS — lookup, referrals &amp; support tools</h2>
+<div class="sec" data-k="inbox start done reply text message canned response sms">
+  <h3>1 · Open Patient Requests <span class="who">Front desk</span></h3>
+  <p>Use <b>Patient Requests</b> for the live communication workflow. Front Desk OS may show operational snapshots, but staff actions belong in the Google-backed request record:</p>
+  <ul>
+    <li><b>Assign to me</b> — records who owns it.</li>
+    <li><b>Start</b> — records that work is underway.</li>
+    <li><b>Notify patient</b> — sends an approved no-PHI message through Dialpad after consent and suppression checks.</li>
+    <li><b>Resolve / outcome buttons</b> — close only after the exact outcome occurred.</li>
+  </ul>
+  <div class="tip"><b>Do not work a second copy.</b> If an old Front Desk card and Patient Requests refer to the same patient contact, use Patient Requests as the source of truth and report the duplicate.</div>
 </div>
 <div class="sec" data-k="patient lookup screen pop phone number search allergies medications last visit snapshot">
   <h3>2 · Patient lookup <span class="who">Everyone</span></h3>
@@ -162,7 +225,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
   <h3>Primary Care providers <span class="who">NP role</span></h3>
   <ul>
     <li><b>Land on:</b> Primary Care page.</li>
-    <li><b>Daily:</b> work your visit schedule, handle clinical items routed to you from the queue, complete referrals from the Front Desk OS button.</li>
+    <li><b>Daily:</b> check your alert bell, work the clinical/medication/authorization requests assigned to you, and document the exact outcome in Patient Requests.</li>
     <li><b>Tools:</b> Positive ANA?, Hormone Analysis, Billing Toolkit for preventive codes, BHWCrewCare Portal for care plans and results.</li>
     <li><b>Referrals:</b> Primary Care page → <span class="path">Front Desk OS — lookup &amp; referrals</span> → look up patient → find specialist → generate.</li>
   </ul>
@@ -171,7 +234,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
   <h3>Care coordination <span class="who">Coordinator role</span></h3>
   <ul>
     <li><b>Land on:</b> Chronic Care page.</li>
-    <li><b>Daily:</b> work the care-coordination requests that come in, follow up on hospital discharges (Panel &amp; Discharges page), manage chronic-care and program enrollees.</li>
+    <li><b>Daily:</b> check the alert bell, work care-coordination/referral requests, follow up on hospital discharges, and keep Referral sent, Ready to schedule, and Scheduled distinct.</li>
     <li><b>Requests come to you</b> through the "Request care coordination" buttons any division can use — each arrives with a reason and timeframe already attached.</li>
     <li><b>Tools:</b> Panel &amp; Discharges, Billing Toolkit for care-management codes.</li>
   </ul>
@@ -188,24 +251,23 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
   <h3>Billing &amp; operations <span class="who">Ops role</span></h3>
   <ul>
     <li><b>Land on:</b> Front Desk / Admin Master.</li>
-    <li><b>Daily:</b> the shared inbox sweep, triage logging, claims and insurance, the referral queue across divisions.</li>
+    <li><b>Daily:</b> monitor urgent/overdue alerts, work billing requests routed to RCM, oversee claims/insurance, and audit suppressed or failed communications.</li>
     <li><b>Tools:</b> Admin Master for the whole-practice view, Billing Toolkit, Panel &amp; Discharges for payer-facing numbers.</li>
   </ul>
 </div>
 
 <h2><span class="n">05</span>Patient pages — setting a patient up</h2>
-<div class="sec" data-k="patient page portal invite access sign up notion share care plan welcome">
-  <h3>Giving a patient their page <span class="who">Providers, care coordination</span></h3>
+<div class="sec" data-k="patient page portal invite access patient html google patient master secure link welcome">
+  <h3>Using the existing patient page <span class="who">Providers, care coordination</span></h3>
   <ol>
-    <li>Open the <b>Patient Pages Hub</b> in Notion and duplicate the 🌿 template.</li>
-    <li>Rename it to the patient's first name and fill in their sections at visit close.</li>
-    <li>Tap <b>Share → Invite</b>, enter the patient's personal email, set permission to <b>Can comment</b>, send.</li>
-    <li>The patient gets an email invitation, creates a free account with that same email, and sees only their page.</li>
-    <li><b>Paste the page link into their row</b> on the Patients Master List so everyone can find it.</li>
-    <li>Text or email them the welcome message (it's saved on the Hub page — copy and paste).</li>
+    <li>Find and select the patient’s <b>existing Google-backed Patient Master record</b>. Do not create a second patient because a link is missing.</li>
+    <li>Open the patient-facing page from the approved CrewOS/patient workflow link. Medication and status routing already belongs to that patient page.</li>
+    <li>Keep detailed status, instructions, medication information, appointment details, and payer information behind the authenticated patient page.</li>
+    <li>Use SMS only as a no-PHI nudge telling the patient that a secure update is available.</li>
+    <li>If the patient page or link is missing, report the missing link to the operations lead. Do not build a replacement page or a new patient record.</li>
   </ol>
-  <div class="rule"><b>Never put a linked database view on a patient page.</b> It would expose other patients. Patient pages hold plain content only — text, tables, and their own updates.</div>
-  <div class="tip"><b>If they can't get in:</b> check spam for the Notion invite, and make sure they signed up with the exact email you invited. A different email means no access — re-invite the one they actually use.</div>
+  <div class="rule"><b>Do not create new Notion patient pages.</b> Notion is legacy/transitional and is not the operational patient-page workflow.</div>
+  <div class="tip"><b>If access fails:</b> verify the patient’s approved contact information in the authoritative record, then escalate the access problem. Never send detailed medical information by ordinary SMS as a workaround.</div>
 </div>
 
 <h2><span class="n">06</span>BHWCrewCare Portal — the provider side</h2>
@@ -232,9 +294,9 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
   <p><b>BHW HQ</b> is the tile page that links the big destinations (crewOS, the RCM platform, the onboarding portal) plus the <b>Staff Tools</b> row. Each tool opens on its own page and reuses your crewOS sign-in to pull patients.</p>
   <table>
     <tr><th>Tool</th><th>What it does</th></tr>
-    <tr><td><b>Patient Requests</b></td><td>The whole request journey — every text, call, voicemail, and fax in one timeline. Claim it, work it, mark it complete. <b>💬 Text back</b> replies to the patient from the main line.</td></tr>
+    <tr><td><b>Patient Requests</b></td><td>The authoritative command center for routed patient work. Assign, start, record exact milestones/outcomes, escalate, review communications/delivery, and send approved no-PHI notifications through Dialpad.</td></tr>
     <tr><td><b>Paperwork Studio</b></td><td>Chart pulls, prior auth, disability, FMLA &amp; MTA. Paste a note and <b>AI read note</b> pre-fills it, fills the real agency/payer PDF, and can <b>📠 Fax</b> it out.</td></tr>
-    <tr><td><b>Care Plan Studio</b></td><td>Branded, patient-ready annual care plans per program — pull the patient, tailor it, print/Save-PDF, save to Notion.</td></tr>
+    <tr><td><b>Care Plan Studio</b></td><td>Branded, patient-ready annual care plans per program — pull the existing patient, tailor it, and print/Save-PDF. Use the current Google-backed patient workflow; do not start new Notion storage.</td></tr>
     <tr><td><b>Document Builder</b></td><td>Patient handouts, after-visit summaries, care plans, letters, and medication lists — branded, print/Save-PDF. Includes <b>✨ Draft with AI</b> (below).</td></tr>
     <tr><td><b>Send a Fax</b></td><td>Fax any PDF out through the practice line — pick a file, enter the number, send.</td></tr>
     <tr><td><b>Patient Monitor</b></td><td>Live roster of who's checking in and active today.</td></tr>
@@ -297,16 +359,20 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
 </div>
 
 <h2><span class="n">09</span>Where everything lives</h2>
-<div class="sec" data-k="notion charm dialpad ifax gmail systems where tools accounts">
+<div class="sec" data-k="google cloud firestore crewos chat dialpad notion legacy charm ifax gmail systems where tools accounts rcm">
   <h3>The systems and what belongs in each</h3>
   <table>
     <tr><th>System</th><th>What lives there</th></tr>
     <tr><td><b>CharmHealth</b></td><td>The medical record. Always the source of truth for anything clinical.</td></tr>
-    <tr><td><b>BHWcrewOS</b></td><td>How we run the practice — inboxes, referrals, handoffs, tools, dashboards.</td></tr>
-    <tr><td><b>Notion</b></td><td>The data behind crewOS — patient master list, triage queue, specialist directory, care plans, patient pages, SOPs.</td></tr>
-    <tr><td><b>Dialpad</b></td><td>Calls and texts on the main line, (443) 762-5343. Texts, missed calls, and voicemails file themselves into the Front Desk inbox; you can also text and fax patients back from crewOS.</td></tr>
-    <tr><td><b>iFax</b></td><td>Faxes in and out, (833) 258-3941. Inbound faxes arrive as email to info@ and file themselves into the Front Desk inbox automatically.</td></tr>
-    <tr><td><b>info@bhwmedical.org</b></td><td>The shared front door — faxes, voicemail notifications, portal alerts. A background job forwards these into the Front Desk inbox, so it's a backup, not a manual queue.</td></tr>
+    <tr><td><b>Google Cloud / Firestore</b></td><td>The operational source of truth for Patient Requests, task state, communications, notification rules, suppression, and audit events.</td></tr>
+    <tr><td><b>BHWcrewOS</b></td><td>The primary staff interface—Patient Requests, alerts, referrals, handoffs, tools, dashboards, and deep links into the appropriate specialist system.</td></tr>
+    <tr><td><b>Google Chat</b></td><td>A no-PHI staff alert and quick-action mirror. It is not a second queue; verify the final state in CrewOS.</td></tr>
+    <tr><td><b>Dialpad</b></td><td>The approved patient call/SMS channel on (443) 762-5343. Consent, STOP suppression, quiet hours, safety holds, and delivery status are checked and recorded by the Google workflow.</td></tr>
+    <tr><td><b>BHW RCM</b></td><td>The downstream specialist system for billing and revenue-cycle work. Billing requests begin in Patient Requests and route to RCM.</td></tr>
+    <tr><td><b>iFax</b></td><td>The approved fax channel, (833) 258-3941. Fax intake remains partly transitional; work any resulting Patient Request once and do not create a duplicate.</td></tr>
+    <tr><td><b>info@bhwmedical.org</b></td><td>A backup intake/checkpoint for fax and other notices. If the corresponding Patient Request already exists, do not create another one.</td></tr>
+    <tr><td><b>Notion</b></td><td>Legacy/transitional content only. Do not create new Patient Requests, patient pages, medication workflows, or operational records there.</td></tr>
+    <tr><td><b>WelcomeToBHW</b></td><td>HR/onboarding only. It is not part of patient care, Patient Requests, or RCM.</td></tr>
   </table>
 </div>
 
@@ -317,9 +383,12 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
     <li><b>Crisis:</b> if a patient is in danger or talking about harming themselves — <b>988</b> (call or text) or <b>911</b>. Do not leave it in a queue. Tell a provider immediately.</li>
     <li><b>Chest pain, trouble breathing, stroke symptoms, heavy bleeding:</b> 911 first, then tell a provider.</li>
     <li><b>Never text or email PHI</b> to a personal phone or personal email — yours or anyone's.</li>
+    <li><b>SMS and Google Chat stay no-PHI.</b> Do not include patient names, diagnoses, medications, DOB, member IDs, appointment details, or clinical summaries. Put detail in the authenticated patient/CrewOS experience.</li>
     <li><b>Patient information stays in the systems.</b> No screenshots, no photos of screens, no forwarding to personal accounts.</li>
     <li><b>Verify in Charm</b> before acting on anything clinical you read on a dashboard.</li>
     <li><b>Log it, don't remember it.</b> If a patient asked for something, it goes in the queue — even if you're about to handle it.</li>
+    <li><b>An alert is not a completed task.</b> Opening the bell or Chat card never replaces assigning, starting, or recording the exact outcome in Patient Requests.</li>
+    <li><b>Never overstate a milestone.</b> PA submitted is not approved; referral sent is not scheduled; “suppressed” is not sent.</li>
   </ul>
 </div>
 <div class="sec" data-k="who to ask help stuck escalate question support">
@@ -329,14 +398,14 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
     <tr><td>Clinical question about a patient</td><td>The patient's assigned provider (primary care NP, or psych NP for behavioral health)</td></tr>
     <tr><td>Billing, insurance, or a claim</td><td>The billing &amp; operations lead</td></tr>
     <tr><td>Care coordination, SDOH, chronic care programs</td><td>The care coordinator</td></tr>
-    <tr><td>Something in crewOS is broken or blank</td><td>The practice owner / medical director — screenshot what you see</td></tr>
+    <tr><td>Something in crewOS is broken or blank</td><td>The practice owner / medical director — report the page, time, and safe request ID/error text without copying patient details into ordinary chat or email</td></tr>
     <tr><td>You're not sure how urgent something is</td><td>Treat it as urgent and ask. Nobody gets in trouble for over-escalating.</td></tr>
   </table>
 </div>
 
 <footer>
   BHW Medical Group · 2131 Maryland Ave, Baltimore, MD 21218 · (443) 762-5343<br>
-  This guide covers where things live and how to use them. Clinical protocols live in the chart and the SOPs.
+  Updated August 30, 2026 · This guide covers where things live and how to use them. Clinical protocols live in the chart and approved SOPs.
 </footer>
 </div>
 <script>
@@ -353,4 +422,5 @@ function filter(){
   });
 }
 </script>
+<script type="module" src="/bhw-alert-center.mjs"></script>
 </body></html>

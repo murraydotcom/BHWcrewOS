@@ -71,6 +71,7 @@ export function parseQueue(raw, clinicalById = {}) {
         noteBuilderInput: sessionClinical?.noteBuilderInput,
         encounterSnapshot: sessionClinical?.encounterSnapshot,
         noteDraftMeta: sessionClinical?.noteDraftMeta,
+        coverage: sessionClinical?.coverage,
         codes: cleanList(sessionClinical?.codes),
         diagnoses: cleanList(sessionClinical?.diagnoses),
         medications: Array.isArray(sessionClinical?.medications) ? sessionClinical.medications : [],
@@ -84,6 +85,7 @@ export function parseQueue(raw, clinicalById = {}) {
         documents: Array.isArray(sessionClinical?.documents) ? sessionClinical.documents : [],
         codingRecommendations: Array.isArray(sessionClinical?.codingRecommendations) ? sessionClinical.codingRecommendations : [],
         clinicalAudit: sessionClinical?.clinicalAudit,
+        medicationEpaCases: Array.isArray(sessionClinical?.medicationEpaCases) ? sessionClinical.medicationEpaCases : [],
       });
     }).filter((encounter) => encounter.id);
   } catch {

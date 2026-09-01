@@ -1,13 +1,15 @@
 # Inbound intake setup (direct webhooks — no middleware)
 
-How inbound patient communications reach the **Front Desk OS inbox**. There is
-no Keragon / Make / Zapier in the loop — each channel posts directly to a
-Netlify function that writes a row into the **Patient Request Triage Queue**
-(Notion), which `bhw-front-desk.html` renders (Calls & voicemails / Texts &
-portal / Faxes & other, bucketed by the row's `Source`).
+How inbound patient communications reach the **Patient Requests** workflow.
+There is no Keragon / Make / Zapier in the loop. Dialpad's signed event is
+verified by the existing Netlify receiver and forwarded unchanged to the
+Google Cloud Run workflow API, where it is verified again and written to the
+Firestore-backed request and communication model. iFax/Gmail intake remains a
+transitional Notion path until those channels migrate.
 
 ```
-Dialpad / iFax / Gmail  →  Netlify function  →  Triage Queue (Notion)  →  Front Desk inbox
+Dialpad → signed receiver → Cloud Run → patientRequests + communications → CrewOS / Chat
+iFax / Gmail → Netlify function → transitional Notion triage
 ```
 
 Every inbound function **fails closed**: it returns `503` and writes nothing
@@ -21,7 +23,7 @@ Env-var changes only take effect on the **next deploy**.
 
 | Channel | Function | Netlify secret | External config |
 |---|---|---|---|
-| Texts, missed calls, voicemails | `/.netlify/functions/dialpad-events` | `DIALPAD_WEBHOOK_SECRET` | Dialpad Event Subscriptions (SMS + call) → the function URL, webhook signed with the same secret |
+| Texts, missed calls, voicemails | `/.netlify/functions/dialpad-events` → Cloud Run `/v1/webhooks/dialpad` | `DIALPAD_WEBHOOK_SECRET`, `RCM_CLOUD_API_URL` | Dialpad Event Subscriptions (SMS + call) → the function URL, webhook signed with the same secret |
 | Faxes (consumer iFax delivers by email) | `/.netlify/functions/email-ingest` | `EMAIL_INGEST_SECRET` | `docs/gmail-ingest.gs` Apps Script forwards the fax emails with the secret |
 | Faxes (iFax business webhook) | `/.netlify/functions/ifax-events` | `IFAX_WEBHOOK_SECRET` | iFax webhook → the function URL |
 
@@ -47,7 +49,7 @@ Base URL in production: `https://crewhq.bhwmedical.org`
      office) on the subscription — get IDs from `GET /api/v2/companies` /
      `GET /api/v2/offices`. Confirm field names against developers.dialpad.com.
 
-Answered/outbound call *lifecycle* events are ignored. What becomes a queue row:
+Answered call lifecycle events without work are ignored. What becomes a Google-backed request or communication:
 inbound texts, missed calls, voicemails (with Dialpad's voicemail transcript),
 and — from the `recap_summary` state — the **Dialpad Ai action items** for a
 call (the follow-ups it generated), surfaced instead of the raw transcript. If
@@ -57,9 +59,11 @@ with neither are skipped so the inbox stays actionable.
 ## After configuring
 
 Redeploy the site so the functions pick up the secret, then send a test (e.g.
-text the Dialpad number). A row should appear in the Front Desk inbox within a
-few seconds, matched to a patient by phone when the number is on the Master
-List.
+text the Dialpad number with a synthetic/de-identified test contact). A request
+should appear in the Google-backed Patient Requests command center and be
+mirrored to its routed Chat space within a few seconds. CrewOS remains the
+authoritative staff queue; Chat is an alert and quick-action surface. Shared or ambiguous phone numbers are logged as
+unmatched communications and are never guessed.
 
 ### Secret must match on both sides
 
@@ -86,11 +90,12 @@ produce a 503 even after "setting" the value:
 
 ## Replying to patients (outbound)
 
-Front Desk inbox "Reply" sends a text from the practice line via Dialpad. Two
-env vars, set as plain Functions-scoped values (not "secret"), then redeploy:
+The Google-backed Patient Requests command center sends no-PHI manual replies and
+state-based notifications through Dialpad. Configure these values on Cloud Run:
 
 - `DIALPAD_TOKEN` — a Dialpad API key with SMS (and Fax) scope.
 - `DIALPAD_FROM` — the sending number in E.164, e.g. `+14437625343`.
 
-`frontdesk-data` passes the key via `?apikey=` (Dialpad sits behind Google Cloud
-Endpoints, which reads the key from the query string) plus a Bearer header.
+The destination is read server-side from the Google Patient Master. The browser
+never supplies a phone number. Consent, STOP suppression, quiet hours,
+idempotency, and communication/audit writes are checked before each send.

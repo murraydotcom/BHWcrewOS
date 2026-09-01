@@ -6,8 +6,9 @@
 //
 //   POST { name, phone, message, hp }  → { ok }
 //
-// Like screener-submit this is intentionally PUBLIC (patients have no crewOS
-// login) and hardened rather than gated: a hidden honeypot rejects bots,
+// Like screener-submit this browser-facing bridge is intentionally PUBLIC
+// (patients have no crewOS login) and hardened rather than gated: a hidden
+// honeypot rejects bots,
 // fields are length-bounded, a message is required, and it only ever creates
 // one queue row. The sender is matched to a patient by phone when possible so
 // the request lands attached to the right chart.
@@ -16,6 +17,7 @@
 // POSTs are allowed from *.netlify.app and the BHW domains (reflected origin).
 
 const { matchPatientByPhone, createQueueEntry, digits } = require("./lib/triage");
+const { intakeConfigured, createCloudIntake } = require("./lib/operations-cloud");
 
 const ORIGIN_OK = /^(https?:\/\/localhost(:\d+)?|https:\/\/([a-z0-9-]+\.)*netlify\.app|https:\/\/([a-z0-9-]+\.)*(bhwmedical\.org|mybhw\.(com|org)))$/i;
 
@@ -35,7 +37,8 @@ exports.handler = async (event) => {
   const origin = event.headers?.origin || event.headers?.Origin || "";
   if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: cors(origin), body: "" };
   if (event.httpMethod !== "POST") return res(405, { error: "POST only" }, origin);
-  if (!process.env.NOTION_TOKEN || !process.env.QUEUE_DB_ID)
+  const legacyConfigured = Boolean(process.env.NOTION_TOKEN && process.env.QUEUE_DB_ID);
+  if (!intakeConfigured() && !legacyConfigured)
     return res(503, { error: "Messaging isn't connected yet — please call the office." }, origin);
 
   let body;
@@ -53,14 +56,36 @@ exports.handler = async (event) => {
     return res(400, { error: "Please include your name or phone number so we can reach you." }, origin);
 
   // Best-effort match to a chart by phone.
-  let match = { patientId: null, patientName: "" };
-  if (digits(phone).length >= 7) {
+  let match = { patientId: null, patientName: "", bhwPatientId: "" };
+  if (legacyConfigured && digits(phone).length >= 7) {
     try { match = await matchPatientByPhone(phone); } catch { /* leave unmatched */ }
   }
 
   const patientName = match.patientName || name || "Patient (portal)";
   // When we couldn't match, keep the typed name visible in the summary too.
   const summary = match.patientId || !name ? message : `${name}: ${message}`;
+
+  if (intakeConfigured()) {
+    try {
+      const out = await createCloudIntake({
+        submissionId: body.submissionId,
+        body: {
+          bhwPatientId: match.bhwPatientId || "",
+          patientMatchStatus: match.bhwPatientId ? "matched" : "unmatched",
+          requestType: "general",
+          priority: "routine",
+          summary,
+          message,
+          requester: { displayName: patientName, callbackPhone: phone, preferredChannel: "portal" },
+          routing: { targetSystem: "crewos", assignedTeam: "front-desk" },
+          sourceMetadata: { sourceRecordId: String(body.submissionId || "").slice(0, 160), sourcePage: "care-connect-patient-page" },
+        },
+      });
+      return res(200, { ok: true, matched: !!match.bhwPatientId, requestId: out?.patientRequest?.patientRequestId || "" }, origin);
+    } catch {
+      return res(502, { error: "Couldn't send right now — please call the office." }, origin);
+    }
+  }
 
   const out = await createQueueEntry({
     patientId: match.patientId,

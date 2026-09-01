@@ -139,6 +139,43 @@ export async function createEncounterCloudClient(fetchImpl = fetch) {
     async patientVisitNotes(bhwPatientId = "BHW0000") {
       return request(`/v1/patients/${encodeURIComponent(bhwPatientId)}/visit-notes`);
     },
+    async listPatientRequests({ status = "open", serviceLine = "", assignedTo = "", limit = 100 } = {}) {
+      const params = new URLSearchParams({ status, limit: String(Math.max(1, Math.min(500, Number(limit) || 100))) });
+      if (serviceLine) params.set("serviceLine", serviceLine);
+      if (assignedTo) params.set("assignedTo", assignedTo);
+      const body = await request(`/v1/patient-requests?${params}`);
+      return Array.isArray(body.requests) ? body.requests : [];
+    },
+    async patientRequestAction(id, action, details = {}) {
+      return request(`/v1/patient-requests/${encodeURIComponent(id)}/actions`, {
+        method: "POST",
+        body: JSON.stringify({
+          action,
+          idempotencyKey: details.idempotencyKey || crypto.randomUUID(),
+          ...details,
+        }),
+      });
+    },
+    async notifyPatientRequest(id, details = {}) {
+      return request(`/v1/patient-requests/${encodeURIComponent(id)}/notify`, {
+        method: "POST",
+        body: JSON.stringify({ idempotencyKey: details.idempotencyKey || crypto.randomUUID(), ...details }),
+      });
+    },
+    async sendPatientRequestSms(id, message, details = {}) {
+      return request(`/v1/patient-requests/${encodeURIComponent(id)}/messages`, {
+        method: "POST",
+        body: JSON.stringify({
+          message,
+          noPhiAttestation: details.noPhiAttestation === true,
+          idempotencyKey: details.idempotencyKey || crypto.randomUUID(),
+        }),
+      });
+    },
+    async listPatientRequestCommunications(id) {
+      const body = await request(`/v1/patient-requests/${encodeURIComponent(id)}/communications`);
+      return Array.isArray(body.communications) ? body.communications : [];
+    },
     async listTcmEvents(limit = 1000) {
       const safeLimit = Math.max(1, Math.min(1000, Number(limit) || 1000));
       const body = await request(`/v1/tcm/events?limit=${safeLimit}`);

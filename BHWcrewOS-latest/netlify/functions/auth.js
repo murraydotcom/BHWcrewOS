@@ -7,6 +7,7 @@
 //   POST { action:"roster" }                              → names for the pickers
 //   POST { action:"set-pin", setupSecret, staffId, pin }  → set/reset a PIN (needs SETUP_SECRET)
 //   POST { action:"login", staffId, pin }                 → { token, user }
+//   POST { action:"clinical-login", pin } + CrewOS token  → short-lived clinical token
 
 const crypto = require("crypto");
 const { DB, httpJson, queryDb, updatePage, P, W, sign, getSession, json } = require("./_lib");
@@ -16,6 +17,29 @@ const PIN_PROP = "PIN Hash";
 
 function hashPin(pin, salt) {
   return crypto.scryptSync(String(pin), salt, 64).toString("hex");
+}
+
+function pinMatches(pin, pinHash) {
+  if (!pinHash || !pinHash.includes(":")) return false;
+  const [salt, storedHash] = pinHash.split(":");
+  const attempt = hashPin(pin, salt);
+  const a = Buffer.from(attempt), b = Buffer.from(storedHash || "");
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+function staffSession(user, { exp, scope = "staff", authTime = 0 } = {}) {
+  return {
+    staffId: user.id,
+    name: user.name,
+    role: user.role,
+    divisions: user.divisions,
+    access: user.access,
+    landing: user.landing,
+    canSchedule: user.canSchedule,
+    scope,
+    ...(authTime ? { authTime } : {}),
+    exp,
+  };
 }
 
 async function ensurePinProperty() {
@@ -61,6 +85,33 @@ exports.handler = async (event) => {
 
     if (!process.env.NOTION_TOKEN) return json(503, { error: "NOTION_TOKEN environment variable is not set on this site" });
 
+    if (body.action === "clinical-login") {
+      const session = getSession(event);
+      if (!session) return json(401, { error: "Sign in to CrewOS again before opening Clinical mode" });
+      if (!/^\d{4,8}$/.test(String(body.pin || ""))) {
+        return json(400, { error: "Enter your CrewOS PIN" });
+      }
+      const staff = (await queryDb(DB.staff)).map(shapeStaff);
+      const user = staff.find((person) => person.id === session.staffId);
+      if (!user || !user.active) return json(403, { error: "Account inactive" });
+      if (!user.pinHash || !user.pinHash.includes(":")) {
+        return json(403, { error: "No PIN is configured for this account" });
+      }
+      if (!pinMatches(body.pin, user.pinHash)) return json(403, { error: "That PIN didn't match" });
+      const authTime = Date.now();
+      const expiresIn = 15 * 60;
+      const token = sign(staffSession(user, {
+        scope: "clinical",
+        authTime,
+        exp: authTime + expiresIn * 1000,
+      }));
+      return json(200, {
+        token,
+        expiresIn,
+        user: { staffId: user.id, name: user.name, role: user.role, access: user.access },
+      });
+    }
+
     if (body.action === "roster") {
       const staff = (await queryDb(DB.staff)).map(shapeStaff).filter((s) => s.active);
       return json(200, { staff: staff.map(({ id, name, role }) => ({ id, name, role })) });
@@ -87,22 +138,13 @@ exports.handler = async (event) => {
       if (!user.pinHash || !user.pinHash.includes(":")) {
         return json(403, { error: "No PIN set for this account yet — ask Amaris or Shadé" });
       }
-      const [salt, storedHash] = user.pinHash.split(":");
-      const attempt = hashPin(pin, salt);
-      const a = Buffer.from(attempt), b = Buffer.from(storedHash);
-      if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+      if (!pinMatches(pin, user.pinHash)) {
         return json(403, { error: "That PIN didn't match" });
       }
-      const token = sign({
-        staffId: user.id,
-        name: user.name,
-        role: user.role,
-        divisions: user.divisions,
-        access: user.access,
-        landing: user.landing,
-        canSchedule: user.canSchedule,
+      const token = sign(staffSession(user, {
+        scope: "staff",
         exp: Date.now() + 12 * 60 * 60 * 1000,
-      });
+      }));
       return json(200, { token, user: { name: user.name, access: user.access, landing: user.landing } });
     }
 
@@ -111,3 +153,6 @@ exports.handler = async (event) => {
     return json(500, { error: err.message });
   }
 };
+
+exports._test = { pinMatches, staffSession };
+
