@@ -9,8 +9,9 @@ const provider = path.join(root, "provider");
 
 test("Patient 360 uses the Opal and Ironstone palette and typography", () => {
   const css = fs.readFileSync(path.join(provider, "patient-360.css"), "utf8");
-  assert.match(css, /--paper:#F8F6F1/);
-  assert.match(css, /--card:#FEFDFB/);
+  assert.match(css, /--paper:#F4F7F7/);
+  assert.match(css, /--paper-2:#EDF3F5/);
+  assert.match(css, /--card:#FFFFFF/);
   assert.match(css, /--sidebar:#0F2230/);
   assert.match(css, /--serif:"Montserrat",system-ui,sans-serif/);
   assert.doesNotMatch(css, /Playfair Display/);
@@ -26,6 +27,11 @@ test("Patient 360 uses the Opal and Ironstone palette and typography", () => {
   assert.match(css, /\.navigator-hero:after\{display:none\}/);
   assert.match(css, /\.overview-card:before,\.body-center:before\{display:none\}/);
   assert.match(css, /@media\(max-width:900px\)\{\.body-center\{min-height:0\}\.health-callout\{min-height:0\}\}/);
+  assert.match(css, /\.health-callout\.teal\{background:color-mix/);
+  assert.match(css, /\.health-callout\.green,\.health-callout\.gold\{background:color-mix/);
+  assert.match(css, /\.health-callout\.purple\{background:color-mix/);
+  assert.match(css, /\.health-callout\.coral\{background:color-mix/);
+  assert.match(css, /\.safe-notice\{background:color-mix/);
 });
 
 test("every Patient 360 page loads the design-system font families", () => {
