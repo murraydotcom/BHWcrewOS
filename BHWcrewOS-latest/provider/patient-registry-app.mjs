@@ -1,4 +1,4 @@
-import { createEncounterCloudClient } from "./cloud-queue.mjs";
+import { createPatientRegistryClient } from "./patient-registry-client.mjs";
 
 const THEME_KEY = "bhw_provider_theme_v1";
 const PENDING_PATIENT_KEY = "bhw_pending_encounter_patient_v1";
@@ -211,8 +211,7 @@ $("create").onclick = async () => {
 
 async function initialize() {
   try {
-    client = await createEncounterCloudClient();
-    if (!client) throw new Error("Google Cloud is not configured for this site.");
+    client = await createPatientRegistryClient();
     patients = await client.listPatients();
     selectedId = patients[0]?.bhwPatientId || "";
     $("cloudStatus").className = "badge complete";
