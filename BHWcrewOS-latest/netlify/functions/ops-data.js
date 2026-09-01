@@ -2,6 +2,8 @@
 // Returns only what the signed-in person's divisions permit. Admins see all.
  
 const { DB, queryDb, P, getSession, visibleDivisions, json } = require("./_lib");
+const { listCloudPatients } = require("./lib/cloud-patients");
+const { buildPatientDirectory, fallbackIndexDirectory } = require("./lib/crew-patient-directory");
 const zlib = require("zlib");
 
 function parseStoredAnswer(raw) {
@@ -75,7 +77,7 @@ exports.handler = async (event) => {
   const inVis = (d) => vis.includes(d);
  
   try {
-    const [staffPages, patientPages, roomPages, referralPages, handoffPages, schedulePages, minutePages, resourcePages] =
+    const [staffPages, patientPages, roomPages, referralPages, handoffPages, schedulePages, minutePages, resourcePages, patientRegistry] =
       await Promise.all([
         queryDb(DB.staff),
         queryDb(DB.patients),
@@ -85,6 +87,9 @@ exports.handler = async (event) => {
         queryDb(DB.schedule),
         queryDb(DB.minutes), // still queried: admin minutes rollup (care-management billing) below still needs it
         queryDb(DB.resources),
+        listCloudPatients(session)
+          .then((patients) => ({ ready: true, patients, error: "" }))
+          .catch((error) => ({ ready: false, patients: [], error: error.message || "Patient Registry unavailable" })),
       ]);
  
     const staff = staffPages.map((pg) => ({
@@ -96,13 +101,13 @@ exports.handler = async (event) => {
     }));
     const staffName = Object.fromEntries(staff.map((s) => [s.id, s.name]));
  
-    // Patient directory: id + name + BHW ID, for pickers and display.
-    const patients = patientPages.map((pg) => ({
+    // Keep legacy relation IDs only as an operational bridge. Every picker is
+    // populated from the protected Google Cloud Patient Registry.
+    const indexPatients = patientPages.map((pg) => ({
       id: pg.id,
       name: P.title(pg.properties["Patient Name"]),
-      // Prefer the authoritative RCM identity. BHW ID is an auto-number for
-      // this transitional Index and can differ from the Master Patient ID.
-      bhwId: P.text(pg.properties["Patient ID #"]) || P.uid(pg.properties["BHW ID"]),
+      masterId: P.text(pg.properties["Patient ID #"]),
+      indexBhwId: P.uid(pg.properties["BHW ID"]),
       chart: P.text(pg.properties["CharmHealth Chart #"]),
       dob: P.date(pg.properties["DOB"]),
       insurance: P.sel(pg.properties["Insurance"]),
@@ -111,7 +116,10 @@ exports.handler = async (event) => {
       email: pg.properties["Email"]?.email || "",
       guardianEmail: pg.properties["Guardian Email"]?.email || "",
     }));
-    const patientLabel = Object.fromEntries(patients.map((p) => [p.id, `${p.name} (${p.bhwId})`]));
+    const directory = patientRegistry.ready
+      ? buildPatientDirectory(indexPatients, patientRegistry.patients)
+      : fallbackIndexDirectory(indexPatients);
+    const { patients, patientLabel } = directory;
  
     const rooms = roomPages.map((pg) => ({
       id: pg.id,
@@ -330,6 +338,8 @@ exports.handler = async (event) => {
       staffName,
       patients,
       patientLabel,
+      patientRegistryReady: patientRegistry.ready,
+      patientRegistryError: patientRegistry.error,
       rooms: rooms.filter((r) => r.active),
       referrals,
       handoffs,
