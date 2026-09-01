@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { OAuth2Client } from "google-auth-library";
 import {
   applyPatientRequestAction,
   buildGoogleChatCard,
@@ -19,6 +20,18 @@ import { normalizeDialpadEvent } from "./dialpad-service.mjs";
 
 const cleanText = (value, max = 4000) => String(value ?? "").trim().slice(0, max);
 const iso = (value = new Date()) => (value instanceof Date ? value : new Date(value)).toISOString();
+const dispatcherOauthClient = new OAuth2Client();
+
+async function verifyGoogleOidcToken(token, audience) {
+  const ticket = await dispatcherOauthClient.verifyIdToken({ idToken: token, audience });
+  return ticket.getPayload() || {};
+}
+
+function constantTimeEqual(left, right) {
+  const leftBytes = Buffer.from(String(left || ""));
+  const rightBytes = Buffer.from(String(right || ""));
+  return leftBytes.length === rightBytes.length && crypto.timingSafeEqual(leftBytes, rightBytes);
+}
 
 function evaluatePortalConsent(consent, { bhwPatientId, channel } = {}) {
   if (!consent) return { eligible: false, reason: "not-found" };
@@ -84,6 +97,7 @@ export function createWorkflowService(repository, {
   chat,
   clock = () => new Date(),
   logger = console,
+  verifyOidcToken = verifyGoogleOidcToken,
 } = {}) {
   const patientPortalUrl = safeHttpsUrl(environment.PATIENT_PORTAL_URL);
   const quietHours = {
@@ -93,6 +107,30 @@ export function createWorkflowService(repository, {
   };
   const automationEnabled = cleanText(environment.PATIENT_WORKFLOW_AUTOMATION_ENABLED, 10).toLowerCase() === "true";
   const dispatchSecret = cleanText(environment.WORKFLOW_DISPATCH_SECRET, 1000);
+  const dispatchAudience = safeHttpsUrl(environment.WORKFLOW_DISPATCH_AUDIENCE);
+  const dispatchServiceAccount = cleanText(environment.WORKFLOW_DISPATCH_SERVICE_ACCOUNT, 320).toLowerCase();
+
+  async function verifyDispatcher(header) {
+    const oidcConfigured = Boolean(dispatchAudience && dispatchServiceAccount);
+    if (!dispatchSecret && !oidcConfigured) {
+      throw Object.assign(new Error("workflow dispatcher is not configured"), { status: 503 });
+    }
+    const authorization = cleanText(header, 4000);
+    const token = authorization.startsWith("Bearer ") ? authorization.slice(7).trim() : "";
+    if (!token) throw Object.assign(new Error("dispatcher authentication required"), { status: 401 });
+    if (dispatchSecret && constantTimeEqual(token, dispatchSecret)) return { method: "shared-secret" };
+    if (oidcConfigured) {
+      try {
+        const payload = await verifyOidcToken(token, dispatchAudience);
+        const email = cleanText(payload.email, 320).toLowerCase();
+        if (payload.email_verified !== true || email !== dispatchServiceAccount) throw new Error("unexpected dispatcher identity");
+        return { method: "google-oidc", email };
+      } catch {
+        throw Object.assign(new Error("dispatcher authentication required"), { status: 401 });
+      }
+    }
+    throw Object.assign(new Error("dispatcher authentication required"), { status: 401 });
+  }
 
   async function ruleFor(request) {
     const ruleId = `${request.requestType}:${request.status}:sms`;
@@ -453,8 +491,7 @@ export function createWorkflowService(repository, {
   }
 
   async function dispatchDue(header) {
-    if (!dispatchSecret) throw Object.assign(new Error("workflow dispatcher is not configured"), { status: 503 });
-    if (cleanText(header, 1200) !== `Bearer ${dispatchSecret}`) throw Object.assign(new Error("dispatcher authentication required"), { status: 401 });
+    await verifyDispatcher(header);
     const due = await repository.listDueCommunications(iso(clock()), 50);
     const results = [];
     for (const queued of due) {

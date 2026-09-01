@@ -356,6 +356,43 @@ test("missing messaging configuration and opt-out both suppress rather than send
   assert.equal(sendCount, 0);
 });
 
+test("queued-message dispatcher accepts only the configured Google Scheduler identity", async () => {
+  const repository = inMemoryRepository();
+  const verified = [];
+  const service = createWorkflowService(repository, {
+    environment: {
+      WORKFLOW_DISPATCH_AUDIENCE: "https://bhw-operations-api.example/v1/workflow/dispatch",
+      WORKFLOW_DISPATCH_SERVICE_ACCOUNT: "bhw-workflow-dispatcher@example.iam.gserviceaccount.com",
+    },
+    dialpad: { configured: false },
+    chat: { enabled: false },
+    verifyOidcToken: async (token, audience) => {
+      verified.push({ token, audience });
+      return {
+        email: token === "synthetic-valid-oidc" ? "bhw-workflow-dispatcher@example.iam.gserviceaccount.com" : "other@example.iam.gserviceaccount.com",
+        email_verified: true,
+      };
+    },
+  });
+
+  await assert.rejects(() => service.dispatchDue("Bearer synthetic-wrong-oidc"), (error) => error.status === 401);
+  assert.deepEqual(await service.dispatchDue("Bearer synthetic-valid-oidc"), { processed: 0, results: [] });
+  assert.deepEqual(verified.at(-1), {
+    token: "synthetic-valid-oidc",
+    audience: "https://bhw-operations-api.example/v1/workflow/dispatch",
+  });
+});
+
+test("queued-message dispatcher keeps legacy secret support without plain string comparison", async () => {
+  const service = createWorkflowService(inMemoryRepository(), {
+    environment: { WORKFLOW_DISPATCH_SECRET: "synthetic-dispatch-secret" },
+    dialpad: { configured: false },
+    chat: { enabled: false },
+  });
+  await assert.rejects(() => service.dispatchDue("Bearer wrong"), (error) => error.status === 401);
+  assert.deepEqual(await service.dispatchDue("Bearer synthetic-dispatch-secret"), { processed: 0, results: [] });
+});
+
 test("an unmatched STOP suppresses the phone destination and is still logged", async () => {
   const repository = inMemoryRepository();
   let phoneSuppression = null;

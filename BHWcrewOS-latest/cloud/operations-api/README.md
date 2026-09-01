@@ -48,7 +48,9 @@ HR data.
 | `PATIENT_NOTIFICATION_RULES_JSON` | Optional rule enable/template/cooldown overrides |
 | `SMS_TIME_ZONE` | Quiet-hours timezone; defaults to `America/New_York` |
 | `SMS_QUIET_HOURS_START` / `SMS_QUIET_HOURS_END` | Quiet-hours window; defaults to `20:00` / `08:00` |
-| `WORKFLOW_DISPATCH_SECRET` | Authenticates the queued-message dispatcher |
+| `WORKFLOW_DISPATCH_AUDIENCE` | HTTPS audience for the Cloud Scheduler OIDC token |
+| `WORKFLOW_DISPATCH_SERVICE_ACCOUNT` | Exact scheduler service-account email allowed to dispatch queued messages |
+| `WORKFLOW_DISPATCH_SECRET` | Optional legacy shared-secret dispatcher authentication; prefer OIDC |
 | `DIALPAD_TOKEN` / `DIALPAD_FROM` | Approved Dialpad SMS credentials/from number |
 | `DIALPAD_WEBHOOK_SECRET` | Verifies signed Dialpad inbound/status callbacks |
 | `DIALPAD_API_BASE` | Optional Dialpad API base; HTTPS only |

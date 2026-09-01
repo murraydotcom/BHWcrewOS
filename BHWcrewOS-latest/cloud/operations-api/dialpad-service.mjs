@@ -154,7 +154,7 @@ export function createDialpadService(environment = process.env, fetchImpl = fetc
       const destination = normalizePhone(to);
       const message = cleanText(text, 480);
       if (!destination || !message) throw Object.assign(new Error("valid SMS destination and message are required"), { status: 400 });
-      const response = await fetchImpl(`${apiBase}/sms?apikey=${encodeURIComponent(token)}`, {
+      const response = await fetchImpl(`${apiBase}/sms`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
