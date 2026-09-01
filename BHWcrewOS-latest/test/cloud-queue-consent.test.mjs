@@ -175,6 +175,12 @@ test("a failed CRISP batch reports how many rows were safely retained", async ()
   );
 });
 
+test("the CrewHQ TCM page labels a user-selected CRISP workbook with allowed provenance", async () => {
+  const html = await readFile(new URL("../provider/tcm.html", import.meta.url), "utf8");
+  assert.match(html, /source: "CrewHQ Panel and Discharges",/);
+  assert.match(html, /sourceFile: file\.name,[\s\S]{0,240}manual: true,/);
+});
+
 test("CrewHQ frontend exposes verified-consent controls and preserves the provider gate", async () => {
   const [html, app, registry, registryHtml, gate] = await Promise.all([
     readFile(new URL("../provider/transcription.html", import.meta.url), "utf8"),

@@ -252,7 +252,9 @@ async function loadFile(file) {
       const saved = await CLOUD.importTcmEvents(rows, {
         source: "CrewHQ Panel and Discharges",
         sourceFile: file.name,
-        manual: false,
+        // This file was selected by a signed-in CrewHQ user. The cloud uses
+        // this provenance flag to distinguish it from an automated feed.
+        manual: true,
         onProgress: ({ processed, total, batch, batches }) => {
           $("parseNote").textContent = `Retaining CRISP events… ${processed} of ${total} saved (batch ${batch} of ${batches}).`;
         },
