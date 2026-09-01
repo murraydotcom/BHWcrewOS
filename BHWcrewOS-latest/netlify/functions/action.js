@@ -44,20 +44,14 @@ function indexInsurance(patient) {
 }
 
 function patientIndexProperties(patient) {
-  const insurance = indexInsurance(patient);
-  const props = {
+  // This row exists only so the remaining Notion-backed CrewOS workflows can
+  // hold a relation to the authoritative Cloud patient. Keep the mirror
+  // deliberately minimal: optional Index columns have changed over time and a
+  // removed column must never prevent staff from selecting an existing patient.
+  return {
     "Patient Name": W.title(patient.name),
     "DOB": W.date(patient.dob),
-    "Status": W.sel("Active"),
   };
-  if (insurance) props["Insurance"] = W.sel(insurance);
-  if (patient.memberId) props["Insurance Member ID"] = W.text(patient.memberId);
-  if (patient.mrn) props["CharmHealth Chart #"] = W.text(patient.mrn);
-  if (patient.medicareMbi) props["Medicare MBI"] = W.text(patient.medicareMbi);
-  if (patient.email) props["Email"] = { email: patient.email };
-  if (patient.guardianEmail) props["Guardian Email"] = { email: patient.guardianEmail };
-  if (patient.programs?.length) props["Active Divisions"] = { multi_select: patient.programs.map((name) => ({ name })) };
-  return props;
 }
 
 let awvPropsEnsured = false;
