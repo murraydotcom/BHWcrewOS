@@ -80,6 +80,7 @@ test("selecting a Cloud-only patient creates one CrewOS link without duplicating
   assert.equal(writes.length, 1);
   assert.equal(writes[0].db, "patients-db");
   assert.equal(writes[0].properties["Patient Name"].title, cloudPatient.name);
+  assert.deepEqual(Object.keys(writes[0].properties).sort(), ["DOB", "Patient Name"]);
 });
 
 test("the picker chooses a Master patient through patient-select, not patient-create", async () => {
