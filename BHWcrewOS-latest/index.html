@@ -2427,6 +2427,8 @@ async function cmVerifyPatient360(assessmentId, kind){
   const assessment = (list||[]).find(x=>x.id===assessmentId);
   const status = document.getElementById("ss-p360");
   if(!assessment?.patient || !status) return;
+  const checkKey = `${kind}:${assessmentId}`;
+  status.dataset.patientCheck = checkKey;
   status.className = "pill warn";
   status.textContent = "Checking Patient Registry match…";
   try{
@@ -2434,14 +2436,16 @@ async function cmVerifyPatient360(assessmentId, kind){
       api(API_ACT, {action:"cm-screening-readiness", patientId:assessment.patient}),
       new Promise((_, reject)=>setTimeout(()=>reject(new Error("Patient Registry check timed out. Close this window and try again.")), 15000)),
     ]);
-    if(document.getElementById("ss-p360")!==status) return;
+    const liveStatus = document.getElementById("ss-p360");
+    if(!liveStatus || liveStatus.dataset.patientCheck!==checkKey) return;
     assessment.patientBhwId = result.bhwPatientId;
-    status.className = "pill ok";
-    status.textContent = `Patient 360 matched · ${result.bhwPatientId}`;
+    liveStatus.className = "pill ok";
+    liveStatus.textContent = `Patient 360 matched · ${result.bhwPatientId}`;
   }catch(error){
-    if(document.getElementById("ss-p360")!==status) return;
-    status.className = "pill alert";
-    status.textContent = `Patient check needs review · ${error.message}`;
+    const liveStatus = document.getElementById("ss-p360");
+    if(!liveStatus || liveStatus.dataset.patientCheck!==checkKey) return;
+    liveStatus.className = "pill alert";
+    liveStatus.textContent = `Patient check needs review · ${error.message}`;
   }
 }
 async function cmSendGo(assessmentId, kind){

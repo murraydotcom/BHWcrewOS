@@ -3,7 +3,7 @@ const crypto = require("crypto");
 const https = require("https");
  
 // Works on every Node runtime (no fetch dependency)
-function httpJson(method, url, body) {
+function httpJson(method, url, body, { timeoutMs = 0 } = {}) {
   return new Promise((resolve, reject) => {
     const u = new URL(url);
     const data = body ? JSON.stringify(body) : null;
@@ -27,6 +27,9 @@ function httpJson(method, url, body) {
       });
     });
     req.on("error", reject);
+    if (timeoutMs > 0) {
+      req.setTimeout(timeoutMs, () => req.destroy(new Error(`Request timed out after ${timeoutMs}ms`)));
+    }
     if (data) req.write(data);
     req.end();
   });

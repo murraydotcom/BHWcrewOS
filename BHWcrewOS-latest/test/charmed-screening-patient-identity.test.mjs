@@ -176,4 +176,6 @@ test("the send dialog shows Patient 360 readiness before staff approval", async 
   assert.match(html, /cm-screening-readiness/);
   assert.match(html, /Patient check needs review/);
   assert.match(html, /Patient Registry check timed out/);
+  assert.match(html, /dataset\.patientCheck/);
+  assert.match(await readFile(new URL("../netlify/functions/action.js", import.meta.url), "utf8"), /timeoutMs: 12_000/);
 });
