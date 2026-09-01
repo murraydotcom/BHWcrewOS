@@ -9,9 +9,9 @@ const provider = path.join(root, "provider");
 
 test("Patient 360 uses the Opal and Ironstone palette and typography", () => {
   const css = fs.readFileSync(path.join(provider, "patient-360.css"), "utf8");
-  assert.match(css, /--paper:#F4F7F7/);
-  assert.match(css, /--paper-2:#EDF3F5/);
-  assert.match(css, /--card:#FFFFFF/);
+  assert.match(css, /--paper:#F8F6F1/);
+  assert.match(css, /--paper-2:#F7F3EA/);
+  assert.match(css, /--card:#FEFDFB/);
   assert.match(css, /--sidebar:#0F2230/);
   assert.match(css, /--serif:"Montserrat",system-ui,sans-serif/);
   assert.doesNotMatch(css, /Playfair Display/);
@@ -32,6 +32,12 @@ test("Patient 360 uses the Opal and Ironstone palette and typography", () => {
   assert.match(css, /\.health-callout\.purple\{background:color-mix/);
   assert.match(css, /\.health-callout\.coral\{background:color-mix/);
   assert.match(css, /\.safe-notice\{background:color-mix/);
+  assert.match(css, /Each longitudinal view has its own opal fire/);
+  for (const view of ["overview", "atlas", "timeline", "mechanism", "context", "plan", "data", "sources"]) {
+    assert.match(css, new RegExp(`body\\[data-p360-view="${view}"\\]\\{--page-accent:`));
+  }
+  assert.match(css, /body\[data-p360-view\] \.navigator-hero\{[^}]*linear-gradient/);
+  assert.match(css, /body\[data-p360-view\] \.panel,body\[data-p360-view\] \.overview-card\{[^}]*linear-gradient/);
 });
 
 test("every Patient 360 page loads the design-system font families", () => {

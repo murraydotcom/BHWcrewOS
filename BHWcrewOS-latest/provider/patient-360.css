@@ -1,8 +1,9 @@
 :root{
-  --paper:#F4F7F7;--paper-2:#EDF3F5;--card:#FFFFFF;--ink:#2A3A40;--muted:#6E6B62;--line:rgba(43,58,64,.10);
+  --paper:#F8F6F1;--paper-2:#F7F3EA;--card:#FEFDFB;--ink:#2A3A40;--muted:#6E6B62;--line:rgba(43,58,64,.10);
   --teal:#3D6E7E;--teal-soft:#DBE8ED;--green:#4D7159;--green-soft:#DDE7DD;--purple:#6A5480;
   --purple-soft:#E6DDEC;--gold:#C0A046;--gold-soft:#F0DDAF;--coral:#B15540;--coral-soft:#F3DED6;
-  --blue:#6E9EB3;--sidebar:#0F2230;--shadow:0 1px 2px rgba(44,35,27,.07);--serif:"Montserrat",system-ui,sans-serif;--sans:"Montserrat",system-ui,sans-serif;
+  --blue:#6E9EB3;--rose:#9A6670;--rose-soft:#E7CBCB;--slate:#527180;--slate-soft:#DCE8EC;--clay:#756252;--clay-soft:#EEE6DE;
+  --sidebar:#0F2230;--shadow:0 1px 2px rgba(44,35,27,.07);--serif:"Montserrat",system-ui,sans-serif;--sans:"Montserrat",system-ui,sans-serif;
   --text-xs:.833rem;--text-sm:.889rem;--text-base:1rem;--text-md:1.125rem;--text-lg:1.35rem;--text-xl:1.62rem;
   --leading-normal:1.55;--radius-lg:18px;--radius-pill:999px;--ring:#C0A046;
   --edge-gold:inset 0 0 0 1px color-mix(in srgb,var(--gold) 42%,transparent);
@@ -12,6 +13,7 @@
   --paper:#0A1822;--paper-2:#071019;--card:#0F2230;--ink:#E9E3D6;--muted:#9AA39B;--line:rgba(233,227,214,.12);
   --teal:#97BACB;--teal-soft:#223E48;--green:#9CB5A2;--green-soft:#2B4133;--purple:#B9A6C9;--purple-soft:#3B2C49;
   --gold:#D6B25C;--gold-soft:rgba(214,178,92,.18);--coral:#E0A896;--coral-soft:rgba(177,85,64,.24);--sidebar:#071019;
+  --rose:#D4AEAE;--rose-soft:#4A3038;--slate:#97BACB;--slate-soft:#223E48;--clay:#D3BF9F;--clay-soft:#493A2C;
   --ring:#D6B25C;--shadow:0 1px 2px rgba(0,0,0,.28);
   --opal-stone:radial-gradient(58% 78% at 20% 24%,rgba(96,158,180,.42),transparent 62%),radial-gradient(54% 74% at 82% 20%,rgba(142,114,168,.36),transparent 62%),radial-gradient(64% 82% at 74% 82%,rgba(104,150,120,.36),transparent 62%),radial-gradient(46% 62% at 46% 50%,rgba(214,178,92,.16),transparent 66%),linear-gradient(135deg,#0A1822,#11253A 52%,#0C1E2E 100%)
 }
@@ -120,4 +122,24 @@ th{font-size:var(--text-xs)}
 .table-wrap{border-radius:8px}
 th{background:color-mix(in srgb,var(--card) 76%,var(--teal-soft))}
 @media(max-width:900px){.body-center{min-height:0}.health-callout{min-height:0}}
+
+/* Each longitudinal view has its own opal fire on the shared calm-cream canvas. */
+body[data-p360-view="overview"]{--page-accent:var(--blue);--page-soft:var(--teal-soft)}
+body[data-p360-view="atlas"]{--page-accent:var(--green);--page-soft:var(--green-soft)}
+body[data-p360-view="timeline"]{--page-accent:var(--purple);--page-soft:var(--purple-soft)}
+body[data-p360-view="mechanism"]{--page-accent:var(--coral);--page-soft:var(--coral-soft)}
+body[data-p360-view="context"]{--page-accent:var(--rose);--page-soft:var(--rose-soft)}
+body[data-p360-view="plan"]{--page-accent:var(--teal);--page-soft:var(--teal-soft)}
+body[data-p360-view="data"]{--page-accent:var(--slate);--page-soft:var(--slate-soft)}
+body[data-p360-view="sources"]{--page-accent:var(--clay);--page-soft:var(--clay-soft)}
+body[data-p360-view]{--page-pearl:color-mix(in srgb,var(--card) 62%,var(--page-soft));--page-pearl-light:color-mix(in srgb,var(--card) 84%,var(--page-soft))}
+body[data-p360-view] .navigator-hero{background-color:var(--card);background-image:linear-gradient(135deg,var(--card) 18%,var(--page-pearl) 100%)}
+body[data-p360-view] .panel,body[data-p360-view] .overview-card{background-color:var(--card);background-image:linear-gradient(145deg,var(--card) 58%,var(--page-pearl-light) 100%)}
+body[data-p360-view] .body-center,body[data-p360-view] .atlas-prompt-card,body[data-p360-view] .atlas-map-card,body[data-p360-view] .snapshot,body[data-p360-view] .data-card,body[data-p360-view] .system,body[data-p360-view] .mechanism-step,body[data-p360-view] .domain,body[data-p360-view] .due-grid>div,body[data-p360-view] .personalized-grid>div{background-color:var(--page-pearl-light);background-image:linear-gradient(145deg,var(--card) 22%,var(--page-pearl) 100%)}
+body[data-p360-view] .hero-aside,body[data-p360-view] .safe-notice,body[data-p360-view] th{background-color:var(--page-pearl-light);background-image:linear-gradient(135deg,var(--card) 30%,var(--page-pearl) 100%)}
+body[data-p360-view] .safe-notice{border-left-color:var(--page-accent)}
+body[data-p360-view] .eyebrow,body[data-p360-view] .callout-head>a,body[data-p360-view] .body-focus-copy a,body[data-p360-view] .trend-heading div span,body[data-p360-view] .prominent-timeline time,body[data-p360-view] .visit-note-card summary{color:var(--page-accent)}
+body[data-p360-view] .section-number,body[data-p360-view] .section-number.purple,body[data-p360-view] .section-number.green,body[data-p360-view] .section-number.gold,body[data-p360-view] .section-number.coral{border-color:var(--page-accent);color:var(--page-accent)}
+body[data-p360-view] .page-nav a:hover,body[data-p360-view] .page-nav a.active{border-bottom-color:var(--page-accent);color:var(--page-accent)}
+body[data-p360-view] .btn.primary{background:var(--page-accent);border-color:var(--page-accent)}
 
