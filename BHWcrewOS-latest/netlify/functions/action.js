@@ -51,6 +51,9 @@ function patientIndexProperties(patient) {
   return {
     "Patient Name": W.title(patient.name),
     "DOB": W.date(patient.dob),
+    // The Index's auto-number is only a local CrewOS relation number. Keep the
+    // authoritative RCM patient ID in the existing writable text property.
+    "Patient ID #": W.text(patient.bhwPatientId),
   };
 }
 
@@ -403,12 +406,21 @@ exports.handler = async (event) => {
           return json(409, { error: "CrewOS has more than one record with this exact name and birthday. Please resolve the duplicate Patient Index records before selecting this patient." });
         }
 
-        let indexId = exactIndexMatches[0]?.id || "";
+        const exactIndex = exactIndexMatches[0] || null;
+        let indexId = exactIndex?.id || "";
         let linked = false;
         if (!indexId) {
           const index = await createPage(DB.patients, patientIndexProperties(patient));
           indexId = index.id;
           linked = true;
+        } else {
+          const storedMasterId = P.text(exactIndex.properties["Patient ID #"]).trim().toUpperCase();
+          if (storedMasterId && storedMasterId !== bhwPatientId) {
+            return json(409, { error: "This CrewOS patient link points to a different Master Patient ID. Please resolve the identity link before continuing." });
+          }
+          if (!storedMasterId) {
+            await updatePage(indexId, { "Patient ID #": W.text(patient.bhwPatientId) });
+          }
         }
 
         return json(200, {
@@ -526,13 +538,11 @@ exports.handler = async (event) => {
         //    relations keep working. crewOS references the Index id, so that's
         //    what we return as `id`.
         const indexProps = {
-          "Patient Name": W.title(name),
-          "DOB": W.date(b.dob),
+          ...patientIndexProperties({ name, dob: b.dob, bhwPatientId: ctlNo }),
           "Status": W.sel("Active"),
         };
         if (b.insurance) indexProps["Insurance"] = W.sel(b.insurance);
         if (b.memberId) indexProps["Insurance Member ID"] = W.text(b.memberId);
-        if (b.chart) indexProps["CharmHealth Chart #"] = W.text(b.chart);
         if (mbi) indexProps["Medicare MBI"] = W.text(mbi);
         if (b.email) indexProps["Email"] = { email: b.email };
         if (b.guardianEmail) indexProps["Guardian Email"] = { email: b.guardianEmail };
