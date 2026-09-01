@@ -126,6 +126,12 @@ export function optionalBhwPatientId(value) {
   return id;
 }
 
+export function assertBhwPatientId(value) {
+  const id = optionalBhwPatientId(value);
+  if (!id) throw apiError(400, "validation_error", "bhwPatientId is required");
+  return id;
+}
+
 export function requireExternalId(value, prefix, field = "id") {
   const id = cleanText(value, 96, { required: true, field });
   if (!EXTERNAL_ID_PATTERN.test(id) || !id.startsWith(`${prefix}-`)) {

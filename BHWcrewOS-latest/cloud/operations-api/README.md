@@ -16,9 +16,12 @@ HR data.
   operational handoff marker; this API does not write claims, remits, or RCM
   workflow state.
 - WelcomeToBHW is HR-only and is not called by this service.
-- No Google Chat message or SMS is sent. Notification metadata is recorded with
-  `automationEnabled: false`, `policy: "manual-only"`, and
-  `deliveryState: "not-scheduled"` so automation can be added later.
+- Google Chat is a no-PHI mirror with role/service-line routing, actionable
+  cards, and CrewOS deep links. CrewOS/Firestore remains authoritative.
+- Patient SMS uses Dialpad only. State-specific templates avoid equating PA
+  submission with approval or referral transmission with scheduling.
+- Automation fails closed when disabled or unconfigured, and applies consent,
+  suppression, quiet-hours, safety-hold, cooldown, and idempotency controls.
 
 ## Authentication
 
@@ -40,6 +43,22 @@ HR data.
 | `CARE_CONNECT_INTAKE_SECRET` | Shared only with the Care Connect server/bridge |
 | `CARE_CONNECT_CLIENT_ID` | Optional; defaults to `care-connect` |
 | `ALLOWED_ORIGINS` | Comma-separated exact CrewOS origins for staff browser calls |
+| `PATIENT_WORKFLOW_AUTOMATION_ENABLED` | Master SMS dispatch gate; anything except `true` suppresses sends |
+| `PATIENT_PORTAL_URL` | HTTPS secure patient-page link used by no-PHI templates |
+| `PATIENT_NOTIFICATION_RULES_JSON` | Optional rule enable/template/cooldown overrides |
+| `SMS_TIME_ZONE` | Quiet-hours timezone; defaults to `America/New_York` |
+| `SMS_QUIET_HOURS_START` / `SMS_QUIET_HOURS_END` | Quiet-hours window; defaults to `20:00` / `08:00` |
+| `WORKFLOW_DISPATCH_SECRET` | Authenticates the queued-message dispatcher |
+| `DIALPAD_TOKEN` / `DIALPAD_FROM` | Approved Dialpad SMS credentials/from number |
+| `DIALPAD_WEBHOOK_SECRET` | Verifies signed Dialpad inbound/status callbacks |
+| `DIALPAD_API_BASE` | Optional Dialpad API base; HTTPS only |
+| `GOOGLE_CHAT_ENABLED` | Master Google Chat dispatch gate |
+| `GOOGLE_CHAT_AUTH_AUDIENCE` | Audience used to verify Google Chat interaction tokens |
+| `GOOGLE_CHAT_SPACES_JSON` | Team/service-line to `spaces/...` routing map |
+| `GOOGLE_CHAT_DEFAULT_SPACE` | Optional safe fallback Chat space |
+| `GOOGLE_CHAT_STAFF_ROLES_JSON` | Staff email to CrewOS role mapping for card actions |
+| `GOOGLE_CHAT_CARD_UPDATES_ENABLED` | Gates API-based card edits after initial send |
+| `CREWOS_REQUESTS_URL` | HTTPS deep-link base for Patient Requests |
 
 Use Secret Manager references when setting both secrets on Cloud Run. The
 service account needs only the Firestore permissions required for the listed
@@ -54,11 +73,20 @@ collections. Do not put either secret or a service-account key in the repo.
 | `POST /v1/intake/patient-requests` | Care Connect server | Atomic request + triage task + inbound communication + audit |
 | `GET/POST /v1/patient-requests` | CrewOS | List or create operational requests |
 | `GET /v1/patient-requests/:id` | CrewOS | Read one request |
+| `POST /v1/patient-requests/:id/actions` | CrewOS / Chat | Assign, start, milestone, resolve, reopen, escalate, or unassign |
+| `POST /v1/patient-requests/:id/notify` | CrewOS | Apply the current safe template through the approved channel |
+| `POST /v1/patient-requests/:id/messages` | CrewOS | Send an attested no-PHI manual SMS through Dialpad |
+| `GET /v1/patient-requests/:id/communications` | CrewOS | Read inbound/outbound delivery and suppression history |
 | `PATCH /v1/patient-requests/:id/status` | CrewOS | Validated state transition and timestamp/audit update |
 | `POST /v1/patient-requests/:id/tasks` | CrewOS | Add a linked task |
 | `GET /v1/tasks` | CrewOS | Filter by status, team, or request |
 | `PATCH /v1/tasks/:id/status` | CrewOS | Validated task transition and audit update |
-| `GET/POST /v1/communications` | CrewOS | Read or record communications; never dispatches them |
+| `GET/POST /v1/communications` | CrewOS | Read or record compatibility communications |
+| `GET /v1/notification-rules` | CrewOS | Read effective receipt/progress/waiting/completed rules |
+| `PATCH /v1/notification-rules/:id` | Operations | Change one safe notification rule |
+| `POST /v1/chat/events` | Google Chat | Verified app installation, messages, and card actions |
+| `POST /v1/webhooks/dialpad` | Dialpad | Verified inbound SMS, STOP/START, and delivery updates |
+| `POST /v1/workflow/dispatch` | Scheduler | Dispatch quiet-hours messages that are due |
 
 The intake request must use a stable idempotency key. Replaying the same key and
 same normalized body returns the original request. Reusing the key with different

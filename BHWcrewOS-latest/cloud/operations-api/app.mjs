@@ -74,8 +74,18 @@ function intakeActor(request, environment) {
   );
 }
 
+function workflowActor(actor = {}) {
+  return {
+    ...actor,
+    sub: actor.sub || actor.id || (actor.staffId ? `crew:${actor.staffId}` : "system"),
+    name: actor.name || actor.id || "CrewOS",
+    role: actor.role || "staff",
+  };
+}
+
 export function createOperationsApp({
   repository,
+  workflow = null,
   environment = process.env,
   now = () => new Date(),
   idFactory,
@@ -88,7 +98,25 @@ export function createOperationsApp({
       const url = new URL(request.url);
       if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
       if (url.pathname === "/health" && request.method === "GET") {
-        return json(200, { ok: true, service: "bhw-operations-api", schemaVersion: SCHEMA_VERSION }, cors);
+        return json(200, {
+          ok: true,
+          service: "bhw-operations-api",
+          schemaVersion: SCHEMA_VERSION,
+          workflowAutomationEnabled: workflow?.automationEnabled === true,
+        }, cors);
+      }
+
+      if (url.pathname === "/v1/chat/events" && request.method === "POST") {
+        if (!workflow) throw apiError(503, "workflow_not_configured", "Google Chat workflow is not configured");
+        return json(200, await workflow.handleChatEvent(request), cors);
+      }
+      if (url.pathname === "/v1/webhooks/dialpad" && request.method === "POST") {
+        if (!workflow) throw apiError(503, "workflow_not_configured", "Dialpad workflow is not configured");
+        return json(200, await workflow.handleDialpadWebhook(await request.text()), cors);
+      }
+      if (url.pathname === "/v1/workflow/dispatch" && request.method === "POST") {
+        if (!workflow) throw apiError(503, "workflow_not_configured", "workflow dispatcher is not configured");
+        return json(200, await workflow.dispatchDue(request.headers.get("authorization")), cors);
       }
       if (url.pathname === "/v1/contracts/communication-foundation" && request.method === "GET") {
         staffActor(request, environment, now);
@@ -102,7 +130,7 @@ export function createOperationsApp({
           communicationDirections: COMMUNICATION_DIRECTIONS,
           communicationChannels: COMMUNICATION_CHANNELS,
           communicationStatuses: COMMUNICATION_STATUSES,
-          notificationAutomationEnabled: false,
+          notificationAutomationEnabled: workflow?.automationEnabled === true,
         }, cors);
       }
 
@@ -117,14 +145,37 @@ export function createOperationsApp({
           key: idempotencyKey,
           payloadHash: bundle.payloadHash,
         });
-        return json(result.replayed ? 200 : 201, { ok: true, replayed: result.replayed, patientRequest: result.request }, cors);
+        let automation = null;
+        if (workflow && !result.replayed) {
+          automation = await workflow.syncCreatedRequest(result.request.patientRequestId, {
+            sub: `integration:${actor.id}`,
+            name: actor.id,
+            role: "system",
+            source: "care-connect",
+          });
+        }
+        return json(result.replayed ? 200 : 201, {
+          ok: true,
+          replayed: result.replayed,
+          patientRequest: automation?.request || result.request,
+          notification: automation?.notification || null,
+          chat: automation?.chat || null,
+        }, cors);
       }
 
       const actor = staffActor(request, environment, now);
       if (url.pathname === "/v1/patient-requests" && request.method === "GET") {
-        return json(200, { ok: true, patientRequests: await repository.listPatientRequests(queryFilters(url)) }, cors);
+        const rows = workflow
+          ? await workflow.listRequests(queryFilters(url), workflowActor(actor))
+          : await repository.listPatientRequests(queryFilters(url));
+        return json(200, { ok: true, requests: rows, patientRequests: rows }, cors);
       }
       if (url.pathname === "/v1/patient-requests" && request.method === "POST") {
+        if (workflow) {
+          const body = await readJson(request);
+          const result = await workflow.createRequest(body, workflowActor(actor));
+          return json(201, { ok: true, ...result }, cors);
+        }
         const idempotencyKey = requireIdempotencyKey(request.headers.get("idempotency-key"));
         const body = await readJson(request);
         const timestamp = now().toISOString();
@@ -139,7 +190,36 @@ export function createOperationsApp({
 
       const requestMatch = url.pathname.match(/^\/v1\/patient-requests\/([^/]+)$/);
       if (requestMatch && request.method === "GET") {
-        return json(200, { ok: true, patientRequest: await repository.getPatientRequest(decodeURIComponent(requestMatch[1])) }, cors);
+        const patientRequest = workflow
+          ? await workflow.getRequest(decodeURIComponent(requestMatch[1]), workflowActor(actor))
+          : await repository.getPatientRequest(decodeURIComponent(requestMatch[1]));
+        return json(200, { ok: true, request: patientRequest, patientRequest }, cors);
+      }
+      const requestActionMatch = url.pathname.match(/^\/v1\/patient-requests\/([^/]+)\/actions$/);
+      if (requestActionMatch && request.method === "POST") {
+        if (!workflow) throw apiError(503, "workflow_not_configured", "patient request actions are not configured");
+        return json(200, { ok: true, ...(await workflow.action(
+          decodeURIComponent(requestActionMatch[1]), await readJson(request), workflowActor(actor),
+        )) }, cors);
+      }
+      const requestNotifyMatch = url.pathname.match(/^\/v1\/patient-requests\/([^/]+)\/notify$/);
+      if (requestNotifyMatch && request.method === "POST") {
+        if (!workflow) throw apiError(503, "workflow_not_configured", "patient notifications are not configured");
+        const result = await workflow.manualNotify(decodeURIComponent(requestNotifyMatch[1]), await readJson(request), workflowActor(actor));
+        return json(result.status === "sent" ? 200 : 202, { ok: true, ...result, communicationId: result.communication?.id || "" }, cors);
+      }
+      const requestMessagesMatch = url.pathname.match(/^\/v1\/patient-requests\/([^/]+)\/messages$/);
+      if (requestMessagesMatch && request.method === "POST") {
+        if (!workflow) throw apiError(503, "workflow_not_configured", "patient messaging is not configured");
+        const result = await workflow.sendManualSms(decodeURIComponent(requestMessagesMatch[1]), await readJson(request), workflowActor(actor));
+        return json(result.status === "sent" ? 200 : 202, { ok: true, ...result, communicationId: result.communication?.id || "" }, cors);
+      }
+      const requestCommunicationsMatch = url.pathname.match(/^\/v1\/patient-requests\/([^/]+)\/communications$/);
+      if (requestCommunicationsMatch && request.method === "GET") {
+        if (!workflow) throw apiError(503, "workflow_not_configured", "patient communications are not configured");
+        return json(200, { ok: true, communications: await workflow.listCommunications(
+          decodeURIComponent(requestCommunicationsMatch[1]), workflowActor(actor),
+        ) }, cors);
       }
       const requestStatusMatch = url.pathname.match(/^\/v1\/patient-requests\/([^/]+)\/status$/);
       if (requestStatusMatch && request.method === "PATCH") {
@@ -186,6 +266,19 @@ export function createOperationsApp({
           { now: now().toISOString(), idFactory },
         );
         return json(201, { ok: true, communication }, cors);
+      }
+
+      if (url.pathname === "/v1/notification-rules" && request.method === "GET") {
+        if (!workflow) throw apiError(503, "workflow_not_configured", "notification rules are not configured");
+        return json(200, { ok: true, rules: await workflow.listNotificationRules() }, cors);
+      }
+      const notificationRuleMatch = url.pathname.match(/^\/v1\/notification-rules\/([^/]+)$/);
+      if (notificationRuleMatch && request.method === "PATCH") {
+        if (!workflow) throw apiError(503, "workflow_not_configured", "notification rules are not configured");
+        const rule = await workflow.saveNotificationRule(
+          decodeURIComponent(notificationRuleMatch[1]), await readJson(request), workflowActor(actor),
+        );
+        return json(200, { ok: true, rule }, cors);
       }
 
       return json(404, { ok: false, code: "not_found", error: "route was not found" }, cors);

@@ -258,7 +258,7 @@ function startAlertCenter(token) {
     if (refreshing) return;
     refreshing = true;
     try {
-      clientPromise ||= import("/provider/cloud-queue.mjs").then(({ createEncounterCloudClient }) => createEncounterCloudClient());
+      clientPromise ||= import("/provider/operations-queue.mjs").then(({ createOperationsCloudClient }) => createOperationsCloudClient());
       const client = await clientPromise;
       if (!client) throw new Error("Google workflow backend is not configured");
       applyRequests(await client.listPatientRequests({ status: "open", limit: 300 }));
