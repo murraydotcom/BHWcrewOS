@@ -63,17 +63,25 @@ function deliveryStatus(value) {
 
 function parameterObject(parameters) {
   if (!parameters) return {};
+  const valueOf = (value) => {
+    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value);
+    if (Array.isArray(value)) return valueOf(value.find((entry) => valueOf(entry)));
+    if (value && typeof value === "object") return valueOf(value.value ?? value.stringValue ?? value.string_value);
+    return "";
+  };
   if (Array.isArray(parameters)) {
-    return Object.fromEntries(parameters.filter((entry) => entry?.key).map((entry) => [entry.key, entry.value]));
+    return Object.fromEntries(parameters.map((entry) => [entry?.key, valueOf(entry?.value)]).filter(([key, value]) => key && value));
   }
-  return typeof parameters === "object" ? { ...parameters } : {};
+  return typeof parameters === "object"
+    ? Object.fromEntries(Object.entries(parameters).map(([key, value]) => [key, valueOf(value)]).filter(([, value]) => value))
+    : {};
 }
 
 function chatActionParameters(event = {}) {
   return {
-    ...parameterObject(event.action?.parameters),
     ...parameterObject(event.common?.invokedFunctionParameters),
     ...parameterObject(event.common?.parameters),
+    ...parameterObject(event.action?.parameters),
   };
 }
 
