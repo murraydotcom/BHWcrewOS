@@ -2,7 +2,7 @@
   --paper:#F8F6F1;--paper-2:#F7F3EA;--card:#FEFDFB;--ink:#2A3A40;--muted:#6E6B62;--line:rgba(43,58,64,.10);
   --teal:#3D6E7E;--teal-soft:#DBE8ED;--green:#4D7159;--green-soft:#DDE7DD;--purple:#6A5480;
   --purple-soft:#E6DDEC;--gold:#C0A046;--gold-soft:#F0DDAF;--coral:#B15540;--coral-soft:#F3DED6;
-  --blue:#6E9EB3;--sidebar:#0F2230;--shadow:0 2px 6px rgba(44,35,27,.08);--serif:"Playfair Display",Georgia,serif;--sans:"Montserrat",system-ui,sans-serif;
+  --blue:#6E9EB3;--sidebar:#0F2230;--shadow:0 1px 2px rgba(44,35,27,.07);--serif:"Montserrat",system-ui,sans-serif;--sans:"Montserrat",system-ui,sans-serif;
   --text-xs:.833rem;--text-sm:.889rem;--text-base:1rem;--text-md:1.125rem;--text-lg:1.35rem;--text-xl:1.62rem;
   --leading-normal:1.55;--radius-lg:18px;--radius-pill:999px;--ring:#C0A046;
   --edge-gold:inset 0 0 0 1px color-mix(in srgb,var(--gold) 42%,transparent);
@@ -12,7 +12,7 @@
   --paper:#0A1822;--paper-2:#071019;--card:#0F2230;--ink:#E9E3D6;--muted:#9AA39B;--line:rgba(233,227,214,.12);
   --teal:#97BACB;--teal-soft:#223E48;--green:#9CB5A2;--green-soft:#2B4133;--purple:#B9A6C9;--purple-soft:#3B2C49;
   --gold:#D6B25C;--gold-soft:rgba(214,178,92,.18);--coral:#E0A896;--coral-soft:rgba(177,85,64,.24);--sidebar:#071019;
-  --ring:#D6B25C;--shadow:0 2px 8px rgba(0,0,0,.45);
+  --ring:#D6B25C;--shadow:0 1px 2px rgba(0,0,0,.28);
   --opal-stone:radial-gradient(58% 78% at 20% 24%,rgba(96,158,180,.42),transparent 62%),radial-gradient(54% 74% at 82% 20%,rgba(142,114,168,.36),transparent 62%),radial-gradient(64% 82% at 74% 82%,rgba(104,150,120,.36),transparent 62%),radial-gradient(46% 62% at 46% 50%,rgba(214,178,92,.16),transparent 66%),linear-gradient(135deg,#0A1822,#11253A 52%,#0C1E2E 100%)
 }
 *{box-sizing:border-box}
@@ -84,4 +84,32 @@ th{font-size:var(--text-xs)}
 .badge,.page-nav a{border-radius:var(--radius-pill)}
 .hero-aside{background:color-mix(in srgb,var(--card) 76%,transparent);border-color:color-mix(in srgb,var(--card) 70%,var(--line))}
 .body-center{min-height:580px}.health-callout{min-height:150px}
+
+/* Professional clinical refinement: quiet surfaces, restrained accents and one sans-serif family. */
+.navigator-hero{background:var(--card);border-color:var(--line);border-radius:12px;padding:24px;box-shadow:none}
+.navigator-hero:after{display:none}
+.navigator-hero h1{font-size:clamp(28px,3.2vw,42px);font-weight:600;line-height:1.12;letter-spacing:-.025em}
+.navigator-hero .subtitle{margin-top:8px;font-family:var(--sans);font-size:var(--text-base);font-style:normal;font-weight:400;line-height:1.55}
+.brand h1,.worksheet-heading h2,.panel-head h3,.overview-card h3,.body-caption b,.trend-heading b,.data-card h4,.atlas-prompt-card>b,.atlas-map-card h4,.atlas-location-key>h4,.atlas-evidence-key>b{font-family:var(--sans);font-weight:600}
+.worksheet-heading h2{font-size:clamp(22px,2.5vw,30px);line-height:1.2;letter-spacing:-.015em}
+.worksheet-heading p,.trajectory:after{font-family:var(--sans);font-style:normal}
+.panel-head h3{font-size:var(--text-md)}
+.overview-card h3{font-size:var(--text-lg)}
+.eyebrow{letter-spacing:1px}
+.panel,.overview-card,.health-callout,.body-center,.atlas-prompt-card,.atlas-map-card,.snapshot,.data-card,.system,.mechanism-step{border-radius:10px;box-shadow:none}
+.hero-aside{background:var(--paper-2);border-color:var(--line);border-radius:10px}
+.btn{border-radius:8px;box-shadow:none}
+.btn:hover{transform:none;border-color:color-mix(in srgb,var(--teal) 55%,var(--line))}
+.page-nav{gap:2px;border-bottom:1px solid var(--line)}
+.page-nav a{background:transparent;border:0;border-bottom:2px solid transparent;border-radius:0;padding:9px 11px}
+.page-nav a:hover,.page-nav a.active{background:transparent;border-color:transparent;border-bottom-color:var(--teal);color:var(--teal)}
+.safe-notice{background:var(--paper-2);border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:8px}
+.section-number,.section-number.purple,.section-number.green,.section-number.gold,.section-number.coral{background:transparent;border:1px solid var(--teal);color:var(--teal)}
+.section-number.overview{border-radius:8px}
+.overview-card:before,.body-center:before{display:none}
+.health-callout,.health-callout.coral,.health-callout.gold,.health-callout.purple,.health-callout.green{border-left:1px solid var(--line)}
+.body-center,.atlas-map-card{background:var(--paper-2)}
+.snapshot.green,.snapshot.coral,.snapshot.blue{background:var(--paper-2);border-left:1px solid var(--line)}
+.atlas-prompt-card{border-left-width:3px}
+.table-wrap{border-radius:8px}
 
