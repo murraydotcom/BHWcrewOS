@@ -492,6 +492,7 @@ export function createWorkflowService(repository, {
 
   async function dispatchDue(header) {
     await verifyDispatcher(header);
+    if (!automationEnabled) return { processed: 0, results: [] };
     const due = await repository.listDueCommunications(iso(clock()), 50);
     const results = [];
     for (const queued of due) {

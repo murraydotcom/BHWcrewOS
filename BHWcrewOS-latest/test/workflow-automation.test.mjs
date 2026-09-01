@@ -383,6 +383,31 @@ test("queued-message dispatcher accepts only the configured Google Scheduler ide
   });
 });
 
+test("queued-message dispatcher does not inspect or deliver queued SMS while automation is disabled", async () => {
+  const repository = inMemoryRepository();
+  let listCount = 0;
+  let sendCount = 0;
+  repository.listDueCommunications = async () => {
+    listCount += 1;
+    return [{ id: "synthetic-queued-001", requestId: "synthetic-request-001" }];
+  };
+  const service = createWorkflowService(repository, {
+    environment: {
+      PATIENT_WORKFLOW_AUTOMATION_ENABLED: "false",
+      WORKFLOW_DISPATCH_SECRET: "synthetic-dispatch-secret",
+    },
+    dialpad: {
+      configured: true,
+      async sendSms() { sendCount += 1; return { id: "synthetic-provider-message" }; },
+    },
+    chat: { enabled: false },
+  });
+
+  assert.deepEqual(await service.dispatchDue("Bearer synthetic-dispatch-secret"), { processed: 0, results: [] });
+  assert.equal(listCount, 0);
+  assert.equal(sendCount, 0);
+});
+
 test("queued-message dispatcher keeps legacy secret support without plain string comparison", async () => {
   const service = createWorkflowService(inMemoryRepository(), {
     environment: { WORKFLOW_DISPATCH_SECRET: "synthetic-dispatch-secret" },
