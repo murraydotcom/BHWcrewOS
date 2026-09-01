@@ -8,11 +8,14 @@ const PAYERS = ["Medicare", "Medicare + QMB", "Maryland Medicaid", "CareFirst BC
 const STATUS_OPTIONS = ["active", "prospective", "inactive", "transferred", "deceased"];
 const COVERAGE_OPTIONS = ["verified", "pending", "needs-review", "inactive", "self-pay", "unknown"];
 const CONSENT_SOURCES = ["previsit-form", "new-patient-packet"];
+const CARE_API = "https://bhw-medication-api-343692256275.us-east4.run.app";
 
 let client = null;
 let patients = [];
 let selectedId = "";
 let toastTimer;
+let careToken = "";
+let careTokenExpiresAt = 0;
 
 function showToast(message) {
   $("toast").textContent = message;
@@ -81,6 +84,66 @@ function localDateTimeValue(value = "") {
 
 function consentSourceLabel(value) {
   return value === "new-patient-packet" ? "New-patient packet" : "Previsit form";
+}
+
+async function getCareToken() {
+  if (careToken && Date.now() < careTokenExpiresAt) return careToken;
+  const crewToken = sessionStorage.getItem("crewos_token") || "";
+  if (!crewToken) throw new Error("CrewHQ session expired. Sign in again.");
+  const response = await fetch("/.netlify/functions/care-cloud-token", {
+    method: "POST",
+    credentials: "same-origin",
+    cache: "no-store",
+    headers: { Authorization: `Bearer ${crewToken}` },
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok || !body.token) throw new Error(body.error || "Patient communication history is unavailable.");
+  careToken = body.token;
+  careTokenExpiresAt = Date.now() + Math.max(30, Number(body.expiresIn || 300) - 30) * 1000;
+  return careToken;
+}
+
+async function careRequest(path) {
+  const token = await getCareToken();
+  const response = await fetch(`${CARE_API}${path}`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error || "Patient communication history is unavailable.");
+  return body;
+}
+
+function communicationStatusLabel(status) {
+  return ({ generated: "Generated", sent_recorded: "Recorded sent", opened: "Opened", submitted: "Submitted", expired: "Expired", revoked: "Revoked" })[status] || status || "Unknown";
+}
+
+function communicationChannelLabel(channel) {
+  return ({ dialpad_sms: "Dialpad SMS", patient_portal: "Patient portal", email: "BHW email", phone: "Telephone", in_person: "In person", other_approved: "Other approved channel" })[channel] || channel || "";
+}
+
+function communicationTime(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date.toLocaleString() : "";
+}
+
+async function renderEducationCommunication(bhwPatientId) {
+  const panel = $("educationCommunicationPanel");
+  if (!panel) return;
+  try {
+    const result = await careRequest(`/v1/staff/content-assignments?patientId=${encodeURIComponent(bhwPatientId)}&limit=100`);
+    if (selectedId !== bhwPatientId || !$("educationCommunicationPanel")) return;
+    const assignments = Array.isArray(result.assignments) ? result.assignments : [];
+    const rows = assignments.length ? assignments.map((item) => {
+      const sent = item.sentAt ? `Recorded sent ${communicationTime(item.sentAt)} via ${communicationChannelLabel(item.sendChannel)}${item.destinationMasked ? ` to ${item.destinationMasked}` : ""}` : "Not recorded as sent";
+      const activity = [item.openedAt ? `Opened ${communicationTime(item.openedAt)}` : "", item.submittedAt ? `Submitted ${communicationTime(item.submittedAt)}` : "", item.revokedAt ? `Revoked ${communicationTime(item.revokedAt)}` : ""].filter(Boolean).join(" · ");
+      const badgeClass = ["submitted", "opened"].includes(item.status) ? "complete" : ["expired", "revoked"].includes(item.status) ? "needs-review" : "warning";
+      return `<div class="communication-row"><div><b>${esc(item.title)}</b><div class="privacy" style="margin-top:4px">Created ${esc(communicationTime(item.createdAt) || "time unavailable")} · Expires ${esc(communicationTime(item.expiresAt) || "time unavailable")}</div><div class="privacy" style="margin-top:3px">${esc(sent)}</div>${activity ? `<div class="privacy" style="margin-top:3px">${esc(activity)}</div>` : ""}</div><span class="badge ${badgeClass}">${esc(communicationStatusLabel(item.status))}</span></div>`;
+    }).join("") : '<div class="empty" style="padding:24px">No education or interactive communication assignments are recorded for this patient.</div>';
+    panel.innerHTML = `<div class="card-head" style="padding:0 0 12px;border:0"><div><h3>Education &amp; Interactive Communication</h3><div class="privacy">Patient-specific care plans, education, interactive questions, and communication status.</div></div><a class="btn" href="/bhw-patient-materials.html?patient=${encodeURIComponent(bhwPatientId)}">Create assignment</a></div><div class="communication-list">${rows}</div><div class="privacy"><b>Proof standard:</b> Recorded sent means a staff member attested that the exact link was sent through the documented channel. Opened and submitted are system-recorded. Carrier delivery confirmation is not available until Dialpad is connected.</div>`;
+  } catch (error) {
+    if (selectedId === bhwPatientId && $("educationCommunicationPanel")) {
+      $("educationCommunicationPanel").innerHTML = `<div class="notice"><b>Education &amp; Interactive Communication is unavailable.</b><br>${esc(error.message || "Try again after the Care Cloud connection is restored.")}</div>`;
+    }
+  }
 }
 
 async function renderRecordingConsent(bhwPatientId) {
@@ -161,7 +224,7 @@ function renderRows() {
 function renderDetail() {
   const patient = patients.find((item) => item.bhwPatientId === selectedId);
   if (!patient) { $("detail").innerHTML = '<div class="empty">Select a patient to review the master record.</div>'; return; }
-  $("detail").innerHTML = `<div class="card-head"><div><h3>${esc(patient.bhwPatientId)} · ${esc(patient.legalLastName)}, ${esc(patient.preferredName || patient.legalFirstName)}</h3><div class="privacy">Last verified ${patient.lastVerifiedAt ? new Date(patient.lastVerifiedAt).toLocaleString() : "not recorded"}</div></div><span class="badge ${patient.coverageStatus === "verified" ? "complete" : "warning"}">${esc(patient.coverageStatus)}</span></div><div class="detail"><div class="formgrid">${patientFields(patient)}</div><div class="actions"><button class="btn primary" id="savePatient">Save verified changes</button><button class="btn" id="startEncounter">Create encounter</button></div><div class="privacy">Patient-reported changes must be verified before they replace this authoritative record. This registry supports operations; CharmHealth remains the legal medical record.</div><div class="consent-panel" id="recordingConsentPanel"><div class="privacy">Loading signed consent status…</div></div></div>`;
+  $("detail").innerHTML = `<div class="card-head"><div><h3>${esc(patient.bhwPatientId)} · ${esc(patient.legalLastName)}, ${esc(patient.preferredName || patient.legalFirstName)}</h3><div class="privacy">Last verified ${patient.lastVerifiedAt ? new Date(patient.lastVerifiedAt).toLocaleString() : "not recorded"}</div></div><span class="badge ${patient.coverageStatus === "verified" ? "complete" : "warning"}">${esc(patient.coverageStatus)}</span></div><div class="detail"><div class="formgrid">${patientFields(patient)}</div><div class="actions"><button class="btn primary" id="savePatient">Save verified changes</button><button class="btn" id="startEncounter">Create encounter</button></div><div class="privacy">Patient-reported changes must be verified before they replace this authoritative record. This registry supports operations; CharmHealth remains the legal medical record.</div><div class="consent-panel" id="recordingConsentPanel"><div class="privacy">Loading signed consent status…</div></div><div class="communication-panel" id="educationCommunicationPanel"><div class="privacy">Loading education and interactive communication history…</div></div></div>`;
   $("savePatient").onclick = async () => {
     const next = readPatient("d", patient.bhwPatientId);
     const error = validationMessage(next);
@@ -178,6 +241,7 @@ function renderDetail() {
     location.href = "workflow.html";
   };
   void renderRecordingConsent(patient.bhwPatientId);
+  void renderEducationCommunication(patient.bhwPatientId);
 }
 
 function render() { renderKpis(); renderRows(); renderDetail(); }
@@ -228,5 +292,3 @@ async function initialize() {
 }
 
 initialize();
-
-
