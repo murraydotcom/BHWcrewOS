@@ -10,7 +10,7 @@
 //   patient-select (link an existing Cloud patient to the transitional Index)
 
 const { DB, DIVISIONS, httpJson, queryDb, createPage, updatePage, P, W, getSession, visibleDivisions, json } = require("./_lib");
-const { cloudRequest, listCloudPatients, findCloudPatient } = require("./lib/cloud-patients");
+const { cloudRequest, listCloudPatients } = require("./lib/cloud-patients");
 const zlib = require("zlib");
 
 // Google Cloud is the authoritative patient list. During migration, new
@@ -110,6 +110,71 @@ async function resolvePatientIndex(patientId, session) {
     linked = true;
   }
   return { indexId: index.id, patient, linked, backfilled };
+}
+
+// CharmEd assessments still hold a relation to the transitional CrewOS Patient
+// Index. Resolve that relation to the authoritative Cloud/Patient 360 identity
+// before sending anything. A blank legacy ID may be backfilled only when exact
+// name + DOB identifies one Cloud patient and no duplicate Index link exists.
+async function resolvePatient360Patient(patientId, session) {
+  const requestedId = String(patientId || "").trim();
+  if (!requestedId) throw actionError(400, "This assessment is not linked to a patient.");
+
+  const cloudPatients = await listCloudPatients(session);
+  const normalizedRequestedId = requestedId.toUpperCase();
+  const directMatches = cloudPatients.filter((patient) =>
+    String(patient.bhwPatientId || "").trim().toUpperCase() === normalizedRequestedId
+    || String(patient.notionPageId || "").trim() === requestedId
+  );
+  if (directMatches.length > 1) {
+    throw actionError(409, "CrewOS found more than one Patient Registry record for this identifier. Review the patient identities before sending.");
+  }
+  if (directMatches.length === 1) return { patient: directMatches[0], backfilled: false };
+
+  const idxPages = await queryDb(DB.patients);
+  const index = idxPages.find((page) => page.id === requestedId);
+  if (!index) {
+    throw actionError(409, "CrewOS could not match this assessment to the Patient Registry. Open Patient Registry and verify the patient's BHW ID.");
+  }
+
+  const storedMasterId = P.text(index.properties["Patient ID #"]).trim().toUpperCase();
+  if (storedMasterId) {
+    const masterMatches = cloudPatients.filter((patient) =>
+      String(patient.bhwPatientId || "").trim().toUpperCase() === storedMasterId
+    );
+    if (masterMatches.length === 1) return { patient: masterMatches[0], backfilled: false };
+    if (masterMatches.length > 1) {
+      throw actionError(409, "CrewOS found more than one Patient Registry record for this BHW ID. Review the patient identities before sending.");
+    }
+    throw actionError(409, "This assessment's saved BHW ID no longer matches the Patient Registry. Review the patient identity before sending.");
+  }
+
+  const indexName = P.title(index.properties["Patient Name"]);
+  const indexDob = P.date(index.properties["DOB"]);
+  if (!indexName || !indexDob) {
+    throw actionError(409, "This assessment needs a verified BHW ID before screening links can be sent.");
+  }
+  const identityMatches = cloudPatients.filter((patient) =>
+    normalizePatientName(patient.name) === normalizePatientName(indexName)
+    && patient.dob === indexDob
+  );
+  if (identityMatches.length !== 1) {
+    throw actionError(409, identityMatches.length
+      ? "This name and birthday match more than one Patient Registry record. Review the patient identities before sending."
+      : "CrewOS could not match this assessment to the Patient Registry. Open Patient Registry and verify the patient's BHW ID.");
+  }
+
+  const patient = identityMatches[0];
+  const duplicateLinks = idxPages.filter((page) =>
+    page.id !== index.id
+    && P.text(page.properties["Patient ID #"]).trim().toUpperCase() === String(patient.bhwPatientId || "").trim().toUpperCase()
+  );
+  if (duplicateLinks.length) {
+    throw actionError(409, "CrewOS has more than one Patient Index record for this BHW ID. Review the duplicate patient links before sending.");
+  }
+
+  await updatePage(index.id, { "Patient ID #": W.text(patient.bhwPatientId) });
+  return { patient, backfilled: true };
 }
 
 let awvPropsEnsured = false;
@@ -711,8 +776,7 @@ exports.handler = async (event) => {
             return json(400, { error: `In-person or performance measures cannot be emailed: ${supervised.join(", ")}` });
           }
         }
-        const patient = await findCloudPatient(patientId, session);
-        if (!patient?.bhwPatientId) return json(409, { error: "This assessment is not linked to a Patient 360 record yet" });
+        const { patient } = await resolvePatient360Patient(patientId, session);
         const result = await cloudRequest(`/v1/patients/${encodeURIComponent(patient.bhwPatientId)}/charmed/screening-invitations`, {
           actor: session,
           method: "POST",
