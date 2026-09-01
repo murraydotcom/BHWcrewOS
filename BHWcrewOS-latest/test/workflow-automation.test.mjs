@@ -4,6 +4,7 @@ import {
   applyPatientRequestAction,
   buildGoogleChatCard,
   defaultNotificationRules,
+  normalizeStaffRole,
   quietHoursState,
   resolveNotificationRule,
   sanitizeManualSms,
@@ -13,6 +14,23 @@ import { createWorkflowService } from "../cloud/operations-api/workflow-service.
 
 const USER = { sub: "crew:synthetic-ops", name: "Synthetic Operator", role: "operations-manager" };
 const NOON = new Date("2026-08-26T16:00:00.000Z");
+
+test("active CrewOS roster titles normalize to least-privilege workflow roles", () => {
+  const expected = new Map([
+    ["BH Assistant", "ma-bha"],
+    ["BH Coordinator", "care-manager"],
+    ["Medical Assistant", "ma-bha"],
+    ["CRNP/FNP", "provider"],
+    ["Porter House Admin", "front-desk"],
+    ["Office Manager", "operations-manager"],
+    ["CRNP", "provider"],
+    ["Chronic Care Manager", "care-manager"],
+  ]);
+
+  for (const [rosterTitle, workflowRole] of expected) {
+    assert.equal(normalizeStaffRole(rosterTitle), workflowRole, rosterTitle);
+  }
+});
 
 function syntheticRequest(requestType, id = `synthetic-${requestType.replaceAll("_", "-")}`) {
   return sanitizePatientRequest({
