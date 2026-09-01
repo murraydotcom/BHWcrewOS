@@ -131,7 +131,12 @@ async function resolvePatient360Patient(patientId, session, { backfill = true } 
   }
   if (directMatches.length === 1) return { patient: directMatches[0], backfilled: false };
 
-  const indexResponse = await httpJson("GET", `https://api.notion.com/v1/pages/${encodeURIComponent(requestedId)}`);
+  let indexResponse;
+  try {
+    indexResponse = await httpJson("GET", `https://api.notion.com/v1/pages/${encodeURIComponent(requestedId)}`, null, { timeoutMs: 12_000 });
+  } catch (error) {
+    throw actionError(503, "Patient Registry check timed out. Close this window and try again.");
+  }
   if (!indexResponse.ok || !indexResponse.data?.properties) {
     throw actionError(409, "CrewOS could not match this assessment to the Patient Registry. Open Patient Registry and verify the patient's BHW ID.");
   }
