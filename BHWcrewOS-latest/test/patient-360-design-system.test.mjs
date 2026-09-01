@@ -17,6 +17,7 @@ test("Patient 360 uses the Opal and Ironstone palette and typography", () => {
   assert.match(css, /Opal & Ironstone typography: 16px reading base, 14px dense UI, 13px metadata/);
   assert.match(css, /\.nav,\.btn,\.page-nav a/);
   assert.match(css, /font-size:var\(--text-sm\)/);
+  assert.match(css, /\.worksheet-heading h2\{min-width:0;max-width:calc\(100% - 41px\);flex:1 1 calc\(100% - 41px\);overflow-wrap:anywhere\}/);
 });
 
 test("every Patient 360 page loads the design-system font families", () => {

@@ -70,6 +70,7 @@ button,a{font:inherit}.app{display:flex;min-height:100vh}
 @media(max-width:780px){.sidebar{display:none}.main{margin:0;width:100%}.top{padding:10px 15px}.content{padding:15px}.page-nav{top:66px}.patient-meta,.source-strip{grid-template-columns:repeat(2,1fr)}.kpis,.atlas,.three-col,.data-grid,.snapshot-grid,.domain-grid,.overview-grid,.due-grid,.personalized-grid{grid-template-columns:1fr}.navigator-hero{padding:22px}.worksheet-heading{align-items:flex-start;flex-wrap:wrap}.worksheet-heading p{width:100%;padding-left:41px}.summary-row{grid-template-columns:1fr}}
 @media(max-width:1000px){.atlas-map-grid{grid-template-columns:repeat(2,minmax(220px,1fr))}.atlas-map-card:last-child{grid-column:1/-1}.ctls-map{max-width:240px}}
 @media(max-width:780px){.atlas-intake-grid,.atlas-map-grid{grid-template-columns:1fr}.atlas-map-card:last-child{grid-column:auto}.atlas-prompt-card{min-height:0}.atlas-evidence-key{align-items:flex-start}}
+@media(max-width:780px){.worksheet-heading h2{min-width:0;max-width:calc(100% - 41px);flex:1 1 calc(100% - 41px);overflow-wrap:anywhere}}
 @media print{.atlas-worksheet{break-inside:auto}.atlas-prompt-card,.atlas-map-panel,.atlas-sweep-panel,.atlas-evidence-key{break-inside:avoid}}
 
 /* Opal & Ironstone typography: 16px reading base, 14px dense UI, 13px metadata. */
