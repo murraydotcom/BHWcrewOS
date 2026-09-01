@@ -1,17 +1,23 @@
 :root{
-  --paper:#f7f3eb;--paper-2:#fbf9f4;--card:#fffdf9;--ink:#26363b;--muted:#707775;--line:#ded8cc;
-  --teal:#3f7888;--teal-soft:#dcebee;--green:#4f7b62;--green-soft:#dfe9df;--purple:#725b8b;
-  --purple-soft:#e8e1ef;--gold:#ad842d;--gold-soft:#f4ead0;--coral:#c65d44;--coral-soft:#f5ddd5;
-  --blue:#6f9dae;--sidebar:#243239;--shadow:0 8px 26px rgba(49,58,55,.07);--serif:"Cormorant Garamond",Georgia,serif;
+  --paper:#F8F6F1;--paper-2:#F7F3EA;--card:#FEFDFB;--ink:#2A3A40;--muted:#6E6B62;--line:rgba(43,58,64,.10);
+  --teal:#3D6E7E;--teal-soft:#DBE8ED;--green:#4D7159;--green-soft:#DDE7DD;--purple:#6A5480;
+  --purple-soft:#E6DDEC;--gold:#C0A046;--gold-soft:#F0DDAF;--coral:#B15540;--coral-soft:#F3DED6;
+  --blue:#6E9EB3;--sidebar:#0F2230;--shadow:0 2px 6px rgba(44,35,27,.08);--serif:"Playfair Display",Georgia,serif;--sans:"Montserrat",system-ui,sans-serif;
+  --text-xs:.833rem;--text-sm:.889rem;--text-base:1rem;--text-md:1.125rem;--text-lg:1.35rem;--text-xl:1.62rem;
+  --leading-normal:1.55;--radius-lg:18px;--radius-pill:999px;--ring:#C0A046;
+  --edge-gold:inset 0 0 0 1px color-mix(in srgb,var(--gold) 42%,transparent);
+  --opal-stone:radial-gradient(58% 78% at 18% 22%,rgba(110,158,179,.44),transparent 60%),radial-gradient(54% 74% at 82% 18%,rgba(156,134,178,.40),transparent 60%),radial-gradient(64% 82% at 74% 82%,rgba(125,155,134,.44),transparent 62%),radial-gradient(48% 66% at 30% 88%,rgba(212,174,174,.32),transparent 60%),radial-gradient(42% 58% at 52% 46%,rgba(230,201,138,.30),transparent 66%),linear-gradient(135deg,var(--card),#F0ECF3 50%,#E9F1EE 100%);
 }
 :root[data-theme=dark]{
-  --paper:#151a1c;--paper-2:#1a2124;--card:#20292c;--ink:#edf1ed;--muted:#a9b3af;--line:#394649;
-  --teal-soft:#273d43;--green-soft:#293d31;--purple-soft:#3a3043;--gold-soft:#433b28;--coral-soft:#493129;
-  --shadow:0 10px 30px rgba(0,0,0,.3)
+  --paper:#0A1822;--paper-2:#071019;--card:#0F2230;--ink:#E9E3D6;--muted:#9AA39B;--line:rgba(233,227,214,.12);
+  --teal:#97BACB;--teal-soft:#223E48;--green:#9CB5A2;--green-soft:#2B4133;--purple:#B9A6C9;--purple-soft:#3B2C49;
+  --gold:#D6B25C;--gold-soft:rgba(214,178,92,.18);--coral:#E0A896;--coral-soft:rgba(177,85,64,.24);--sidebar:#071019;
+  --ring:#D6B25C;--shadow:0 2px 8px rgba(0,0,0,.45);
+  --opal-stone:radial-gradient(58% 78% at 20% 24%,rgba(96,158,180,.42),transparent 62%),radial-gradient(54% 74% at 82% 20%,rgba(142,114,168,.36),transparent 62%),radial-gradient(64% 82% at 74% 82%,rgba(104,150,120,.36),transparent 62%),radial-gradient(46% 62% at 46% 50%,rgba(214,178,92,.16),transparent 66%),linear-gradient(135deg,#0A1822,#11253A 52%,#0C1E2E 100%)
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{margin:0;background:var(--paper);color:var(--ink);font:13px Montserrat,system-ui,sans-serif}
+body{margin:0;background:var(--paper);color:var(--ink);font:var(--text-base)/var(--leading-normal) var(--sans);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 button,a{font:inherit}.app{display:flex;min-height:100vh}
 .sidebar{width:248px;background:var(--sidebar);color:#cad6d9;padding:27px 15px;position:fixed;inset:0 auto 0 0;z-index:20}
 .brand{padding:0 13px 22px;border-bottom:1px solid rgba(255,255,255,.1)}
@@ -27,7 +33,7 @@ button,a{font:inherit}.app{display:flex;min-height:100vh}
 .btn.primary{background:var(--teal);border-color:var(--teal);color:#fff}.btn:hover{transform:translateY(-1px)}
 .badge{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:14px;font-size:9px;font-weight:800;letter-spacing:.15px}
 .badge.complete{background:var(--green-soft);color:var(--green)}.badge.warning{background:var(--gold-soft);color:#836317}.badge.restricted{background:var(--coral-soft);color:#a44431}.badge.neutral{background:var(--teal-soft);color:var(--teal)}
-.navigator-hero{position:relative;overflow:hidden;background:linear-gradient(120deg,var(--teal-soft),var(--purple-soft) 52%,var(--green-soft));border:1px solid color-mix(in srgb,var(--gold) 45%,var(--line));border-radius:23px;padding:27px 29px 25px;box-shadow:var(--shadow)}
+.navigator-hero{position:relative;overflow:hidden;background-image:var(--opal-stone);border:1px solid transparent;border-radius:23px;padding:27px 29px 25px;box-shadow:0 10px 24px -12px rgba(44,35,27,.20),var(--edge-gold)}
 .navigator-hero:after{content:"";position:absolute;width:300px;height:300px;border-radius:50%;right:-125px;top:-180px;border:1px solid rgba(255,255,255,.58);box-shadow:0 0 0 38px rgba(255,255,255,.08),0 0 0 76px rgba(255,255,255,.06)}
 .eyebrow{font-size:9px;font-weight:800;letter-spacing:1.7px;text-transform:uppercase;color:var(--teal);margin-bottom:8px}.navigator-hero h1{font:700 clamp(34px,4.3vw,58px)/.94 var(--serif);margin:0;max-width:860px;letter-spacing:-1.2px}.navigator-hero .subtitle{font:500 16px/1.45 var(--serif);color:color-mix(in srgb,var(--ink) 78%,var(--muted));margin:12px 0 0;max-width:760px}
 .hero-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.62fr);gap:24px;position:relative;z-index:1}.patient-meta{display:grid;grid-template-columns:repeat(4,minmax(110px,1fr));gap:13px;margin-top:23px}.patient-meta div{border-top:1px solid color-mix(in srgb,var(--ink) 20%,transparent);padding-top:8px}.patient-meta span{display:block;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);font-weight:800;margin-bottom:4px}.patient-meta b{font-size:11px}.hero-aside{background:rgba(255,253,249,.57);border:1px solid rgba(255,255,255,.65);border-radius:16px;padding:17px;align-self:stretch}.hero-aside h2{font:700 20px var(--serif);margin:0 0 7px}.hero-aside p{font-size:10px;line-height:1.55;color:var(--muted);margin:0 0 13px}.confidence{border-left:4px solid var(--coral);background:var(--coral-soft);padding:11px 12px;border-radius:8px;font-size:9.5px;line-height:1.5}
@@ -65,4 +71,16 @@ button,a{font:inherit}.app{display:flex;min-height:100vh}
 @media(max-width:1000px){.atlas-map-grid{grid-template-columns:repeat(2,minmax(220px,1fr))}.atlas-map-card:last-child{grid-column:1/-1}.ctls-map{max-width:240px}}
 @media(max-width:780px){.atlas-intake-grid,.atlas-map-grid{grid-template-columns:1fr}.atlas-map-card:last-child{grid-column:auto}.atlas-prompt-card{min-height:0}.atlas-evidence-key{align-items:flex-start}}
 @media print{.atlas-worksheet{break-inside:auto}.atlas-prompt-card,.atlas-map-panel,.atlas-sweep-panel,.atlas-evidence-key{break-inside:avoid}}
+
+/* Opal & Ironstone typography: 16px reading base, 14px dense UI, 13px metadata. */
+:where(a,button,input,select,textarea,[tabindex]):focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+.brand h1,.navigator-hero h1,.worksheet-heading h2,.panel-head h3,.overview-card h3,.body-caption b,.trend-heading b,.data-card h4,.atlas-prompt-card>b,.atlas-map-card h4,.atlas-location-key>h4,.atlas-evidence-key>b{font-family:var(--serif);font-weight:500}
+.brand div,.nav-label,.side-note,.crumb,.eyebrow,.badge,.patient-meta span,.panel-subtitle,.clinical-list small,.more-note,.body-caption span,.body-outline-option>span,.trend-heading>span,.trend-foot,.due-grid>div>span,.personalized-grid>div>span,.prominent-timeline time,.prominent-timeline small,.visit-note-head span,.record-boundary,.system .focus,.meta,.trajectory-labels,.timeline-tags span,.evidence-row span,.domain span,.source-cell span,.atlas-prompt-card>span,.atlas-prompt-card>small,.atlas-map-card h4 small,.atlas-map-marker,.atlas-body-unavailable,.ctls-marker text,.atlas-number-key,.atlas-cell-empty,.atlas-evidence-codes>span,.atlas-evidence-key>span,.atlas-evidence-key strong{font-size:var(--text-xs)}
+.nav,.btn,.page-nav a,.safe-notice,.patient-meta b,.hero-aside p,.confidence,.overview-card p,.overview-card .overview-facts span,.summary-row b,.summary-row span,.callout-head>span,.callout-head>a,.clinical-list li,.overview-empty,.outline-picker label,.body-focus-copy b,.body-focus-copy span,.body-focus-copy a,.trend-heading div span,.trend-empty,.prominent-timeline b,.visit-note-head b,.visit-note-card>p,.visit-note-card summary,.visit-note-content,.system p,.item b,.empty-note,.timeline-item b,.mechanism-step h4,.mechanism-step p,.domain b,.snapshot h4,.snapshot p,td,.source-cell b,.atlas-sweep-table th[scope="row"],.atlas-sweep-items>div,.ctls-segment text{font-size:var(--text-sm)}
+th{font-size:var(--text-xs)}
+.system h4{font-size:var(--text-base)}
+.btn{font-family:var(--sans);font-weight:600;border-radius:var(--radius-pill);padding:.7em 1.35em}
+.badge,.page-nav a{border-radius:var(--radius-pill)}
+.hero-aside{background:color-mix(in srgb,var(--card) 76%,transparent);border-color:color-mix(in srgb,var(--card) 70%,var(--line))}
+.body-center{min-height:580px}.health-callout{min-height:150px}
 
