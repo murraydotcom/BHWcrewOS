@@ -25,7 +25,7 @@ function indexPatient({ id = "index-synthetic", name = cloudPatient.name, dob = 
   };
 }
 
-function loadAction({ indexRows = [], cloudPatients = [cloudPatient] } = {}) {
+function loadAction({ indexRows = [], assessmentRows = [], cloudPatients = [cloudPatient] } = {}) {
   const updates = [];
   const cloudWrites = [];
   const W = {
@@ -38,12 +38,12 @@ function loadAction({ indexRows = [], cloudPatients = [cloudPatient] } = {}) {
   require.cache[libPath] = {
     id: libPath, filename: libPath, loaded: true,
     exports: {
-      DB: { patients: "patients-db" },
+      DB: { patients: "patients-db", charmed: "charmed-peds-db", charmedAdult: "charmed-adult-db" },
       DIVISIONS: [],
       httpJson: async (method, url) => {
         if (method === "GET" && url.includes("/v1/pages/")) {
           const id = decodeURIComponent(url.split("/").pop());
-          const page = indexRows.find((row) => row.id === id);
+          const page = [...indexRows, ...assessmentRows].find((row) => row.id === id);
           return page ? { ok: true, status: 200, data: page } : { ok: false, status: 404, data: {} };
         }
         return { ok: true, status: 200, data: {} };
@@ -144,6 +144,35 @@ test("CharmEd can verify a real Registry identity without sending or backfilling
   assert.equal(cloudWrites.length, 0);
 });
 
+test("CharmEd links an unassigned assessment to an existing Registry patient without sending", async () => {
+  const assessment = {
+    id: "assessment-synthetic",
+    parent: { database_id: "charmed-adult-db" },
+    properties: {},
+  };
+  const { handler, updates, cloudWrites } = loadAction({
+    indexRows: [indexPatient({ masterId: cloudPatient.bhwPatientId })],
+    assessmentRows: [assessment],
+  });
+  const response = await handler({
+    httpMethod: "POST",
+    body: JSON.stringify({
+      action: "cm-screening-link-patient",
+      assessmentId: assessment.id,
+      patientId: "index-synthetic",
+      kind: "adult",
+    }),
+  });
+  const body = JSON.parse(response.body);
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.bhwPatientId, "BHW9999");
+  assert.deepEqual(updates.at(-1), {
+    id: assessment.id,
+    properties: { Patient: { relation: ["index-synthetic"] } },
+  });
+  assert.equal(cloudWrites.length, 0);
+});
+
 test("CharmEd fails closed when name and DOB are not unique", async () => {
   const secondPatient = { ...cloudPatient, bhwPatientId: "BHW9998" };
   const { handler, updates, cloudWrites } = loadAction({
@@ -174,6 +203,8 @@ test("the send dialog shows Patient 360 readiness before staff approval", async 
   assert.match(opsData, /patientBhwIdByKey\[patient\] \|\| ""/);
   assert.match(html, /Patient 360 matched/);
   assert.match(html, /cm-screening-readiness/);
+  assert.match(html, /cm-screening-link-patient/);
+  assert.match(html, /Search Patient Registry by name, BHW ID, DOB, MRN, or insurance/);
   assert.match(html, /Patient check needs review/);
   assert.match(html, /Patient Registry check timed out/);
   assert.match(html, /dataset\.patientCheck/);

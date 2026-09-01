@@ -27,6 +27,7 @@ function encodeCmWorkflow(value) {
 }
 
 const normalizePatientName = (value) => String(value || "").toLowerCase().replace(/[^a-z]/g, "");
+const normalizeNotionId = (value) => String(value || "").replace(/-/g, "").toLowerCase();
 
 function indexInsurance(patient) {
   const value = `${patient.primaryPayer || patient.payer || ""} ${patient.insurancePlanName || patient.insurance || ""}`.toLowerCase();
@@ -764,6 +765,30 @@ exports.handler = async (event) => {
           ...props,
         });
         return json(200, { ok: true, id: page.id });
+      }
+
+      case "cm-screening-link-patient": {
+        if (!b.assessmentId || !b.patientId || !["peds", "adult"].includes(b.kind)) {
+          return json(400, { error: "Choose a Patient Registry record for this assessment." });
+        }
+        if (session.access !== "Admin" && !vis.includes("CharmEd Minds")) {
+          return json(403, { error: "CharmEd Minds access is required to link this assessment." });
+        }
+        const expectedDb = b.kind === "adult" ? DB.charmedAdult : DB.charmed;
+        const assessmentResponse = await httpJson("GET", `https://api.notion.com/v1/pages/${encodeURIComponent(b.assessmentId)}`, null, { timeoutMs: 12_000 });
+        if (!assessmentResponse.ok || normalizeNotionId(assessmentResponse.data?.parent?.database_id) !== normalizeNotionId(expectedDb)) {
+          return json(404, { error: "That CharmEd assessment is no longer available. Refresh and try again." });
+        }
+        const linked = await resolvePatientIndex(b.patientId, session);
+        const patientResolution = linked.patient
+          ? { patient: linked.patient }
+          : await resolvePatient360Patient(linked.indexId, session, { backfill: false });
+        await updatePage(b.assessmentId, { "Patient": W.rel([linked.indexId]) });
+        return json(200, {
+          ok: true,
+          indexId: linked.indexId,
+          bhwPatientId: patientResolution.patient.bhwPatientId,
+        });
       }
 
       case "cm-screening-readiness": {

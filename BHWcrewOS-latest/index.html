@@ -2396,7 +2396,9 @@ function cmSendOpen(assessmentId, kind){
   const reasons = kind==="adult" ? cmaScreeningReasons(e.answers) : cmScreeningReasons(e.answers);
   const patient360Status = e.patientBhwId
     ? `<span class="pill ok" id="ss-p360">Patient 360 matched · ${esc(e.patientBhwId)}</span>`
-    : `<span class="pill warn" id="ss-p360">Checking Patient Registry match…</span>`;
+    : e.patient
+      ? `<span class="pill warn" id="ss-p360">Checking Patient Registry match…</span>`
+      : `<span class="pill warn" id="ss-p360">Choose the patient from the Registry below</span>`;
   const registryNote = kind==="peds"
     ? "Only approved links from the CharmEd Minds screening-link registry are sent. Supervised performance measures from step 6 never appear here; anything without an active link is skipped and noted."
     : "Only approved links from the CharmEd Minds screening-link registry are sent; anything without an active link is skipped and noted.";
@@ -2404,6 +2406,9 @@ function cmSendOpen(assessmentId, kind){
   <div class="msub">${esc(patLabel(e.patient))} · assigns approved remote links in Patient 360 and sends one secure portal invitation</div>
   <div style="margin:10px 0">${patient360Status}</div>
   <div class="f">
+    <label>Patient Registry record</label>
+    <select id="f-pat"><option value="">Select patient…</option>${patientOptions()}</select>
+    <div style="display:flex;align-items:center;gap:8px;margin:7px 0 12px"><button class="btn sm sec" id="ss-link" type="button" onclick="cmLinkScreeningPatient('${assessmentId}','${kind}')">Link selected patient to this assessment</button><span class="lede" id="ss-link-state" style="margin:0"></span></div>
     <p class="lede">The recipient address comes from the protected Patient 360 record. Screening names and results are never placed in the email.</p>
     <div class="awv-q"><div class="awv-l">Why this review was triggered</div>${reasons.length?reasons.map(r=>`<span class="pill info">${esc(r)}</span>`).join(" "):'<span class="pill gray">Routine clinician review</span>'}</div>
     <label>Recipient is</label>
@@ -2420,7 +2425,32 @@ function cmSendOpen(assessmentId, kind){
     <div class="ferr" id="f-err"></div>
     <div class="macts"><button class="btn sec" onclick="closeModal()">Not indicated</button><button class="btn" onclick="cmSendGo('${assessmentId}','${kind}')">Approve & send selected links</button></div>
   </div>`);
-  cmVerifyPatient360(assessmentId, kind);
+  const patientPicker = document.getElementById("f-pat");
+  if(e.patient && patientPicker) patientPicker.value = e.patient;
+  if(e.patient) cmVerifyPatient360(assessmentId, kind);
+}
+async function cmLinkScreeningPatient(assessmentId, kind){
+  const patientId = val("f-pat");
+  const linkState = document.getElementById("ss-link-state");
+  const linkButton = document.getElementById("ss-link");
+  if(!patientId){ if(linkState) linkState.textContent = "Choose a patient first."; return; }
+  if(linkButton){ linkButton.disabled = true; linkButton.textContent = "Linking…"; }
+  if(linkState) linkState.textContent = "Saving patient link…";
+  try{
+    const result = await api(API_ACT, {action:"cm-screening-link-patient", assessmentId, patientId, kind});
+    const list = kind==="adult" ? D.charmedAdult : D.charmed;
+    const assessment = (list||[]).find(x=>x.id===assessmentId);
+    if(assessment){ assessment.patient = result.indexId; assessment.patientBhwId = result.bhwPatientId; }
+    const selectedLabel = document.getElementById("f-pat")?.selectedOptions?.[0]?.textContent || "Selected patient";
+    D.patientLabel[result.indexId] = selectedLabel;
+    const status = document.getElementById("ss-p360");
+    if(status){ status.className = "pill ok"; status.textContent = `Patient 360 matched · ${result.bhwPatientId}`; }
+    if(linkState) linkState.textContent = "Linked to this assessment.";
+  }catch(error){
+    if(linkState) linkState.textContent = error.message;
+  }finally{
+    if(linkButton){ linkButton.disabled = false; linkButton.textContent = "Link selected patient to this assessment"; }
+  }
 }
 async function cmVerifyPatient360(assessmentId, kind){
   const list = kind==="adult" ? D.charmedAdult : D.charmed;
