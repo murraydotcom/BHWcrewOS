@@ -112,4 +112,5 @@ th{font-size:var(--text-xs)}
 .snapshot.green,.snapshot.coral,.snapshot.blue{background:var(--paper-2);border-left:1px solid var(--line)}
 .atlas-prompt-card{border-left-width:3px}
 .table-wrap{border-radius:8px}
+@media(max-width:900px){.body-center{min-height:0}.health-callout{min-height:0}}
 

@@ -25,6 +25,7 @@ test("Patient 360 uses the Opal and Ironstone palette and typography", () => {
   assert.match(css, /Professional clinical refinement/);
   assert.match(css, /\.navigator-hero:after\{display:none\}/);
   assert.match(css, /\.overview-card:before,\.body-center:before\{display:none\}/);
+  assert.match(css, /@media\(max-width:900px\)\{\.body-center\{min-height:0\}\.health-callout\{min-height:0\}\}/);
 });
 
 test("every Patient 360 page loads the design-system font families", () => {
