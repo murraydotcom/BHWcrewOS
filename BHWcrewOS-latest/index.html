@@ -2395,8 +2395,8 @@ function cmSendOpen(assessmentId, kind){
   const screeners = e.screeners || [];
   const reasons = kind==="adult" ? cmaScreeningReasons(e.answers) : cmScreeningReasons(e.answers);
   const patient360Status = e.patientBhwId
-    ? `<span class="pill ok">Patient 360 matched · ${esc(e.patientBhwId)}</span>`
-    : `<span class="pill warn">Patient Registry match will be verified before sending</span>`;
+    ? `<span class="pill ok" id="ss-p360">Patient 360 matched · ${esc(e.patientBhwId)}</span>`
+    : `<span class="pill warn" id="ss-p360">Checking Patient Registry match…</span>`;
   const registryNote = kind==="peds"
     ? "Only approved links from the CharmEd Minds screening-link registry are sent. Supervised performance measures from step 6 never appear here; anything without an active link is skipped and noted."
     : "Only approved links from the CharmEd Minds screening-link registry are sent; anything without an active link is skipped and noted.";
@@ -2420,6 +2420,26 @@ function cmSendOpen(assessmentId, kind){
     <div class="ferr" id="f-err"></div>
     <div class="macts"><button class="btn sec" onclick="closeModal()">Not indicated</button><button class="btn" onclick="cmSendGo('${assessmentId}','${kind}')">Approve & send selected links</button></div>
   </div>`);
+  cmVerifyPatient360(assessmentId, kind);
+}
+async function cmVerifyPatient360(assessmentId, kind){
+  const list = kind==="adult" ? D.charmedAdult : D.charmed;
+  const assessment = (list||[]).find(x=>x.id===assessmentId);
+  const status = document.getElementById("ss-p360");
+  if(!assessment?.patient || !status) return;
+  status.className = "pill warn";
+  status.textContent = "Checking Patient Registry match…";
+  try{
+    const result = await api(API_ACT, {action:"cm-screening-readiness", patientId:assessment.patient});
+    if(!document.getElementById("ss-p360")) return;
+    assessment.patientBhwId = result.bhwPatientId;
+    status.className = "pill ok";
+    status.textContent = `Patient 360 matched · ${result.bhwPatientId}`;
+  }catch(error){
+    if(!document.getElementById("ss-p360")) return;
+    status.className = "pill alert";
+    status.textContent = `Patient check needs review · ${error.message}`;
+  }
 }
 async function cmSendGo(assessmentId, kind){
   const screeners = [...document.querySelectorAll("#ss-list .chip.on")].map(c=>c.dataset.s);

@@ -56,7 +56,7 @@ function loadAction({ indexRows = [], cloudPatients = [cloudPatient] } = {}) {
         scope: "clinical",
         authTime: Date.now(),
       }),
-      visibleDivisions: () => [],
+      visibleDivisions: () => ["CharmEd Minds"],
       json: (statusCode, body) => ({ statusCode, body: JSON.stringify(body) }),
     },
   };
@@ -85,6 +85,14 @@ async function send(handler, patientId = "index-synthetic") {
       screeners: ["PHQ-9"],
       audience: "Self",
     }),
+  });
+  return { status: response.statusCode, body: JSON.parse(response.body) };
+}
+
+async function checkReadiness(handler, patientId = "index-synthetic") {
+  const response = await handler({
+    httpMethod: "POST",
+    body: JSON.stringify({ action: "cm-screening-readiness", patientId }),
   });
   return { status: response.statusCode, body: JSON.parse(response.body) };
 }
@@ -119,6 +127,16 @@ test("CharmEd accepts a Cloud Patient 360 BHW ID directly", async () => {
   assert.equal(cloudWrites.length, 1);
 });
 
+test("CharmEd can verify a real Registry identity without sending or backfilling", async () => {
+  const { handler, updates, cloudWrites } = loadAction({ indexRows: [indexPatient()] });
+  const response = await checkReadiness(handler);
+  assert.equal(response.status, 200);
+  assert.equal(response.body.ready, true);
+  assert.equal(response.body.bhwPatientId, "BHW9999");
+  assert.equal(updates.length, 0);
+  assert.equal(cloudWrites.length, 0);
+});
+
 test("CharmEd fails closed when name and DOB are not unique", async () => {
   const secondPatient = { ...cloudPatient, bhwPatientId: "BHW9998" };
   const { handler, updates, cloudWrites } = loadAction({
@@ -148,5 +166,6 @@ test("the send dialog shows Patient 360 readiness before staff approval", async 
   ]);
   assert.match(opsData, /patientBhwIdByKey\[patient\] \|\| ""/);
   assert.match(html, /Patient 360 matched/);
-  assert.match(html, /Patient Registry match will be verified before sending/);
+  assert.match(html, /cm-screening-readiness/);
+  assert.match(html, /Patient check needs review/);
 });
