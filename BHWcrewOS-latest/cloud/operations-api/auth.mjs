@@ -44,7 +44,7 @@ export function verifyCrewToken(header, secret, { now = Date.now() } = {}) {
 }
 
 export function verifyIntakeClient(header, expectedSecret, clientHeader, expectedClientId = "care-connect") {
-  if (!expectedSecret) throw apiError(503, "intake_not_configured", "Care Connect intake is not configured");
+  if (!expectedSecret) throw apiError(503, "intake_not_configured", "server intake is not configured");
   const supplied = bearer(header);
   if (!safeEqual(supplied, expectedSecret)) throw apiError(401, "unauthorized", "valid intake authorization is required");
   const clientId = cleanText(clientHeader, 80, { required: true, field: "X-BHW-Client-Id" }).toLowerCase();

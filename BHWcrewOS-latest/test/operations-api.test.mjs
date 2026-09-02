@@ -101,6 +101,8 @@ function fixture() {
     CREWOS_OPERATIONS_TOKEN_SECRET: "synthetic-crew-secret",
     CARE_CONNECT_INTAKE_SECRET: "synthetic-intake-secret",
     CARE_CONNECT_CLIENT_ID: "care-connect",
+    FRONT_DESK_INTAKE_SECRET: "synthetic-front-desk-secret",
+    FRONT_DESK_CLIENT_ID: "front-desk-os",
     ALLOWED_ORIGINS: "https://crew.example.test",
   };
   const app = createOperationsApp({
@@ -110,6 +112,19 @@ function fixture() {
     idFactory: idFactory(),
   });
   return { app, repository, environment };
+}
+
+function frontDeskReferralRequest(body, key = "front-desk-referral:synthetic-0001", secret = "synthetic-front-desk-secret") {
+  return new Request("https://operations.example.test/v1/intake/front-desk-referrals", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${secret}`,
+      "Content-Type": "application/json",
+      "Idempotency-Key": key,
+      "X-BHW-Client-Id": "front-desk-os",
+    },
+    body: JSON.stringify(body),
+  });
 }
 
 function intakeRequest(body, key = "cc:synthetic-0001", secret = "synthetic-intake-secret") {
@@ -183,6 +198,42 @@ test("intake authentication fails closed and idempotency replays safely", async 
 
   response = await app(intakeRequest({ ...syntheticIntake, message: "Different synthetic content" }));
   assert.equal(response.status, 409);
+});
+
+test("Front Desk referral intake creates one patient-linked workflow record without clinical narrative", async () => {
+  const { app, repository } = fixture();
+  const response = await app(frontDeskReferralRequest({
+    bhwPatientId: "BHW0000",
+    priority: "routine",
+    summary: "Referral coordination · Endocrinology",
+    message: "Referral document generated; clinical indication remains in the clinical record.",
+    requester: { displayName: "Front Desk OS", preferredChannel: "internal" },
+    sourceMetadata: {
+      sourceRecordId: "front-desk-referral:synthetic-0001",
+      sourcePage: "bhw-front-desk",
+      referralDestination: "Endocrinology",
+      referralDocumentState: "generated",
+    },
+  }));
+  assert.equal(response.status, 201);
+  const saved = (await response.json()).patientRequest;
+  assert.equal(saved.bhwPatientId, "BHW0000");
+  assert.equal(saved.requestType, "referral");
+  assert.equal(saved.source, "front-desk-os");
+  assert.equal(saved.routing.assignedTeam, "referrals");
+  assert.equal(saved.sourceMetadata.referralDestination, "Endocrinology");
+  assert.equal(saved.sourceMetadata.referralDocumentState, "generated");
+  assert.doesNotMatch(JSON.stringify(saved), /diagnosis|brief history|test result/i);
+  assert.equal(repository.requests.size, 1);
+});
+
+test("Front Desk referral intake rejects the wrong integration secret", async () => {
+  const { app, repository } = fixture();
+  const response = await app(frontDeskReferralRequest({
+    bhwPatientId: "BHW0000", summary: "Referral coordination · Endocrinology", message: "Synthetic",
+  }, "front-desk-referral:synthetic-0002", "wrong-secret"));
+  assert.equal(response.status, 401);
+  assert.equal(repository.requests.size, 0);
 });
 
 test("CrewOS status changes validate transitions and keep notifications unscheduled", async () => {
