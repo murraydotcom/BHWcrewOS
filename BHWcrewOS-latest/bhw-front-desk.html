@@ -328,6 +328,33 @@
 const API = '/.netlify/functions/frontdesk-data';           // e.g. '/.netlify/functions/frontdesk-data'
 const DASH_KEY = '02142022';      // optional shared key, matches function env
 
+function crewSessionToken(){
+  try{return sessionStorage.getItem('crewos_token')||'';}catch(e){return '';}
+}
+
+async function faxRequest(body){
+  const token=crewSessionToken();
+  if(!token) throw new Error('Sign in to CrewOS before using fax.');
+  const response=await fetch(`${API}?key=${encodeURIComponent(DASH_KEY)}`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},
+    body:JSON.stringify(body)
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok) throw new Error(data.detail||data.error||'Fax service unavailable');
+  return data;
+}
+
+async function waitForFaxDelivery(jobId){
+  for(let attempt=0;attempt<6;attempt++){
+    const status=await faxRequest({action:'fax_status',jobId});
+    if(status.delivered) return status;
+    if(status.terminal) throw new Error(`iFax reported ${status.faxStatus||'a failed transmission'}.`);
+    if(attempt<5) await new Promise(resolve=>setTimeout(resolve,5000));
+  }
+  return {faxStatus:'sending',delivered:false,terminal:false};
+}
+
 /* ============ SPECIALIST DIRECTORY (live from Notion) ============ */
 // Loaded from the Notion "Specialist Referral Directory" via loadDir(). Empty
 // here on purpose — no sample rows; an empty directory shows an empty state.
@@ -652,6 +679,8 @@ $('g-make').addEventListener('click', async ()=>{
     // keep the PDF + destination so it can be faxed straight to the specialist
     window.lastReferralPdf = pdf;
     window.lastReferralName = `Referral - ${($('g-pname').value.split(',')[0]||'patient').trim()}.pdf`;
+    window.lastFaxJobId = '';
+    window.lastFaxDeliveredJobId = '';
     const fx=$('g-fax'), sfax=($('g-sfax').value||'').replace(/\D/g,'');
     if(fx){ fx.style.display=sfax?'block':'none'; fx.textContent=sfax?`📠 Fax to ${$('g-sspec').value||'specialist'} (${$('g-sfax').value})`:'📠 Fax to specialist'; fx.disabled=false; }
     const patientId=(window.lastPatient?.bhwPatientId||window.lastPatient?.bhwId||window.lastPatient?.ctl||'').toUpperCase();
@@ -677,12 +706,24 @@ $('g-fax').addEventListener('click', async ()=>{
   const to=($('g-sfax').value||'').replace(/\D/g,'');
   if(!window.lastReferralPdf){ st.textContent='Generate the referral first.'; return; }
   if(!to){ st.textContent='Add the specialist’s fax number first.'; return; }
+  if(window.lastFaxDeliveredJobId){ st.textContent='This generated referral already has confirmed fax delivery.'; return; }
   const fx=$('g-fax'); fx.disabled=true; const label=fx.textContent; fx.textContent='Faxing…';
   try{
-    const r=await fetch(`${API}?key=${encodeURIComponent(DASH_KEY)}`,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'fax', to, pdf:window.lastReferralPdf, filename:window.lastReferralName||'referral.pdf'})});
-    if(r.ok){
-      fx.textContent='Faxed ✓';
+    let jobId=window.lastFaxJobId;
+    if(!jobId){
+      const accepted=await faxRequest({
+        action:'fax',to,pdf:window.lastReferralPdf,filename:window.lastReferralName||'referral.pdf',
+        subject:'BHW Medical Group referral',fromName:'BHW Medical Group',toName:$('g-sspec').value||$('g-sname').value||''
+      });
+      jobId=accepted.jobId;
+      if(!jobId) throw new Error('iFax did not return a tracking ID.');
+      window.lastFaxJobId=jobId;
+    }
+    fx.textContent='Checking delivery…';
+    const delivery=await waitForFaxDelivery(jobId);
+    if(delivery.delivered){
+      window.lastFaxDeliveredJobId=jobId;
+      fx.textContent='Fax delivered ✓';
       let tracking='Referral faxed, but no patient-linked workflow record was available to update.';
       if(window.lastReferralRequestId){
         try{
@@ -696,10 +737,13 @@ $('g-fax').addEventListener('click', async ()=>{
           tracking=`Saved to BHW Cloud · ${new Date(saved.savedAt).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})} · Referral sent (not scheduled)`;
         }catch(error){ tracking=`Fax sent; workflow status not saved — ${String(error.message||error).slice(0,100)}`; }
       }
-      st.textContent=`✓ Referral faxed to ${$('g-sspec').value||'the specialist'} at ${$('g-sfax').value}. ${tracking}`;
+      st.textContent=`✓ iFax confirmed delivery to ${$('g-sspec').value||'the specialist'} at ${$('g-sfax').value}. ${tracking}`;
+    }else{
+      fx.textContent='Check fax status';
+      fx.disabled=false;
+      st.textContent=`iFax accepted job ${jobId} and is still sending. Referral status was not advanced; use “Check fax status” again.`;
     }
-    else{ const d=await r.json().catch(()=>({})); fx.textContent=label; fx.disabled=false; st.textContent='Fax failed — '+(d.detail?String(d.detail).slice(0,120):'try again or send from Dialpad'); }
-  }catch(e){ fx.textContent=label; fx.disabled=false; st.textContent='Fax error: '+e; }
+  }catch(e){ fx.textContent=window.lastFaxJobId?'Check fax status':label; fx.disabled=false; st.textContent='Fax not delivered — '+String(e.message||e).slice(0,160); }
 });
 </script>
 </body>

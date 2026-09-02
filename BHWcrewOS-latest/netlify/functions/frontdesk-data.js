@@ -12,6 +12,8 @@ const H = () => ({
 
 const QUEUE_DB = process.env.QUEUE_DB_ID || 'de7906906a134b65bb0fc6966ba20b13';
 const { listCloudPatients, findCloudPatient, searchCloudPatients } = require('./lib/cloud-patients');
+const { createIFaxClient } = require('./lib/ifax');
+const { getSession } = require('./_lib');
 const digits = s => (s || '').replace(/\D/g, '');
 const text = p => (p?.rich_text?.[0]?.plain_text) || (p?.title?.[0]?.plain_text) || '';
 const sel = p => p?.select?.name || p?.status?.name || '';
@@ -85,9 +87,12 @@ exports.handler = async (event) => {
     if (event.httpMethod === 'POST') {
       const { pageId, action } = JSON.parse(event.body || '{}');
       if (!action) return { statusCode: 400, body: JSON.stringify({ error: 'missing action' }) };
+      if (['fax', 'fax_status'].includes(action) && !getSession(event)) {
+        return { statusCode: 401, body: JSON.stringify({ ok: false, detail: 'Sign in to CrewOS again before using fax.' }) };
+      }
       // sms/fax can be sent without a triage row (referrals, paperwork, ad-hoc fax);
       // the status/publish actions still need a pageId to mutate.
-      if (!pageId && !['sms', 'fax'].includes(action)) return { statusCode: 400, body: JSON.stringify({ error: 'missing pageId' }) };
+      if (!pageId && !['sms', 'fax', 'fax_status'].includes(action)) return { statusCode: 400, body: JSON.stringify({ error: 'missing pageId' }) };
       const now = new Date().toISOString();
       let properties = {};
       if (action === 'start') {
@@ -130,17 +135,15 @@ exports.handler = async (event) => {
         }
         return { statusCode: 200, body: JSON.stringify({ ok: true }) };
       } else if (action === 'fax') {
-        // Fax a document out via Dialpad. Two inputs:
+        // Fax a document through iFax. Two inputs:
         //   pdf  — base64 of a real PDF (referral, filled paperwork, uploaded doc)
         //   text — a short typed note, rendered onto a 1-page BHW cover sheet
-        // `pdf` wins when both are present. Dialpad's fax-send request shape isn't
-        // publicly documented (docs are behind egress), so the endpoint/field
-        // names are best-effort: the Dialpad response is logged and returned so we
-        // can confirm/correct on the first live test.
-        const { to, text: msg, pdf: pdfB64, filename } = JSON.parse(event.body || '{}');
+        // `pdf` wins when both are present. Acceptance creates an iFax job; callers
+        // must use fax_status and wait for `delivered` before advancing a referral.
+        const { to, text: msg, pdf: pdfB64, filename, subject, fromName, toName } = JSON.parse(event.body || '{}');
         if (!to) return { statusCode: 400, body: JSON.stringify({ error: 'missing to' }) };
         if (!pdfB64 && !msg) return { statusCode: 400, body: JSON.stringify({ error: 'missing pdf/text' }) };
-        if (!process.env.DIALPAD_TOKEN) return { statusCode: 503, body: JSON.stringify({ ok: false, detail: 'DIALPAD_TOKEN not set' }) };
+        if (!process.env.IFAX_API_KEY) return { statusCode: 503, body: JSON.stringify({ ok: false, detail: 'IFAX_API_KEY not set' }) };
         let pdfBytes, faxName = filename || 'document.pdf';
         if (pdfB64) {
           try { pdfBytes = Buffer.from(String(pdfB64).replace(/^data:.*?;base64,/, ''), 'base64'); }
@@ -163,21 +166,30 @@ exports.handler = async (event) => {
           } catch (e) { return { statusCode: 500, body: JSON.stringify({ ok: false, detail: 'pdf: ' + String(e.message || e) }) }; }
         }
         try {
-          const form = new FormData();
-          form.append('to', to);
-          form.append('from_number', process.env.DIALPAD_FROM || '');
-          form.append('file', new Blob([pdfBytes], { type: 'application/pdf' }), faxName);
-          const fres = await fetch(`https://dialpad.com/api/v2/sendfax?apikey=${encodeURIComponent(process.env.DIALPAD_TOKEN)}`, {
-            method: 'POST', headers: { 'Authorization': `Bearer ${process.env.DIALPAD_TOKEN}` }, body: form,
+          const ifax = createIFaxClient({
+            apiKey: process.env.IFAX_API_KEY,
+            callerId: process.env.IFAX_CALLER_ID,
           });
-          const detail = await fres.text();
-          console.log('dialpad fax send:', fres.status, detail.slice(0, 300));
-          if (!fres.ok) return { statusCode: 502, body: JSON.stringify({ ok: false, detail: `Dialpad ${fres.status}: ${detail.slice(0, 160)}` }) };
-          if (pageId) {
-            await fetch(`${NOTION}/pages/${pageId}`, { method: 'PATCH', headers: H(), body: JSON.stringify({ properties: { 'First Response': { date: { start: now } } } }) });
-          }
-          return { statusCode: 200, body: JSON.stringify({ ok: true }) };
+          const accepted = await ifax.sendPdf({
+            to,
+            pdfBytes,
+            filename: faxName,
+            subject,
+            fromName,
+            toName,
+            message: msg,
+          });
+          return { statusCode: 202, body: JSON.stringify({ ok: true, accepted: true, delivered: false, provider: 'iFax', ...accepted }) };
         } catch (e) { return { statusCode: 502, body: JSON.stringify({ ok: false, detail: 'fax: ' + String(e.message || e) }) }; }
+      } else if (action === 'fax_status') {
+        const { jobId } = JSON.parse(event.body || '{}');
+        if (!jobId) return { statusCode: 400, body: JSON.stringify({ error: 'missing jobId' }) };
+        if (!process.env.IFAX_API_KEY) return { statusCode: 503, body: JSON.stringify({ ok: false, detail: 'IFAX_API_KEY not set' }) };
+        try {
+          const ifax = createIFaxClient({ apiKey: process.env.IFAX_API_KEY });
+          const status = await ifax.getStatus(jobId);
+          return { statusCode: 200, body: JSON.stringify({ ok: true, provider: 'iFax', ...status }) };
+        } catch (e) { return { statusCode: 502, body: JSON.stringify({ ok: false, detail: 'fax status: ' + String(e.message || e) }) }; }
       } else if (action === 'publish') {
         // post a dated update line onto the patient's Health Hub page (+ optional no-PHI text)
         const { masterId, text: updText, notify } = JSON.parse(event.body || '{}');
