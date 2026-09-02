@@ -1,13 +1,13 @@
 {
-  "schemaVersion": "bhw.lab-crewos-pilot.v1",
-  "generatedAt": "2026-09-01T03:45:00.000Z",
+  "schemaVersion": "bhw.lab-crewos-work-queues.v1",
+  "generatedAt": "2026-09-01T04:20:00.000Z",
   "boundary": {
     "bhwPatientId": "BHW0000",
     "syntheticOnly": true,
     "readOnly": true,
     "runtimeConnected": false,
-    "source": "synthetic-contract-fixture",
-    "notice": "No production Firestore, Labcorp, Health Core publication, Care Connect delivery, or real-patient access is enabled."
+    "source": "synthetic-operational-queue-fixture",
+    "notice": "CrewOS contains operational laboratory work only. The clinical laboratory record, results, trends, interpretations, and orders belong to the Health Core EHR. No production Firestore, Labcorp, Care Connect, or real-patient access is enabled."
   },
   "directory": {
     "authoritativePhysicalEntries": 21,
@@ -23,6 +23,12 @@
       "outsideVerification": 1,
       "providerReview": 2
     },
+    "orderIntegrity": {
+      "templatePreserved": true,
+      "authoritativeTemplateItemCount": 21,
+      "programAdditionCount": 2,
+      "patientSpecificAdditionCount": 1
+    },
     "workItems": [
       {
         "workItemId": "SYN-WORK-CRITICAL-1",
@@ -30,9 +36,10 @@
         "priority": "critical",
         "bhwPatientId": "BHW0000",
         "patientName": "Synthetic Patient",
-        "title": "Critical potassium acknowledgment remains open",
-        "detail": "Provider assessment is documented. Patient action or disposition and closure are still required.",
+        "title": "Critical-result closure remains open",
+        "detail": "Provider assessment is documented. Patient action or disposition and closure are still required in Health Core.",
         "status": "clinician-acknowledged",
+        "healthCoreRecordReference": "health-core://patients/BHW0000/labs/critical/SYN-CRITICAL-1",
         "updatedAt": "2026-08-31T15:12:00.000Z"
       },
       {
@@ -42,8 +49,9 @@
         "bhwPatientId": "BHW0000",
         "patientName": "Synthetic Patient",
         "title": "Partial report requires reconciliation",
-        "detail": "One ordered CBC differential component has not resulted.",
+        "detail": "One ordered component has not resulted. Review the clinical order and report in Health Core.",
         "status": "partial",
+        "healthCoreRecordReference": "health-core://patients/BHW0000/labs/reports/SYN-REPORT-PARTIAL-1",
         "updatedAt": "2026-08-31T14:20:00.000Z"
       },
       {
@@ -53,8 +61,9 @@
         "bhwPatientId": "BHW0000",
         "patientName": "Synthetic Patient",
         "title": "Outside PDF identity verification incomplete",
-        "detail": "One matching evidence type is present; two are required before longitudinal linkage.",
+        "detail": "One matching evidence type is present; two are required before Health Core linkage.",
         "status": "candidate-match",
+        "healthCoreRecordReference": "health-core://outside-intake/SYN-OUTSIDE-INTAKE-1",
         "updatedAt": "2026-08-30T18:15:00.000Z"
       },
       {
@@ -64,8 +73,9 @@
         "bhwPatientId": "BHW0000",
         "patientName": "Synthetic Patient",
         "title": "Interpretation review blocked by open critical event",
-        "detail": "The draft cannot be approved until the critical-result workflow is closed.",
+        "detail": "The draft in Health Core cannot be approved until the critical-result workflow is closed.",
         "status": "blocked",
+        "healthCoreRecordReference": "health-core://patients/BHW0000/labs/interpretations/SYN-INTERPRETATION-1",
         "updatedAt": "2026-08-31T15:20:00.000Z"
       },
       {
@@ -75,309 +85,11 @@
         "bhwPatientId": "BHW0000",
         "patientName": "Synthetic Patient",
         "title": "Lab Justification requires provider dispositions",
-        "detail": "Every recommendation requires a separate approve, modify, defer, or decline decision.",
+        "detail": "Every recommendation in Health Core requires a separate approve, modify, defer, or decline decision.",
         "status": "provider-review-required",
+        "healthCoreRecordReference": "health-core://patients/BHW0000/labs/justifications/SYN-JUSTIFICATION-1",
         "updatedAt": "2026-08-31T15:22:00.000Z"
       }
     ]
-  },
-  "patient": {
-    "bhwPatientId": "BHW0000",
-    "name": "Synthetic Patient",
-    "dob": "1984-06-14",
-    "communicationStatus": "Synthetic secure-message channel verified",
-    "careTeam": ["BHW Primary Care", "Synthetic Provider"],
-    "programs": ["Primary Care", "Flow"],
-    "riskStatus": "Elevated follow-up risk",
-    "lastEncounter": "2026-08-28T14:00:00.000Z",
-    "nextAppointment": "2026-09-08T15:30:00.000Z"
-  },
-  "orders": [
-    {
-      "orderId": "SYN-LAB-ORDER-1",
-      "bhwPatientId": "BHW0000",
-      "status": "partial",
-      "orderedAt": "2026-08-27T16:00:00.000Z",
-      "orderedBy": "Synthetic Provider",
-      "authoritativeTemplateItemCount": 21,
-      "programAdditionCount": 2,
-      "patientSpecificAdditionCount": 1,
-      "resultedItemCount": 23,
-      "missingItemCount": 1,
-      "templatePreserved": true
-    }
-  ],
-  "specimens": [
-    {
-      "specimenId": "SYN-SPECIMEN-1",
-      "bhwPatientId": "BHW0000",
-      "orderId": "SYN-LAB-ORDER-1",
-      "status": "received-by-lab",
-      "specimenType": "whole blood and serum",
-      "collectedAt": "2026-08-29T08:05:00.000Z",
-      "receivedByLabAt": "2026-08-29T10:18:00.000Z"
-    }
-  ],
-  "reports": [
-    {
-      "reportId": "SYN-REPORT-PARTIAL-1",
-      "bhwPatientId": "BHW0000",
-      "orderId": "SYN-LAB-ORDER-1",
-      "status": "partial",
-      "laboratoryName": "Synthetic Reference Laboratory",
-      "issuedAt": "2026-08-30T14:20:00.000Z",
-      "sourceDocumentId": "SYN-DOC-PARTIAL-1",
-      "supersedesReportId": ""
-    },
-    {
-      "reportId": "SYN-REPORT-FINAL-1",
-      "bhwPatientId": "BHW0000",
-      "orderId": "SYN-LAB-ORDER-1",
-      "status": "final",
-      "laboratoryName": "Synthetic Reference Laboratory",
-      "issuedAt": "2026-08-31T14:50:00.000Z",
-      "sourceDocumentId": "SYN-DOC-FINAL-1",
-      "supersedesReportId": ""
-    },
-    {
-      "reportId": "SYN-REPORT-CORRECTED-1",
-      "bhwPatientId": "BHW0000",
-      "orderId": "SYN-LAB-ORDER-1",
-      "status": "corrected",
-      "laboratoryName": "Synthetic Reference Laboratory",
-      "issuedAt": "2026-08-31T16:10:00.000Z",
-      "sourceDocumentId": "SYN-DOC-CORRECTED-1",
-      "supersedesReportId": "SYN-REPORT-FINAL-1"
-    }
-  ],
-  "results": [
-    {
-      "resultId": "SYN-WBC-2024",
-      "bhwPatientId": "BHW0000",
-      "testName": "WBC",
-      "value": 10.6,
-      "unit": "x10E3/uL",
-      "referenceRange": "3.4-10.8",
-      "abnormalFlag": "",
-      "collectedAt": "2024-08-29T08:00:00.000Z",
-      "resultedAt": "2024-08-29T14:00:00.000Z",
-      "laboratoryName": "Synthetic Reference Laboratory",
-      "methodology": "automated hematology analyzer",
-      "specimen": "whole blood",
-      "sourceType": "outside-lab",
-      "sourceReportId": "SYN-HISTORICAL-REPORT-2024",
-      "verificationStatus": "verified",
-      "status": "final",
-      "revision": 1,
-      "supersedesResultId": ""
-    },
-    {
-      "resultId": "SYN-WBC-2025",
-      "bhwPatientId": "BHW0000",
-      "testName": "WBC",
-      "value": 10.9,
-      "unit": "x10E3/uL",
-      "referenceRange": "3.4-10.8",
-      "abnormalFlag": "high",
-      "collectedAt": "2025-08-29T08:00:00.000Z",
-      "resultedAt": "2025-08-29T14:00:00.000Z",
-      "laboratoryName": "Synthetic Reference Laboratory",
-      "methodology": "automated hematology analyzer",
-      "specimen": "whole blood",
-      "sourceType": "outside-lab",
-      "sourceReportId": "SYN-HISTORICAL-REPORT-2025",
-      "verificationStatus": "verified",
-      "status": "final",
-      "revision": 1,
-      "supersedesResultId": ""
-    },
-    {
-      "resultId": "SYN-WBC-2026-ORIGINAL",
-      "bhwPatientId": "BHW0000",
-      "testName": "WBC",
-      "value": 11.8,
-      "unit": "x10E3/uL",
-      "referenceRange": "3.4-10.8",
-      "abnormalFlag": "high",
-      "collectedAt": "2026-08-29T08:05:00.000Z",
-      "resultedAt": "2026-08-31T14:50:00.000Z",
-      "laboratoryName": "Synthetic Reference Laboratory",
-      "methodology": "automated hematology analyzer",
-      "specimen": "whole blood",
-      "sourceType": "bhw-ordered",
-      "sourceReportId": "SYN-REPORT-FINAL-1",
-      "verificationStatus": "verified",
-      "status": "final",
-      "revision": 1,
-      "supersedesResultId": "",
-      "supersededByResultId": "SYN-WBC-2026-CORRECTED"
-    },
-    {
-      "resultId": "SYN-WBC-2026-CORRECTED",
-      "bhwPatientId": "BHW0000",
-      "testName": "WBC",
-      "value": 11.2,
-      "unit": "x10E3/uL",
-      "referenceRange": "3.4-10.8",
-      "abnormalFlag": "high",
-      "collectedAt": "2026-08-29T08:05:00.000Z",
-      "resultedAt": "2026-08-31T16:10:00.000Z",
-      "laboratoryName": "Synthetic Reference Laboratory",
-      "methodology": "automated hematology analyzer",
-      "specimen": "whole blood",
-      "sourceType": "bhw-ordered",
-      "sourceReportId": "SYN-REPORT-CORRECTED-1",
-      "verificationStatus": "verified",
-      "status": "corrected",
-      "revision": 2,
-      "supersedesResultId": "SYN-WBC-2026-ORIGINAL"
-    },
-    {
-      "resultId": "SYN-ALT-2024",
-      "bhwPatientId": "BHW0000",
-      "testName": "ALT",
-      "value": 29,
-      "unit": "IU/L",
-      "referenceRange": "0-32",
-      "abnormalFlag": "",
-      "collectedAt": "2024-08-29T08:00:00.000Z",
-      "resultedAt": "2024-08-29T14:00:00.000Z",
-      "laboratoryName": "Synthetic Reference Laboratory",
-      "methodology": "enzymatic assay",
-      "specimen": "serum",
-      "sourceType": "outside-lab",
-      "sourceReportId": "SYN-HISTORICAL-REPORT-2024",
-      "verificationStatus": "verified",
-      "status": "final",
-      "revision": 1,
-      "supersedesResultId": ""
-    },
-    {
-      "resultId": "SYN-ALT-2025",
-      "bhwPatientId": "BHW0000",
-      "testName": "ALT",
-      "value": 42,
-      "unit": "IU/L",
-      "referenceRange": "0-32",
-      "abnormalFlag": "high",
-      "collectedAt": "2025-08-29T08:00:00.000Z",
-      "resultedAt": "2025-08-29T14:00:00.000Z",
-      "laboratoryName": "Synthetic Reference Laboratory",
-      "methodology": "enzymatic assay",
-      "specimen": "serum",
-      "sourceType": "outside-lab",
-      "sourceReportId": "SYN-HISTORICAL-REPORT-2025",
-      "verificationStatus": "verified",
-      "status": "final",
-      "revision": 1,
-      "supersedesResultId": ""
-    },
-    {
-      "resultId": "SYN-ALT-2026",
-      "bhwPatientId": "BHW0000",
-      "testName": "ALT",
-      "value": 58,
-      "unit": "IU/L",
-      "referenceRange": "0-32",
-      "abnormalFlag": "high",
-      "collectedAt": "2026-08-29T08:05:00.000Z",
-      "resultedAt": "2026-08-31T14:50:00.000Z",
-      "laboratoryName": "Synthetic Reference Laboratory",
-      "methodology": "enzymatic assay",
-      "specimen": "serum",
-      "sourceType": "bhw-ordered",
-      "sourceReportId": "SYN-REPORT-FINAL-1",
-      "verificationStatus": "verified",
-      "status": "final",
-      "revision": 1,
-      "supersedesResultId": ""
-    },
-    {
-      "resultId": "SYN-POTASSIUM-2026",
-      "bhwPatientId": "BHW0000",
-      "testName": "Potassium",
-      "value": 6.3,
-      "unit": "mmol/L",
-      "referenceRange": "3.5-5.2",
-      "abnormalFlag": "critical-high",
-      "collectedAt": "2026-08-29T08:05:00.000Z",
-      "resultedAt": "2026-08-31T14:50:00.000Z",
-      "laboratoryName": "Synthetic Reference Laboratory",
-      "methodology": "ion-selective electrode",
-      "specimen": "serum",
-      "sourceType": "bhw-ordered",
-      "sourceReportId": "SYN-REPORT-FINAL-1",
-      "verificationStatus": "verified",
-      "status": "final",
-      "revision": 1,
-      "supersedesResultId": ""
-    }
-  ],
-  "trends": [
-    {
-      "trendId": "SYN-TREND-WBC",
-      "testName": "WBC",
-      "unit": "x10E3/uL",
-      "direction": "increasing",
-      "netChange": 0.6,
-      "percentageChange": 5.7,
-      "clinicalMeaning": "provider-review-required",
-      "comparable": true,
-      "points": [
-        {"resultId": "SYN-WBC-2024", "date": "2024-08-29", "value": 10.6, "referenceRange": "3.4-10.8"},
-        {"resultId": "SYN-WBC-2025", "date": "2025-08-29", "value": 10.9, "referenceRange": "3.4-10.8"},
-        {"resultId": "SYN-WBC-2026-CORRECTED", "date": "2026-08-29", "value": 11.2, "referenceRange": "3.4-10.8"}
-      ]
-    },
-    {
-      "trendId": "SYN-TREND-ALT",
-      "testName": "ALT",
-      "unit": "IU/L",
-      "direction": "increasing",
-      "netChange": 29,
-      "percentageChange": 100,
-      "clinicalMeaning": "provider-review-required",
-      "comparable": true,
-      "points": [
-        {"resultId": "SYN-ALT-2024", "date": "2024-08-29", "value": 29, "referenceRange": "0-32"},
-        {"resultId": "SYN-ALT-2025", "date": "2025-08-29", "value": 42, "referenceRange": "0-32"},
-        {"resultId": "SYN-ALT-2026", "date": "2026-08-29", "value": 58, "referenceRange": "0-32"}
-      ]
-    }
-  ],
-  "criticalEvents": [
-    {
-      "criticalEventId": "SYN-CRITICAL-1",
-      "bhwPatientId": "BHW0000",
-      "resultId": "SYN-POTASSIUM-2026",
-      "status": "clinician-acknowledged",
-      "reportedAt": "2026-08-31T15:02:00.000Z",
-      "providerAcknowledgedAt": "2026-08-31T15:12:00.000Z",
-      "assessment": "Synthetic clinical assessment documented.",
-      "patientAction": null,
-      "closure": null
-    }
-  ],
-  "outsideIntakes": [
-    {
-      "intakeId": "SYN-OUTSIDE-INTAKE-1",
-      "bhwPatientId": "BHW0000",
-      "sourceType": "outside-pdf",
-      "status": "received",
-      "patientMatchStatus": "candidate-match",
-      "evidenceTypes": ["date-of-birth"],
-      "requiredEvidenceTypeCount": 2,
-      "receivedAt": "2026-08-30T18:15:00.000Z"
-    }
-  ],
-  "timeline": [
-    {"eventId":"SYN-EVENT-ORDER","type":"order","occurredAt":"2026-08-27T16:00:00.000Z","title":"Complete-template order composed","summary":"All 21 authoritative template items were preserved with separate additions.","status":"provider-reviewed","sourceId":"SYN-LAB-ORDER-1","verification":"verified"},
-    {"eventId":"SYN-EVENT-COLLECTION","type":"specimen","occurredAt":"2026-08-29T08:05:00.000Z","title":"Specimens collected","summary":"Whole blood and serum collected for the synthetic order.","status":"received-by-lab","sourceId":"SYN-SPECIMEN-1","verification":"verified"},
-    {"eventId":"SYN-EVENT-OUTSIDE","type":"outside","occurredAt":"2026-08-30T18:15:00.000Z","title":"Outside laboratory PDF received","summary":"Patient linkage remains blocked until a second identity evidence type is verified.","status":"candidate-match","sourceId":"SYN-OUTSIDE-INTAKE-1","verification":"needs-verification"},
-    {"eventId":"SYN-EVENT-PARTIAL","type":"report","occurredAt":"2026-08-30T14:20:00.000Z","title":"Partial laboratory report received","summary":"One ordered CBC differential component remains missing.","status":"partial","sourceId":"SYN-REPORT-PARTIAL-1","verification":"verified"},
-    {"eventId":"SYN-EVENT-FINAL","type":"report","occurredAt":"2026-08-31T14:50:00.000Z","title":"Final laboratory report received","summary":"Verified results were added without replacing the partial source report.","status":"final","sourceId":"SYN-REPORT-FINAL-1","verification":"verified"},
-    {"eventId":"SYN-EVENT-CRITICAL","type":"critical","occurredAt":"2026-08-31T15:02:00.000Z","title":"Critical potassium reported","summary":"Provider acknowledged and assessed; patient action or disposition and closure remain open.","status":"clinician-acknowledged","sourceId":"SYN-CRITICAL-1","verification":"verified"},
-    {"eventId":"SYN-EVENT-CORRECTION","type":"correction","occurredAt":"2026-08-31T16:10:00.000Z","title":"Corrected WBC result received","summary":"The corrected result is a new revision linked to the original result; the original remains preserved.","status":"corrected","sourceId":"SYN-WBC-2026-CORRECTED","verification":"verified"},
-    {"eventId":"SYN-EVENT-REVIEW","type":"review","occurredAt":"2026-08-31T15:20:00.000Z","title":"Interpretation review blocked","summary":"Open critical-result workflow prevents final interpretation approval.","status":"blocked","sourceId":"SYN-WORK-REVIEW-1","verification":"system-rule"}
-  ]
+  }
 }

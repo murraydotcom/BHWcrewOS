@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="/crew-provider-gate.js"></script>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>BHW CrewOS - Laboratory Result Reconciliation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="lab-intelligence.css">
+</head>
+<body data-lab-view="result-queues">
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><h1>BHW CrewOS</h1><div>Operational intelligence</div></div>
+    <div class="nav-label">Patient Operations</div>
+    <a class="nav" href="patient-registry.html">Patient Registry</a>
+    <a class="nav" href="patient-360.html">Patient 360</a>
+    <div class="nav-label">Lab Intelligence</div>
+    <a class="nav" href="lab-dashboard.html">Lab Dashboard</a>
+    <a class="nav active" href="lab-result-queues.html?patient=BHW0000">Result Reconciliation</a>
+    <a class="nav" href="workflow.html">24-Hour Work Queue</a>
+    <div class="side-note">Operational queues only.<br>BHW0000 synthetic pilot.<br><br>No clinical laboratory payload is retained in CrewOS.</div>
+  </aside>
+  <main class="main">
+    <header class="top"><div class="crumb">Operational Intelligence · Laboratory Work · <b>Result Reconciliation</b></div><div class="tools"><span class="status warning" id="connection-status">Loading</span><button id="refresh">Refresh</button><button id="theme">Theme</button></div></header>
+    <div class="content" id="lab-root">
+      <div class="notice" id="boundary-notice">Loading the synthetic pilot boundary.</div>
+      <section class="hero"><div><span class="eyebrow">Minimum-necessary operations</span><h1>Critical, Missing &amp; Partial Result Queues</h1><p>Assign the work, watch due times, escalate unresolved loops, and confirm closure. Open clinical facts only in Health Core after authenticated routing is approved.</p></div><span class="status warning">Read-only synthetic preview</span></section>
+      <section class="kpis four" id="result-queue-kpis" aria-label="Result queue counts"></section>
+      <nav class="queue-tabs" id="result-queue-tabs" aria-label="Result queue filter">
+        <button class="active" data-result-queue="all">All result work</button>
+        <button data-result-queue="critical">Critical</button>
+        <button data-result-queue="missing">Missing</button>
+        <button data-result-queue="partial">Partial</button>
+      </nav>
+      <div class="result-queue-layout">
+        <section>
+          <div class="panel search-panel"><div class="filterbar"><input id="result-queue-search" type="search" aria-label="Search result reconciliation work" placeholder="Search patient, owner, role, status, or work item"></div></div>
+          <div class="queue-list section-gap" id="result-queue-items"></div>
+        </section>
+        <aside>
+          <section class="panel"><div class="panel-head"><h2>Queue contract</h2><span class="status neutral">Operations only</span></div><div class="panel-body" id="queue-definition"></div></section>
+          <section class="panel section-gap"><div class="panel-head"><h2>Clinical boundary</h2></div><div class="panel-body safety-list"><p><b>CrewOS may retain:</b> owner, role, priority, due time, escalation, workflow checkpoints, closure state, and an opaque Health Core reference.</p><p><b>CrewOS may not retain here:</b> test identity, result value, unit, interval, methodology, specimen, report content, assessment, diagnosis, or patient disposition.</p><p class="meta">The controls are disabled because operational writes and authenticated Health Core routing are not connected in this pilot.</p></div></section>
+        </aside>
+      </div>
+    </div>
+  </main>
+</div>
+<script type="module" src="lab-intelligence.mjs"></script>
+</body>
+</html>

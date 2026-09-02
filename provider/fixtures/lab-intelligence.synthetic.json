@@ -1,0 +1,196 @@
+{
+  "schemaVersion": "bhw.lab-crewos-work-queues.v2",
+  "generatedAt": "2026-09-01T05:35:00.000Z",
+  "boundary": {
+    "bhwPatientId": "BHW0000",
+    "syntheticOnly": true,
+    "readOnly": true,
+    "runtimeConnected": false,
+    "operationalWritesEnabled": false,
+    "healthCoreRoutingEnabled": false,
+    "clinicalPayloadAllowed": false,
+    "source": "synthetic-operational-queue-fixture",
+    "notice": "CrewOS contains minimum-necessary laboratory operations only. Clinical results, reports, values, trends, assessments, dispositions, interpretations, and orders remain in the Health Core EHR. No production Firestore, Health Core routing, Labcorp, Care Connect, or real-patient access is enabled."
+  },
+  "directory": {
+    "authoritativePhysicalEntries": 21,
+    "specialtyCandidates": 49,
+    "escalationBranches": 8,
+    "totalRecords": 70,
+    "vendorValidationStatus": "pending-live-labcorp-validation"
+  },
+  "queueDefinitions": {
+    "critical": {
+      "label": "Critical-result closure",
+      "recordType": "operational-work-item",
+      "purpose": "Assign, escalate, and confirm closure of a Health Core critical-result event without copying the clinical result into CrewOS.",
+      "clinicalSourceOfTruth": "Health Core EHR",
+      "policyStatus": "synthetic-proposed-not-approved",
+      "requiredHealthCoreSignals": ["provider-acknowledgment", "clinical-assessment", "patient-action-or-disposition", "documented-provider-closure"]
+    },
+    "missing": {
+      "label": "Missing-result reconciliation",
+      "recordType": "operational-work-item",
+      "purpose": "Track an expected report or component that has not arrived and coordinate follow-up without copying the order or result into CrewOS.",
+      "clinicalSourceOfTruth": "Health Core EHR",
+      "policyStatus": "synthetic-proposed-not-approved",
+      "requiredHealthCoreSignals": ["expected-result-reconciliation", "health-core-resolution-confirmed"]
+    },
+    "partial": {
+      "label": "Partial-result reconciliation",
+      "recordType": "operational-work-item",
+      "purpose": "Track an incomplete report and coordinate reconciliation while the report and component identities remain in Health Core.",
+      "clinicalSourceOfTruth": "Health Core EHR",
+      "policyStatus": "synthetic-proposed-not-approved",
+      "requiredHealthCoreSignals": ["partial-report-reviewed", "health-core-resolution-confirmed"]
+    }
+  },
+  "dashboard": {
+    "queues": {
+      "criticalOpen": 1,
+      "missing": 1,
+      "partial": 1,
+      "missingOrPartial": 2,
+      "outsideVerification": 1,
+      "providerReview": 2
+    },
+    "orderIntegrity": {
+      "templatePreserved": true,
+      "authoritativeTemplateItemCount": 21,
+      "programAdditionCount": 2,
+      "patientSpecificAdditionCount": 1
+    },
+    "workItems": [
+      {
+        "workItemId": "SYN-WORK-CRITICAL-1",
+        "recordType": "operational-lab-work-item",
+        "queue": "critical",
+        "priority": "critical",
+        "bhwPatientId": "BHW0000",
+        "patientName": "Synthetic Patient",
+        "title": "Critical-result closure remains open",
+        "detail": "Clinical follow-through and closure remain incomplete in Health Core.",
+        "status": "escalated-open",
+        "healthCoreRecordReference": "health-core://patients/BHW0000/labs/critical/SYN-CRITICAL-1",
+        "createdAt": "2026-08-31T15:02:00.000Z",
+        "updatedAt": "2026-08-31T15:12:00.000Z",
+        "owner": {"team":"BHW Clinical","requiredRole":"provider","assigneeId":"SYN-STAFF-PROVIDER-1","assignmentStatus":"assigned"},
+        "sla": {"dueAt":"2026-08-31T15:17:00.000Z","status":"overdue","policyStatus":"synthetic-proposed-not-approved"},
+        "escalation": {"level":2,"status":"escalated","nextEscalationAt":null},
+        "closureRequirements": [
+          {"key":"provider-acknowledgment","label":"Provider acknowledgment","status":"complete","systemOfRecord":"Health Core EHR"},
+          {"key":"clinical-assessment","label":"Clinical assessment","status":"complete","systemOfRecord":"Health Core EHR"},
+          {"key":"patient-action-or-disposition","label":"Patient action or disposition","status":"open","systemOfRecord":"Health Core EHR"},
+          {"key":"documented-provider-closure","label":"Documented provider closure","status":"open","systemOfRecord":"Health Core EHR"},
+          {"key":"operational-queue-closure","label":"CrewOS work-item closure confirmation","status":"blocked","systemOfRecord":"CrewOS"}
+        ],
+        "allowedActions": ["view-health-core", "reassign", "escalate", "record-operational-follow-up", "close-after-health-core-confirmation"]
+      },
+      {
+        "workItemId": "SYN-WORK-MISSING-1",
+        "recordType": "operational-lab-work-item",
+        "queue": "missing",
+        "priority": "high",
+        "bhwPatientId": "BHW0000",
+        "patientName": "Synthetic Patient",
+        "title": "Expected final result remains missing",
+        "detail": "The expected Health Core laboratory event has not reached its resolved state and requires reconciliation.",
+        "status": "missing-after-expected-date",
+        "healthCoreRecordReference": "health-core://patients/BHW0000/labs/orders/SYN-LAB-ORDER-1",
+        "createdAt": "2026-08-31T17:00:00.000Z",
+        "updatedAt": "2026-09-01T05:20:00.000Z",
+        "owner": {"team":"Lab Reconciliation","requiredRole":"clinical-staff","assigneeId":"SYN-STAFF-LAB-1","assignmentStatus":"assigned"},
+        "sla": {"dueAt":"2026-09-01T09:00:00.000Z","status":"due-today","policyStatus":"synthetic-proposed-not-approved"},
+        "escalation": {"level":1,"status":"watching","nextEscalationAt":"2026-09-01T09:00:00.000Z"},
+        "closureRequirements": [
+          {"key":"expected-result-reconciliation","label":"Expected-result reconciliation reviewed","status":"open","systemOfRecord":"Health Core EHR"},
+          {"key":"facility-follow-up","label":"Facility or source follow-up completed","status":"in-progress","systemOfRecord":"CrewOS"},
+          {"key":"health-core-resolution-confirmed","label":"Resolution confirmed in Health Core","status":"open","systemOfRecord":"Health Core EHR"},
+          {"key":"operational-queue-closure","label":"CrewOS work-item closure confirmation","status":"blocked","systemOfRecord":"CrewOS"}
+        ],
+        "allowedActions": ["view-health-core", "reassign", "escalate", "record-operational-follow-up", "close-after-health-core-confirmation"]
+      },
+      {
+        "workItemId": "SYN-WORK-PARTIAL-1",
+        "recordType": "operational-lab-work-item",
+        "queue": "partial",
+        "priority": "high",
+        "bhwPatientId": "BHW0000",
+        "patientName": "Synthetic Patient",
+        "title": "Partial report requires reconciliation",
+        "detail": "A Health Core report remains partial and requires operational follow-up before the work item can close.",
+        "status": "partial-open",
+        "healthCoreRecordReference": "health-core://patients/BHW0000/labs/reports/SYN-REPORT-PARTIAL-1",
+        "createdAt": "2026-08-30T14:20:00.000Z",
+        "updatedAt": "2026-08-31T14:20:00.000Z",
+        "owner": {"team":"Lab Reconciliation","requiredRole":"clinical-staff","assigneeId":"SYN-STAFF-LAB-2","assignmentStatus":"assigned"},
+        "sla": {"dueAt":"2026-09-01T12:00:00.000Z","status":"due-today","policyStatus":"synthetic-proposed-not-approved"},
+        "escalation": {"level":1,"status":"watching","nextEscalationAt":"2026-09-01T12:00:00.000Z"},
+        "closureRequirements": [
+          {"key":"partial-report-reviewed","label":"Partial-report state reviewed","status":"complete","systemOfRecord":"Health Core EHR"},
+          {"key":"facility-follow-up","label":"Facility or source follow-up completed","status":"open","systemOfRecord":"CrewOS"},
+          {"key":"health-core-resolution-confirmed","label":"Resolution confirmed in Health Core","status":"open","systemOfRecord":"Health Core EHR"},
+          {"key":"operational-queue-closure","label":"CrewOS work-item closure confirmation","status":"blocked","systemOfRecord":"CrewOS"}
+        ],
+        "allowedActions": ["view-health-core", "reassign", "escalate", "record-operational-follow-up", "close-after-health-core-confirmation"]
+      },
+      {
+        "workItemId": "SYN-WORK-OUTSIDE-1",
+        "recordType": "operational-lab-work-item",
+        "queue": "outside",
+        "priority": "routine",
+        "bhwPatientId": "BHW0000",
+        "patientName": "Synthetic Patient",
+        "title": "Outside PDF identity verification incomplete",
+        "detail": "The Health Core identity-verification workflow requires additional evidence.",
+        "status": "candidate-match",
+        "healthCoreRecordReference": "health-core://outside-intake/SYN-OUTSIDE-INTAKE-1",
+        "createdAt": "2026-08-30T18:15:00.000Z",
+        "updatedAt": "2026-08-30T18:15:00.000Z",
+        "owner": {"team":"Records Intake","requiredRole":"authorized-staff","assigneeId":"SYN-STAFF-INTAKE-1","assignmentStatus":"assigned"},
+        "sla": {"dueAt":"2026-09-02T17:00:00.000Z","status":"scheduled","policyStatus":"synthetic-proposed-not-approved"},
+        "escalation": {"level":0,"status":"not-escalated","nextEscalationAt":"2026-09-02T17:00:00.000Z"},
+        "closureRequirements": [],
+        "allowedActions": ["view-health-core", "reassign", "escalate"]
+      },
+      {
+        "workItemId": "SYN-WORK-REVIEW-1",
+        "recordType": "operational-lab-work-item",
+        "queue": "review",
+        "priority": "high",
+        "bhwPatientId": "BHW0000",
+        "patientName": "Synthetic Patient",
+        "title": "Interpretation review blocked by open critical event",
+        "detail": "The Health Core review remains blocked until its linked critical-result event is closed.",
+        "status": "blocked",
+        "healthCoreRecordReference": "health-core://patients/BHW0000/labs/interpretations/SYN-INTERPRETATION-1",
+        "createdAt": "2026-08-31T15:20:00.000Z",
+        "updatedAt": "2026-08-31T15:20:00.000Z",
+        "owner": {"team":"BHW Clinical","requiredRole":"provider","assigneeId":"SYN-STAFF-PROVIDER-1","assignmentStatus":"assigned"},
+        "sla": {"dueAt":"2026-09-01T17:00:00.000Z","status":"blocked","policyStatus":"synthetic-proposed-not-approved"},
+        "escalation": {"level":1,"status":"dependency-blocked","nextEscalationAt":"2026-09-01T13:00:00.000Z"},
+        "closureRequirements": [],
+        "allowedActions": ["view-health-core", "reassign", "escalate"]
+      },
+      {
+        "workItemId": "SYN-WORK-REVIEW-2",
+        "recordType": "operational-lab-work-item",
+        "queue": "review",
+        "priority": "routine",
+        "bhwPatientId": "BHW0000",
+        "patientName": "Synthetic Patient",
+        "title": "Lab Justification requires provider dispositions",
+        "detail": "Provider review remains open in Health Core.",
+        "status": "provider-review-required",
+        "healthCoreRecordReference": "health-core://patients/BHW0000/labs/justifications/SYN-JUSTIFICATION-1",
+        "createdAt": "2026-08-31T15:22:00.000Z",
+        "updatedAt": "2026-08-31T15:22:00.000Z",
+        "owner": {"team":"BHW Clinical","requiredRole":"provider","assigneeId":null,"assignmentStatus":"unassigned"},
+        "sla": {"dueAt":"2026-09-02T17:00:00.000Z","status":"scheduled","policyStatus":"synthetic-proposed-not-approved"},
+        "escalation": {"level":0,"status":"not-escalated","nextEscalationAt":"2026-09-02T12:00:00.000Z"},
+        "closureRequirements": [],
+        "allowedActions": ["view-health-core", "claim", "reassign", "escalate"]
+      }
+    ]
+  }
+}
