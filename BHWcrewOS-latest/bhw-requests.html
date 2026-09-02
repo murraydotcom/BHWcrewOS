@@ -22,7 +22,7 @@
   header .logo{width:42px;height:42px;border-radius:11px;background:var(--white);border:1px solid var(--line);display:grid;place-items:center;flex-shrink:0}
   header h1{font-size:1.28rem;font-weight:800;letter-spacing:-.01em}
   header .sub{font-size:.72rem;color:var(--ink-soft);font-weight:600;margin-top:1px}
-  header .right{margin-left:auto;display:flex;align-items:center;gap:10px}
+  header .right{margin-left:auto;display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:10px}
   .opencount{display:flex;align-items:center;gap:9px;background:var(--white);border:1px solid var(--line);border-radius:12px;padding:7px 14px}
   .opencount .n{font-size:1.15rem;font-weight:800;line-height:1}.opencount .n.warn{color:var(--clay)}
   .opencount .l{font-size:.6rem;font-weight:700;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.04em;line-height:1.2}
@@ -185,7 +185,7 @@
   .srow.allrow{border-top:1px solid var(--line-2);border-radius:0;margin-bottom:6px;padding-top:12px;font-weight:800}
   @media(max-width:960px){.layout{grid-template-columns:1fr}.detailpanel{position:static}.detailgrid{grid-template-columns:1fr}.detailsection+ .detailsection{border-left:0;border-top:1px solid var(--line)}}
   @media(max-width:640px){
-    .wrap{padding:12px 10px 50px}.right .opencount{display:none}.backlink{padding:8px 10px}
+    .wrap{padding:12px 10px 50px}header{flex-wrap:wrap}.right{width:100%;margin-left:0}.right .opencount{display:none}.backlink{padding:8px 10px}
     .filters{overflow-x:auto}.filters .flabel,.filters .live{display:none}.filters button{flex:0 0 auto;padding:7px 12px}.filters input{min-width:150px;margin-left:8px}.filters select{min-width:135px}
     .dategroup{grid-template-columns:44px 1fr;gap:8px}.datenode .d{font-size:1.35rem}.datenode .w{padding:3px 6px}
     .rc-head{padding:12px 10px;gap:8px}.av.lg{width:38px;height:38px}.stagepill{padding:5px 8px;font-size:.55rem}
@@ -207,6 +207,7 @@
     <div class="right">
       <div class="opencount"><span class="n" id="ocN">–</span><span class="l" id="ocL">open<br>requests</span></div>
       <span class="mirror-note">Chat mirror connected</span>
+      <a class="backlink" href="/bhw-staff-guide.html#patient-requests-training" target="_blank" rel="noopener">Training guide</a>
       <a class="backlink" href="/bhw-front-desk.html">← Front Desk</a>
     </div>
   </header>

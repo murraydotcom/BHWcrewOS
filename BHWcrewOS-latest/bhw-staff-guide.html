@@ -22,7 +22,7 @@ header .sub{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color
 .qc span{font-size:14px;font-weight:600;overflow-wrap:anywhere}
 .qc .url{font-size:12px;white-space:nowrap}
 .qc small{display:block;font-size:11.5px;color:var(--soft);font-weight:400;margin-top:2px}
-h2{font-family:var(--serif);font-weight:700;letter-spacing:-.01em;font-size:22px;margin:30px 0 4px;padding-top:14px;border-top:2px solid var(--sand)}
+h2{font-family:var(--serif);font-weight:700;letter-spacing:-.01em;font-size:22px;margin:30px 0 4px;padding-top:14px;border-top:2px solid var(--sand);scroll-margin-top:16px}
 h2 .n{color:var(--clay);font-weight:400;margin-right:8px}
 .lede{font-size:13px;color:var(--soft);margin-bottom:14px}
 .sec{background:#fff;border:1px solid var(--line);border-radius:13px;padding:18px 20px;margin-bottom:13px}
@@ -51,7 +51,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
 <header>
   <img src="/assets/bhw-medical-logo.png" alt="BHW Medical" onerror="this.style.display='none'">
   <div><h1>Staff Guide — Where Everything Is</h1><div class="sub">BHW Medical Group · BHWcrewOS</div></div>
-  <div class="updated">Updated August 30, 2026<br>Patient Requests + alerts</div>
+  <div class="updated">Updated September 1, 2026<br>Patient Requests training + alerts</div>
 </header>
 
 <button class="print" onclick="window.print()">Print this guide</button>
@@ -121,7 +121,36 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
   <div class="rule"><b>The clock stops when you tap Start</b> — not when you finish. If you've reached out and are waiting on the patient or a specialist, Start it so it stops screaming red while you wait.</div>
 </div>
 
-<h2><span class="n">03b</span>Alerts &amp; Patient Requests — the one work queue</h2>
+<h2 id="patient-requests-training"><span class="n">03b</span>Patient Requests training — the one work queue</h2>
+<div class="lede">Use this module for new-hire orientation, role changes, and annual refresher training. It teaches the live CrewOS workflow without using real patient data.</div>
+
+<div class="sec" data-k="training purpose scope objectives authoritative queue google firestore crewos chat mirror rcm downstream">
+  <h3>Purpose, scope, and pass standard <span class="who">Trainer + trainee</span></h3>
+  <p><b>Purpose:</b> teach staff to safely receive, claim, advance, communicate about, and close patient work in the Google-backed Patient Requests page.</p>
+  <table>
+    <tr><th>By the end, the trainee can…</th><th>Pass standard</th></tr>
+    <tr><td>Explain which system is authoritative</td><td><b>Patient Requests in CrewOS</b> is the one work queue. Google Chat is a no-PHI alert/action mirror, not a second queue.</td></tr>
+    <tr><td>Work only appropriate requests</td><td>Use the request's routed service line and the staff member's authorized role. Escalate instead of working beyond role or license.</td></tr>
+    <tr><td>Record the real milestone</td><td>Assign, Start, and select the exact outcome that actually occurred—never skip from submitted/sent to approved/scheduled.</td></tr>
+    <tr><td>Handle patient communication safely</td><td>Use only approved no-PHI wording, confirm delivery status, and never describe suppressed, queued, failed, or gated messages as delivered.</td></tr>
+  </table>
+  <div class="tip"><b>System boundaries:</b> Google Cloud/Firestore stores the workflow record; CrewOS is where staff work it; RCM receives billing work as a downstream specialist system; WelcomeToBHW remains HR/onboarding only; Notion is legacy/transitional.</div>
+</div>
+
+<div class="sec" data-k="training lesson plan walkthrough process flow fifteen minutes demonstration practice teach back">
+  <h3>15-minute trainer-led walkthrough</h3>
+  <table>
+    <tr><th>Time</th><th>Trainer demonstrates</th><th>Trainee does</th></tr>
+    <tr><td><b>0–3 min</b></td><td>Open the alert bell, explain role routing, then open the exact request.</td><td>States why opening an alert does not resolve the request.</td></tr>
+    <tr><td><b>3–7 min</b></td><td>Review filters, request history, routed team, current owner, and communications.</td><td>Finds one unclaimed synthetic request and identifies the correct service line.</td></tr>
+    <tr><td><b>7–11 min</b></td><td>Use Assign to me, Start, an exact milestone, and Escalate.</td><td>Completes the same sequence on a different synthetic request.</td></tr>
+    <tr><td><b>11–15 min</b></td><td>Show Notify patient eligibility and communications/delivery results.</td><td>Explains no-PHI, suppression, quiet-hours, duplicate-send, and automation-gate rules.</td></tr>
+  </table>
+  <div class="tip"><b>Process flow:</b> Alert or intake → open the record → confirm route and urgency → assign → start → do the work → record the exact milestone → notify only if eligible → verify delivery → resolve or escalate.</div>
+  <div class="tip"><b>Current release:</b> the CrewOS queue, alert bell, and Google Chat mirror are available. Automated patient SMS is gated off. A patient message counts only when Notify patient is available, the send is accepted, and the communications record shows the resulting delivery state.</div>
+  <div class="rule"><b>Training data only:</b> use synthetic/de-identified records labeled <b>BHW0000</b>. Never create, display, text, or test with a real patient's name, phone number, date of birth, diagnosis, medication, payer, or appointment.</div>
+</div>
+
 <div class="sec" data-k="alerts bell unread popup toast role routed assigned urgent overdue escalated google chat mirror">
   <h3>What the 🔔 alert bell means <span class="who">Everyone</span></h3>
   <ul>
@@ -178,6 +207,37 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
   </table>
 </div>
 
+<div class="sec" data-k="synthetic practice lab scenarios refill referral prior authorization billing rcm general BHW0000">
+  <h3>Synthetic practice lab <span class="who">Trainee drives</span></h3>
+  <p>The trainer prepares five de-identified <b>BHW0000</b> requests. The trainee narrates each decision before selecting an action.</p>
+  <table>
+    <tr><th>Practice request</th><th>Required demonstration</th><th>Do not misstate</th></tr>
+    <tr><td><b>Refill</b></td><td>Assign → Start → Waiting on clinician or Waiting on pharmacy → exact final outcome</td><td>Waiting is not completed; a refill request is not proof a prescription was sent.</td></tr>
+    <tr><td><b>Referral</b></td><td>Record Referral sent, Ready to schedule, Scheduled, or Closed without scheduling only when true</td><td>Referral sent does not mean the appointment is scheduled.</td></tr>
+    <tr><td><b>Prior authorization</b></td><td>Record PA submitted, then later Approved or Denied when the payer decision is known</td><td>PA submitted does not mean approved.</td></tr>
+    <tr><td><b>Billing / RCM</b></td><td>Route downstream to RCM and distinguish With RCM, Waiting on payer, and Resolved</td><td>Sending to RCM does not resolve the patient's question.</td></tr>
+    <tr><td><b>General request</b></td><td>Use Received → In progress → Waiting or Completed, escalating if ownership or safety is unclear</td><td>Do not use a generic completion when follow-up is still pending.</td></tr>
+  </table>
+</div>
+
+<div class="sec" data-k="competency checklist sign off training completion teach back supervisor">
+  <h3>Competency check and sign-off</h3>
+  <ul>
+    <li>□ Opens the exact request from an alert and explains that <b>read is not resolved</b>.</li>
+    <li>□ Uses filters and confirms routed service line, urgency, ownership, and status history.</li>
+    <li>□ Correctly uses Assign to me, Start, one exact milestone, Escalate, and Resolve.</li>
+    <li>□ Correctly completes all five BHW0000 scenarios without skipping a milestone.</li>
+    <li>□ Explains why Chat and SMS contain no PHI and why secure details stay in the patient-facing app.</li>
+    <li>□ Correctly interprets sent, suppressed, queued, failed, quiet-hours, and automation-not-enabled states.</li>
+    <li>□ States the urgent/emergency rule: the queue never replaces immediate provider notification, 988, or 911.</li>
+  </ul>
+  <div class="rule"><b>Pass only when every safety item is correct.</b> If the trainee misses role boundaries, status distinctions, PHI rules, delivery meaning, or emergency escalation, review that section and repeat the synthetic scenario before access is considered complete.</div>
+  <table>
+    <tr><th>Trainee</th><th>Trainer</th><th>Date</th><th>Result / follow-up</th></tr>
+    <tr><td>________________</td><td>________________</td><td>________________</td><td>Pass / repeat: ____________________</td></tr>
+  </table>
+</div>
+
 <h2><span class="n">04</span>Front Desk OS — lookup, referrals &amp; support tools</h2>
 <div class="sec" data-k="inbox start done reply text message canned response sms">
   <h3>1 · Open Patient Requests <span class="who">Front desk</span></h3>
@@ -185,7 +245,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
   <ul>
     <li><b>Assign to me</b> — records who owns it.</li>
     <li><b>Start</b> — records that work is underway.</li>
-    <li><b>Notify patient</b> — sends an approved no-PHI message through Dialpad after consent and suppression checks.</li>
+    <li><b>Notify patient</b> — when available and enabled, sends an approved no-PHI message through Dialpad after consent and suppression checks.</li>
     <li><b>Resolve / outcome buttons</b> — close only after the exact outcome occurred.</li>
   </ul>
   <div class="tip"><b>Do not work a second copy.</b> If an old Front Desk card and Patient Requests refer to the same patient contact, use Patient Requests as the source of truth and report the duplicate.</div>
@@ -294,7 +354,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
   <p><b>BHW HQ</b> is the tile page that links the big destinations (crewOS, the RCM platform, the onboarding portal) plus the <b>Staff Tools</b> row. Each tool opens on its own page and reuses your crewOS sign-in to pull patients.</p>
   <table>
     <tr><th>Tool</th><th>What it does</th></tr>
-    <tr><td><b>Patient Requests</b></td><td>The authoritative command center for routed patient work. Assign, start, record exact milestones/outcomes, escalate, review communications/delivery, and send approved no-PHI notifications through Dialpad.</td></tr>
+    <tr><td><b>Patient Requests</b></td><td>The authoritative command center for routed patient work. Assign, start, record exact milestones/outcomes, escalate, review communications/delivery, and—when enabled—send approved no-PHI notifications through Dialpad.</td></tr>
     <tr><td><b>Paperwork Studio</b></td><td>Chart pulls, prior auth, disability, FMLA &amp; MTA. Paste a note and <b>AI read note</b> pre-fills it, fills the real agency/payer PDF, and can <b>📠 Fax</b> it out.</td></tr>
     <tr><td><b>Care Plan Studio</b></td><td>Branded, patient-ready annual care plans per program — pull the existing patient, tailor it, and print/Save-PDF. Use the current Google-backed patient workflow; do not start new Notion storage.</td></tr>
     <tr><td><b>Document Builder</b></td><td>Patient handouts, after-visit summaries, care plans, letters, and medication lists — branded, print/Save-PDF. Includes <b>✨ Draft with AI</b> (below).</td></tr>

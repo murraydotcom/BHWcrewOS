@@ -9,6 +9,7 @@ test("Patient Requests is the command center and Google Chat is only a mirror", 
 
   assert.match(html, /One Google-backed queue/);
   assert.match(html, /Google Chat mirrors alerts and quick actions/);
+  assert.match(html, /bhw-staff-guide\.html#patient-requests-training/);
   assert.match(html, /Patient request work queue/);
   assert.match(script, /listPatientRequests/);
   assert.match(script, /listPatientRequestCommunications/);
