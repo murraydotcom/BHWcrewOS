@@ -49,3 +49,40 @@ test("Front Desk referral bridge fails closed without its server secret", async 
   const result = await handler({ httpMethod: "POST", queryStringParameters: {}, body: JSON.stringify({ action: "create" }) });
   assert.equal(result.statusCode, 503);
 });
+
+test("Front Desk keeps scheduled as a milestone before referral completion", async () => {
+  const originalFetch = global.fetch;
+  process.env.OPERATIONS_CLOUD_API_URL = "https://operations.example.test";
+  process.env.FRONT_DESK_INTAKE_SECRET = "synthetic-front-secret";
+  process.env.FRONT_DESK_CLIENT_ID = "front-desk-os";
+  const calls = [];
+  global.fetch = async (url, init) => {
+    calls.push({ url, body: JSON.parse(init.body) });
+    return new Response(JSON.stringify({ request: { id: "REQ-synthetic-referral-0002", version: calls.length + 1 } }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  };
+  try {
+    for (const [status, idempotencyKey] of [
+      ["scheduled", "front-desk-referral-scheduled:synthetic-0002"],
+      ["referral_completed", "front-desk-referral-completed:synthetic-0002"],
+    ]) {
+      const result = await handler({
+        httpMethod: "POST",
+        queryStringParameters: {},
+        body: JSON.stringify({ action: "milestone", requestId: "REQ-synthetic-referral-0002", status, idempotencyKey }),
+      });
+      assert.equal(result.statusCode, 200);
+    }
+    assert.equal(calls[0].body.action, "milestone");
+    assert.equal(calls[0].body.status, "scheduled");
+    assert.equal(calls[1].body.action, "resolve");
+    assert.equal(calls[1].body.outcome, "referral_completed");
+  } finally {
+    global.fetch = originalFetch;
+    delete process.env.OPERATIONS_CLOUD_API_URL;
+    delete process.env.FRONT_DESK_INTAKE_SECRET;
+    delete process.env.FRONT_DESK_CLIENT_ID;
+  }
+});

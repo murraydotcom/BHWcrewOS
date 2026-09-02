@@ -50,7 +50,7 @@ function act(request, action, details = {}, minute = 1) {
   }, { user: USER, now: new Date(NOON.getTime() + minute * 60_000) }).request;
 }
 
-test("workflow milestones distinguish submitted/sent states from approved/scheduled outcomes", () => {
+test("workflow milestones distinguish sent/scheduled states from completed outcomes", () => {
   let refill = act(syntheticRequest("refill"), "start");
   refill = act(refill, "milestone", { status: "waiting_on_pharmacy" }, 2);
   refill = act(refill, "resolve", {}, 3);
@@ -61,8 +61,12 @@ test("workflow milestones distinguish submitted/sent states from approved/schedu
   referral = act(referral, "milestone", { status: "referral_sent" }, 2);
   assert.equal(referral.statusCategory, "waiting");
   assert.throws(() => act(referral, "resolve", {}, 3), /specific outcome/);
-  referral = act(referral, "resolve", { outcome: "scheduled" }, 4);
+  referral = act(referral, "milestone", { status: "scheduled" }, 4);
   assert.equal(referral.status, "scheduled");
+  assert.equal(referral.statusCategory, "waiting");
+  referral = act(referral, "resolve", { outcome: "referral_completed" }, 5);
+  assert.equal(referral.status, "referral_completed");
+  assert.equal(referral.statusCategory, "completed");
 
   let priorAuth = act(syntheticRequest("prior_auth"), "start");
   priorAuth = act(priorAuth, "milestone", { status: "pa_submitted" }, 2);
@@ -322,7 +326,7 @@ test("synthetic end-to-end transitions send through one idempotent Dialpad path 
 
   const scenarios = [
     ["refill", [{ action: "start" }, { action: "milestone", status: "waiting_on_pharmacy" }, { action: "resolve" }]],
-    ["referral", [{ action: "start" }, { action: "milestone", status: "referral_sent" }, { action: "resolve", outcome: "scheduled" }]],
+    ["referral", [{ action: "start" }, { action: "milestone", status: "referral_sent" }, { action: "milestone", status: "scheduled" }, { action: "resolve", outcome: "referral_completed" }]],
     ["prior_auth", [{ action: "start" }, { action: "milestone", status: "pa_submitted" }, { action: "resolve", outcome: "pa_approved" }]],
     ["billing_rcm", [{ action: "start" }, { action: "milestone", status: "waiting_on_payer" }, { action: "resolve" }]],
     ["general", [{ action: "start" }, { action: "milestone", status: "waiting" }, { action: "resolve" }]],

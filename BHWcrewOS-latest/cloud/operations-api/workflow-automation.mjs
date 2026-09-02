@@ -54,17 +54,18 @@ export const WORKFLOW_DEFINITIONS = Object.freeze({
       referral_in_progress: { category: "in_progress", label: "In progress", notify: false, message: COMMON_IN_PROGRESS },
       referral_sent: { category: "waiting", label: "Referral sent", notify: true, message: "BHW Medical Group: The requested information was sent to the next organization. This does not mean an appointment is scheduled. See your secure BHW page." },
       ready_to_schedule: { category: "waiting", label: "Ready to schedule", notify: true, message: "BHW Medical Group: A scheduling update is available. Open your secure BHW page for contact details." },
-      scheduled: { category: "completed", label: "Scheduled", notify: true, message: "BHW Medical Group: A scheduling status update is available. Appointment details remain in your secure BHW page." },
+      scheduled: { category: "waiting", label: "Scheduled", notify: true, message: "BHW Medical Group: A scheduling status update is available. Appointment details remain in your secure BHW page." },
       referral_completed: { category: "completed", label: "Completed", notify: true, message: "BHW Medical Group: Your care team completed the requested workflow. See your secure BHW page for details." },
       closed_without_scheduling: { category: "completed", label: "Closed without scheduling", notify: true, message: "BHW Medical Group: Your care team posted an update that needs your attention. Open your secure BHW page or call the office." },
     },
     cardOutcomes: [
-      { label: "Scheduled", status: "scheduled" },
+      { label: "Complete", status: "referral_completed" },
       { label: "Close", status: "closed_without_scheduling" },
     ],
     cardMilestones: [
       { label: "Referral sent", status: "referral_sent" },
       { label: "Ready to schedule", status: "ready_to_schedule" },
+      { label: "Scheduled", status: "scheduled" },
     ],
   },
   prior_auth: {
