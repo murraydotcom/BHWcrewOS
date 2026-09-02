@@ -467,12 +467,14 @@ function renderTable() {
     <tbody>${rows.map((it) => {
       const dl = it.dl;
       const rowCls = it.category === "tcm" && dl ? (dl.callState === "passed" || dl.callState === "due-today" ? "action" : dl.windowState === "7" ? "soon" : "") : "";
-      const when = it.category === "admitted" ? (fmtDate(it.admitAt) + ' <span class="mini">adm</span>') : fmtDate(it.dischargeAt || it.admitAt);
+      const whenHtml = it.category === "admitted"
+        ? `${esc(fmtDate(it.admitAt))} <span class="mini">adm</span>`
+        : esc(fmtDate(it.dischargeAt || it.admitAt));
       return `<tr class="${rowCls}">
         <td><span class="nm">${esc(it.name)}</span><br><span class="dob">${esc(fmtDate(it.dob))}${it.gender ? " · " + esc(it.gender) : ""}</span></td>
         ${showP ? `<td>${panelCell(it)}</td>` : ""}
         <td><span class="badge b-${it.category}">${esc(CAT_LABEL[it.category] || it.category)}</span>${it.encounterType ? `<br><span class="mini">${esc(it.encounterType)}</span>` : ""}</td>
-        <td>${esc(when)}</td>
+        <td>${whenHtml}</td>
         <td>${dl ? dl.daysSince : "—"}</td>
         <td>${callCell(dl)}</td>
         <td>${visitCell(dl)}</td>
