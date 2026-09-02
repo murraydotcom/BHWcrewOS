@@ -316,7 +316,10 @@ async function loadRetainedEvents(silent = false) {
   if (!CLOUD) return;
   try {
     const rows = await CLOUD.listTcmEvents();
-    $("cloudStatus").innerHTML = `<b>Secure retention connected.</b> ${rows.length} hospital events retained.`;
+    const loadedLabel = rows.length === 1000
+      ? "The newest 1,000 retained hospital events are loaded."
+      : `${rows.length} retained hospital event${rows.length === 1 ? " is" : "s are"} loaded.`;
+    $("cloudStatus").innerHTML = `<b>Secure retention connected.</b> ${loadedLabel}`;
     if (!rows.length) {
       if (!silent) $("parseNote").textContent = "No retained hospital events yet. Upload the first CRISP Panel Details file.";
       return;
