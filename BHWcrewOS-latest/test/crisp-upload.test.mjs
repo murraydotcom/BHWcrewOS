@@ -90,4 +90,5 @@ test("admitted dates render the adm label instead of escaped HTML", async () => 
   assert.match(html, /const whenHtml = it\.category === "admitted"[\s\S]{0,180}<span class="mini">adm<\/span>/);
   assert.match(html, /<td>\$\{whenHtml\}<\/td>/);
   assert.doesNotMatch(html, /<td>\$\{esc\(when(?:Html)?\)\}<\/td>/);
+  assert.match(html, /The newest 1,000 retained hospital events are loaded\./);
 });
