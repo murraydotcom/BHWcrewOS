@@ -73,6 +73,8 @@ function normalizeSourceMetadata(input = {}) {
     sourcePage: cleanText(input.sourcePage, 120),
     legacyNotionPageId: cleanText(input.legacyNotionPageId, 80),
     sourceUrl: cleanText(input.sourceUrl, 1000),
+    referralDestination: cleanText(input.referralDestination, 160),
+    referralDocumentState: cleanText(input.referralDocumentState, 40),
   };
 }
 

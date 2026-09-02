@@ -555,7 +555,16 @@ $('go').addEventListener('click',lookup);
 $('q').addEventListener('keydown',e=>{if(e.key==='Enter')lookup();});
 /* ============ REFERRAL GENERATOR ============ */
 const REF_API = API ? API.replace('frontdesk-data','referral-pdf') : '';
+const REF_SYNC_API = '/.netlify/functions/referral-sync';
 let DIR = [];
+async function syncReferralTracking(action,payload){
+  const r=await fetch(`${REF_SYNC_API}?key=${encodeURIComponent(DASH_KEY)}`,{
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...payload})
+  });
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(d.error||`tracking ${r.status}`);
+  return d;
+}
 async function loadDir(){
   if(API){
     try{
@@ -645,7 +654,22 @@ $('g-make').addEventListener('click', async ()=>{
     window.lastReferralName = `Referral - ${($('g-pname').value.split(',')[0]||'patient').trim()}.pdf`;
     const fx=$('g-fax'), sfax=($('g-sfax').value||'').replace(/\D/g,'');
     if(fx){ fx.style.display=sfax?'block':'none'; fx.textContent=sfax?`📠 Fax to ${$('g-sspec').value||'specialist'} (${$('g-sfax').value})`:'📠 Fax to specialist'; fx.disabled=false; }
-    st.textContent='✓ Referral generated — downloaded and opened for printing.'+(sfax?' Tap “Fax to specialist” to send it now.':' Add the specialist’s fax to send it from here.');
+    const patientId=(window.lastPatient?.bhwPatientId||window.lastPatient?.bhwId||window.lastPatient?.ctl||'').toUpperCase();
+    let tracking='Not saved to BHW Cloud — select the patient through lookup first.';
+    if(/^BHW\d{4}$/.test(patientId)){
+      try{
+        const saved=await syncReferralTracking('create',{
+          bhwPatientId:patientId,
+          destination:$('g-sspec').value||$('g-sname').value||'Specialty referral',
+          priority:'routine',
+          idempotencyKey:`front-desk-referral:${crypto.randomUUID()}`
+        });
+        window.lastReferralRequestId=saved.requestId;
+        window.lastReferralVersion=saved.version;
+        tracking=`Saved to BHW Cloud · ${new Date(saved.savedAt).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})} · ${saved.requestId}`;
+      }catch(error){ tracking=`Not saved to BHW Cloud — ${String(error.message||error).slice(0,100)}`; }
+    }
+    st.textContent='✓ Referral generated — downloaded and opened for printing.'+(sfax?' Tap “Fax to specialist” to send it now. ':' Add the specialist’s fax to send it from here. ')+tracking;
   }catch(e){ st.textContent='Error: '+e; }
 });
 $('g-fax').addEventListener('click', async ()=>{
@@ -657,7 +681,23 @@ $('g-fax').addEventListener('click', async ()=>{
   try{
     const r=await fetch(`${API}?key=${encodeURIComponent(DASH_KEY)}`,{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({action:'fax', to, pdf:window.lastReferralPdf, filename:window.lastReferralName||'referral.pdf'})});
-    if(r.ok){ fx.textContent='Faxed ✓'; st.textContent=`✓ Referral faxed to ${$('g-sspec').value||'the specialist'} at ${$('g-sfax').value}.`; }
+    if(r.ok){
+      fx.textContent='Faxed ✓';
+      let tracking='Referral faxed, but no patient-linked workflow record was available to update.';
+      if(window.lastReferralRequestId){
+        try{
+          const saved=await syncReferralTracking('milestone',{
+            requestId:window.lastReferralRequestId,
+            status:'referral_sent',
+            expectedVersion:window.lastReferralVersion,
+            idempotencyKey:`front-desk-referral-sent:${window.lastReferralRequestId}`
+          });
+          window.lastReferralVersion=saved.version;
+          tracking=`Saved to BHW Cloud · ${new Date(saved.savedAt).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})} · Referral sent (not scheduled)`;
+        }catch(error){ tracking=`Fax sent; workflow status not saved — ${String(error.message||error).slice(0,100)}`; }
+      }
+      st.textContent=`✓ Referral faxed to ${$('g-sspec').value||'the specialist'} at ${$('g-sfax').value}. ${tracking}`;
+    }
     else{ const d=await r.json().catch(()=>({})); fx.textContent=label; fx.disabled=false; st.textContent='Fax failed — '+(d.detail?String(d.detail).slice(0,120):'try again or send from Dialpad'); }
   }catch(e){ fx.textContent=label; fx.disabled=false; st.textContent='Fax error: '+e; }
 });
