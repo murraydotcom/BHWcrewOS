@@ -53,10 +53,11 @@ exports.handler = async (event) => {
       const allowed = new Set(["referral_sent", "ready_to_schedule", "scheduled", "referral_completed", "closed_without_scheduling"]);
       const status = clean(body.status, 80).toLowerCase();
       if (!allowed.has(status)) return response(400, { ok: false, error: "unsupported referral milestone" });
+      const terminal = status === "referral_completed" || status === "closed_without_scheduling";
       const result = await updateReferral({
         requestId: clean(body.requestId, 100),
         idempotencyKey,
-        body: { action: status === "scheduled" || status === "closed_without_scheduling" ? "resolve" : "milestone", status, expectedVersion: Number(body.expectedVersion) || undefined },
+        body: { action: terminal ? "resolve" : "milestone", ...(terminal ? { outcome: status } : { status }), expectedVersion: Number(body.expectedVersion) || undefined },
       });
       const request = result?.request || result?.patientRequest || {};
       return response(200, { ok: true, requestId: request.id || request.patientRequestId || body.requestId, version: request.version, status: request.status, savedAt: new Date().toISOString() });
