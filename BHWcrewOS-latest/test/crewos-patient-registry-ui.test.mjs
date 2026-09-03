@@ -11,15 +11,15 @@ test("CrewOS inline scripts compile with the shared Patient Registry picker", as
   assert.match(html, /function enhancePatientPicker\(\)/);
 });
 
-test("CrewHQ exposes the protected Patient Registry as a first-class tool", async () => {
+test("CrewHQ keeps patient maintenance tools inside the protected Patient Registry", async () => {
   const hq = await readFile(new URL("../hq.html", import.meta.url), "utf8");
   const registry = await readFile(new URL("../provider/patient-registry.html", import.meta.url), "utf8");
   const registryApp = await readFile(new URL("../provider/patient-registry-app.mjs", import.meta.url), "utf8");
   const workflowApp = await readFile(new URL("../provider/workflow-app.mjs", import.meta.url), "utf8");
   const transcriptionApp = await readFile(new URL("../provider/transcription-app.mjs", import.meta.url), "utf8");
   assert.match(hq, /name:'Patient Registry'.*href:'\/provider\/patient-registry\.html'/s);
-  assert.match(hq, /name:'Load & Reconcile Patients'.*patient-loader\.html/s);
-  assert.match(hq, /name:'Repair Patient IDs'.*patient-collision-repair\.html/s);
+  assert.doesNotMatch(hq, /name:'Load & Reconcile Patients'/);
+  assert.doesNotMatch(hq, /name:'Repair Patient IDs'/);
   assert.match(hq, /name:'Health 360 Care Plans'.*health-blueprint\.html/s);
   assert.doesNotMatch(hq, /save to Notion/);
   assert.match(registry, /href="\/crewos">← CrewOS<\/a>/);
