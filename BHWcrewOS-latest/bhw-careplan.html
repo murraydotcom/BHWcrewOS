@@ -133,7 +133,7 @@ textarea{resize:vertical;min-height:74px;line-height:1.5;font-size:13px}
   <div class="panel">
     <div class="eyebrow">Step 1 · Program</div>
     <h2 class="sec">Build an annual care plan</h2>
-    <p class="step-lede">Pick the program, pull the patient, and the plan below fills with brand-ready starter language you can tailor. Then print to PDF and save it to Notion.</p>
+    <p class="step-lede">Pick the program, pull the patient from the protected Patient Registry, and tailor the patient-ready plan. Saving updates that patient's existing Health Blueprint draft in BHW Cloud.</p>
     <div class="progs" id="progs"></div>
 
     <div class="subhead"><h3>Patient</h3><div class="line"></div></div>
@@ -168,9 +168,9 @@ textarea{resize:vertical;min-height:74px;line-height:1.5;font-size:13px}
 
     <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:6px">
       <button class="btn" id="printBtn" type="button">Print / Save PDF</button>
-      <button class="btn ghost2" id="saveBtn" type="button">Save to Notion</button>
+      <button class="btn ghost2" id="saveBtn" type="button">Save draft to BHW Cloud</button>
     </div>
-    <div class="note" id="saveNote"></div>
+    <div class="note" id="saveNote"><span class="saveno">Not saved</span></div>
   </div>
 
   <!-- DOCUMENT -->
@@ -184,7 +184,7 @@ textarea{resize:vertical;min-height:74px;line-height:1.5;font-size:13px}
 <div class="modal" id="signin">
   <div class="mcard">
     <h3>Connect to crewOS</h3>
-    <div class="sub">Sign in with your name and PIN to pull patients and save plans to Notion.</div>
+    <div class="sub">Sign in with your name and PIN to pull patients and save Health Blueprint drafts to BHW Cloud.</div>
     <div class="f"><label>Name</label><select id="siStaff"></select></div>
     <div class="f"><label>PIN</label><input type="password" id="siPin" inputmode="numeric" autocomplete="off"></div>
     <div class="merr" id="siErr"><span id="siErrTxt"></span></div>
@@ -339,7 +339,7 @@ function renderDoc(){
   $("doc").innerHTML = doc;
 }
 
-/* plain-text snapshot for Notion */
+/* plain-text print snapshot */
 function snapshot(){
   const f=state.fields;
   return [`${state.program} Care Plan`,
@@ -364,7 +364,7 @@ async function post(fn, body){
 function setConnected(name){
   const b=$("connBtn");
   if(TOKEN){ b.textContent = name?`✓ ${String(name).split(" ")[0]}`:"✓ Connected"; b.title="Connected — click to disconnect"; $("patientPickWrap").style.display=""; if(!$("f-prep").value&&name) { $("f-prep").value=name; syncFromInputs(); renderDoc(); } loadPatients(); }
-  else { b.textContent="Connect"; b.title="Sign in to pull patients & save to Notion"; $("patientPickWrap").style.display="none"; }
+  else { b.textContent="Connect"; b.title="Sign in to pull patients and save to BHW Cloud"; $("patientPickWrap").style.display="none"; }
 }
 $("connBtn").addEventListener("click",()=>{ if(TOKEN){ if(confirm("Disconnect this session?")){ TOKEN=""; sessionStorage.removeItem("crewos_token"); setConnected(); } } else openSignin(); });
 async function openSignin(){ const { d }=await post("auth",{action:"roster"}); $("siStaff").innerHTML=(d.staff||[]).map(s=>`<option value="${s.id}">${esc(s.name)}${s.role?` — ${esc(s.role)}`:""}</option>`).join(""); $("siErr").style.display="none"; $("siPin").value=""; $("signin").classList.add("on"); setTimeout(()=>$("siPin").focus(),50); }
@@ -373,7 +373,7 @@ $("siGo").addEventListener("click",doLogin);
 $("siPin").addEventListener("keydown",e=>{ if(e.key==="Enter") doLogin(); });
 async function doLogin(){ const staffId=$("siStaff").value, pin=$("siPin").value.trim(); if(!staffId||!pin) return; const { ok, d }=await post("auth",{action:"login",staffId,pin}); if(ok&&d.token){ TOKEN=d.token; sessionStorage.setItem("crewos_token",TOKEN); $("signin").classList.remove("on"); setConnected(d.user?.name||d.name); } else { $("siErr").style.display="flex"; $("siErrTxt").textContent=d.error||"Sign-in failed."; } }
 function patientChoice(p){ return `${p.name}${p.bhwId?` — ${p.bhwId}`:""}${p.dob?` · DOB ${fmtDate(p.dob)}`:""}${p.status&&p.status!=="active"?` · ${p.status}`:""}`; }
-async function loadPatients(){ const { ok, status, d }=await post("patients",{action:"list"}); if(status===401){ TOKEN=""; sessionStorage.removeItem("crewos_token"); setConnected(); return; } if(ok&&d.patients){ PATIENTS=d.patients; $("patientOptions").innerHTML=PATIENTS.map(p=>`<option ${p.selectable===false?'disabled ':''}value="${esc(patientChoice(p))}">`).join(""); } }
+async function loadPatients(){ const { ok, status, d }=await post("patients",{action:"list"}); if(status===401){ TOKEN=""; sessionStorage.removeItem("crewos_token"); setConnected(); return; } if(ok&&d.patients){ PATIENTS=d.patients; $("patientOptions").innerHTML=PATIENTS.map(p=>`<option ${p.selectable===false?'disabled ':''}value="${esc(patientChoice(p))}">`).join(""); const requested=(new URLSearchParams(location.search).get("patient")||"").toUpperCase(); const patient=PATIENTS.find(p=>(p.bhwId||p.bhwPatientId)===requested); if(patient&&patient.selectable!==false){ $("patientSearch").value=patientChoice(patient); $("patientPickBtn").click(); } } }
 $("patientPickBtn").addEventListener("click",()=>{
   const raw=$("patientSearch").value.trim(); if(!raw) return;
   const id=(raw.match(/\bBHW\d{4}\b/i)||[])[0]?.toUpperCase();
@@ -392,15 +392,19 @@ $("printBtn").addEventListener("click",()=>window.print());
 $("saveBtn").addEventListener("click",async()=>{
   syncFromInputs();
   const note=$("saveNote"); note.className="note"; note.textContent="";
-  if(!TOKEN){ note.innerHTML='<span class="saveno">Connect to crewOS first to save to Notion.</span>'; return; }
+  if(!TOKEN){ note.innerHTML='<span class="saveno">Not saved — connect to CrewOS first.</span>'; return; }
   if(!state.fields.patient.trim()){ note.innerHTML='<span class="saveno">Add a patient name first.</span>'; return; }
+  if(!/^BHW\d{4,}$/i.test(state.fields.bhwId.trim())){ note.innerHTML='<span class="saveno">Not saved — choose a verified patient from the Patient Registry.</span>'; return; }
   $("saveBtn").disabled=true;
+  $("saveBtn").textContent="Saving…";
+  note.innerHTML='<span>Saving to BHW Cloud…</span>';
   const f=state.fields;
-  const { ok, status, d }=await post("careplan-save",{ program:state.program, patientName:f.patient, bhwId:f.bhwId, dob:f.dob, planYear:f.planDate?Number(String(f.planDate).slice(0,4)):new Date().getFullYear(), planDate:f.planDate, reviewDate:f.reviewDate, focus:f.focus, goals:f.goals, interventions:f.interventions, patientRole:f.patientRole, careTeam:f.team, preparedBy:f.preparedBy, snapshot:snapshot(), status:"Active" });
+  const { ok, status, d }=await post("careplan-save",{ program:state.program, patientName:f.patient, bhwId:f.bhwId, dob:f.dob, planYear:f.planDate?Number(String(f.planDate).slice(0,4)):new Date().getFullYear(), planDate:f.planDate, reviewDate:f.reviewDate, focus:f.focus, goals:f.goals, interventions:f.interventions, patientRole:f.patientRole, actions:f.actionSteps, track:f.trackHome, weeks1to4:f.week14, weeks5to8:f.week58, weeks9to12:f.week912, careTeam:f.team, preparedBy:f.preparedBy, snapshot:snapshot(), status:"Draft" });
   $("saveBtn").disabled=false;
-  if(status===401){ TOKEN=""; sessionStorage.removeItem("crewos_token"); setConnected(); note.innerHTML='<span class="saveno">Session expired — reconnect.</span>'; return; }
-  if(ok&&d.ok) note.innerHTML='<span class="saveok">✓ Saved to the Care Plans database in Notion.</span>';
-  else note.innerHTML=`<span class="saveno">${esc(d.error||"Couldn't save.")}</span>`;
+  $("saveBtn").textContent="Save draft to BHW Cloud";
+  if(status===401){ TOKEN=""; sessionStorage.removeItem("crewos_token"); setConnected(); note.innerHTML='<span class="saveno">Not saved — session expired. Reconnect and try again.</span>'; return; }
+  if(ok&&d.ok&&d.saved){ const when=d.savedAt?new Date(d.savedAt).toLocaleString():new Date().toLocaleString(); note.innerHTML=`<span class="saveok">✓ Saved to BHW Cloud · ${esc(when)} · Draft for clinician review</span>`; }
+  else note.innerHTML=`<span class="saveno">Not saved — ${esc(d.error||"couldn't reach BHW Cloud.")}</span>`;
 });
 
 /* ---- boot ---- */
