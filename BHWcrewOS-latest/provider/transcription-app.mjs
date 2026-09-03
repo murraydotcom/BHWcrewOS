@@ -1,17 +1,33 @@
 import { CREW_SESSION_EXPIRED, createEncounterCloudClient } from "./cloud-queue.mjs";
+import {
+  createTranscriptionSegmentQueue,
+  MAX_VISIT_SECONDS,
+  SEGMENT_SECONDS,
+} from "./transcription-segments.mjs";
 
 const SYNTHETIC_PATIENT_ID = "BHW0000";
 const SYNTHETIC_CONSENT = "synthetic-role-play";
 const LIVE_CONSENT = "session-recording-confirmed";
-const MAX_AUDIO_BYTES = 9 * 1024 * 1024;
+const DEFAULT_MAX_AUDIO_BYTES = 9 * 1024 * 1024;
 const $ = (id) => document.getElementById(id);
 let cloudClient = null;
 let longRecordingEnabled = false;
 let recorder = null;
 let stream = null;
-let chunks = [];
-let audioBlob = null;
+let segmentChunks = [];
+let segmentQueue = null;
+let preferredMimeType = "";
+let visitPatientId = "";
+let visitConsentMode = "";
+let visitActive = false;
+let visitFinishing = false;
+let stopReason = "";
 let elapsedSeconds = 0;
+let segmentElapsedSeconds = 0;
+let segmentStartedAtSeconds = 0;
+let maxAudioBytes = DEFAULT_MAX_AUDIO_BYTES;
+let maxVisitSeconds = MAX_VISIT_SECONDS;
+let segmentSeconds = SEGMENT_SECONDS;
 let timerHandle = null;
 let toastTimer = null;
 let sessionVersion = 0;
@@ -64,8 +80,155 @@ function stopTracks() {
 }
 
 function discardAudio() {
-  chunks = [];
-  audioBlob = null;
+  segmentChunks = [];
+  segmentQueue?.clear();
+}
+
+function queueSnapshot() {
+  return segmentQueue?.snapshot() || {
+    total: 0,
+    completed: 0,
+    pending: 0,
+    failed: 0,
+    transcribing: 0,
+    retained: 0,
+    retainedBytes: 0,
+    processing: false,
+  };
+}
+
+function segmentLabel(segment) {
+  return `Segment ${segment.id} · ${formatTime(segment.startedAtSeconds)}–${formatTime(segment.endedAtSeconds)}`;
+}
+
+function appendSegmentTranscript(result, segment) {
+  const text = String(result?.transcript || "").trim();
+  const block = `${segmentLabel(segment)}\n${text || "[No speech recognized in this segment.]"}`;
+  const current = $("transcript").value.trim();
+  $("transcript").value = current ? `${current}\n\n${block}` : block;
+  $("reviewed").checked = false;
+  $("copy").disabled = true;
+}
+
+async function transcribeSegment(segment) {
+  if (!cloudClient) throw new Error("Google Cloud transcription is unavailable");
+  if (segment.blob.size > maxAudioBytes) {
+    throw Object.assign(new Error("This protected segment is over the upload limit"), { code: "AUDIO_SEGMENT_TOO_LARGE" });
+  }
+  return cloudClient.transcribe(segment.blob, {
+    bhwPatientId: segment.patientId,
+    consentMode: segment.consentMode,
+  });
+}
+
+function handleSegmentError(error, segment) {
+  const sessionExpired = error?.code === CREW_SESSION_EXPIRED;
+  const detail = error?.code === "AUDIO_SEGMENT_TOO_LARGE"
+    ? `${segmentLabel(segment)} is too large to upload. Its audio is still retained in this open tab.`
+    : sessionExpired
+      ? "Your CrewHQ session expired. This segment is retained in the open tab. Do not close or reload it; sign in from another tab, then retry here."
+      : `${segmentLabel(segment)} could not be transcribed. Its audio is retained in this open tab for retry.`;
+  setState(sessionExpired
+    ? "CrewHQ session expired · audio retained in this tab"
+    : "Transcription needs attention · audio retained for retry");
+  showToast(detail);
+}
+
+function finishSuccessfulVisit(snapshot) {
+  if (!visitFinishing || snapshot.processing || snapshot.retained || snapshot.completed !== snapshot.total) return;
+  visitActive = false;
+  visitFinishing = false;
+  lockSelection(false);
+  $("previsitConsent").checked = false;
+  $("sessionConsent").checked = false;
+  updateConsentCopy();
+  $("reviewed").checked = false;
+  $("copy").disabled = true;
+  setState("Draft ready for provider review · all segment audio discarded after successful transcription");
+}
+
+function updateSegmentStatus(snapshot = queueSnapshot()) {
+  const waiting = snapshot.pending + snapshot.transcribing;
+  $("transcribe").textContent = snapshot.failed ? `Retry ${snapshot.failed} retained segment${snapshot.failed === 1 ? "" : "s"}` : "Retry retained audio";
+  $("transcribe").disabled = snapshot.failed === 0;
+  $("meta").textContent = snapshot.total
+    ? `${snapshot.completed} of ${snapshot.total} protected segment${snapshot.total === 1 ? "" : "s"} transcribed${snapshot.retained ? ` · ${snapshot.retained} retained in this tab` : " · successful audio discarded"}`
+    : "";
+  if (snapshot.failed) {
+    setState("Transcription needs attention · audio retained for retry");
+  } else if (visitFinishing && waiting) {
+    setState(`Finishing visit · ${waiting} protected segment${waiting === 1 ? "" : "s"} processing`);
+  } else if (visitActive && !visitFinishing) {
+    setState(`${isSynthetic() ? "Recording synthetic role-play" : "Recording consented visit"} · protected segments transcribe automatically`);
+  }
+  finishSuccessfulVisit(snapshot);
+}
+
+function beginSegmentRecorder() {
+  if (!stream || !visitActive || visitFinishing) return;
+  segmentChunks = [];
+  segmentElapsedSeconds = 0;
+  segmentStartedAtSeconds = elapsedSeconds;
+  const activeRecorder = new MediaRecorder(stream, {
+    mimeType: preferredMimeType,
+    audioBitsPerSecond: 96_000,
+  });
+  recorder = activeRecorder;
+  activeRecorder.ondataavailable = (event) => { if (event.data.size) segmentChunks.push(event.data); };
+  activeRecorder.onstop = () => {
+    if (recorder === activeRecorder) recorder = null;
+    const completedReason = stopReason;
+    stopReason = "";
+    const blob = new Blob(segmentChunks, { type: activeRecorder.mimeType || segmentChunks[0]?.type || "audio/webm" });
+    segmentChunks = [];
+    if (blob.size) {
+      segmentQueue.enqueue({
+        blob,
+        startedAtSeconds: segmentStartedAtSeconds,
+        endedAtSeconds: elapsedSeconds,
+        patientId: visitPatientId,
+        consentMode: visitConsentMode,
+      });
+    }
+    if (visitFinishing || completedReason === "finish") {
+      stopTracks();
+      if (!blob.size && queueSnapshot().total === 0) {
+        visitActive = false;
+        visitFinishing = false;
+        lockSelection(false);
+        setState("No audio was captured");
+      } else {
+        updateSegmentStatus();
+      }
+      return;
+    }
+    beginSegmentRecorder();
+  };
+  activeRecorder.start(1000);
+}
+
+function rotateSegment() {
+  if (!recorder || recorder.state !== "recording" || stopReason) return;
+  stopReason = "rotate";
+  setState("Securing the current segment · recording continues automatically");
+  recorder.stop();
+}
+
+function finishVisit() {
+  if (!visitActive || visitFinishing) return;
+  visitFinishing = true;
+  clearInterval(timerHandle);
+  timerHandle = null;
+  $("pause").disabled = true;
+  $("finish").disabled = true;
+  $("pause").textContent = "Pause";
+  if (recorder && recorder.state !== "inactive") {
+    stopReason = "finish";
+    recorder.stop();
+  } else {
+    stopTracks();
+    updateSegmentStatus();
+  }
 }
 
 function canStart() {
@@ -76,8 +239,9 @@ function canStart() {
     && $("previsitConsent").checked
     && (isSynthetic() || hasVerifiedConsent())
     && $("sessionConsent").checked
-    && !recorder
-    && !audioBlob,
+    && !visitActive
+    && !queueSnapshot().retained
+    && !queueSnapshot().processing,
   );
 }
 
@@ -142,6 +306,9 @@ async function refreshRecordingConsent() {
 
 function clearSession({ resetAttestations = true } = {}) {
   sessionVersion += 1;
+  visitActive = false;
+  visitFinishing = false;
+  stopReason = "";
   const activeRecorder = recorder;
   recorder = null;
   if (activeRecorder?.state === "recording" || activeRecorder?.state === "paused") {
@@ -154,6 +321,10 @@ function clearSession({ resetAttestations = true } = {}) {
   timerHandle = null;
   discardAudio();
   elapsedSeconds = 0;
+  segmentElapsedSeconds = 0;
+  segmentStartedAtSeconds = 0;
+  visitPatientId = "";
+  visitConsentMode = "";
   $("timer").textContent = "00:00";
   $("transcript").value = "";
   $("meta").textContent = "";
@@ -162,6 +333,7 @@ function clearSession({ resetAttestations = true } = {}) {
   $("pause").textContent = "Pause";
   $("finish").disabled = true;
   $("transcribe").disabled = true;
+  $("transcribe").textContent = "Retry retained audio";
   $("copy").disabled = true;
   $("patient").disabled = !cloudClient;
   if (resetAttestations) {
@@ -207,6 +379,13 @@ function loadPatientOptions(patients, { realPatientEnabled = false } = {}) {
   updateConsentCopy();
 }
 
+segmentQueue = createTranscriptionSegmentQueue({
+  transcribeSegment,
+  onTranscript: appendSegmentTranscript,
+  onError: handleSegmentError,
+  onChange: updateSegmentStatus,
+});
+
 $("patient").onchange = async () => {
   verifiedConsent = null;
   clearSession({ resetAttestations: true });
@@ -214,7 +393,8 @@ $("patient").onchange = async () => {
 };
 for (const id of ["previsitConsent", "sessionConsent"]) {
   $(id).onchange = () => {
-    if ((recorder || audioBlob) && !$(id).checked) {
+    const snapshot = queueSnapshot();
+    if ((visitActive || snapshot.retained || snapshot.processing) && !$(id).checked) {
       clearSession({ resetAttestations: true });
       showToast("Recording stopped and discarded because recording agreement was withdrawn.");
       return;
@@ -225,7 +405,8 @@ for (const id of ["previsitConsent", "sessionConsent"]) {
 
 $("saveRecordingConsent").onclick = async () => {
   const bhwPatientId = selectedPatientId();
-  if (!bhwPatientId || isSynthetic() || recorder || audioBlob) return;
+  const snapshot = queueSnapshot();
+  if (!bhwPatientId || isSynthetic() || visitActive || snapshot.retained || snapshot.processing) return;
   if (!$("previsitConsent").checked) {
     showToast("Check the signed-consent verification statement first.");
     return;
@@ -274,44 +455,47 @@ $("start").onclick = async () => {
         return;
       }
     }
+    segmentQueue.clear();
     $("transcript").value = "";
     $("meta").textContent = "";
     $("reviewed").checked = false;
     $("copy").disabled = true;
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const preferred = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mpeg"]
+    preferredMimeType = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mpeg"]
       .find((type) => MediaRecorder.isTypeSupported(type));
-    if (!preferred) throw Object.assign(new Error("unsupported-audio-format"), { name: "NotSupportedError" });
-    recorder = new MediaRecorder(stream, { mimeType: preferred });
-    const activeRecorder = recorder;
-    chunks = [];
-    $("patient").disabled = true;
-    recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
-    recorder.onstop = () => {
-      if (recorder !== activeRecorder) return;
-      recorder = null;
-      audioBlob = new Blob(chunks, { type: activeRecorder.mimeType || chunks[0]?.type || "audio/webm" });
-      chunks = [];
-      stopTracks();
-      $("transcribe").disabled = !audioBlob.size;
-      setState(`Ready to transcribe · ${(audioBlob.size / 1024 / 1024).toFixed(1)} MB`);
-    };
-    recorder.start(1000);
+    if (!preferredMimeType) throw Object.assign(new Error("unsupported-audio-format"), { name: "NotSupportedError" });
+    visitPatientId = selectedPatientId();
+    visitConsentMode = consentMode();
+    visitActive = true;
+    visitFinishing = false;
+    stopReason = "";
     elapsedSeconds = 0;
+    segmentElapsedSeconds = 0;
+    lockSelection(true);
+    beginSegmentRecorder();
     timerHandle = setInterval(() => {
-      if (recorder?.state === "recording") elapsedSeconds += 1;
+      if (recorder?.state === "recording") {
+        elapsedSeconds += 1;
+        segmentElapsedSeconds += 1;
+      }
       $("timer").textContent = formatTime(elapsedSeconds);
-      if (elapsedSeconds >= 600) $("finish").click();
+      if (elapsedSeconds >= maxVisitSeconds) {
+        finishVisit();
+      } else if (segmentElapsedSeconds >= segmentSeconds) {
+        rotateSegment();
+      }
     }, 1000);
     $("start").disabled = true;
     $("pause").disabled = false;
     $("finish").disabled = false;
     $("transcribe").disabled = true;
-    setState(isSynthetic() ? "Recording synthetic role-play" : "Recording consented visit");
+    setState(`${isSynthetic() ? "Recording synthetic role-play" : "Recording consented visit"} · protected segments transcribe automatically`);
   } catch (error) {
     recorder = null;
+    visitActive = false;
+    visitFinishing = false;
     stopTracks();
-    $("patient").disabled = false;
+    lockSelection(false);
     updateStartAvailability();
     if (error.name === "NotAllowedError") showToast("Microphone access was not allowed.");
     else if (error.name === "NotSupportedError") showToast("This browser cannot create a Speech-to-Text compatible recording. Use Edge or Chrome.");
@@ -324,68 +508,21 @@ $("pause").onclick = () => {
   if (recorder.state === "recording") {
     recorder.pause();
     $("pause").textContent = "Resume";
-    setState("Paused");
+    setState("Paused · keep this tab open");
   } else if (recorder.state === "paused") {
     recorder.resume();
     $("pause").textContent = "Pause";
-    setState(isSynthetic() ? "Recording synthetic role-play" : "Recording consented visit");
+    setState(`${isSynthetic() ? "Recording synthetic role-play" : "Recording consented visit"} · protected segments transcribe automatically`);
   }
 };
 
-$("finish").onclick = () => {
-  if (!recorder || recorder.state === "inactive") return;
-  recorder.stop();
-  clearInterval(timerHandle);
-  timerHandle = null;
-  $("pause").disabled = true;
-  $("finish").disabled = true;
-  $("pause").textContent = "Pause";
-};
+$("finish").onclick = () => finishVisit();
 
 $("transcribe").onclick = async () => {
-  if (!audioBlob || !cloudClient) return;
-  const recording = audioBlob;
-  const bhwPatientId = selectedPatientId();
-  const attestation = consentMode();
-  const requestVersion = sessionVersion;
-  discardAudio();
+  if (!cloudClient || queueSnapshot().failed === 0) return;
   $("transcribe").disabled = true;
-  lockSelection(true);
-  if (recording.size > MAX_AUDIO_BYTES) {
-    setState("Recording discarded · over 9 MB limit");
-    lockSelection(false);
-    $("previsitConsent").checked = false;
-    $("sessionConsent").checked = false;
-    updateConsentCopy();
-    showToast("This recording was over the 9 MB limit and has been discarded. Please record a shorter visit.");
-    return;
-  }
-  setState("Cloud Speech-to-Text is transcribing…");
-  let sessionExpired = false;
-  try {
-    const result = await cloudClient.transcribe(recording, { bhwPatientId, consentMode: attestation });
-    if (requestVersion !== sessionVersion) return;
-    $("transcript").value = result.transcript;
-    $("meta").textContent = `Draft created ${new Date(result.transcribedAt).toLocaleString()} · ${result.model} · audio discarded`;
-    $("reviewed").checked = false;
-    $("copy").disabled = true;
-    setState("Draft ready for provider review · audio discarded");
-  } catch (error) {
-    if (requestVersion !== sessionVersion) return;
-    sessionExpired = error.code === CREW_SESSION_EXPIRED;
-    setState(sessionExpired ? "CrewHQ session expired · audio discarded" : "Transcription failed · audio discarded");
-    showToast(sessionExpired
-      ? "Your CrewHQ session expired. Sign in again in this tab; the audio was discarded."
-      : (error.message || "The recording could not be transcribed."));
-  } finally {
-    discardAudio();
-    if (requestVersion !== sessionVersion) return;
-    lockSelection(false);
-    $("previsitConsent").checked = false;
-    $("sessionConsent").checked = false;
-    updateConsentCopy();
-    if (sessionExpired) setTimeout(signInAgain, 1200);
-  }
+  setState("Retrying retained protected audio…");
+  await segmentQueue.retry();
 };
 
 $("reviewed").onchange = () => { $("copy").disabled = !$("reviewed").checked || !$("transcript").value.trim(); };
@@ -394,7 +531,20 @@ $("copy").onclick = async () => {
   await navigator.clipboard.writeText($("transcript").value);
   showToast("Reviewed transcript copied. It is still a draft, not a signed note.");
 };
-$("clear").onclick = () => clearSession({ resetAttestations: true });
+$("clear").onclick = () => {
+  const snapshot = queueSnapshot();
+  if (
+    (visitActive || snapshot.retained || snapshot.processing || $("transcript").value.trim())
+    && !globalThis.confirm("Permanently clear this visit's audio and transcript draft? Cleared content cannot be recovered.")
+  ) return;
+  clearSession({ resetAttestations: true });
+};
+window.addEventListener("beforeunload", (event) => {
+  const snapshot = queueSnapshot();
+  if (!visitActive && !snapshot.retained && !snapshot.processing) return;
+  event.preventDefault();
+  event.returnValue = "";
+});
 window.addEventListener("pagehide", () => {
   stopTracks();
   discardAudio();
@@ -414,6 +564,12 @@ async function initialize() {
       cloudClient.transcriptionConfig(),
     ]);
     longRecordingEnabled = Boolean(config.longRecordingEnabled);
+    maxAudioBytes = Math.max(1, Number(config.maxAudioBytes) || DEFAULT_MAX_AUDIO_BYTES);
+    maxVisitSeconds = Math.max(SEGMENT_SECONDS, Number(config.maxVisitSeconds) || MAX_VISIT_SECONDS);
+    segmentSeconds = Math.min(
+      maxVisitSeconds,
+      Math.max(60, Number(config.segmentSeconds) || SEGMENT_SECONDS),
+    );
     loadPatientOptions(patients, config);
     if (!longRecordingEnabled) {
       $("cloudStatus").textContent = "Long recording setup incomplete";
