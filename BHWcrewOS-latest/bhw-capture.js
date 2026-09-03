@@ -129,13 +129,15 @@ import {
       $("liveSpeech").checked = false;
       $("keepAudio").checked = false;
       $("captureNotice").innerHTML = "<b>Protected Clinical mode.</b> Patient-linked text routes directly to the protected 24-hour documentation queue. It is not written to the ordinary BHW Memory endpoint, offline cache, or JSON export.";
-      $("recordStatus").textContent = "Select a patient and confirm consent before recording. Raw audio is always discarded.";
-      $("audioHelper").textContent = "Clinical audio uses BHW’s protected Google Cloud transcription route and is discarded after transcription.";
+      $("recordLabel").textContent = "Full visits use Visit Transcription";
+      $("recordStatus").textContent = "Open the protected two-hour recorder above for patient audio.";
+      $("audioHelper").textContent = "Clinical Capture accepts typed patient-linked drafts. Patient recording is handled by Visit Transcription so failed audio can be retried safely.";
       $("saveBtn").textContent = "Send to 24-Hour Documentation";
       $("transcript").placeholder = "Speak or type the patient-linked clinical draft here.";
     } else {
       $("captureNotice").innerHTML = "<b>Non-PHI modes.</b> Do not include patient information unless you enter Clinical and complete the additional verification. Non-clinical text synchronizes to BHW Memory; retained audio stays only on this device.";
       $("recordStatus").textContent = "Non-PHI audio is sent for transcription, then discarded by default.";
+      if (!recorder) $("recordLabel").textContent = "Tap to capture";
       $("audioHelper").textContent = "After stop, the recording is transcribed, the organization preview appears, and raw audio is discarded unless device-only retention was selected.";
       $("saveBtn").textContent = "Save to Memory";
       $("transcript").placeholder = "Speak or type here. You can also paste a thought, meeting note, or idea.";
@@ -832,31 +834,11 @@ import {
   }
   async function startRecording() {
     if (transcriptionBusy) return;
-    var protectedPatientId = "";
     if (isClinical()) {
-      if (!clinicalSessionValid(clinicalSession) || !clinicalClient) {
-        showClinicalGate();
-        return;
-      }
-      var protectedPatient = selectedClinicalPatient();
-      if (!protectedPatient) {
-        $("recordStatus").textContent = "Select a patient before recording.";
-        return;
-      }
-      if (!clinicalConsent || !clinicalConsent.eligible) {
-        $("recordStatus").textContent = "Recording is blocked until signed consent is verified for this patient.";
-        return;
-      }
-      if (!$("clinicalAgreement").checked) {
-        $("recordStatus").textContent = "Confirm current-session agreement from everyone who may be heard.";
-        return;
-      }
-      if (!clinicalConfig || !clinicalConfig.realPatientTranscriptionEnabled) {
-        $("recordStatus").textContent = "Real-patient transcription is not enabled in the protected cloud service.";
-        return;
-      }
-      protectedPatientId = protectedPatient.bhwPatientId;
+      $("recordStatus").textContent = "Use Open full Visit Transcription above for patient audio. Clinical Capture remains available for typed drafts.";
+      return;
     }
+    var protectedPatientId = "";
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
       $("recordStatus").textContent = "This browser cannot record audio here. You can still type or paste a thought.";
       return;

@@ -15,9 +15,9 @@
 </head>
 <body>
 <div class="app">
-<aside class="sidebar"><div class="brand"><h1>BHW Provider</h1><div>Clinical Intelligence</div></div><div class="nav-label">Documentation</div><a class="nav" href="patient-registry.html">◎ Patient Registry</a><a class="nav" href="workflow.html">◷ 24-Hour Work Queue</a><a class="nav active" href="transcription.html">◉ Visit Transcription</a><a class="nav" href="index.html">◈ Encounter Scrub</a><div class="side-note">Consent-gated transcription<br>Audio discarded after processing.<br><br>CharmHealth remains the legal medical record.</div></aside>
+<aside class="sidebar"><div class="brand"><h1>BHW Provider</h1><div>Clinical Intelligence</div></div><div class="nav-label">Documentation</div><a class="nav" href="patient-registry.html">◎ Patient Registry</a><a class="nav" href="workflow.html">◷ 24-Hour Work Queue</a><a class="nav active" href="transcription.html">◉ Visit Transcription</a><a class="nav" href="index.html">◈ Encounter Scrub</a><div class="side-note">Consent-gated transcription<br>Up to two hours per visit.<br><br>CharmHealth remains the legal medical record.</div></aside>
 <main class="main"><div class="top"><div>Clinical Intelligence · <b>Visit Transcription</b></div><span class="badge" id="cloudStatus">Connecting…</span></div><div class="content">
-  <div class="hero"><h2>Consent-gated visit transcription</h2><p>Select the verified patient, confirm today’s recording agreement, record the visit, and review the speaker-labeled draft before copying it. Audio is released from page memory immediately after transcription.</p></div>
+  <div class="hero"><h2>Consent-gated visit transcription</h2><p>Record visits for up to two hours. The page automatically secures and transcribes five-minute protected segments in order while the visit continues, then assembles them into one review draft.</p></div>
   <div class="notice" id="complianceNotice"><b>Two consent checks are required.</b> The system must verify signed recording and AI-transcription consent from either the previsit form or the new-patient packet. The patient—and every other person who may be heard—must also agree to recording today. If anyone withdraws consent, stop and clear the recording.</div>
   <section class="grid">
     <div class="card"><h3>1 · Select and record</h3><div class="field"><label>Verified patient</label><select id="patient" disabled><option value="">Loading protected Patient Registry…</option></select></div>
@@ -36,8 +36,8 @@
       <label class="check"><input type="checkbox" id="sessionConsent" disabled><span id="sessionConsentText">Select a patient to confirm recording agreement for this visit.</span></label>
       <div class="meter"><div class="timer" id="timer">00:00</div><div class="state" id="state">Ready</div></div>
       <div class="controls"><button class="btn primary" id="start" disabled>Start recording</button><button class="btn" id="pause" disabled>Pause</button><button class="btn" id="finish" disabled>Finish</button></div>
-      <div class="controls"><button class="btn primary" id="transcribe" disabled>Transcribe draft</button><button class="btn danger" id="clear">Clear audio and draft</button></div>
-      <div class="privacy">No audio is written to Firestore or browser storage. The protected API encrypts each recording in a private temporary Google Cloud Storage object so visits up to 10 minutes can be transcribed, then deletes that object immediately after processing; a one-day bucket lifecycle is the cleanup backstop. The browser also discards its audio copy whether transcription succeeds or fails. Server logs contain the provider, consent mode, time, byte count, model, and a protected patient reference—not the audio, transcript, patient name, or BHW ID. Real-patient mode is permitted only while BHW’s Google Cloud BAA is active.</div>
+      <div class="controls"><button class="btn primary" id="transcribe" disabled>Retry retained audio</button><button class="btn danger" id="clear">Clear audio and draft</button></div>
+      <div class="privacy"><b>Keep this tab open until every segment is transcribed.</b> No audio is written to Firestore or browser storage. Each five-minute segment passes through a private temporary Google Cloud Storage object that is deleted after processing. The browser releases a segment only after its transcript succeeds; failed audio remains in this open tab for Retry. Closing or reloading the tab clears any audio still held in page memory. Server logs contain the provider, consent mode, time, byte count, model, and a protected patient reference—not the audio, transcript, patient name, or BHW ID. Real-patient mode is permitted only while BHW’s Google Cloud BAA is active.</div>
     </div>
     <div class="card"><h3>2 · Provider review</h3><div class="field"><label>Editable transcript draft</label><textarea id="transcript" placeholder="The transcript draft will appear here." spellcheck="true"></textarea></div><div class="meta" id="meta"></div>
       <label class="check"><input type="checkbox" id="reviewed"><span>I reviewed this draft for accuracy and completeness. It is not a signed note or the legal medical record.</span></label>
@@ -45,7 +45,7 @@
     </div>
   </section>
 </div></main></div><div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script type="module" src="transcription-app.mjs"></script>
+<script type="module" src="transcription-app.mjs?v=20260902-1"></script>
 </body></html>
 
 

@@ -102,12 +102,15 @@ test("Capture keeps non-PHI caching separate from reauthenticated protected Clin
   assert.doesNotMatch(html, /data-mode="Clinical" disabled/);
   assert.match(html, /id="clinicalGate"/);
   assert.match(html, /current-session agreement/);
+  assert.match(html, /href="\/provider\/transcription\.html"/);
+  assert.match(html, /up to 2 hours/);
+  assert.match(html, /protected five-minute segments/);
   assert.match(html, /Clinical drafts and clinical references never enter this cache/);
   assert.match(html, /id="keepAudio" type="checkbox"/);
   assert.doesNotMatch(html, /id="keepAudio"[^>]*checked/);
   assert.match(html, /id="authGate"/);
   assert.match(html, /Sign in with CrewOS/);
-  assert.match(html, /type="module" src="\/bhw-capture\.js\?v=20260825-1"/);
+  assert.match(html, /type="module" src="\/bhw-capture\.js\?v=20260902-1"/);
   assert.match(app, /bhw_capture_pin_v1/);
   assert.match(app, /validateCrewSession/);
   assert.match(app, /reauthenticateClinical/);
@@ -115,6 +118,7 @@ test("Capture keeps non-PHI caching separate from reauthenticated protected Clin
   assert.match(app, /clinicalDraftId \|\| \(clinicalDraftId = uid\(\)\)/);
   assert.match(app, /Stop the recording and wait for transcription before changing capture mode/);
   assert.match(app, /Send to 24-Hour Documentation/);
+  assert.match(app, /Use Open full Visit Transcription above for patient audio/);
   assert.match(app, /var dbPromise = null/);
   assert.match(app, /CACHE_STARTUP_TIMEOUT_MS/);
   assert.match(app, /await openDB\(\);/);

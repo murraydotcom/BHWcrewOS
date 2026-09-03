@@ -181,10 +181,11 @@ test("the CrewHQ TCM page labels a user-selected CRISP workbook with allowed pro
   assert.match(html, /sourceFile: file\.name,[\s\S]{0,240}manual: true,/);
 });
 
-test("CrewHQ frontend exposes verified-consent controls and preserves the provider gate", async () => {
-  const [html, app, registry, registryHtml, gate] = await Promise.all([
+test("CrewHQ frontend exposes verified consent, retry-safe segments, and the provider gate", async () => {
+  const [html, app, segments, registry, registryHtml, gate] = await Promise.all([
     readFile(new URL("../provider/transcription.html", import.meta.url), "utf8"),
     readFile(new URL("../provider/transcription-app.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../provider/transcription-segments.mjs", import.meta.url), "utf8"),
     readFile(new URL("../provider/patient-registry-app.mjs", import.meta.url), "utf8"),
     readFile(new URL("../provider/patient-registry.html", import.meta.url), "utf8"),
     readFile(new URL("../crew-provider-gate.js", import.meta.url), "utf8"),
@@ -207,7 +208,14 @@ test("CrewHQ frontend exposes verified-consent controls and preserves the provid
   assert.match(app, /\$\("sessionConsent"\)\.disabled = !selected/);
   assert.match(app, /Saved to BHW Cloud/);
   assert.match(app, /longRecordingEnabled/);
-  assert.match(app, /elapsedSeconds >= 600/);
+  assert.match(html, /up to two hours/i);
+  assert.match(html, /five-minute protected segments/i);
+  assert.match(html, /failed audio remains in this open tab for Retry/i);
+  assert.match(app, /elapsedSeconds >= maxVisitSeconds/);
+  assert.match(app, /segmentElapsedSeconds >= segmentSeconds/);
+  assert.match(app, /beforeunload/);
+  assert.match(segments, /await onTranscript/);
+  assert.match(segments, /segment\.blob = null/);
   assert.match(registry, /Verify signed consent/);
   assert.match(registry, /new-patient-packet/);
   assert.match(registryHtml, /crew-provider-gate\.js/);
