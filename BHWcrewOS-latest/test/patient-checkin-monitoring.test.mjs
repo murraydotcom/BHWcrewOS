@@ -16,13 +16,28 @@ test("Patient 360 reads full Health Core check-ins and preserves patient scope",
   const css = await readFile(new URL("../provider/patient-360.css", import.meta.url), "utf8");
 
   assert.match(app, /record\.patientCheckins/);
+  assert.match(app, /record\.monitoringPlans/);
+  assert.match(app, /record\.monitoringModuleCatalog/);
   assert.match(app, /Patient-entered details from Care Connect, stored in Health Core/);
   assert.match(app, /Patient-entered readings/);
   assert.match(app, /Medications marked taken/);
   assert.match(app, /preservePatientLinks\(document\)/);
   assert.match(app, /Patient-scoped and role protected/);
+  assert.match(app, /Individualized check-in plan/);
+  assert.match(app, /Clinician approval required/);
+  assert.match(app, /savePatientMonitoringPlan/);
+  assert.match(app, /same-day review/);
   assert.match(css, /\.patient-checkin-card/);
   assert.match(css, /\.checkin-clinical-block/);
+  assert.match(css, /\.monitoring-plan-editor/);
+});
+
+test("CrewHQ cloud client reads and saves a patient-scoped monitoring plan", async () => {
+  const client = await readFile(new URL("../provider/cloud-queue.mjs", import.meta.url), "utf8");
+  assert.match(client, /patientMonitoringPlan\(bhwPatientId/);
+  assert.match(client, /savePatientMonitoringPlan\(bhwPatientId/);
+  assert.match(client, /monitoring-plans\/\$\{encodeURIComponent\(program\)\}/);
+  assert.match(client, /method: "PUT"/);
 });
 
 test("Patient Monitoring uses reference-only operations items and opens Patient 360", async () => {
