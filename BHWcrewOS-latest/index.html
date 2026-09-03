@@ -275,6 +275,18 @@ function statusPill(s){
 const patLabel = id => (D && D.patientLabel[id]) || "—";
 const staffLabel = id => (D && D.staffName[id]) || "—";
 
+const SAFE_STANDALONE_NEXT = /^\/bhw-(?:capture|patient-monitor(?:-list)?|patient-materials)(?:\.html)?(?:\?[a-z0-9%&=._-]*)?$/i;
+function requestedNext(search = location.search){
+  const next = new URLSearchParams(search).get("next") || "";
+  return /^\/provider\/[a-z0-9._/-]+(?:\?[a-z0-9%&=._-]*)?$/i.test(next) || SAFE_STANDALONE_NEXT.test(next) ? next : "";
+}
+function redirectToRequestedPage(){
+  const next = requestedNext();
+  if(!next) return false;
+  location.replace(next);
+  return true;
+}
+
 async function api(url, body){
   const res = await fetch(url, {
     method: body ? "POST" : "GET",
@@ -315,11 +327,7 @@ async function doLogin(){
     const data = await res.json();
     if(!res.ok) throw new Error(data.error||"Sign-in failed");
     TOKEN = data.token; sessionStorage.setItem("crewos_token",TOKEN);
-    const next = new URLSearchParams(location.search).get("next") || "";
-    if (/^\/provider\/[a-z0-9._/-]+(?:\?[a-z0-9%&=._-]*)?$/i.test(next) || next === "/bhw-capture.html") {
-      location.replace(next);
-      return;
-    }
+    if(redirectToRequestedPage()) return;
     document.getElementById("login").style.display="none";
     document.getElementById("app").style.display="block";
     await refresh();
@@ -2871,7 +2879,7 @@ async function refreshSoft(){
 if(TOKEN){
   document.getElementById("login").style.display="none";
   document.getElementById("app").style.display="block";
-  refresh().catch(()=>logout());
+  refresh().then(()=>{ redirectToRequestedPage(); }).catch(()=>logout());
 }
 </script>
 <script type="module" src="/bhw-alert-center.mjs"></script>

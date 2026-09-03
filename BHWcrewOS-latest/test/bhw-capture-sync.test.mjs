@@ -121,7 +121,8 @@ test("Capture keeps non-PHI caching separate from reauthenticated protected Clin
   assert.match(app, /return openDB\(\)\.then\(function \(database\)/);
   assert.doesNotMatch(app, /\bdb\.transaction\(/);
   assert.match(app, /raw audio discarded/);
-  assert.match(index, /next === "\/bhw-capture\.html"/);
+  assert.match(index, /SAFE_STANDALONE_NEXT/);
+  assert.match(index, /capture\|patient-monitor/);
 });
 
 test("Capture falls back to a text-only cache when IndexedDB is unavailable", async () => {
