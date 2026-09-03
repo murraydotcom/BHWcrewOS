@@ -89,6 +89,8 @@ test("the installed alert module never requests browser notifications", async ()
   assert.match(source, /bhw-alert-bell/);
   assert.match(source, /bhw-alert-enabled-v1/);
   assert.match(source, /Notifications off/);
+  assert.match(source, /type="checkbox"/);
+  assert.match(source, /addEventListener\("change"/);
   assert.match(source, /bhw:requests-updated/);
 });
 
