@@ -170,6 +170,15 @@ export async function createEncounterCloudClient(fetchImpl = fetch) {
     async healthRecord(bhwPatientId = "BHW0000") {
       return request(`/v1/patients/${encodeURIComponent(bhwPatientId)}/health-record`);
     },
+    async patientAtlas(bhwPatientId = "BHW0000") {
+      return request(`/v1/patients/${encodeURIComponent(bhwPatientId)}/atlas`);
+    },
+    async savePatientAtlas(bhwPatientId = "BHW0000", input = {}) {
+      return request(`/v1/patients/${encodeURIComponent(bhwPatientId)}/atlas`, {
+        method: "PUT",
+        body: JSON.stringify(input),
+      });
+    },
     async patientVisitNotes(bhwPatientId = "BHW0000") {
       return request(`/v1/patients/${encodeURIComponent(bhwPatientId)}/visit-notes`);
     },

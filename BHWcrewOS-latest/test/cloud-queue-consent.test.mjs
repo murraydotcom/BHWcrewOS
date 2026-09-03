@@ -33,6 +33,8 @@ test("CrewHQ keeps its protected token exchange while using consent-aware transc
 
   await client.transcriptionConfig();
   await client.patientVisitNotes("BHW12/34");
+  await client.patientAtlas("BHW12/34");
+  await client.savePatientAtlas("BHW12/34", { action: "save-draft", content: { primaryConcern: "Synthetic concern" } });
   await client.recordingConsent("BHW12/34");
   await client.saveRecordingConsent("BHW12/34", {
     sourceType: "previsit-form",
@@ -52,6 +54,12 @@ test("CrewHQ keeps its protected token exchange while using consent-aware transc
 
   const visitNotes = requests.find(({ url }) => url.endsWith("/v1/patients/BHW12%2F34/visit-notes"));
   assert.ok(visitNotes, "Patient 360 requests only the selected patient's visit-note projection");
+
+  const atlasRead = requests.find(({ url, options }) => url.endsWith("/v1/patients/BHW12%2F34/atlas") && !options.method);
+  assert.ok(atlasRead, "Patient 360 reads the patient-scoped Health Core Atlas workspace");
+
+  const atlasWrite = requests.find(({ url, options }) => url.endsWith("/v1/patients/BHW12%2F34/atlas") && options.method === "PUT");
+  assert.equal(JSON.parse(atlasWrite.options.body).action, "save-draft");
 
   const consentRead = requests.find(({ url }) => url.endsWith("/v1/patients/BHW12%2F34/recording-consent") && !url.includes("transcriptions"));
   assert.ok(consentRead, "patient ID is encoded in the consent endpoint");

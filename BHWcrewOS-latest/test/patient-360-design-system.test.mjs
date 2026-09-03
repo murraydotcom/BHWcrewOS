@@ -66,3 +66,22 @@ test("Patient 360 overview omits internal labels and uses lighter headings", () 
   assert.match(css, /\.navigator-hero h1\{[^}]*font-weight:500/);
   assert.match(css, /\.hero-aside h2\{font-weight:500\}/);
 });
+
+test("Patient 360 Atlas supports protected draft entry with a separate provider approval gate", () => {
+  const app = fs.readFileSync(path.join(provider, "patient-360-app.mjs"), "utf8");
+  const queue = fs.readFileSync(path.join(provider, "cloud-queue.mjs"), "utf8");
+  const css = fs.readFileSync(path.join(provider, "patient-360.css"), "utf8");
+  assert.match(app, /Add or update Atlas information/);
+  assert.match(app, /Save clinical draft/);
+  assert.match(app, /Approve for Patient 360/);
+  assert.match(app, /I reviewed this saved draft against the patient record/);
+  assert.match(app, /Saved to BHW Cloud/);
+  assert.match(app, /Draft information stays separate until provider approval/);
+  assert.match(app, /cloudClient\.savePatientAtlas\(PATIENT_ID, \{ action: "save-draft"/);
+  assert.match(app, /cloudClient\.savePatientAtlas\(PATIENT_ID, \{ action: "approve"/);
+  assert.match(queue, /async patientAtlas\(/);
+  assert.match(queue, /async savePatientAtlas\(/);
+  assert.match(css, /Protected Atlas entry stays visually separate/);
+  assert.match(css, /\.atlas-entry-workspace/);
+  assert.match(css, /\.atlas-review-bar/);
+});
