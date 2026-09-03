@@ -196,7 +196,8 @@ function loadPatientOptions(patients, { realPatientEnabled = false } = {}) {
   addPatientOption(SYNTHETIC_PATIENT_ID, "BHW0000 · Synthetic staff role-play");
   if (realPatientEnabled) {
     for (const patient of patients) {
-      const name = `${patient.legalLastName || ""}, ${patient.preferredName || patient.legalFirstName || ""}`.replace(/^, |, $/g, "");
+      const lastName = `${patient.legalLastName || ""}${patient.nameSuffix ? ` ${patient.nameSuffix}` : ""}`;
+      const name = `${lastName}, ${patient.preferredName || patient.legalFirstName || ""}`.replace(/^, |, $/g, "");
       const status = patient.patientStatus && patient.patientStatus !== "active" ? ` · ${patient.patientStatus}` : "";
       addPatientOption(patient.bhwPatientId, `${name} · ${patient.bhwPatientId}${status}`);
     }

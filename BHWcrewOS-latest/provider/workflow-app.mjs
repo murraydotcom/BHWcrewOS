@@ -1267,7 +1267,8 @@ function openEncounterModal() {
 
 function renderPatientOptions() {
   const options = patients.map((patient) => {
-    const name = [patient.legalLastName, patient.legalFirstName].filter(Boolean).join(", ");
+    const lastName = [patient.legalLastName, patient.nameSuffix].filter(Boolean).join(" ");
+    const name = [lastName, patient.legalFirstName].filter(Boolean).join(", ");
     return `<option value="${esc(patient.bhwPatientId)}" label="${esc(name || patient.bhwPatientId)}"></option>`;
   }).join("");
   $("patientOptions").innerHTML = options;
