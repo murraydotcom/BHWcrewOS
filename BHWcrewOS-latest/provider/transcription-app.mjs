@@ -33,6 +33,7 @@ let toastTimer = null;
 let sessionVersion = 0;
 let verifiedConsent = null;
 let consentLookupVersion = 0;
+let crewSessionChannel = null;
 
 function showToast(message) {
   $("toast").textContent = message;
@@ -131,6 +132,7 @@ function handleSegmentError(error, segment) {
   setState(sessionExpired
     ? "CrewHQ session expired · audio retained in this tab"
     : "Transcription needs attention · audio retained for retry");
+  $("reauth").hidden = !sessionExpired;
   showToast(detail);
 }
 
@@ -144,6 +146,7 @@ function finishSuccessfulVisit(snapshot) {
   updateConsentCopy();
   $("reviewed").checked = false;
   $("copy").disabled = true;
+  $("reauth").hidden = true;
   setState("Draft ready for provider review · all segment audio discarded after successful transcription");
 }
 
@@ -334,6 +337,7 @@ function clearSession({ resetAttestations = true } = {}) {
   $("finish").disabled = true;
   $("transcribe").disabled = true;
   $("transcribe").textContent = "Retry retained audio";
+  $("reauth").hidden = true;
   $("copy").disabled = true;
   $("patient").disabled = !cloudClient;
   if (resetAttestations) {
@@ -524,6 +528,10 @@ $("transcribe").onclick = async () => {
   setState("Retrying retained protected audio…");
   await segmentQueue.retry();
 };
+$("reauth").onclick = () => {
+  window.open(crewSignInUrl(), "_blank", "noopener");
+  showToast("Complete CrewHQ sign-in in the new tab, then return here. Retained audio stays in this tab.");
+};
 
 $("reviewed").onchange = () => { $("copy").disabled = !$("reviewed").checked || !$("transcript").value.trim(); };
 $("transcript").oninput = () => { $("reviewed").checked = false; $("copy").disabled = true; };
@@ -546,9 +554,22 @@ window.addEventListener("beforeunload", (event) => {
   event.returnValue = "";
 });
 window.addEventListener("pagehide", () => {
+  crewSessionChannel?.close();
   stopTracks();
   discardAudio();
 });
+
+if ("BroadcastChannel" in globalThis) {
+  crewSessionChannel = new BroadcastChannel("bhw-crew-session-v1");
+  crewSessionChannel.onmessage = (event) => {
+    const token = typeof event.data?.token === "string" ? event.data.token : "";
+    if (event.data?.type !== "crew-session" || token.length > 4096 || token.split(".").length !== 2) return;
+    try { sessionStorage.setItem("crewos_token", token); } catch { return; }
+    $("reauth").hidden = true;
+    setState("CrewHQ sign-in refreshed · retained audio is ready to retry");
+    showToast("CrewHQ sign-in refreshed. Click Retry retained audio.");
+  };
+}
 
 async function initialize() {
   if (!navigator.mediaDevices?.getUserMedia || !globalThis.MediaRecorder) {
