@@ -169,14 +169,14 @@ function injectStyles() {
   const style = document.createElement("style");
   style.id = "bhw-alert-styles";
   style.textContent = `
-    .bhw-alert-root{position:fixed;top:14px;right:14px;z-index:2147482000;font-family:Montserrat,Inter,system-ui,sans-serif;color:#22303a}
-    .bhw-alert-root.bhw-alert-inline{position:relative;top:auto;right:auto;display:inline-block;flex:0 0 auto}
+    .bhw-alert-root{position:fixed;top:14px;right:14px;z-index:2147482000;display:flex;align-items:center;gap:7px;font-family:Montserrat,Inter,system-ui,sans-serif;color:#22303a}
+    .bhw-alert-root.bhw-alert-inline{position:relative;top:auto;right:auto;display:inline-flex;flex:0 0 auto}
     .bhw-alert-bell{width:44px;height:44px;border:1px solid #d9e2e2;border-radius:14px;background:#fff;box-shadow:0 7px 24px rgba(34,48,58,.16);display:grid;place-items:center;cursor:pointer;position:relative;color:#3c7c78}
     .bhw-alert-bell:hover{border-color:#4f9a95}.bhw-alert-bell svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
     .bhw-alert-count{position:absolute;right:-5px;top:-5px;min-width:20px;height:20px;padding:0 5px;border-radius:20px;background:#b0525a;color:#fff;border:2px solid #fff;display:grid;place-items:center;font-size:10px;font-weight:800}
     .bhw-alert-count[hidden]{display:none}.bhw-alert-panel[hidden]{display:none}
     .bhw-alert-panel{position:absolute;right:0;top:52px;width:min(380px,calc(100vw - 28px));max-height:min(610px,calc(100vh - 84px));overflow:hidden;background:#fff;border:1px solid #dfe5e3;border-radius:17px;box-shadow:0 18px 55px rgba(34,48,58,.24)}
-    .bhw-alert-head{display:flex;align-items:center;gap:10px;padding:14px 15px;border-bottom:1px solid #eee9e2;background:#fcfaf6}.bhw-alert-head b{font-size:14px}.bhw-alert-toggle-wrap{margin-left:auto;display:flex;align-items:center;gap:6px;border:1px solid #cfdcda;border-radius:20px;background:#fff;color:#3c7c78;padding:6px 9px;font:800 10px/1 Montserrat,Inter,system-ui,sans-serif;cursor:pointer}.bhw-alert-toggle-wrap:has(input:not(:checked)){color:#6f7b82;background:#f2f3f3}.bhw-alert-toggle{margin:0;accent-color:#3c7c78}
+    .bhw-alert-head{display:flex;align-items:center;gap:10px;padding:14px 15px;border-bottom:1px solid #eee9e2;background:#fcfaf6}.bhw-alert-head b{font-size:14px}.bhw-alert-head span{margin-left:auto;font-size:10px;font-weight:800;color:#5b6b76;text-transform:uppercase;letter-spacing:.05em}.bhw-alert-toggle-wrap{display:flex;align-items:center;gap:6px;border:1px solid #cfdcda;border-radius:20px;background:#fff;color:#3c7c78;padding:6px 9px;font:800 10px/1 Montserrat,Inter,system-ui,sans-serif;cursor:pointer;white-space:nowrap}.bhw-alert-toggle-wrap:has(input:not(:checked)){color:#6f7b82;background:#f2f3f3}.bhw-alert-toggle{margin:0;accent-color:#3c7c78}
     .bhw-alert-list{max-height:490px;overflow:auto;padding:7px}.bhw-alert-item{display:block;text-decoration:none;color:inherit;padding:11px;border-radius:12px;border:1px solid transparent}.bhw-alert-item:hover{background:#f4f8f7;border-color:#dcebe8}
     .bhw-alert-item+.bhw-alert-item{border-top-color:#eee9e2}.bhw-alert-top{display:flex;align-items:center;gap:8px}.bhw-alert-type{font-size:12px;font-weight:800}.bhw-alert-reason{margin-left:auto;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:4px 7px;border-radius:20px;background:#eaf2f1;color:#3c7c78}
     .bhw-alert-item.urgent .bhw-alert-reason{background:#f6e2e2;color:#9a424b}.bhw-alert-item.warning .bhw-alert-reason{background:#fbf1dd;color:#8a6a26}
@@ -195,12 +195,13 @@ function createUi() {
   root.className = "bhw-alert-root";
   root.setAttribute("aria-label", "CrewOS alerts");
   root.innerHTML = `
+    <label class="bhw-alert-toggle-wrap" title="Choose whether CrewOS alerts appear on this device"><input class="bhw-alert-toggle" type="checkbox" checked><span>Notifications on</span></label>
     <button class="bhw-alert-bell" type="button" aria-label="Open CrewOS alerts" aria-expanded="false">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
       <span class="bhw-alert-count" hidden>0</span>
     </button>
     <div class="bhw-alert-panel" hidden>
-      <div class="bhw-alert-head"><b>CrewOS alerts</b><label class="bhw-alert-toggle-wrap"><input class="bhw-alert-toggle" type="checkbox" checked><span>Notifications on</span></label></div>
+      <div class="bhw-alert-head"><b>CrewOS alerts</b><span>Role routed</span></div>
       <div class="bhw-alert-list"></div>
       <div class="bhw-alert-foot"><a href="/bhw-requests.html">Open Patient Requests →</a></div>
     </div>`;
