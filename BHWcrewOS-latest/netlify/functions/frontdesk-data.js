@@ -18,6 +18,28 @@ const digits = s => (s || '').replace(/\D/g, '');
 const text = p => (p?.rich_text?.[0]?.plain_text) || (p?.title?.[0]?.plain_text) || '';
 const sel = p => p?.select?.name || p?.status?.name || '';
 
+// Reserved, de-identified production smoke-test patient. This fixture is
+// intentionally available only by its exact ID so it never appears in normal
+// staff searches or patient lists.
+const BHW0000 = Object.freeze({
+  id: 'BHW0000',
+  bhwPatientId: 'BHW0000',
+  bhwId: 'BHW0000',
+  ctl: 'BHW0000',
+  name: 'Synthetic QA',
+  dob: '1980-01-01',
+  phone: '',
+  payer: 'Synthetic test coverage',
+  member: 'BHW0000',
+  status: 'synthetic-test',
+  allergies: 'Synthetic test record — no real patient data',
+  meds: '',
+  lastVisit: '',
+  nextVisit: '',
+  notionPageId: '',
+  pageUrl: '',
+});
+
 // Full patient card from a Master List page (used for a single/selected match).
 function shapePatient(page) {
   const P = page.properties;
@@ -294,6 +316,28 @@ exports.handler = async (event) => {
 
     const q = (event.queryStringParameters?.q || '').trim();
     const pid = (event.queryStringParameters?.pid || '').trim();
+
+    // BHW0000 is reserved outside the live patient registry. Expose it only
+    // for an exact protected smoke test so Front Desk can exercise the same
+    // Health Core referral path without creating a duplicate patient record.
+    if (pid.toUpperCase() === 'BHW0000') {
+      return {
+        statusCode: 200,
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+        body: JSON.stringify({ patient: BHW0000, requests: [] }),
+      };
+    }
+    if (q.toUpperCase() === 'BHW0000') {
+      return {
+        statusCode: 200,
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+        body: JSON.stringify({
+          matches: [{ id: BHW0000.id, name: BHW0000.name, ctl: BHW0000.ctl, dob: BHW0000.dob, phone: '' }],
+          patient: BHW0000,
+          requests: [],
+        }),
+      };
+    }
 
     // ---- DIRECT PATIENT: ?pid=<pageId> -> full detail for one chosen match ----
     if (pid) {
