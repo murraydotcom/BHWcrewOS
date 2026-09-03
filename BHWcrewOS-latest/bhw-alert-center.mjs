@@ -176,7 +176,7 @@ function injectStyles() {
     .bhw-alert-count{position:absolute;right:-5px;top:-5px;min-width:20px;height:20px;padding:0 5px;border-radius:20px;background:#b0525a;color:#fff;border:2px solid #fff;display:grid;place-items:center;font-size:10px;font-weight:800}
     .bhw-alert-count[hidden]{display:none}.bhw-alert-panel[hidden]{display:none}
     .bhw-alert-panel{position:absolute;right:0;top:52px;width:min(380px,calc(100vw - 28px));max-height:min(610px,calc(100vh - 84px));overflow:hidden;background:#fff;border:1px solid #dfe5e3;border-radius:17px;box-shadow:0 18px 55px rgba(34,48,58,.24)}
-    .bhw-alert-head{display:flex;align-items:center;gap:10px;padding:14px 15px;border-bottom:1px solid #eee9e2;background:#fcfaf6}.bhw-alert-head b{font-size:14px}.bhw-alert-toggle{margin-left:auto;border:1px solid #cfdcda;border-radius:20px;background:#fff;color:#3c7c78;padding:6px 9px;font:800 10px/1 Montserrat,Inter,system-ui,sans-serif;cursor:pointer}.bhw-alert-toggle[aria-pressed="false"]{color:#6f7b82;background:#f2f3f3}
+    .bhw-alert-head{display:flex;align-items:center;gap:10px;padding:14px 15px;border-bottom:1px solid #eee9e2;background:#fcfaf6}.bhw-alert-head b{font-size:14px}.bhw-alert-toggle-wrap{margin-left:auto;display:flex;align-items:center;gap:6px;border:1px solid #cfdcda;border-radius:20px;background:#fff;color:#3c7c78;padding:6px 9px;font:800 10px/1 Montserrat,Inter,system-ui,sans-serif;cursor:pointer}.bhw-alert-toggle-wrap:has(input:not(:checked)){color:#6f7b82;background:#f2f3f3}.bhw-alert-toggle{margin:0;accent-color:#3c7c78}
     .bhw-alert-list{max-height:490px;overflow:auto;padding:7px}.bhw-alert-item{display:block;text-decoration:none;color:inherit;padding:11px;border-radius:12px;border:1px solid transparent}.bhw-alert-item:hover{background:#f4f8f7;border-color:#dcebe8}
     .bhw-alert-item+.bhw-alert-item{border-top-color:#eee9e2}.bhw-alert-top{display:flex;align-items:center;gap:8px}.bhw-alert-type{font-size:12px;font-weight:800}.bhw-alert-reason{margin-left:auto;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:4px 7px;border-radius:20px;background:#eaf2f1;color:#3c7c78}
     .bhw-alert-item.urgent .bhw-alert-reason{background:#f6e2e2;color:#9a424b}.bhw-alert-item.warning .bhw-alert-reason{background:#fbf1dd;color:#8a6a26}
@@ -200,7 +200,7 @@ function createUi() {
       <span class="bhw-alert-count" hidden>0</span>
     </button>
     <div class="bhw-alert-panel" hidden>
-      <div class="bhw-alert-head"><b>CrewOS alerts</b><button class="bhw-alert-toggle" type="button" aria-pressed="true">Notifications on</button></div>
+      <div class="bhw-alert-head"><b>CrewOS alerts</b><label class="bhw-alert-toggle-wrap"><input class="bhw-alert-toggle" type="checkbox" checked><span>Notifications on</span></label></div>
       <div class="bhw-alert-list"></div>
       <div class="bhw-alert-foot"><a href="/bhw-requests.html">Open Patient Requests →</a></div>
     </div>`;
@@ -220,7 +220,7 @@ function createUi() {
   } else {
     document.body.append(root, toast);
   }
-  return { root, button: root.querySelector(".bhw-alert-bell"), toggle: root.querySelector(".bhw-alert-toggle"), badge: root.querySelector(".bhw-alert-count"), panel: root.querySelector(".bhw-alert-panel"), list: root.querySelector(".bhw-alert-list"), toast };
+  return { root, button: root.querySelector(".bhw-alert-bell"), toggle: root.querySelector(".bhw-alert-toggle"), toggleText: root.querySelector(".bhw-alert-toggle-wrap span"), badge: root.querySelector(".bhw-alert-count"), panel: root.querySelector(".bhw-alert-panel"), list: root.querySelector(".bhw-alert-list"), toast };
 }
 
 function startAlertCenter(token) {
@@ -259,8 +259,8 @@ function startAlertCenter(token) {
     ui.badge.textContent = notRead.length > 99 ? "99+" : String(notRead.length);
     ui.badge.hidden = !notificationsEnabled || notRead.length === 0;
     ui.button.setAttribute("aria-label", !notificationsEnabled ? "Open CrewOS alerts, notifications off" : notRead.length ? `Open CrewOS alerts, ${notRead.length} unread` : "Open CrewOS alerts");
-    ui.toggle.textContent = notificationsEnabled ? "Notifications on" : "Notifications off";
-    ui.toggle.setAttribute("aria-pressed", String(notificationsEnabled));
+    ui.toggle.checked = notificationsEnabled;
+    ui.toggleText.textContent = notificationsEnabled ? "Notifications on" : "Notifications off";
     ui.list.innerHTML = !notificationsEnabled ? '<div class="bhw-alert-empty"><b>Notifications are off on this device.</b><br>You can turn them back on at any time.</div>' : current.length ? current.map((alert) => `
       <a class="bhw-alert-item ${escapeHtml(alert.severity)}" href="${escapeHtml(alert.href)}" data-alert-key="${escapeHtml(alert.key)}">
         <span class="bhw-alert-top"><span class="bhw-alert-type">${escapeHtml(alert.label)}</span><span class="bhw-alert-reason">${escapeHtml(alert.reason)}</span></span>
@@ -302,9 +302,9 @@ function startAlertCenter(token) {
     ui.button.setAttribute("aria-expanded", String(opening));
     if (opening) { markSeen(current.map((alert) => alert.key)); render(); }
   });
-  ui.toggle.addEventListener("click", (event) => {
+  ui.toggle.addEventListener("change", (event) => {
     event.stopPropagation();
-    notificationsEnabled = !notificationsEnabled;
+    notificationsEnabled = ui.toggle.checked;
     saveJson(enabledKey, notificationsEnabled);
     if (!notificationsEnabled) markSeen(current.map((alert) => alert.key));
     render();
