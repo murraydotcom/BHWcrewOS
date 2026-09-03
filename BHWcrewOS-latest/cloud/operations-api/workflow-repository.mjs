@@ -46,6 +46,7 @@ function toWorkflowRequest(raw = {}) {
     status,
     manualNotifyOnly: source.manualNotifyOnly === true,
     notificationMode: source.notificationMode || "automatic",
+    workflowContext: source.workflowContext || {},
     createdBy: source.createdBy || source.receivedBy || "system:migration",
   }, { user: { sub: source.createdBy || source.receivedBy || "system:migration" }, now: new Date(createdAt) });
   request.patientRequestId = request.id;

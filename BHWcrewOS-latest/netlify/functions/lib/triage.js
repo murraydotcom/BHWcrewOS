@@ -1,28 +1,24 @@
 // netlify/functions/lib/triage.js — shared ingestion for inbound patient
 // communications. This is the "Keragon replacement": webhook → match the
-// patient by phone → drop a row in the Patient Request Triage Queue, which the
+// patient by phone → create a record in the Google Operations Patient Requests queue, which the
 // Front Desk OS inbox already renders (Calls & voicemails / Texts & portal /
 // Faxes) by the row's Source.
 //
-// Env: Cloud patient registry settings, NOTION_TOKEN, QUEUE_DB_ID (triage queue).
+// Env: Cloud patient registry settings, Operations API URL, and the protected
+// Front Desk intake secret.
 //
 // Source strings are chosen so Front Desk OS buckets them correctly — its
 // bucket() sorts /voicemail|phone/ → voice, /text|sms|portal/ → text, else fax:
 //   "Text / SMS"  "Voicemail"  "Missed Call (Phone)"  "Phone Call"  "Fax"
 
-const NOTION = "https://api.notion.com/v1";
-const H = () => ({
-  Authorization: `Bearer ${process.env.NOTION_TOKEN}`,
-  "Notion-Version": "2022-06-28",
-  "Content-Type": "application/json",
-});
+const crypto = require("crypto");
 const digits = (s) => (s || "").replace(/\D/g, "");
 const { listCloudPatients } = require("./cloud-patients");
+const { createFrontDeskIntake } = require("./operations-cloud");
 
 // Match a sender phone number to one patient on the Master Patient List.
-// Returns { patientId, patientName, bhwPatientId } — nulls when there's no
-// confident match. `patientId` is the legacy Notion relation ID;
-// `bhwPatientId` is the migrated Google registry ID when present on that row.
+// Returns the canonical BHW Patient ID only when the match is unique. Shared
+// household/caregiver numbers remain unresolved for staff identity confirmation.
 async function matchPatientByPhone(from) {
   const out = { patientId: null, patientName: "", bhwPatientId: "" };
   const d = digits(from);
@@ -32,7 +28,7 @@ async function matchPatientByPhone(from) {
   try {
     const hits = (await listCloudPatients()).filter((p) => digits(p.phone).endsWith(last10));
     if (hits.length === 1) {
-      out.patientId = hits[0].notionPageId || null;
+      out.patientId = hits[0].bhwPatientId || null;
       out.bhwPatientId = hits[0].bhwPatientId || "";
       out.patientName = hits[0].name || "";
     } else if (hits.length > 1) {
@@ -45,33 +41,35 @@ async function matchPatientByPhone(from) {
   return out;
 }
 
-// Create one triage-queue row. The DB's title is "Request ID" (REQ-…) and
-// "Patient Name" is a text field. The original's URL — fax PDF, call recording,
-// or portal/Charm message — goes in the "Source Link" property (pass an explicit
-// `sourceUrl`, else it's pulled from `link`).
+// Create one authoritative Patient Request. The original fax/recording link is
+// retained in protected source metadata. A shared or unmatched phone never gets
+// guessed onto a patient record.
 async function createQueueEntry({ patientId, patientName, from, summary, source, receivedISO, link, sourceUrl }) {
-  if (!process.env.QUEUE_DB_ID) return { ok: false, error: "QUEUE_DB_ID not set" };
   const when = receivedISO || new Date().toISOString();
-  const reqId = `REQ-${when.slice(0, 10).replace(/-/g, "")}-${when.slice(11, 19).replace(/:/g, "")}`;
   const url = sourceUrl || (String(link || "").match(/https?:\/\/[^\s)]+/) || [])[0] || "";
-  const body = `${summary || ""}`.trim().slice(0, 1900);
-  const props = {
-    "Request ID": { title: [{ text: { content: reqId } }] },
-    "Patient Name": { rich_text: [{ text: { content: String(patientName || "").slice(0, 200) } }] },
-    "Callback Number": { phone_number: from || null },
-    "Summary": { rich_text: [{ text: { content: body || "(no content)" } }] },
-    "Source": { select: { name: source } },
-    "Received": { date: { start: when } },
-    "Status": { status: { name: "Not started" } },
-  };
-  if (url) props["Source Link"] = { url };
-  if (patientId) props["Patient"] = { relation: [{ id: patientId }] };
-
-  const res = await fetch(`${NOTION}/pages`, {
-    method: "POST", headers: H(),
-    body: JSON.stringify({ parent: { database_id: process.env.QUEUE_DB_ID }, properties: props }),
+  const message = `${summary || ""}`.trim().slice(0, 4000) || "Inbound communication received";
+  const sourceSlug = String(source || "front-desk").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const fingerprint = crypto.createHash("sha256").update([sourceSlug, from, when, url, message].join("|")).digest("hex");
+  const result = await createFrontDeskIntake({
+    submissionId: `front-desk:${fingerprint}`,
+    body: {
+      bhwPatientId: patientId || "",
+      patientMatchStatus: patientId ? "matched" : "unmatched",
+      requestType: "general",
+      priority: "routine",
+      summary: (!patientId && patientName ? `${patientName}: ` : "") + message,
+      message,
+      source: sourceSlug || "front-desk",
+      requester: {
+        displayName: patientName || "Unmatched sender",
+        callbackPhone: from || "",
+        preferredChannel: /fax/i.test(source) ? "fax" : "phone",
+      },
+      routing: { targetSystem: "crewos", assignedTeam: "front-desk" },
+      sourceMetadata: { sourceRecordId: fingerprint, sourcePage: "front-desk-inbound", sourceUrl: url },
+    },
   });
-  if (!res.ok) return { ok: false, error: (await res.text()).slice(0, 300) };
+  if (!result) return { ok: false, error: "Google Operations intake is not configured" };
   return { ok: true, matched: !!patientId };
 }
 

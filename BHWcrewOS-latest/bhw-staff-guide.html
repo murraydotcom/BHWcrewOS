@@ -134,7 +134,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
     <tr><td>Record the real milestone</td><td>Assign, Start, and select the exact outcome that actually occurred—never skip from submitted/sent to approved/scheduled.</td></tr>
     <tr><td>Handle patient communication safely</td><td>Use only approved no-PHI wording, confirm delivery status, and never describe suppressed, queued, failed, or gated messages as delivered.</td></tr>
   </table>
-  <div class="tip"><b>System boundaries:</b> Google Cloud/Firestore stores the workflow record; CrewOS is where staff work it; RCM receives billing work as a downstream specialist system; WelcomeToBHW remains HR/onboarding only; Notion is legacy/transitional.</div>
+  <div class="tip"><b>System boundaries:</b> Google Cloud/Firestore stores the patient roster and workflow record; CrewOS is where staff work it; RCM receives billing work as a downstream specialist system; WelcomeToBHW remains HR/onboarding only; retired Notion patient records are read-only migration history.</div>
 </div>
 
 <div class="sec" data-k="training lesson plan walkthrough process flow fifteen minutes demonstration practice teach back">
@@ -328,7 +328,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
     <li>Use SMS only as a no-PHI nudge telling the patient that a secure update is available.</li>
     <li>If the patient page or link is missing, report the missing link to the operations lead. Do not build a replacement page or a new patient record.</li>
   </ol>
-  <div class="rule"><b>Do not create new Notion patient pages.</b> Notion is legacy/transitional and is not the operational patient-page workflow.</div>
+  <div class="rule"><b>Do not create new Notion patient pages.</b> The protected Google Cloud Patient Registry is the only operational patient roster.</div>
   <div class="tip"><b>If access fails:</b> verify the patient’s approved contact information in the authoritative record, then escalate the access problem. Never send detailed medical information by ordinary SMS as a workaround.</div>
 </div>
 
@@ -431,9 +431,9 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
     <tr><td><b>Google Chat</b></td><td>A no-PHI staff alert and quick-action mirror. It is not a second queue; verify the final state in CrewOS.</td></tr>
     <tr><td><b>Dialpad</b></td><td>The approved patient call/SMS channel on (443) 762-5343. Consent, STOP suppression, quiet hours, safety holds, and delivery status are checked and recorded by the Google workflow.</td></tr>
     <tr><td><b>BHW RCM</b></td><td>The downstream specialist system for billing and revenue-cycle work. Billing requests begin in Patient Requests and route to RCM.</td></tr>
-    <tr><td><b>iFax</b></td><td>The approved fax channel, (833) 258-3941. Fax intake remains partly transitional; work any resulting Patient Request once and do not create a duplicate.</td></tr>
+    <tr><td><b>iFax</b></td><td>The approved fax channel, (833) 258-3941. Verified fax intake creates one Google Cloud Patient Request; work that request once and do not create a duplicate.</td></tr>
     <tr><td><b>info@bhwmedical.org</b></td><td>A backup intake/checkpoint for fax and other notices. If the corresponding Patient Request already exists, do not create another one.</td></tr>
-    <tr><td><b>Notion</b></td><td>Legacy/transitional content only. Do not create new Patient Requests, patient pages, medication workflows, or operational records there.</td></tr>
+    <tr><td><b>Notion</b></td><td>Read-only historical migration and non-patient reference content only. Do not create Patient Requests, patient pages, medication workflows, or patient operational records there.</td></tr>
     <tr><td><b>WelcomeToBHW</b></td><td>HR/onboarding only. It is not part of patient care, Patient Requests, or RCM.</td></tr>
   </table>
 </div>

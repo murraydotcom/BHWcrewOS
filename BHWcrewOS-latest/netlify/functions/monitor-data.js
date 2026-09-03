@@ -1,29 +1,17 @@
 // netlify/functions/monitor-data.js
 // Live data for the Patient Monitor pages (bhw-patient-monitor-list.html and
 // bhw-patient-monitor.html). Reads identity from the Cloud patient registry and
-// activity from the triage queue. Gated by the signed CrewOS session. Never
+// activity from the Google Operations Patient Requests queue. Gated by the signed CrewOS session. Never
 // accept a browser-visible shared key.
 //
 //   GET ?roster=1          -> { patients:[{id,name,mrn,program,phone,lastVisit,nextVisit,page}], capped }
 //                             (patients enrolled in a monitoring program, A–Z, capped)
 //   GET ?patient=<pageId>  -> { patient:{...identity + snapshot...}, activity:[...] }
 
-const NOTION = 'https://api.notion.com/v1';
-const H = () => ({
-  'Authorization': `Bearer ${process.env.NOTION_TOKEN}`,
-  'Notion-Version': '2022-06-28',
-  'Content-Type': 'application/json',
-});
-const QUEUE_DB = process.env.QUEUE_DB_ID || 'de7906906a134b65bb0fc6966ba20b13';
 const ROSTER_CAP = 150;
 const { getSession } = require('./_lib');
 const { listCloudPatients, findCloudPatient } = require('./lib/cloud-patients');
-
-const text = p => (p?.rich_text?.[0]?.plain_text) || (p?.title?.[0]?.plain_text) || '';
-const sel = p => p?.select?.name || p?.status?.name || '';
-const multi = p => (p?.multi_select || []).map(o => o.name);
-const dateOf = p => p?.date?.start || '';
-const phoneOf = p => p?.phone_number || '';
+const { operationsRequest } = require('./lib/operations-cloud');
 const j = (status, obj) => ({
   statusCode: status,
   headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
@@ -32,13 +20,14 @@ const j = (status, obj) => ({
 
 exports.handler = async (event) => {
   try {
-    if (!getSession(event)) return j(401, { error: 'unauthorized' });
+    const session = getSession(event);
+    if (!session) return j(401, { error: 'unauthorized' });
 
     const qs = event.queryStringParameters || {};
 
     // ---- ROSTER: patients enrolled in a monitoring program ----
     if (qs.roster) {
-      const all = (await listCloudPatients()).filter(p => p.name && p.programs.length);
+      const all = (await listCloudPatients(session)).filter(p => p.name && p.programs.length);
       const capped = all.length > ROSTER_CAP;
       const patients = all.slice(0, ROSTER_CAP);
       return j(200, { patients, capped });
@@ -46,30 +35,19 @@ exports.handler = async (event) => {
 
     // ---- SINGLE PATIENT: identity + snapshot + activity ----
     if (qs.patient) {
-      const patient = await findCloudPatient(qs.patient);
+      const patient = await findCloudPatient(qs.patient, session);
       if (!patient) return j(404, { error: 'patient not found' });
-      let activity = [];
-      try {
-        const qr = await fetch(`${NOTION}/databases/${QUEUE_DB}/query`, {
-          method: 'POST', headers: H(),
-          body: JSON.stringify({
-            filter: { property: 'Patient', relation: { contains: patient.notionPageId } },
-            sorts: [{ property: 'Received', direction: 'descending' }],
-            page_size: 8,
-          }),
-        });
-        const qd = await qr.json();
-        activity = (qd.results || []).map(r => {
-          const q = r.properties;
-          return {
-            type: sel(q['Request Type']),
-            source: sel(q['Source']),
-            status: sel(q['Status']),
-            received: dateOf(q['Received']),
-            summary: text(q['Summary']),
-          };
-        });
-      } catch (_) { /* activity is best-effort */ }
+      const requestResult = await operationsRequest(
+        `/v1/patient-requests?bhwPatientId=${encodeURIComponent(patient.bhwPatientId)}&limit=8`,
+        { actor: session },
+      );
+      const activity = (requestResult.requests || requestResult.patientRequests || []).slice(0, 8).map((request) => ({
+        type: request.requestType || 'general',
+        source: request.source || 'crewos',
+        status: request.statusLabel || request.status || '',
+        received: request.createdAt || request.receivedAt || '',
+        summary: request.summary || '',
+      }));
       return j(200, { patient: { ...patient, program: patient.programs }, activity });
     }
 

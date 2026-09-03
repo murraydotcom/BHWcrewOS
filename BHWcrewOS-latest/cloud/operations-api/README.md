@@ -76,6 +76,7 @@ collections. Do not put either secret or a service-account key in the repo.
 | `GET /v1/contracts/communication-foundation` | CrewOS | Current enums/schema version |
 | `POST /v1/intake/patient-requests` | Care Connect server | Atomic request + triage task + inbound communication + audit |
 | `POST /v1/intake/front-desk-referrals` | Front Desk server bridge | Create one matched referral workflow record after document generation |
+| `POST /v1/intake/front-desk-patient-requests` | Front Desk server bridge | Create one matched or unresolved inbound fax/email request in the authoritative queue |
 | `POST /v1/intake/front-desk-referrals/:id/actions` | Front Desk server bridge | Record referral sent/ready/scheduled milestones without exposing the server secret |
 | `GET/POST /v1/patient-requests` | CrewOS | List or create operational requests |
 | `GET /v1/patient-requests/:id` | CrewOS | Read one request |

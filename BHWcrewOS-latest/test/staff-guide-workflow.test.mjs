@@ -19,7 +19,7 @@ test("staff guide teaches the current Patient Requests and alert workflow", asyn
   assert.match(html, /Referral sent ≠ ready to schedule ≠ scheduled/);
   assert.match(html, /“automation-not-enabled”/);
   assert.match(html, /SMS and Google Chat stay no-PHI/);
-  assert.match(html, /Notion is legacy\/transitional/);
+  assert.match(html, /retired Notion patient records are read-only migration history/);
   assert.match(html, /WelcomeToBHW.*HR\/onboarding only/);
   assert.match(html, /bhw-alert-center\.mjs/);
   assert.match(html, /Notifications on\/off/);

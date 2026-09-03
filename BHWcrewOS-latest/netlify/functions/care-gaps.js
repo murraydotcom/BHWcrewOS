@@ -1,142 +1,85 @@
-// netlify/functions/care-gaps.js — Gaps in Care, from the payer Wellness Report.
-//
-// BHW uploads each month's Medicare "Wellness Report" (HETS-derived preventive
-// eligibility) into ONE persistent Notion DB — "Medicare Wellness Report" under
-// the Gaps in Care Management page — via Notion's "Merge with CSV" (append). This
-// function is the read side: crewOS calls it to surface each patient's open
-// preventive gaps right in the AWV flow, matched by their Insurance Member ID
-// (falling back to a normalized name match).
-//
-// Read-only, session-gated (crewOS PIN). Source of truth stays in Notion; this
-// never writes. Each row is one (patient, preventive code) eligibility line.
-//
-//   POST { action:"for", memberId, name }
-//        → { matched:true|false, patient:{name,memberId,payer}, gaps:[…] }
-//        Matches by Member ID first (exact, then case-insensitive), else by
-//        normalized name. Returns only that patient's rows.
-//
-//   POST { action:"list" }
-//        → { patients:[ {name, memberId, payer, gaps:[…]} ], rows, updated }
-//        Every patient in the report, each with their gap lines. For the board.
-//
-// A "gap" line: { code, label, hcpcs, state, open, eligibleProf, eligibleTech }.
-//   code    — the full "Preventative Code" text (e.g. "Glaucoma Screening (GLAU) - G0117")
-//   label   — the human name only ("Glaucoma Screening")
-//   hcpcs   — the billing code parsed off the end ("G0117"), if present
-//   state   — "Eligibility State" verbatim ("Active Coverage", "Missing Request
-//             Information", "Review: Other Plan Detected", …)
-//   open    — true when the state indicates the service is still eligible/needed
-//             (i.e. "Active Coverage"); informational states are surfaced but not
-//             counted as an open gap.
+// Gaps in Care read-side. The Patient Registry owns identity and the RCM Cloud
+// quality profile owns reviewed payer/preventive evidence. No patient roster or
+// relationship is read from the retired Notion databases.
 
-const { DB, queryDb, P, getSession, json } = require("./_lib");
+const { getSession, json } = require("./_lib");
+const { cloudRequest, listCloudPatients } = require("./lib/cloud-patients");
 
-const norm = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-// "Lastname, Firstname" and "Firstname Lastname" normalize to the same key so a
-// report name ("Doe, Jane") still matches the Master Patient List ("Jane Doe").
-const nameKey = (s) => norm(String(s || "").split(",").reverse().join(" "));
+const norm = (value) => String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+const nameKey = (value) => norm(String(value || "").split(",").reverse().join(" "));
 
-// "Glaucoma Screening (GLAU) - G0117" → { label:"Glaucoma Screening", hcpcs:"G0117" }
-function parseCode(raw) {
-  const text = String(raw || "").trim();
-  const hcpcs = (text.match(/\b([A-Z]?\d{4,5}[A-Z]?|[A-Z]\d{4})\b\s*$/) || [])[1] || "";
-  const label = text
-    .replace(/\s*[-–—]\s*[A-Z]?\d{3,5}[A-Z]?\s*$/, "") // trailing " - G0117"
-    .replace(/\s*\([^)]*\)\s*$/, "")                    // trailing " (GLAU)"
-    .trim();
-  return { label: label || text, hcpcs };
+function gapsFor(profile) {
+  return (Array.isArray(profile.preventiveGaps) ? profile.preventiveGaps : [])
+    .map((gap) => ({
+      code: String(gap.code || ""),
+      label: String(gap.label || gap.code || ""),
+      hcpcs: String(gap.hcpcs || ""),
+      state: String(gap.state || ""),
+      open: gap.open === true,
+      eligibleProf: String(gap.eligibleProf || ""),
+      eligibleTech: String(gap.eligibleTech || ""),
+    }))
+    .sort((a, b) => Number(b.open) - Number(a.open) || a.label.localeCompare(b.label));
 }
-
-// "Active Coverage" is the only state that means the service is genuinely still
-// open. The others are administrative notes we surface but don't count as a gap.
-const isOpen = (state) => /active\s*coverage/i.test(String(state || ""));
-
-function shape(pg) {
-  const p = pg.properties;
-  const codeText = P.text(p["Preventative Code"]);
-  const { label, hcpcs } = parseCode(codeText);
-  const state = P.text(p["Eligibility State"]);
-  return {
-    name: P.title(p["Patient Name"]),
-    memberId: P.text(p["Member ID"]),
-    payer: P.text(p["Payer"]),
-    code: codeText,
-    label,
-    hcpcs,
-    state,
-    open: isOpen(state),
-    eligibleProf: P.date(p["Eligible Date Prof:"]),
-    eligibleTech: P.date(p["Eligible Date Tech:"]),
-    created: pg.created_time || "",
-  };
-}
-
-// Collapse per-row records into one entry per patient (keyed by Member ID when
-// present, else by normalized name), carrying that patient's gap lines.
-function groupByPatient(rows) {
-  const map = new Map();
-  for (const r of rows) {
-    if (!r.name && !r.memberId) continue;
-    const key = r.memberId ? `id:${r.memberId.toLowerCase()}` : `nm:${nameKey(r.name)}`;
-    let entry = map.get(key);
-    if (!entry) {
-      entry = { name: r.name, memberId: r.memberId, payer: r.payer, gaps: [] };
-      map.set(key, entry);
-    }
-    if (!entry.name && r.name) entry.name = r.name;
-    if (!entry.memberId && r.memberId) entry.memberId = r.memberId;
-    if (!entry.payer && r.payer) entry.payer = r.payer;
-    entry.gaps.push(gapLine(r));
-  }
-  return [...map.values()];
-}
-
-const gapLine = (r) => ({
-  code: r.code, label: r.label, hcpcs: r.hcpcs, state: r.state, open: r.open,
-  eligibleProf: r.eligibleProf, eligibleTech: r.eligibleTech,
-});
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return json(405, { error: "POST only" });
   const session = getSession(event);
-  if (!session) return json(401, { error: "Sign in to crewOS again." });
-  if (!process.env.NOTION_TOKEN) return json(503, { error: "NOTION_TOKEN is not set on this site" });
+  if (!session) return json(401, { error: "Sign in to CrewOS again." });
 
-  let body; try { body = JSON.parse(event.body || "{}"); } catch { return json(400, { error: "Bad JSON" }); }
-  const action = body.action || "list";
+  let body;
+  try { body = JSON.parse(event.body || "{}"); } catch { return json(400, { error: "Bad JSON" }); }
 
   try {
-    const rows = (await queryDb(DB.careGaps)).map(shape).filter((r) => r.name || r.memberId);
+    const [panel, roster] = await Promise.all([
+      cloudRequest("/v1/panel", { actor: session }),
+      listCloudPatients(session),
+    ]);
+    const patientById = new Map(roster.map((patient) => [patient.bhwPatientId, patient]));
+    const rows = (panel.profiles || []).map((profile) => {
+      const patient = patientById.get(profile.bhwPatientId);
+      return {
+        bhwPatientId: profile.bhwPatientId,
+        name: patient?.name || profile.bhwPatientId,
+        memberId: patient?.memberId || "",
+        payer: profile.payer || patient?.payer || "",
+        gaps: gapsFor(profile),
+        updatedAt: profile.coverageCheckedAt || profile.updatedAt || "",
+      };
+    }).filter((entry) => entry.gaps.length);
 
-    if (action === "for") {
-      const memberId = String(body.memberId || "").trim();
-      const name = String(body.name || "").trim();
-      let hits = [];
-      if (memberId) {
-        hits = rows.filter((r) => r.memberId && r.memberId === memberId);
-        if (!hits.length) {
-          const m = memberId.toLowerCase();
-          hits = rows.filter((r) => r.memberId && r.memberId.toLowerCase() === m);
-        }
-      }
-      if (!hits.length && name) {
-        const k = nameKey(name);
-        hits = rows.filter((r) => nameKey(r.name) === k);
-      }
-      if (!hits.length) return json(200, { matched: false, gaps: [] });
-      const patient = { name: hits[0].name, memberId: hits[0].memberId, payer: hits[0].payer };
-      const gaps = hits.map(gapLine).sort((a, b) => Number(b.open) - Number(a.open) || a.label.localeCompare(b.label));
-      return json(200, { matched: true, patient, gaps, openCount: gaps.filter((g) => g.open).length });
+    if ((body.action || "list") === "for") {
+      const requestedId = String(body.bhwPatientId || body.patientId || "").toUpperCase();
+      const memberId = String(body.memberId || "").trim().toLowerCase();
+      const requestedName = nameKey(body.name);
+      const hits = rows.filter((entry) => (
+        (requestedId && entry.bhwPatientId === requestedId)
+        || (memberId && String(entry.memberId).toLowerCase() === memberId)
+        || (!requestedId && !memberId && requestedName && nameKey(entry.name) === requestedName)
+      ));
+      if (hits.length !== 1) return json(200, { matched: false, ambiguous: hits.length > 1, gaps: [] });
+      const match = hits[0];
+      return json(200, {
+        matched: true,
+        patient: { bhwPatientId: match.bhwPatientId, name: match.name, memberId: match.memberId, payer: match.payer },
+        gaps: match.gaps,
+        openCount: match.gaps.filter((gap) => gap.open).length,
+        storage: "BHW Cloud",
+      });
     }
 
-    if (action === "list") {
-      const patients = groupByPatient(rows).sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-      const updated = rows.reduce((m, r) => (r.created > m ? r.created : m), "");
-      return json(200, { patients, rows: rows.length, updated });
+    if ((body.action || "list") === "list") {
+      const patients = rows.sort((a, b) => a.name.localeCompare(b.name));
+      const updated = patients.reduce((latest, entry) => entry.updatedAt > latest ? entry.updatedAt : latest, "");
+      return json(200, {
+        patients: patients.map(({ updatedAt, ...entry }) => entry),
+        rows: patients.reduce((count, patient) => count + patient.gaps.length, 0),
+        updated,
+        storage: "BHW Cloud",
+      });
     }
-
     return json(400, { error: "Unknown action" });
-  } catch (err) {
-    return json(500, { error: String(err.message || err) });
+  } catch (error) {
+    return json(502, { error: String(error.message || error) });
   }
 };

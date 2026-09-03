@@ -143,7 +143,9 @@
     // Live open-request count on the Patient Requests button — so the front desk
     // always sees how many patient requests are waiting for an owner.
     (function(){
-      fetch('/.netlify/functions/frontdesk-data?key=02142022').then(r=>r.ok?r.json():null).then(d=>{
+      var token='';try{token=sessionStorage.getItem('crewos_token')||'';}catch(e){}
+      if(!token)return;
+      fetch('/.netlify/functions/frontdesk-data',{headers:{Authorization:'Bearer '+token}}).then(r=>r.ok?r.json():null).then(d=>{
         if(!d||!Array.isArray(d.items)) return;
         var open=d.items.filter(function(i){return !/done|resolved|complete|closed/i.test(i.status||'');}).length;
         var b=document.getElementById('reqBadge');
@@ -309,10 +311,9 @@
 
   <!-- QUICK LINKS -->
   <section aria-labelledby="ql">
-    <h2 id="ql">Open in Notion</h2>
+    <h2 id="ql">Reference links</h2>
     <div class="links">
       <a href="https://app.notion.com/p/8ae69b6a2f1a42679848744f3a17acb6" target="_rel">🩺 Specialist Directory</a>
-      <a href="https://app.notion.com/p/de7906906a134b65bb0fc6966ba20b13" target="_rel">📥 Triage Queue</a>
       <a href="https://app.notion.com/p/39a580758d3081fcb425cdb1d2b4cb33" target="_rel">📋 Triage SOP</a>
     </div>
   </section>
@@ -326,16 +327,21 @@
    '/.netlify/functions/frontdesk-data' and lookups + cards go live.
    Until then the page runs on the embedded data below.       */
 const API = '/.netlify/functions/frontdesk-data';           // e.g. '/.netlify/functions/frontdesk-data'
-const DASH_KEY = '02142022';      // optional shared key, matches function env
 
 function crewSessionToken(){
   try{return sessionStorage.getItem('crewos_token')||'';}catch(e){return '';}
 }
 
+async function crewFetch(url,options={}){
+  const token=crewSessionToken();
+  if(!token)throw new Error('Sign in to CrewOS again.');
+  return fetch(url,{...options,headers:{...(options.headers||{}),Authorization:`Bearer ${token}`}});
+}
+
 async function faxRequest(body){
   const token=crewSessionToken();
   if(!token) throw new Error('Sign in to CrewOS before using fax.');
-  const response=await fetch(`${API}?key=${encodeURIComponent(DASH_KEY)}`,{
+  const response=await crewFetch(API,{
     method:'POST',
     headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},
     body:JSON.stringify(body)
@@ -433,7 +439,7 @@ function renderInbox(items){
       const when=it.received? (it.received.slice(0,10)===today? (it.received.slice(11,16)||'today') : it.received.slice(5,10)) : '';
       const btn = done
         ? `<button class="act" data-id="${it.id}" data-a="reopen">Reopen</button>`
-        : `${started?'':`<button class="act" data-id="${it.id}" data-a="start">Start</button>`}<button class="act primary" data-id="${it.id}" data-a="done">✓ Done</button>${it.phone?`<button class="act reply" data-id="${it.id}" data-phone="${it.phone}">💬 Reply</button>`:''}`;
+        : `${started?'':`<button class="act" data-id="${it.id}" data-a="start">Start</button>`}<button class="act primary" data-id="${it.id}" data-a="done">✓ Done</button>${it.canSms?`<button class="act reply" data-id="${it.id}">💬 Reply</button>`:''}`;
       el.insertAdjacentHTML('beforeend',`<div class="inb ${breach?'breach':''}">
         <div class="t ${done?'done':''}"><span>${it.name||it.type||it.phone||it.source||'Message'}${it.type?' · '+it.type:''}</span><span class="w">${when}</span></div>
         <div class="s ${done?'done':''}">${it.summary||it.source||''}${it.assigned?' — '+it.assigned:''}${breach?' · <b style="color:var(--urgent)">'+it.sla+'</b>':''}</div>
@@ -449,7 +455,7 @@ function renderInbox(items){
 async function poll(){
   if(!API)return;
   try{
-    const res=await fetch(`${API}?${DASH_KEY?`key=${DASH_KEY}`:''}`);
+    const res=await crewFetch(API);
     if(!res.ok)return;
     const d=await res.json();
     if(d.items)renderInbox(d.items);
@@ -457,7 +463,7 @@ async function poll(){
 }
 poll(); setInterval(poll,60000);
 
-/* write-back: Start / Done / Reopen buttons -> Notion */
+/* write-back: Start / Done / Reopen buttons -> BHW Cloud */
 const CANNED = [
   ["Rx sent","Good news — your prescription was sent to your pharmacy today. Please allow a few hours for them to process it before pickup. — BHW Medical Group"],
   ["Refill received","We received your refill request and sent it to the clinical team. Please allow 1–2 business days. — BHW Medical Group"],
@@ -486,9 +492,9 @@ function openReply(btn){
     if(!msg)return;
     const s=box.querySelector('.send'); s.disabled=true; s.textContent='Sending…';
     try{
-      const res=await fetch(`${API}${DASH_KEY?`?key=${DASH_KEY}`:''}`,{
+      const res=await crewFetch(API,{
         method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({action:'sms',pageId:btn.dataset.id,to:btn.dataset.phone,text:msg})
+        body:JSON.stringify({action:'sms',pageId:btn.dataset.id,text:msg})
       });
       if(res.ok){s.textContent='Sent ✓';setTimeout(()=>box.remove(),900);poll();}
       else{s.textContent='Failed — retry';s.disabled=false;}
@@ -500,7 +506,7 @@ document.addEventListener('click', async e=>{
   const b=e.target.closest('.act'); if(!b||!API||b.classList.contains('send')||b.classList.contains('cancel'))return;
   b.disabled=true; b.textContent='…';
   try{
-    const res=await fetch(`${API}${DASH_KEY?`?key=${DASH_KEY}`:''}`,{
+    const res=await crewFetch(API,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({pageId:b.dataset.id,action:b.dataset.a})
@@ -515,12 +521,12 @@ async function lookup(){
   if(!q){$('lkstatus').textContent='Enter a phone number or name to search.';return;}
   $('profile').classList.remove('show');
   if(!API){
-    $('lkstatus').innerHTML='Live lookup isn\u2019t connected yet — open the patient in <a href="https://app.notion.com/p/2cf580758d3080f0825de4bbfb6c7528" target="_rel"><b>Patients Master List</b></a> for now.';
+    $('lkstatus').textContent='The protected Patient Registry is unavailable. Sign in again or try later; do not create a duplicate list.';
     return;
   }
   $('lkstatus').textContent='Searching…';
   try{
-    const res=await fetch(`${API}?q=${encodeURIComponent(q)}${DASH_KEY?`&key=${DASH_KEY}`:''}`);
+    const res=await crewFetch(`${API}?q=${encodeURIComponent(q)}`);
     if(!res.ok)throw new Error(res.status);
     const d=await res.json();
     // Back-compat: older responses returned only {patient}; new ones return {matches,[patient]}.
@@ -544,7 +550,7 @@ function renderChooser(matches){
 async function selectPatient(id){
   $('lkstatus').textContent='Loading…';
   try{
-    const res=await fetch(`${API}?pid=${encodeURIComponent(id)}${DASH_KEY?`&key=${DASH_KEY}`:''}`);
+    const res=await crewFetch(`${API}?pid=${encodeURIComponent(id)}`);
     if(!res.ok)throw new Error(res.status);
     const d=await res.json();
     if(!d.patient){$('lkstatus').textContent='Could not load that patient — try again.';return;}
@@ -585,7 +591,7 @@ const REF_API = API ? API.replace('frontdesk-data','referral-pdf') : '';
 const REF_SYNC_API = '/.netlify/functions/referral-sync';
 let DIR = [];
 async function syncReferralTracking(action,payload){
-  const r=await fetch(`${REF_SYNC_API}?key=${encodeURIComponent(DASH_KEY)}`,{
+  const r=await crewFetch(REF_SYNC_API,{
     method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...payload})
   });
   const d=await r.json().catch(()=>({}));
@@ -595,7 +601,7 @@ async function syncReferralTracking(action,payload){
 async function loadDir(){
   if(API){
     try{
-      const r = await fetch(`${API}?dir=1&key=${encodeURIComponent(DASH_KEY)}`);
+      const r = await crewFetch(`${API}?dir=1`);
       const d = await r.json();
       if(d.specialists && d.specialists.length){ DIR = d.specialists; }
     }catch(e){}
@@ -654,9 +660,8 @@ $('g-make').addEventListener('click', async ()=>{
     .filter(k=>$('p-'+k)?.checked);
   st.textContent='Generating…';
   try{
-    const res = await fetch(REF_API,{method:'POST',headers:{'Content-Type':'application/json'},
+    const res = await crewFetch(REF_API,{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        key: DASH_KEY,
         provider: $('g-provider').value,
         date: new Date().toLocaleDateString('en-US'),
         patient:{ name:$('g-pname').value, dob:$('g-pdob').value, phone:$('g-pphone').value, member:$('g-pmember').value },

@@ -246,15 +246,15 @@ input:focus,select:focus,button:focus-visible{outline:2.5px solid var(--seaglass
   </div>
 
   <button class="btn sea" id="copySummary">Copy payer summary</button>
-  <p class="note">Data lives in Notion and syncs for everyone. the Care Coordinator's daily hospital checks go in the Events tab; benchmarks are set per device in Data &amp; Settings.</p>
+  <p class="note">Patient identity comes from the protected Patient Registry. Quality and utilization records save to BHW Cloud for the whole care team; benchmarks remain a device-only preference.</p>
 </section>
 
 <!-- ================= PATIENTS ================= -->
 <section class="tab" id="tab-patients">
   <div class="card">
     <div class="eyebrow">Add patient</div>
-    <label class="f" for="pLabel">MRN or initials (no full names)</label>
-    <input type="text" id="pLabel" placeholder="e.g. MRN 10482 or J.D.">
+    <label class="f" for="pPatient">Patient Registry record</label>
+    <select id="pPatient"><option value="">Choose a patient…</option></select>
     <label class="f" for="pPayer">Payer</label>
     <select id="pPayer">
       <option>Medicare</option><option>Medicaid — UHC Community Plan</option>
@@ -288,7 +288,7 @@ input:focus,select:focus,button:focus-visible{outline:2.5px solid var(--seaglass
       <label class="f" for="pComplaint">Chief complaint</label><input id="pComplaint" placeholder="Reason for hospital visit">
       <label class="f" for="pDx">Diagnosis codes</label><input id="pDx" placeholder="I10; E11.9">
       <label class="f" for="pDxDesc">Diagnosis description</label><input id="pDxDesc" placeholder="Optional diagnosis description">
-      <p class="muted" style="margin-top:6px">Saving will create the Panel patient, the utilization event, and the retained Hospital Visits row in one workflow.</p>
+      <p class="muted" style="margin-top:6px">Saving will add a quality profile and utilization event to this Patient Registry record, then retain the Hospital Visits row.</p>
     </div>
     <button class="btn" id="addPatient">Add patient</button>
   </div>
@@ -358,12 +358,10 @@ input:focus,select:focus,button:focus-visible{outline:2.5px solid var(--seaglass
 <!-- ================= DATA ================= -->
 <section class="tab" id="tab-data">
   <div class="card">
-    <div class="eyebrow">Notion sync</div>
+    <div class="eyebrow">BHW Cloud</div>
     <h2>Source of truth</h2>
-    <p class="muted">Patients and events are stored in the <b>Panel Patients</b> and <b>Utilization Events</b> databases under Panel Performance in Notion. Edits made in Notion appear here on refresh.</p>
-    <button class="btn ghost" id="refreshBtn">Refresh from Notion</button>
-    <label class="f" for="dashKey" style="margin-top:14px">Access key (if configured on the server)</label>
-    <input type="password" id="dashKey" placeholder="Leave blank if not set">
+    <p class="muted">The protected Google Cloud Patient Registry supplies the roster. This page stores only patient-linked quality profiles and utilization events; it does not create another patient master list.</p>
+    <button class="btn ghost" id="refreshBtn">Refresh from BHW Cloud</button>
   </div>
   <div class="card">
     <div class="eyebrow">Benchmarks</div>
@@ -379,7 +377,7 @@ input:focus,select:focus,button:focus-visible{outline:2.5px solid var(--seaglass
     <div class="eyebrow">Backup</div>
     <h2>Export snapshot</h2>
     <button class="btn ghost" id="exportBtn">Download snapshot (JSON)</button>
-    <p class="note">Notion is the backup now — this just downloads a point-in-time copy for payer submissions or analysis.</p>
+    <p class="note">This downloads a point-in-time working copy for payer submissions or analysis. It is not another patient record.</p>
   </div>
 </section>
 
@@ -406,20 +404,26 @@ input:focus,select:focus,button:focus-visible{outline:2.5px solid var(--seaglass
 
 /* ============ API client ============ */
 const API='/.netlify/functions/panel-data';
-const CACHE_KEY='bhw-panel-cache', BENCH_KEY='bhw-panel-bench', KEY_KEY='bhw-panel-key';
-let state={patients:[],events:[]};
+const CACHE_KEY='bhw-panel-cache', BENCH_KEY='bhw-panel-bench';
+let state={patients:[],events:[],registryPatients:[]};
 let bench={admit:280,ed:650};
 let online=false;
 let CLOUD=null;
 
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function headers(){ const h={'Content-Type':'application/json'}; const k=localStorage.getItem(KEY_KEY); if(k)h['x-dash-key']=k; return h; }
+function headers(){
+  const h={'Content-Type':'application/json'};
+  try{const token=sessionStorage.getItem('crewos_token')||'';if(token)h.Authorization='Bearer '+token;}catch(e){}
+  return h;
+}
 
 async function api(action,payload){
   const res=await fetch(API,{method:'POST',headers:headers(),body:JSON.stringify({action,payload})});
   if(!res.ok){ const e=await res.json().catch(()=>({})); throw new Error(e.error||('HTTP '+res.status)); }
-  return res.json();
+  const data=await res.json();
+  if(data.savedAt)setPill('Saved to BHW Cloud · '+new Date(data.savedAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}),false);
+  return data;
 }
 async function refresh(){
   setPill('syncing…',false);
@@ -428,7 +432,7 @@ async function refresh(){
     if(!res.ok){ const e=await res.json().catch(()=>({})); throw new Error(e.error||('HTTP '+res.status)); }
     state=await res.json();
     try{ localStorage.setItem(CACHE_KEY,JSON.stringify(state)); }catch(e){}
-    online=true; setPill('synced · Notion',false);
+    online=true; setPill('BHW Cloud synced',false);
   }catch(err){
     online=false;
     try{ const c=localStorage.getItem(CACHE_KEY); if(c)state=JSON.parse(c); }catch(e){}
@@ -436,15 +440,15 @@ async function refresh(){
     console.warn('Sync failed:',err.message);
   }
   if(CLOUD){
-    try{ mergeCloudRows(await CLOUD.listTcmEvents()); setPill(online?'synced · Notion + Hospital feed':'Notion offline · Hospital feed connected',!online); }
+    try{ mergeCloudRows(await CLOUD.listTcmEvents()); setPill(online?'BHW Cloud synced':'BHW Cloud record feed connected',!online); }
     catch(error){ console.warn('Hospital feed sync failed:',error.message); }
   }
   renderAll();
 }
 function setPill(t,off){ const p=$('storagePill'); p.textContent=t; p.classList.toggle('off',!!off); }
-function guardOnline(){ if(!online){ alert("Can't reach Notion right now — check your connection, the access key in Data & Settings, or the Netlify function setup, then Refresh."); return false; } return true; }
+function guardOnline(){ if(!online){ alert("Can't reach BHW Cloud right now. Sign in to CrewOS again, then Refresh."); return false; } return true; }
 async function busy(btn,fn){ const t=btn.textContent; btn.disabled=true; btn.textContent='Saving…';
-  try{ await fn(); }catch(err){ alert('Save failed: '+err.message); } btn.disabled=false; btn.textContent=t; }
+  try{ await fn(); }catch(err){ setPill('Not saved',true); alert('Save failed: '+err.message); } btn.disabled=false; btn.textContent=t; }
 
 const truthy=v=>/^(true|yes|1)$/i.test(String(v||''));
 function cloudType(row){
@@ -739,7 +743,7 @@ function openSheet(id){
     });
   };
   $('dDelete').onclick=e=>{ if(!guardOnline())return;
-    if(!confirm('Delete this patient? Their record is archived in Notion (recoverable from trash).'))return;
+    if(!confirm('Remove this quality profile from Panel Performance? The Patient Registry record stays active and the archived profile is recoverable.'))return;
     busy(e.target,async()=>{
       await api('deletePatient',{id});
       state.patients=state.patients.filter(x=>x.id!==id);
@@ -814,13 +818,13 @@ function openEventSheet(id){
       Object.assign(ev,upd);
       if(CLOUD&&p){
         try{await CLOUD.importTcmEvents([panelEventToCloudRow(p,ev,id)],{source:'CrewHQ Panel and Discharges',sourceFile:'Panel follow-up update',manual:true});}
-        catch(error){alert('Follow-up was saved in Notion, but the shared Hospital Visits feed could not be updated: '+error.message);}
+        catch(error){alert('Follow-up was saved to BHW Cloud, but the shared Hospital Visits feed could not be updated: '+error.message);}
       }
       renderAll(); closeSheet();
     });
   };
   $('xDelete').onclick=e=>{ if(!guardOnline())return;
-    if(!confirm('Delete this event? It is archived in Notion (recoverable from trash).'))return;
+    if(!confirm('Archive this utilization event in BHW Cloud? It can be recovered by an administrator.'))return;
     busy(e.target,async()=>{
       await api('deleteEvent',{id});
       state.events=state.events.filter(x=>x.id!==id);
@@ -831,8 +835,10 @@ function openEventSheet(id){
 
 /* ============ Actions ============ */
 $('addPatient').onclick=e=>{
-  const label=$('pLabel').value.trim();
-  if(!label){ alert('Enter an MRN or initials'); return; }
+  const bhwPatientId=$('pPatient').value;
+  const registryPatient=(state.registryPatients||[]).find(patient=>patient.bhwPatientId===bhwPatientId);
+  if(!registryPatient){ alert('Choose a patient from the protected Patient Registry.'); return; }
+  const label=registryPatient.bhwPatientId;
   const addHospital=$('pHospital').checked;
   const first=$('pFirst').value.trim(),last=$('pLast').value.trim(),dob=$('pDob').value;
   const hospitalType=$('pHospType').value,eventDate=$('pDischarge').value,facility=$('pFacility').value.trim();
@@ -844,10 +850,10 @@ $('addPatient').onclick=e=>{
   if(!guardOnline())return;
   busy(e.target,async()=>{
     const program=$('pProgram').value;
-    const payload={label,payer:$('pPayer').value,program,
+    const payload={bhwPatientId,label,payer:$('pPayer').value,program,
       enrollDate:program==='none'?null:($('pEnroll').value||null)};
     const res=await api('addPatient',payload);
-    const patient={...payload,id:res.id,hedis:{}};state.patients.push(patient);
+    const patient={...payload,id:res.id,hedis:{},rosterLinked:true};state.patients.push(patient);
     if(addHospital){
       const stillAdmitted=hospitalType==='Inpatient-admit';
       const type=hospitalType==='Emergency'?'ed':hospitalType==='Observation'?'obs':'admit';
@@ -863,13 +869,20 @@ $('addPatient').onclick=e=>{
       try{await CLOUD.importTcmEvents([row],{source:'CrewHQ Panel and Discharges',sourceFile:'manual add patient',manual:true});}
       catch(error){alert('The patient and Panel event were saved, but the shared Hospital Discharges row could not be retained: '+error.message);}
     }
-    $('pLabel').value=''; $('pEnroll').value='';
+    $('pPatient').value=''; $('pEnroll').value='';
     ['pFirst','pLast','pDob','pAdmit','pDischarge','pFacility','pDisposition','pComplaint','pDx','pDxDesc'].forEach(id=>$(id).value='');
     $('pHospital').checked=false;$('pHospitalFields').hidden=true;
     renderAll();
   });
 };
 $('pHospital').addEventListener('change',e=>{$('pHospitalFields').hidden=!e.target.checked;});
+$('pPatient').addEventListener('change',()=>{
+  const patient=(state.registryPatients||[]).find(item=>item.bhwPatientId===$('pPatient').value);
+  if(!patient)return;
+  $('pFirst').value=patient.legalFirstName||'';
+  $('pLast').value=patient.legalLastName||'';
+  $('pDob').value=patient.dob||'';
+});
 $('addEvent').onclick=e=>{
   const pid=$('ePatient').value;
   if(!pid){ alert('Add a patient first'); return; }
@@ -895,8 +908,8 @@ $('addEvent').onclick=e=>{
     const patient=state.patients.find(p=>p.id===pid);
     if(CLOUD&&patient){
       try{await CLOUD.importTcmEvents([panelEventToCloudRow(patient,payload,res.id)],{source:'CrewHQ Panel and Discharges',sourceFile:'Panel event log',manual:true});}
-      catch(error){alert('The Panel event was saved in Notion, but the shared Hospital Visits feed could not be updated: '+error.message);}
-    }else alert('The Panel event was saved in Notion, but the shared Hospital Visits feed is not connected.');
+      catch(error){alert('The Panel event was saved to BHW Cloud, but the shared Hospital Visits feed could not be updated: '+error.message);}
+    }else alert('The Panel event was saved to BHW Cloud, but the shared Hospital Visits feed is not connected.');
     $('eFacility').value=''; $('eReason').value=''; $('eAppt').value='';
     $('eOut1').value=''; $('eOut2').value=''; $('eOut3').value='';
     $('eDischarge').checked=false; $('eHistorical').checked=false; $('eDateTo').value=$('eDate').value;
@@ -937,16 +950,11 @@ window.addEventListener('message',event=>{
     hospital.checked=true;
     hospital.dispatchEvent(new Event('change',{bubbles:true}));
   }
-  $('pLabel').focus();
+  $('pPatient').focus();
 });
 
 /* data tab */
 $('refreshBtn').onclick=e=>busy(e.target,refresh);
-$('dashKey').addEventListener('change',()=>{
-  const v=$('dashKey').value.trim();
-  if(v)localStorage.setItem(KEY_KEY,v); else localStorage.removeItem(KEY_KEY);
-  refresh();
-});
 $('saveBench').onclick=()=>{
   bench.admit=parseFloat($('bAdmit').value)||bench.admit;
   bench.ed=parseFloat($('bEd').value)||bench.ed;
@@ -984,11 +992,17 @@ $('copySummary').onclick=async()=>{
 };
 
 /* ============ Init ============ */
-function renderAll(){ renderOverview(); renderPatients(); renderEvents(); renderHedis();
+function renderRegistryPatients(){
+  const current=$('pPatient').value;
+  const available=(state.registryPatients||[]).filter(patient=>!patient.alreadyInPanel || patient.bhwPatientId===current);
+  $('pPatient').innerHTML='<option value="">Choose a patient…</option>'+available.map(patient=>
+    `<option value="${esc(patient.bhwPatientId)}">${esc(patient.name)} · ${esc(patient.bhwPatientId)}${patient.dob?' · '+esc(patient.dob):''}</option>`).join('');
+  if(available.some(patient=>patient.bhwPatientId===current))$('pPatient').value=current;
+}
+function renderAll(){ renderRegistryPatients(); renderOverview(); renderPatients(); renderEvents(); renderHedis();
   $('bAdmit').value=bench.admit; $('bEd').value=bench.ed; }
 
 try{ const b=localStorage.getItem(BENCH_KEY); if(b)bench=JSON.parse(b); }catch(e){}
-try{ const k=localStorage.getItem(KEY_KEY); if(k)$('dashKey').value=k; }catch(e){}
 $('eDate').value=new Date().toISOString().slice(0,10);
 $('eDateTo').value=$('eDate').value;
 $('pDischarge').value=$('eDate').value;

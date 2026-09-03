@@ -3,7 +3,7 @@
  * scheduled SFTP poller (crisp-sftp-poll.js) so a CRISP notification maps to
  * the same event shape no matter how it arrived (push vs. file drop).
  *
- * Normalized event: { patient, type, event, facility, date(ISO), dispo, complexity }
+ * Normalized event: { patient, bhwPatientId, type, event, facility, date(ISO), dispo, complexity }
  *   type: admit | discharge | transfer | ed | update
  *   complexity: null (99495 moderate vs 99496 high is a clinical call, set later)
  * ==========================================================================*/
@@ -35,8 +35,9 @@ function parseHL7ADT(msg) {
   const dispo = pv1[36] || '';
   const when = (evn[6] || msh[6] || '').slice(0, 8);                  // YYYYMMDD
   const date = when.length === 8 ? `${when.slice(0,4)}-${when.slice(4,6)}-${when.slice(6,8)}` : null;
+  const bhwPatientId = ((pid[3] || '').match(/BHW\d{4}/i) || [])[0]?.toUpperCase() || '';
 
-  return { patient, type, event: `${eventLabel}${classLabel}`, facility, date, dispo, complexity: null };
+  return { patient, bhwPatientId, type, event: `${eventLabel}${classLabel}`, facility, date, dispo, complexity: null };
 }
 
 /* ENS flat-file row (pipe/comma/tab) or a JSON line → normalized. Adjust the
@@ -51,6 +52,7 @@ function parseDelimited(body) {
              : /ed|emerg/i.test(p[2]) ? 'ed' : 'update';
   return {
     patient: p[0] && p[1] ? `${p[0]}, ${p[1][0]}.` : (p[0] || 'Unknown'),
+    bhwPatientId: ((p[6] || '').match(/BHW\d{4}/i) || [])[0]?.toUpperCase() || '',
     type, event: p[2] || 'Encounter', facility: p[3] || '',
     date: p[4] || null, dispo: p[5] || '', complexity: null
   };
@@ -59,6 +61,7 @@ function parseDelimited(body) {
 function normalizeObj(o) {
   return {
     patient: o.patient || (o.last && o.first ? `${o.last}, ${String(o.first)[0]}.` : (o.last || 'Unknown')),
+    bhwPatientId: String(o.bhwPatientId || o.patientId || o.mrn || '').match(/^BHW\d{4}$/i)?.[0]?.toUpperCase() || '',
     type: o.type || 'update', event: o.event || 'Encounter',
     facility: o.facility || '', date: o.date || null, dispo: o.dispo || '', complexity: null
   };

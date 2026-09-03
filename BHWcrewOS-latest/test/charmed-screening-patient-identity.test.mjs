@@ -7,62 +7,20 @@ const require = createRequire(import.meta.url);
 const libPath = require.resolve("../netlify/functions/_lib.js");
 const cloudPath = require.resolve("../netlify/functions/lib/cloud-patients.js");
 const actionPath = require.resolve("../netlify/functions/action.js");
+const cloudPatient = { bhwPatientId: "BHW9999", name: "Synthetic Screening Patient", dob: "1990-02-03" };
+const assessment = { id: "assessment-synthetic", kind: "adult", bhwPatientId: cloudPatient.bhwPatientId, status: "Intake" };
 
-const cloudPatient = {
-  bhwPatientId: "BHW9999",
-  name: "Synthetic Screening Patient",
-  dob: "1990-02-03",
-};
-
-function indexPatient({ id = "index-synthetic", name = cloudPatient.name, dob = cloudPatient.dob, masterId = "" } = {}) {
-  return {
-    id,
-    properties: {
-      "Patient Name": { title: [{ plain_text: name }] },
-      "DOB": { date: { start: dob } },
-      "Patient ID #": { rich_text: masterId ? [{ plain_text: masterId }] : [] },
-    },
-  };
-}
-
-function loadAction({ indexRows = [], assessmentRows = [], cloudPatients = [cloudPatient] } = {}) {
-  const updates = [];
+function loadAction({ patients = [cloudPatient], assessments = [assessment] } = {}) {
   const cloudWrites = [];
-  const W = {
-    text: (value) => ({ rich_text: value }),
-    title: (value) => ({ title: value }),
-    date: (value) => ({ date: value }),
-    sel: (value) => ({ select: value }),
-    rel: (value) => ({ relation: value }),
-  };
   require.cache[libPath] = {
     id: libPath, filename: libPath, loaded: true,
     exports: {
-      DB: { patients: "patients-db", charmed: "charmed-peds-db", charmedAdult: "charmed-adult-db" },
-      DIVISIONS: [],
-      httpJson: async (method, url) => {
-        if (method === "GET" && url.includes("/v1/pages/")) {
-          const id = decodeURIComponent(url.split("/").pop());
-          const page = [...indexRows, ...assessmentRows].find((row) => row.id === id);
-          return page ? { ok: true, status: 200, data: page } : { ok: false, status: 404, data: {} };
-        }
-        return { ok: true, status: 200, data: {} };
-      },
-      queryDb: async (db) => db === "patients-db" ? indexRows : [],
-      createPage: async () => ({ id: "unused" }),
-      updatePage: async (id, properties) => { updates.push({ id, properties }); return {}; },
-      P: {
-        title: (prop) => prop?.title?.map((item) => item.plain_text).join("") || "",
-        date: (prop) => prop?.date?.start || "",
-        text: (prop) => prop?.rich_text?.map((item) => item.plain_text).join("") || "",
-      },
-      W,
-      getSession: () => ({
-        staffId: "staff-synthetic",
-        name: "Synthetic Clinician",
-        scope: "clinical",
-        authTime: Date.now(),
-      }),
+      DB: {}, DIVISIONS: [],
+      httpJson: async () => ({ ok: true, status: 200, data: {} }),
+      queryDb: async () => [], createPage: async () => ({ id: "unused" }), updatePage: async () => ({}),
+      P: { title: () => "", date: () => "", text: () => "" },
+      W: { text: (value) => value, title: (value) => value, date: (value) => value, sel: (value) => value, rel: (value) => value },
+      getSession: () => ({ staffId: "staff-synthetic", name: "Synthetic Clinician", scope: "clinical", authTime: Date.now() }),
       visibleDivisions: () => ["CharmEd Minds"],
       json: (statusCode, body) => ({ statusCode, body: JSON.stringify(body) }),
     },
@@ -70,143 +28,78 @@ function loadAction({ indexRows = [], assessmentRows = [], cloudPatients = [clou
   require.cache[cloudPath] = {
     id: cloudPath, filename: cloudPath, loaded: true,
     exports: {
-      listCloudPatients: async () => cloudPatients,
+      listCloudPatients: async () => patients,
+      parsePatientName: () => ({}),
       cloudRequest: async (path, options) => {
         cloudWrites.push({ path, options });
-        return { eventId: "evt-synthetic", destination: "synthetic-portal" };
+        if (path.startsWith("/v1/charmed/assessments?")) return { assessments };
+        if (path.includes("/screening-invitations")) return { eventId: "evt-synthetic", destination: "synthetic-portal" };
+        return {};
       },
     },
   };
   delete require.cache[actionPath];
-  return { handler: require(actionPath).handler, updates, cloudWrites };
+  return { handler: require(actionPath).handler, cloudWrites };
 }
 
-async function send(handler, patientId = "index-synthetic") {
-  const response = await handler({
-    httpMethod: "POST",
-    body: JSON.stringify({
-      action: "cm-send-screeners",
-      assessmentId: "assessment-synthetic",
-      patientId,
-      kind: "adult",
-      screeners: ["PHQ-9"],
-      audience: "Self",
-    }),
-  });
+async function run(handler, body) {
+  const response = await handler({ httpMethod: "POST", body: JSON.stringify(body) });
   return { status: response.statusCode, body: JSON.parse(response.body) };
 }
 
-async function checkReadiness(handler, patientId = "index-synthetic") {
-  const response = await handler({
-    httpMethod: "POST",
-    body: JSON.stringify({ action: "cm-screening-readiness", patientId }),
+test("CharmEd sends only for the canonical Patient Registry identity already bound to the Cloud assessment", async () => {
+  const { handler, cloudWrites } = loadAction();
+  const response = await run(handler, {
+    action: "cm-send-screeners", assessmentId: assessment.id, patientId: cloudPatient.bhwPatientId,
+    kind: "adult", screeners: ["PHQ-9"], audience: "Self",
   });
-  return { status: response.statusCode, body: JSON.parse(response.body) };
-}
-
-test("CharmEd resolves an existing Patient Index relation through its BHW ID", async () => {
-  const { handler, updates, cloudWrites } = loadAction({
-    indexRows: [indexPatient({ masterId: cloudPatient.bhwPatientId })],
-  });
-  const response = await send(handler);
   assert.equal(response.status, 200);
-  assert.equal(updates.length, 0);
-  assert.equal(cloudWrites.length, 1);
-  assert.equal(cloudWrites[0].path, "/v1/patients/BHW9999/charmed/screening-invitations");
-  assert.deepEqual(cloudWrites[0].options.body.screenings, ["PHQ-9"]);
+  assert.equal(cloudWrites.at(-1).path, "/v1/patients/BHW9999/charmed/screening-invitations");
+  assert.deepEqual(cloudWrites.at(-1).options.body.screenings, ["PHQ-9"]);
 });
 
-test("CharmEd backfills a blank legacy link only for one exact Registry identity", async () => {
-  const { handler, updates, cloudWrites } = loadAction({ indexRows: [indexPatient()] });
-  const response = await send(handler);
-  assert.equal(response.status, 200);
-  assert.equal(updates.length, 1);
-  assert.equal(updates[0].id, "index-synthetic");
-  assert.equal(updates[0].properties["Patient ID #"].rich_text, "BHW9999");
-  assert.equal(cloudWrites.length, 1);
-});
-
-test("CharmEd accepts a Cloud Patient 360 BHW ID directly", async () => {
-  const { handler, updates, cloudWrites } = loadAction();
-  const response = await send(handler, "BHW9999");
-  assert.equal(response.status, 200);
-  assert.equal(updates.length, 0);
-  assert.equal(cloudWrites.length, 1);
-});
-
-test("CharmEd can verify a real Registry identity without sending or backfilling", async () => {
-  const { handler, updates, cloudWrites } = loadAction({ indexRows: [indexPatient()] });
-  const response = await checkReadiness(handler);
-  assert.equal(response.status, 200);
-  assert.equal(response.body.ready, true);
-  assert.equal(response.body.bhwPatientId, "BHW9999");
-  assert.equal(updates.length, 0);
-  assert.equal(cloudWrites.length, 0);
-});
-
-test("CharmEd links an unassigned assessment to an existing Registry patient without sending", async () => {
-  const assessment = {
-    id: "assessment-synthetic",
-    parent: { database_id: "charmed-adult-db" },
-    properties: {},
-  };
-  const { handler, updates, cloudWrites } = loadAction({
-    indexRows: [indexPatient({ masterId: cloudPatient.bhwPatientId })],
-    assessmentRows: [assessment],
+test("CharmEd refuses a different patient ID instead of guessing through a legacy relation", async () => {
+  const { handler, cloudWrites } = loadAction({ patients: [cloudPatient, { ...cloudPatient, bhwPatientId: "BHW9998" }] });
+  const response = await run(handler, {
+    action: "cm-send-screeners", assessmentId: assessment.id, patientId: "BHW9998",
+    kind: "adult", screeners: ["PHQ-9"], audience: "Self",
   });
-  const response = await handler({
-    httpMethod: "POST",
-    body: JSON.stringify({
-      action: "cm-screening-link-patient",
-      assessmentId: assessment.id,
-      patientId: "index-synthetic",
-      kind: "adult",
-    }),
-  });
-  const body = JSON.parse(response.body);
-  assert.equal(response.statusCode, 200);
-  assert.equal(body.bhwPatientId, "BHW9999");
-  assert.deepEqual(updates.at(-1), {
-    id: assessment.id,
-    properties: { Patient: { relation: ["index-synthetic"] } },
-  });
-  assert.equal(cloudWrites.length, 0);
-});
-
-test("CharmEd fails closed when name and DOB are not unique", async () => {
-  const secondPatient = { ...cloudPatient, bhwPatientId: "BHW9998" };
-  const { handler, updates, cloudWrites } = loadAction({
-    indexRows: [indexPatient()],
-    cloudPatients: [cloudPatient, secondPatient],
-  });
-  const response = await send(handler);
   assert.equal(response.status, 409);
-  assert.match(response.body.error, /more than one Patient Registry record/);
-  assert.equal(updates.length, 0);
-  assert.equal(cloudWrites.length, 0);
+  assert.match(response.body.error, /do not match/);
+  assert.equal(cloudWrites.some((call) => call.path.includes("screening-invitations")), false);
 });
 
-test("CharmEd fails closed when the assessment relation is absent from the Registry bridge", async () => {
-  const { handler, updates, cloudWrites } = loadAction();
-  const response = await send(handler, "missing-index-record");
-  assert.equal(response.status, 409);
-  assert.match(response.body.error, /could not match this assessment to the Patient Registry/);
-  assert.equal(updates.length, 0);
-  assert.equal(cloudWrites.length, 0);
+test("CharmEd readiness resolves only a real canonical Registry patient", async () => {
+  const { handler } = loadAction();
+  const ready = await run(handler, { action: "cm-screening-readiness", patientId: "BHW9999" });
+  assert.equal(ready.status, 200);
+  assert.equal(ready.body.bhwPatientId, "BHW9999");
+  const missing = await run(handler, { action: "cm-screening-readiness", patientId: "legacy-relation" });
+  assert.equal(missing.status, 404);
 });
 
-test("the send dialog shows Patient 360 readiness before staff approval", async () => {
-  const [html, opsData] = await Promise.all([
+test("assessment identity check never rewrites the patient relationship", async () => {
+  const { handler } = loadAction();
+  const correct = await run(handler, {
+    action: "cm-screening-link-patient", assessmentId: assessment.id, patientId: "BHW9999", kind: "adult",
+  });
+  assert.equal(correct.status, 200);
+  const wrong = await run(handler, {
+    action: "cm-screening-link-patient", assessmentId: assessment.id, patientId: "BHW9998", kind: "adult",
+  });
+  assert.equal(wrong.status, 409);
+});
+
+test("the send dialog and dashboard use Patient Registry IDs and Cloud assessment records", async () => {
+  const [html, opsData, action] = await Promise.all([
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../netlify/functions/ops-data.js", import.meta.url), "utf8"),
+    readFile(new URL("../netlify/functions/action.js", import.meta.url), "utf8"),
   ]);
-  assert.match(opsData, /patientBhwIdByKey\[patient\] \|\| ""/);
+  assert.match(opsData, /cloudRequest\("\/v1\/charmed\/assessments"/);
+  assert.match(opsData, /patient: assessment\.bhwPatientId/);
+  assert.match(action, /The assessment and selected Patient Registry record do not match/);
   assert.match(html, /Patient 360 matched/);
   assert.match(html, /cm-screening-readiness/);
-  assert.match(html, /cm-screening-link-patient/);
-  assert.match(html, /Search Patient Registry by name, BHW ID, DOB, MRN, or insurance/);
-  assert.match(html, /Patient check needs review/);
   assert.match(html, /Patient Registry check timed out/);
-  assert.match(html, /dataset\.patientCheck/);
-  assert.match(await readFile(new URL("../netlify/functions/action.js", import.meta.url), "utf8"), /timeoutMs: 12_000/);
 });

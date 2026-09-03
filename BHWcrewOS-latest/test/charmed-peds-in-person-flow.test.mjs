@@ -64,14 +64,12 @@ test("screening need queues are created before the send step and remain staff ap
   assert.doesNotMatch(html, /auto(?:matically)?[^\n]{0,40}send/i);
 });
 
-test("save adapter preserves legacy records while storing seven-step progress", () => {
-  assert.match(action, /__cmWorkflowV2: 1/);
-  assert.match(action, /encodeCmWorkflow/);
-  assert.match(action, /encoded\.length > 1850/);
-  assert.match(action, /inPerson: workflowAnswers\.inPerson/);
-  assert.match(opsData, /value\.startsWith\("gz:"\)/);
-  assert.match(opsData, /zlib\.gunzipSync/);
-  assert.match(opsData, /hasInPersonStep/);
-  assert.match(opsData, /storedTail\.stepStatus\?\.inPerson/);
-  assert.match(opsData, /hasInPersonStep \? \(storedTail\.results \|\| \{\}\) : storedTail/);
+test("save adapter stores all seven steps in the protected Cloud assessment", () => {
+  assert.match(action, /saveCloudCharmedAssessment/);
+  assert.match(action, /const answerCount = kind === "adult" \? 6 : 7/);
+  assert.match(action, /answers\[5\] = workflowAnswers\.inPerson/);
+  assert.match(action, /answers\[6\] = workflowAnswers\.results/);
+  assert.match(action, /\/v1\/charmed\/assessments/);
+  assert.match(opsData, /cloudRequest\("\/v1\/charmed\/assessments"/);
+  assert.doesNotMatch(opsData, /queryDb\(DB\.charmed\)/);
 });

@@ -123,7 +123,7 @@ function render(){
   var under = rows.filter(function(e){ return (e.program==="CCM"||e.program==="APCM") && (e.minutes||0) < 20; }).length;
 
   var head =
-    '<div class="disc">Log time, what you did, and completed referrals for each patient, and set the next follow-up (1 day / 4 days / 2 weeks / 1 month). Saved straight to Notion and shown on the patient’s Master List profile.</div>'+
+    '<div class="disc">Log time, what you did, completed referrals, and the next follow-up. Every entry is linked to the protected Patient Registry and saved to BHW Cloud.</div>'+
     '<div class="kpis">'+
       kpi(rows.length,"patients")+
       kpi(due,"follow-ups due",due?"due":"")+
@@ -145,7 +145,7 @@ function render(){
       '<td class="'+dueCls+'"><input type="date" class="f-fu" value="'+esc(e.nextFollowUp||"")+'"></td>'+
       '<td><select class="f-stage">'+STAGES.map(function(s){return '<option'+(s===e.followUpStage?" selected":"")+'>'+esc(s)+'</option>';}).join("")+'</select></td>'+
       '<td><select class="f-status">'+STATUSES.map(function(s){return '<option'+(s===(e.status||"Open")?" selected":"")+'>'+esc(s)+'</option>';}).join("")+'</select></td>'+
-      '<td class="rowsave"><button class="btn sm" onclick="save(this)">Save</button> <span class="saved" style="display:none">✓</span></td>'+
+      '<td class="rowsave"><button class="btn sm" onclick="save(this)">Save</button> <span class="saved" style="display:none"></span></td>'+
     '</tr>';
   }).join("");
 
@@ -175,7 +175,9 @@ async function save(btn){
   btn.disabled = false; btn.textContent = "Save";
   if(res.status===401){ gate("Your session expired — sign in to crewOS again."); return; }
   if(res.ok && res.d.ok){
-    var s = tr.querySelector(".saved"); s.style.display="inline"; setTimeout(function(){ s.style.display="none"; }, 1600);
+    var s = tr.querySelector(".saved");
+    var when = res.d.savedAt ? new Date(res.d.savedAt).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}) : "now";
+    s.textContent = "Saved to BHW Cloud · " + when; s.style.display="inline";
     // keep local copy in sync so filters/KPIs reflect the save
     var e = ALL.filter(function(x){ return x.id===id; })[0];
     if(e){ e.minutes=payload.minutes===""?null:payload.minutes; e.activities=payload.activities; e.referrals=payload.referrals; e.nextFollowUp=payload.nextFollowUp; e.followUpStage=payload.followUpStage; e.status=payload.status; }
@@ -185,7 +187,7 @@ async function save(btn){
 }
 
 async function importNow(){
-  if(!confirm("Pull this month's CCM + APCM lists into the log and enrich from the eligibility tracker?\n\nSafe to re-run — it won't duplicate rows or overwrite time/activities/referrals/follow-up you've entered.")) return;
+  if(!confirm("Prepare this month's CCM + APCM rows from the protected Patient Registry?\n\nSafe to re-run — it won't duplicate rows or overwrite time, activities, referrals, or follow-up you've entered.")) return;
   var btn = document.getElementById("importBtn");
   btn.disabled = true; btn.textContent = "Importing…";
   var res = await api("care-log-import", { confirm:true });
@@ -193,9 +195,8 @@ async function importNow(){
   if(res.status===401){ gate("Your session expired — sign in to crewOS again."); return; }
   if(res.ok && res.d.ok){
     var s = res.d.summary || {};
-    alert("Import complete for "+(res.d.month||"")+":\n"+
-      (s.created||0)+" created · "+(s.updated||0)+" updated · "+(s.linked||0)+" linked to Master · "+
-      (s.enriched||0)+" enriched · "+(s.unmatched||0)+" not in Master List");
+    alert("BHW Cloud preparation complete for "+(res.d.month||"")+":\n"+
+      (s.created||0)+" created · "+(s.updated||0)+" refreshed from "+(s.patientRegistryCount||0)+" Registry records");
     load();
   } else {
     alert("Import failed: " + (res.d.error || res.status));

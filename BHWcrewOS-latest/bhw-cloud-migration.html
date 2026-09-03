@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="/crew-provider-gate.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BHW CrewOS — Cloud Patient Record Migration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--blue:#80abbd;--blue-d:#5f8b9d;--base:#f7f5f2;--bronze:#b07a55;--sage:#a8b59a;--ink:#2f3a3f;--muted:#68767b;--line:#e4ded6;--card:#fff;--sidebar:#243239;--danger:#a33f34;--shadow:0 1px 3px rgba(36,50,57,.08),0 6px 18px rgba(36,50,57,.05)}
+*{box-sizing:border-box}body{margin:0;background:var(--base);color:var(--ink);font:13px Montserrat,system-ui,sans-serif}.app{display:flex;min-height:100vh}.side{width:240px;position:fixed;inset:0 auto 0 0;background:var(--sidebar);color:#cad5da;padding:28px 18px}.brand{color:#fff;font-size:18px;font-weight:800}.sub{font-size:9px;letter-spacing:1.4px;text-transform:uppercase;margin-top:5px}.nav{display:block;color:inherit;text-decoration:none;padding:11px 12px;border-radius:9px;margin-top:28px}.nav:hover{background:#354a54;color:#fff}.side p{position:absolute;bottom:22px;margin:0 10px 0 0;font-size:10px;line-height:1.65;opacity:.7}.main{margin-left:240px;width:calc(100% - 240px)}.top{height:66px;background:var(--card);border-bottom:1px solid var(--line);padding:0 28px;display:flex;justify-content:space-between;align-items:center}.content{padding:28px;max-width:1280px;margin:auto}h1{font-size:26px;margin:0 0 8px}.lede{color:var(--muted);line-height:1.6;max-width:900px}.notice{margin:20px 0;padding:14px 16px;background:#fff7e8;border-left:4px solid var(--bronze);border-radius:10px;line-height:1.6}.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:18px 0}.btn{font:700 12px Montserrat;padding:10px 14px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer}.btn.primary{background:var(--blue-d);border-color:var(--blue-d);color:#fff}.btn:disabled{opacity:.45;cursor:not-allowed}.state{font-weight:700}.state.saving{color:#86610f}.state.saved{color:#526a48}.state.error{color:var(--danger)}.card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);margin:12px 0;overflow:hidden}.row{display:grid;grid-template-columns:minmax(260px,1fr) repeat(3,100px) 150px;gap:10px;align-items:center;padding:15px 17px}.row+.row{border-top:1px solid var(--line)}.label{font-weight:700}.small{font-size:10px;color:var(--muted);margin-top:4px}.num{font-size:18px;font-weight:800}.cap{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}.bad{color:var(--danger)}details{padding:0 17px 15px}summary{cursor:pointer;color:var(--danger);font-weight:700}.blocked{max-height:240px;overflow:auto;margin-top:8px;padding:9px 12px;background:#fbefed;border-radius:9px;font-size:10px;line-height:1.55}.confirm{width:min(430px,100%);padding:10px 12px;border:1px solid var(--line);border-radius:9px;font:600 11px Montserrat}@media(max-width:850px){.side{display:none}.main{margin:0;width:100%}.row{grid-template-columns:1fr 1fr}.row .label{grid-column:1/-1}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side"><div class="brand">BHW CrewOS</div><div class="sub">Protected Administration</div><a class="nav" href="/provider/patient-registry.html">← Patient Registry</a><p>One canonical Patient Registry.<br>Historical links move only after a sealed preview and read-back verification.</p></aside>
+  <main class="main">
+    <div class="top"><span>Patient Operations · <b>Cloud migration</b></span><a class="btn" href="/crewos">CrewOS</a></div>
+    <div class="content">
+      <h1>Move historical patient-linked records to BHW Cloud</h1>
+      <p class="lede">This protected tool checks every older CrewOS relationship against the canonical Google Cloud Patient Registry. It never guesses a patient. Shared contacts, mismatched IDs, and incomplete identities are held for review.</p>
+      <div class="notice"><b>First step: preview only.</b> No record changes during preview. A section can be applied only when every row in that section has a verified patient match. Applying does not message patients or post migration notices to staff chat.</div>
+      <div class="toolbar"><button class="btn primary" id="preview">Run protected preview</button><span class="state" id="state">Not started</span></div>
+      <div id="summary"></div>
+      <section id="results" class="card" hidden></section>
+      <section id="approval" hidden>
+        <div class="notice"><b>Approval phrase</b><br>Type <code>APPLY APPROVED CLOUD MIGRATION</code> to enable complete, unblocked sections. Each save is immediately read back before it is shown as saved.</div>
+        <input id="confirmation" class="confirm" autocomplete="off" placeholder="Type the approval phrase exactly">
+      </section>
+    </div>
+  </main>
+</div>
+<script>
+const API="/.netlify/functions/patient-cloud-migration";
+const PHRASE="APPLY APPROVED CLOUD MIGRATION";
+let previewToken="", previewData=null;
+const $=id=>document.getElementById(id);
+const esc=value=>String(value==null?"":value).replace(/[&<>\"]/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[char]));
+function token(){try{return sessionStorage.getItem("crewos_token")||""}catch{return""}}
+async function call(body){
+  const auth=token(); if(!auth)throw new Error("Sign in to CrewOS first, then reopen this page.");
+  const response=await fetch(API,{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${auth}`},body:JSON.stringify(body)});
+  const data=await response.json().catch(()=>({})); if(!response.ok)throw new Error(data.error||`Request failed (${response.status})`); return data;
+}
+function setState(kind,text){$("state").className=`state ${kind}`;$("state").textContent=text}
+function blockedRows(items){return items.map(item=>`<div><b>${esc(item.label||item.sourceId)}</b> — ${esc(item.reason)}</div>`).join("")}
+function render(preview){
+  previewData=preview; const totals=preview.datasets.reduce((out,row)=>({source:out.source+row.sourceCount,ready:out.ready+row.readyCount,blocked:out.blocked+row.blockedCount}),{source:0,ready:0,blocked:0});
+  $("summary").innerHTML=`<div class="notice"><b>${totals.source} historical source rows reviewed</b> · ${totals.ready} verified migration records · ${totals.blocked} blocked for identity review · ${preview.rosterCount} canonical patients checked</div>`;
+  $("results").innerHTML=preview.datasets.map(row=>`<div class="row" data-key="${esc(row.key)}"><div class="label">${esc(row.label)}<div class="small">${row.sourceError?`Unavailable: ${esc(row.sourceError)}`:"Protected source read completed"}</div></div><div><div class="num">${row.sourceCount}</div><div class="cap">Source rows</div></div><div><div class="num">${row.readyCount}</div><div class="cap">Verified</div></div><div><div class="num ${row.blockedCount?"bad":""}">${row.blockedCount}</div><div class="cap">Blocked</div></div><button class="btn apply" data-key="${esc(row.key)}" ${row.sourceError||row.blockedCount||!row.readyCount?"disabled":""}>Apply section</button></div>${row.blockedCount?`<details><summary>Review ${row.blockedCount} blocked record(s)</summary><div class="blocked">${blockedRows(row.blocked)}</div></details>`:""}`).join("");
+  $("results").hidden=false;$("approval").hidden=false;syncButtons();
+}
+function syncButtons(){const approved=$("confirmation").value===PHRASE;document.querySelectorAll(".apply").forEach(button=>{const row=previewData?.datasets.find(item=>item.key===button.dataset.key);button.disabled=!approved||!row||row.sourceError||row.blockedCount||!row.readyCount||button.dataset.saved==="1"})}
+$("confirmation").addEventListener("input",syncButtons);
+$("preview").addEventListener("click",async()=>{
+  $("preview").disabled=true;setState("saving","Checking protected sources…");
+  try{const data=await call({action:"preview"});previewToken=data.previewToken;render(data.preview);setState("","Preview only — no records changed")}catch(error){setState("error",`Not saved · ${error.message}`)}finally{$("preview").disabled=false}
+});
+$("results").addEventListener("click",async event=>{
+  const button=event.target.closest(".apply");if(!button)return;const key=button.dataset.key;button.disabled=true;button.textContent="Saving…";setState("saving","Saving to BHW Cloud…");
+  try{const data=await call({action:"apply",dataset:key,confirmation:$("confirmation").value,previewToken});button.dataset.saved="1";button.textContent=`Saved ${data.verifiedCount}`;const stamp=new Date(data.savedAt).toLocaleString();setState("saved",`Saved to BHW Cloud · ${stamp} · ${data.verifiedCount} read back`)}catch(error){button.textContent="Apply section";setState("error",`Not saved · ${error.message}`);syncButtons()}
+});
+</script>
+</body>
+</html>
