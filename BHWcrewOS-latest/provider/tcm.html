@@ -104,6 +104,12 @@ a{color:inherit;text-decoration:none}
 .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:14px 0 8px}
 .chip{font-size:11.5px;font-weight:600;padding:6px 12px;border-radius:20px;border:1px solid var(--line);background:var(--card);color:var(--ink-soft);cursor:pointer}
 .chip.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.cend-roster{margin-top:10px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--base)}
+.cend-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.cend-title{font-size:12px;font-weight:800;color:var(--ink);margin-bottom:2px}
+.cend-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cend-controls input{width:185px;max-width:100%;font:inherit;font-size:12px;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:7px 10px;outline:none}
+.cend-controls input:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(128,171,189,.18)}
 .tb-left{display:flex;align-items:center;gap:12px;min-width:0}
 .hamburger{display:none;background:transparent;border:1px solid var(--line);border-radius:9px;color:var(--ink);font-size:17px;line-height:1;padding:6px 11px;cursor:pointer;flex:0 0 auto}
 .scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40;opacity:0;visibility:hidden;transition:opacity .2s}
@@ -177,8 +183,22 @@ a{color:inherit;text-decoration:none}
         </div>
         <div class="mini" id="cloudStatus" style="margin-top:8px">Checking secure retention…</div>
         <div class="mini" id="parseNote" style="margin-top:5px"></div>
+        <section class="cend-roster" aria-labelledby="cendRosterTitle">
+          <div class="cend-row">
+            <div>
+              <div class="cend-title" id="cendRosterTitle">Current active CEND roster</div>
+              <div class="mini">Built directly from current active permanent patients in the protected Patient Registry.</div>
+            </div>
+            <div class="cend-controls">
+              <input id="crispSubscriberCode" placeholder="CRISP subscriber code" aria-label="CRISP subscriber code" autocomplete="off">
+              <button class="btn btn-ghost btn-sm" id="cendRosterBtn" disabled>Build current active CEND roster</button>
+            </div>
+          </div>
+          <div class="mini" id="cendRosterStatus" style="margin-top:7px">Checking the active Patient Registry…</div>
+          <div class="mini" style="margin-top:3px">The downloaded CSV contains PHI. Upload it only through CRISP CEND and resubmit at least every 90 days; do not send it by ordinary email or text.</div>
+        </section>
         <div class="mini" id="rosterBar" style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:10px">
-          <b>Panel roster:</b>
+          <b>Optional discharge match roster:</b>
           <span id="rosterStatus">not loaded — showing all discharges</span>
           <button class="btn btn-ghost btn-sm" id="rosterBtn">Upload roster…</button>
           <input type="file" id="rosterInput" accept=".xlsx,.csv" hidden>
@@ -208,6 +228,7 @@ a{color:inherit;text-decoration:none}
 <script type="module">
 import { buildWorklist, normalizeRoster, inspectCrispColumns, partitionTcmImportRows } from "../engine/tcm-parse.mjs";
 import { readSpreadsheet } from "../engine/xlsx-lite.mjs";
+import { activeCendPatients, buildCendRosterFile } from "../engine/cend-roster.mjs";
 import { createEncounterCloudClient } from "./cloud-queue.mjs";
 
 const $ = (id) => document.getElementById(id);
@@ -215,6 +236,7 @@ const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": 
 let RESULT = { items: [], stats: {}, meta: {} }, FILTER = "tcm";
 let RAW_ROWS = [], ROSTER = [], PANEL_ONLY = false;
 let CLOUD = null;
+let ACTIVE_PATIENT_REGISTRY = [];
 const ROSTER_KEY = "bhw-tcm-roster";
 const ALERT_KEY_PREFIX = "bhw-tcm-alert";
 
@@ -301,15 +323,62 @@ async function initCloud() {
     CLOUD = await createEncounterCloudClient();
     if (!CLOUD) {
       $("cloudStatus").innerHTML = `<b>Retention unavailable:</b> the BHW cloud API is not configured.`;
+      $("cendRosterStatus").textContent = "CEND roster unavailable: the protected Patient Registry is not connected.";
       return;
     }
     $("cloudStatus").innerHTML = `<b>Secure retention connected.</b> Loading retained hospital events…`;
-    await loadRetainedEvents();
+    await Promise.all([loadRetainedEvents(), loadActiveCendRoster()]);
     window.setInterval(() => loadRetainedEvents(true), 5 * 60 * 1000);
   } catch (error) {
     CLOUD = null;
     $("cloudStatus").innerHTML = `<b>Retention unavailable:</b> ${esc(error.message)}`;
+    $("cendRosterStatus").textContent = `CEND roster unavailable: ${error.message}`;
   }
+}
+
+async function loadActiveCendRoster() {
+  $("cendRosterBtn").disabled = true;
+  $("cendRosterStatus").textContent = "Loading current active patients from the protected Patient Registry…";
+  try {
+    ACTIVE_PATIENT_REGISTRY = await CLOUD.listPatients();
+    const count = activeCendPatients(ACTIVE_PATIENT_REGISTRY).length;
+    $("cendRosterStatus").textContent = count
+      ? `${count} current active permanent patient${count === 1 ? "" : "s"} available for the CEND roster.`
+      : "No current active permanent patients are available for a CEND roster.";
+    $("cendRosterBtn").disabled = count === 0;
+  } catch (error) {
+    ACTIVE_PATIENT_REGISTRY = [];
+    $("cendRosterStatus").textContent = `CEND roster unavailable: ${error.message}`;
+  }
+}
+
+function exportActiveCendRoster() {
+  const result = buildCendRosterFile(ACTIVE_PATIENT_REGISTRY, {
+    subscriberCode: $("crispSubscriberCode").value,
+  });
+  if (!result.ok) {
+    if (result.reason === "subscriber-required") {
+      $("cendRosterStatus").textContent = "Enter the CRISP subscriber code supplied during CEND enrollment.";
+      $("crispSubscriberCode").focus();
+      return;
+    }
+    if (result.reason === "incomplete-demographics") {
+      $("cendRosterStatus").textContent = `${result.incompleteCount} active record${result.incompleteCount === 1 ? " needs" : "s need"} complete name, DOB, gender, and address demographics before export.`;
+      alert(`${result.incompleteCount} active patient record${result.incompleteCount === 1 ? " is" : "s are"} missing a name, DOB, gender, or full address. Complete those protected Patient Registry fields before exporting so CRISP does not reject the roster.`);
+      return;
+    }
+    $("cendRosterStatus").textContent = "No current active permanent patients are available for a CEND roster.";
+    return;
+  }
+
+  const blob = new Blob([result.csv], { type: "text/csv;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = result.filename;
+  document.body.appendChild(link);
+  link.click();
+  setTimeout(() => { URL.revokeObjectURL(link.href); link.remove(); }, 0);
+  $("cendRosterStatus").textContent = `${result.activeCount} active patients exported ${new Date().toLocaleString()} — upload through CRISP CEND.`;
 }
 
 async function loadRetainedEvents(silent = false) {
@@ -519,6 +588,7 @@ $("drop").onclick = () => $("fileInput").click();
 $("fileInput").addEventListener("change", (e) => loadFile(e.target.files[0]));
 $("alertsBtn").onclick = enableAlerts;
 $("csvBtn").onclick = toCSV;
+$("cendRosterBtn").onclick = exportActiveCendRoster;
 $("rosterBtn").onclick = () => $("rosterInput").click();
 $("rosterInput").addEventListener("change", (e) => loadRoster(e.target.files[0]));
 $("rosterForget").onclick = forgetRoster;
