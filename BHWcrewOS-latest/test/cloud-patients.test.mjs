@@ -5,7 +5,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const { legacyPatient, parsePatientName, searchCloudPatients } = require('../netlify/functions/lib/cloud-patients');
 
-test('Cloud patient adapter preserves legacy picker and source-relation keys', () => {
+test('Cloud patient adapter exposes canonical picker fields without a legacy patient key', () => {
   const patient = legacyPatient({
     bhwPatientId: 'BHW0140', legalFirstName: 'Ella', legalLastName: 'Ballard', dateOfBirth: '1980-01-02',
     phone: '(443) 555-1212', primaryPayer: 'Medicare', memberId: 'MEM-1',
@@ -15,7 +15,10 @@ test('Cloud patient adapter preserves legacy picker and source-relation keys', (
   assert.equal(patient.id, 'BHW0140');
   assert.equal(patient.name, 'Ella Ballard');
   assert.equal(patient.dob, '1980-01-02');
-  assert.equal(patient.notionPageId, 'notion-row');
+  assert.equal(Object.hasOwn(patient, 'notionPageId'), false);
+  assert.equal(Object.hasOwn(patient, 'pageId'), false);
+  assert.equal(Object.hasOwn(patient, 'source'), false);
+  assert.equal(Object.hasOwn(patient, 'patientPageUrl'), false);
   assert.equal(patient.payer, 'Medicare');
   assert.equal(patient.member, 'MEM-1');
   assert.deepEqual(patient.programs, ['APCM']);

@@ -207,6 +207,46 @@ export function createOperationsApp({
         }, cors);
       }
 
+      if (url.pathname === "/v1/intake/front-desk-patient-requests" && request.method === "POST") {
+        const actor = frontDeskReferralActor(request, environment);
+        const idempotencyKey = requireIdempotencyKey(request.headers.get("idempotency-key"));
+        const body = await readJson(request);
+        const historicalTimestamp = body.notificationMode === "none" ? new Date(body.historicalReceivedAt || "") : null;
+        const timestamp = historicalTimestamp && Number.isFinite(historicalTimestamp.getTime())
+          ? historicalTimestamp.toISOString() : now().toISOString();
+        const bundle = buildPatientRequestBundle({
+          ...body,
+          source: body.source || "front-desk-os",
+          routing: { targetSystem: "crewos", assignedTeam: "front-desk", ...(body.routing || {}) },
+          workflowContext: {
+            kind: "patient-request",
+            ...(body.workflowContext || {}),
+            historicalReceivedAt: body.historicalReceivedAt || body.workflowContext?.historicalReceivedAt || "",
+          },
+        }, actor, { now: timestamp, idFactory, intake: true });
+        const result = await repository.createPatientRequest(bundle, {
+          scope: `intake:${actor.id}`,
+          key: idempotencyKey,
+          payloadHash: bundle.payloadHash,
+        });
+        let automation = null;
+        if (workflow && !result.replayed && body.notificationMode !== "none") {
+          automation = await workflow.syncCreatedRequest(result.request.patientRequestId, {
+            sub: `integration:${actor.id}`,
+            name: "Front Desk OS",
+            role: "front-desk",
+            source: "front-desk-os",
+          });
+        }
+        return json(result.replayed ? 200 : 201, {
+          ok: true,
+          replayed: result.replayed,
+          patientRequest: automation?.request || result.request,
+          notification: automation?.notification || null,
+          chat: automation?.chat || null,
+        }, cors);
+      }
+
       const frontDeskReferralActionMatch = url.pathname.match(/^\/v1\/intake\/front-desk-referrals\/([^/]+)\/actions$/);
       if (frontDeskReferralActionMatch && request.method === "POST") {
         const actor = frontDeskReferralActor(request, environment);

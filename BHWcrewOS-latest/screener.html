@@ -224,6 +224,8 @@ var qp = new URLSearchParams(location.search);
 var slug = (qp.get("s") || "").toLowerCase();
 var S = SCREENERS[slug];
 var caseId = qp.get("case") || "";
+var screeningId = qp.get("screening") || slug;
+var responseToken = qp.get("responseToken") || "";
 var audParam = qp.get("aud") || "";
 var ptParam = qp.get("pt") || "";
 var app = document.getElementById("app");
@@ -242,6 +244,10 @@ function render(){
   if(!S){
     app.innerHTML = '<div class="card"><div class="done"><div class="big">🔍</div><h2>Questionnaire not found</h2>'+
       '<p class="lede">This link may be out of date. Please contact the BHW office and we\'ll send you a fresh one.</p></div></div>';
+    return;
+  }
+  if(!caseId || !responseToken){
+    app.innerHTML = '<div class="card"><div class="done"><div class="big">🔒</div><h2>Open this task from your patient portal</h2><p class="lede">For your privacy, this questionnaire must be opened from the secure task assigned to you. Sign in to the BHW patient portal or ask the office to send a new invitation.</p></div></div>';
     return;
   }
   var whoOpts = ["Self","Parent","Teacher","Provider"];
@@ -354,7 +360,8 @@ async function submit(){
   var payload = {
     slug: slug, answers: c.answers, extra: c.extra, who: state.who,
     ageGroups: S.ages || [], patientLabel: (document.getElementById("pt").value||"").trim(),
-    case: caseId, formUrl: location.origin + location.pathname + "?s=" + encodeURIComponent(slug),
+    case: caseId, screeningId: screeningId, responseToken: responseToken,
+    formUrl: location.origin + location.pathname + "?s=" + encodeURIComponent(slug),
     hp: document.getElementById("hp").value
   };
   try{

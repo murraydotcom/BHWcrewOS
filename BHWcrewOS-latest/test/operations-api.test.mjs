@@ -127,6 +127,19 @@ function frontDeskReferralRequest(body, key = "front-desk-referral:synthetic-000
   });
 }
 
+function frontDeskPatientRequest(body, key = "front-desk-request:synthetic-0001", secret = "synthetic-front-desk-secret") {
+  return new Request("https://operations.example.test/v1/intake/front-desk-patient-requests", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${secret}`,
+      "Content-Type": "application/json",
+      "Idempotency-Key": key,
+      "X-BHW-Client-Id": "front-desk-os",
+    },
+    body: JSON.stringify(body),
+  });
+}
+
 function intakeRequest(body, key = "cc:synthetic-0001", secret = "synthetic-intake-secret") {
   return new Request("https://operations.example.test/v1/intake/patient-requests", {
     method: "POST",
@@ -224,6 +237,28 @@ test("Front Desk referral intake creates one patient-linked workflow record with
   assert.equal(saved.sourceMetadata.referralDestination, "Endocrinology");
   assert.equal(saved.sourceMetadata.referralDocumentState, "generated");
   assert.doesNotMatch(JSON.stringify(saved), /diagnosis|brief history|test result/i);
+  assert.equal(repository.requests.size, 1);
+});
+
+test("historical Front Desk intake preserves its received time and suppresses notifications", async () => {
+  const { app, repository } = fixture();
+  const response = await app(frontDeskPatientRequest({
+    bhwPatientId: "BHW0000",
+    patientMatchStatus: "matched",
+    requestType: "general",
+    summary: "Synthetic historical request",
+    message: "Synthetic historical request",
+    notificationMode: "none",
+    historicalReceivedAt: "2026-08-01T13:30:00.000Z",
+    source: "legacy-protected-migration",
+    sourceMetadata: { sourceRecordId: "legacy-synthetic-request" },
+  }));
+  assert.equal(response.status, 201);
+  const body = await response.json();
+  assert.equal(body.notification, null);
+  assert.equal(body.chat, null);
+  assert.equal(body.patientRequest.createdAt, "2026-08-01T13:30:00.000Z");
+  assert.equal(body.patientRequest.notificationMode, "none");
   assert.equal(repository.requests.size, 1);
 });
 

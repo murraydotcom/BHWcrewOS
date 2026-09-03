@@ -7,203 +7,79 @@
 //   minutes-log, minutes-charm (toggle In CharmHealth)
 //   availability-submit
 //   booking-create (requires Can Schedule; enforces room rules + conflicts)
-//   patient-select (link an existing Cloud patient to the transitional Index)
+//   patient-select, patient-create (protected Cloud Registry only)
 
-const { DB, DIVISIONS, httpJson, queryDb, createPage, updatePage, P, W, getSession, visibleDivisions, json } = require("./_lib");
+const crypto = require("crypto");
+const { DB, DIVISIONS, queryDb, createPage, updatePage, P, W, getSession, visibleDivisions, json } = require("./_lib");
 const { cloudRequest, listCloudPatients, parsePatientName } = require("./lib/cloud-patients");
-const zlib = require("zlib");
-
-// Google Cloud is the authoritative patient list. During migration, new
-// registrations are also mirrored to the Notion master and lean Patient Index
-// so existing operational relations continue to work.
-const MASTER_DB = process.env.MASTER_DB_ID || "2cf580758d3080f0825de4bbfb6c7528";
-
-function encodeCmWorkflow(value) {
-  const encoded = `gz:${zlib.gzipSync(JSON.stringify(value)).toString("base64")}`;
-  if (encoded.length > 1850) {
-    throw Object.assign(new Error("The in-person screening record is too long to save safely. Shorten the free-text notes, then try again."), { status: 400 });
-  }
-  return encoded;
-}
-
-const normalizePatientName = (value) => String(value || "").toLowerCase().replace(/[^a-z]/g, "");
-const normalizeNotionId = (value) => String(value || "").replace(/-/g, "").toLowerCase();
-
-function indexInsurance(patient) {
-  const value = `${patient.primaryPayer || patient.payer || ""} ${patient.insurancePlanName || patient.insurance || ""}`.toLowerCase();
-  if (/dual|qmb|medicare.*medicaid|medicaid.*medicare/.test(value)) return "Medicare + Medicaid";
-  if (/cigna/.test(value)) return "Cigna";
-  if (/aetna/.test(value)) return "Aetna";
-  if (/united|uhc|optum/.test(value)) return "UnitedHealthcare";
-  if (/tricare/.test(value)) return "Tricare";
-  if (/hopkins|ehp|priority partners/.test(value)) return "Johns Hopkins EHP";
-  if (/carefirst|bcbs|blue\s*cross|bluechoice/.test(value)) return "CareFirst BCBS";
-  if (/medicaid|physicians care|amerigroup|molina/.test(value)) return "Medicaid";
-  if (/medicare/.test(value)) return "Medicare";
-  if (/self.?pay|cash/.test(value)) return "Self-Pay";
-  return "";
-}
-
-function patientIndexProperties(patient) {
-  // This row exists only so the remaining Notion-backed CrewOS workflows can
-  // hold a relation to the authoritative Cloud patient. Keep the mirror
-  // deliberately minimal: optional Index columns have changed over time and a
-  // removed column must never prevent staff from selecting an existing patient.
-  return {
-    "Patient Name": W.title(patient.name),
-    "DOB": W.date(patient.dob),
-    // The Index's auto-number is only a local CrewOS relation number. Keep the
-    // authoritative RCM patient ID in the existing writable text property.
-    "Patient ID #": W.text(patient.bhwPatientId),
-  };
-}
+const { operationsRequest } = require("./lib/operations-cloud");
 
 function actionError(status, message) {
   return Object.assign(new Error(message), { status });
 }
 
-// CrewOS forms may submit either an existing relation-page id or an
-// authoritative BHW Patient ID from the Cloud Registry. Resolve Cloud IDs only
-// when a legacy workflow actually needs a Notion relation; staff never have to
-// pre-link a patient before using a dropdown.
-async function resolvePatientIndex(patientId, session) {
-  const requestedId = String(patientId || "").trim();
-  if (!requestedId) throw actionError(400, "Pick a patient");
-  if (!/^BHW\d+$/i.test(requestedId)) {
-    return { indexId: requestedId, patient: null, linked: false, backfilled: false };
+async function saveCloudCharmedAssessment(body, kind, session) {
+  let current = null;
+  if (body.id) {
+    const result = await cloudRequest(`/v1/charmed/assessments?kind=${encodeURIComponent(kind)}`, { actor: session });
+    current = (result.assessments || []).find((assessment) => assessment.id === body.id) || null;
+    if (!current) throw actionError(404, "That CharmEd assessment is no longer available. Refresh and try again.");
   }
-
-  const bhwPatientId = requestedId.toUpperCase();
-  const [idxPages, cloudPatients] = await Promise.all([queryDb(DB.patients), listCloudPatients(session)]);
-  const patient = cloudPatients.find((item) => String(item.bhwPatientId || "").toUpperCase() === bhwPatientId);
-  if (!patient) throw actionError(404, "That patient is no longer available in the Patient Registry. Search again.");
-  if (!patient.name || !patient.dob) throw actionError(409, "This Patient Registry record needs a name and birthday before CrewOS can use it safely.");
-
-  const storedMasterId = (page) => P.text(page.properties["Patient ID #"]).trim().toUpperCase();
-  const idMatches = idxPages.filter((page) => storedMasterId(page) === bhwPatientId);
-  if (idMatches.length > 1) throw actionError(409, "CrewOS has more than one link for this Master Patient ID. Resolve the duplicate links before continuing.");
-
-  let index = idMatches[0] || null;
-  let backfilled = false;
-  if (!index) {
-    const blankIdentityMatches = idxPages.filter((page) =>
-      !storedMasterId(page)
-      && normalizePatientName(P.title(page.properties["Patient Name"])) === normalizePatientName(patient.name)
-      && P.date(page.properties["DOB"]) === patient.dob
-    );
-    const cloudIdentityMatches = cloudPatients.filter((item) =>
-      normalizePatientName(item.name) === normalizePatientName(patient.name)
-      && item.dob === patient.dob
-    );
-    if (blankIdentityMatches.length > 1 || (blankIdentityMatches.length && cloudIdentityMatches.length > 1)) {
-      throw actionError(409, "This name and birthday are not unique enough to link automatically. Review the Patient Registry identities first.");
-    }
-    index = blankIdentityMatches[0] || null;
-    if (index) {
-      await updatePage(index.id, { "Patient ID #": W.text(patient.bhwPatientId) });
-      backfilled = true;
-    }
+  const answerCount = kind === "adult" ? 6 : 7;
+  const answers = Array.from({ length: answerCount }, (_, index) => current?.answers?.[index] || {});
+  const steps = Array.from({ length: answerCount }, (_, index) => current?.steps?.[index] || "Not Started");
+  const step = Number(body.step) || 0;
+  if (step >= 1 && step <= answerCount) {
+    answers[step - 1] = body.answers || {};
+    steps[step - 1] = body.stepStatus || "Complete";
   }
-
-  let linked = false;
-  if (!index) {
-    index = await createPage(DB.patients, patientIndexProperties(patient));
-    linked = true;
+  if (kind === "peds" && (step === 6 || step === 7)) {
+    const workflowAnswers = body.workflowAnswers || {};
+    const workflowStepStatus = body.workflowStepStatus || {};
+    answers[5] = workflowAnswers.inPerson || answers[5] || {};
+    answers[6] = workflowAnswers.results || answers[6] || {};
+    steps[5] = workflowStepStatus.inPerson || steps[5];
+    steps[6] = workflowStepStatus.results || steps[6];
   }
-  return { indexId: index.id, patient, linked, backfilled };
-}
-
-// CharmEd assessments still hold a relation to the transitional CrewOS Patient
-// Index. Resolve that relation to the authoritative Cloud/Patient 360 identity
-// before sending anything. A blank legacy ID may be backfilled only when exact
-// name + DOB identifies one Cloud patient and no duplicate Index link exists.
-async function resolvePatient360Patient(patientId, session, { backfill = true } = {}) {
-  const requestedId = String(patientId || "").trim();
-  if (!requestedId) throw actionError(400, "This assessment is not linked to a patient.");
-
-  const cloudPatients = await listCloudPatients(session);
-  const normalizedRequestedId = requestedId.toUpperCase();
-  const directMatches = cloudPatients.filter((patient) =>
-    String(patient.bhwPatientId || "").trim().toUpperCase() === normalizedRequestedId
-    || String(patient.notionPageId || "").trim() === requestedId
-  );
-  if (directMatches.length > 1) {
-    throw actionError(409, "CrewOS found more than one Patient Registry record for this identifier. Review the patient identities before sending.");
+  const payload = {
+    kind,
+    date: current?.date || today(),
+    status: body.status || current?.status || "Intake",
+    ageGroup: body.ageGroup || current?.ageGroup || "",
+    flags: body.flags || current?.flags || [],
+    screeners: body.screeners || current?.screeners || [],
+    notes: body.notes !== undefined ? body.notes : current?.notes || "",
+    steps,
+    answers,
+  };
+  if (current) {
+    const result = await cloudRequest(`/v1/charmed/assessments/${encodeURIComponent(current.id)}`, {
+      actor: session,
+      method: "PUT",
+      body: payload,
+    });
+    return result.assessment;
   }
-  if (directMatches.length === 1) return { patient: directMatches[0], backfilled: false };
-
-  let indexResponse;
-  try {
-    indexResponse = await httpJson("GET", `https://api.notion.com/v1/pages/${encodeURIComponent(requestedId)}`, null, { timeoutMs: 12_000 });
-  } catch (error) {
-    throw actionError(503, "Patient Registry check timed out. Close this window and try again.");
-  }
-  if (!indexResponse.ok || !indexResponse.data?.properties) {
-    throw actionError(409, "CrewOS could not match this assessment to the Patient Registry. Open Patient Registry and verify the patient's BHW ID.");
-  }
-  const index = indexResponse.data;
-
-  const storedMasterId = P.text(index.properties["Patient ID #"]).trim().toUpperCase();
-  if (storedMasterId) {
-    const masterMatches = cloudPatients.filter((patient) =>
-      String(patient.bhwPatientId || "").trim().toUpperCase() === storedMasterId
-    );
-    if (masterMatches.length === 1) return { patient: masterMatches[0], backfilled: false };
-    if (masterMatches.length > 1) {
-      throw actionError(409, "CrewOS found more than one Patient Registry record for this BHW ID. Review the patient identities before sending.");
-    }
-    throw actionError(409, "This assessment's saved BHW ID no longer matches the Patient Registry. Review the patient identity before sending.");
-  }
-
-  const indexName = P.title(index.properties["Patient Name"]);
-  const indexDob = P.date(index.properties["DOB"]);
-  if (!indexName || !indexDob) {
-    throw actionError(409, "This assessment needs a verified BHW ID before screening links can be sent.");
-  }
-  const identityMatches = cloudPatients.filter((patient) =>
-    normalizePatientName(patient.name) === normalizePatientName(indexName)
-    && patient.dob === indexDob
-  );
-  if (identityMatches.length !== 1) {
-    throw actionError(409, identityMatches.length
-      ? "This name and birthday match more than one Patient Registry record. Review the patient identities before sending."
-      : "CrewOS could not match this assessment to the Patient Registry. Open Patient Registry and verify the patient's BHW ID.");
-  }
-
-  const patient = identityMatches[0];
-  if (!backfill) return { patient, backfilled: false };
-
-  const idxPages = await queryDb(DB.patients);
-  const duplicateLinks = idxPages.filter((page) =>
-    page.id !== index.id
-    && P.text(page.properties["Patient ID #"]).trim().toUpperCase() === String(patient.bhwPatientId || "").trim().toUpperCase()
-  );
-  if (duplicateLinks.length) {
-    throw actionError(409, "CrewOS has more than one Patient Index record for this BHW ID. Review the duplicate patient links before sending.");
-  }
-
-  await updatePage(index.id, { "Patient ID #": W.text(patient.bhwPatientId) });
-  return { patient, backfilled: true };
-}
-
-let awvPropsEnsured = false;
-async function ensureAwvReviewProps() {
-  if (awvPropsEnsured) return;
-  const res = await httpJson("PATCH", `https://api.notion.com/v1/databases/${DB.awv}`, {
-    properties: {
-      "Provider Review": { select: { options: [
-        { name: "Pending Review", color: "orange" },
-        { name: "Reviewed & Signed", color: "green" },
-      ] } },
-      "Signed By": { rich_text: {} },
-      "Signed Date": { date: {} },
-      "Provider Note": { rich_text: {} },
-    },
+  const bhwPatientId = String(body.patientId || "").trim().toUpperCase();
+  if (!/^BHW\d{4}$/.test(bhwPatientId)) throw actionError(400, "Pick a patient from the protected Patient Registry.");
+  const result = await cloudRequest(`/v1/patients/${encodeURIComponent(bhwPatientId)}/charmed/assessments`, {
+    actor: session,
+    method: "POST",
+    body: payload,
   });
-  if (res.ok) awvPropsEnsured = true;
+  return result.assessment;
 }
 
 const today = () => new Date().toISOString().slice(0, 10);
+const actionKey = (prefix) => `${prefix}:${crypto.randomUUID()}`;
+
+async function requireCloudPatient(patientId, session) {
+  const bhwPatientId = String(patientId || "").trim().toUpperCase();
+  if (!/^BHW\d{4}$/.test(bhwPatientId)) throw actionError(400, "Pick a patient from the protected Patient Registry.");
+  const patient = (await listCloudPatients(session)).find((item) => item.bhwPatientId === bhwPatientId);
+  if (!patient) throw actionError(404, "That patient is no longer available in the Patient Registry. Search again.");
+  return patient;
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return json(405, { error: "POST only" });
@@ -221,50 +97,63 @@ exports.handler = async (event) => {
         if (!b.to || !DIVISIONS.includes(b.to)) return json(400, { error: "Pick a receiving division" });
         if (!b.from || !vis.includes(b.from)) return json(403, { error: "You can only send from your own division" });
         if (!b.patientId) return json(400, { error: "Pick a patient" });
-        const patientId = (await resolvePatientIndex(b.patientId, session)).indexId;
-        const page = await createPage(DB.referrals, {
-          "Referral": W.title(`${b.type || "Referral"} → ${b.to}`),
-          "Patient": W.rel([patientId]),
-          "From Division": W.sel(b.from),
-          "To Division": W.sel(b.to),
-          "Sent By": W.rel([session.staffId]),
-          "Referral Type": W.sel(b.type || "Division Referral"),
-          "Device": W.sel(b.device || null),
-          "Details": W.text(b.details || ""),
-          "Status": W.sel("Sent"),
-          "Sent Date": W.date(today()),
-          "Priority": W.sel(b.priority || "Routine"),
+        const patient = await requireCloudPatient(b.patientId, session);
+        const result = await operationsRequest("/v1/patient-requests", {
+          actor: session,
+          method: "POST",
+          body: {
+            id: actionKey("crew-referral"),
+            bhwPatientId: patient.bhwPatientId,
+            requestType: "referral",
+            priority: String(b.priority || "routine").toLowerCase() === "urgent" ? "urgent" : "routine",
+            source: "crewos",
+            sourceReference: "CrewOS division referral",
+            summary: `${b.type || "Referral"}: ${b.from} to ${b.to}${b.details ? ` — ${b.details}` : ""}`,
+            notificationMode: "none",
+            manualNotifyOnly: true,
+            workflowContext: {
+              kind: "referral",
+              fromDivision: b.from,
+              toDivision: b.to,
+              referralType: b.type || "Division Referral",
+              device: b.device || "",
+              details: b.details || "",
+            },
+          },
         });
-        return json(200, { ok: true, id: page.id });
+        const request = result.request || result.patientRequest;
+        return json(200, { ok: true, id: request.id || request.patientRequestId, savedAt: request.updatedAt, storage: "BHW Cloud" });
       }
       case "referral-status": {
         const allowed = ["Received", "In Progress", "Completed", "Declined/Redirect"];
         if (!allowed.includes(b.status)) return json(400, { error: "Bad status" });
-        const props = { "Status": W.sel(b.status) };
-        if (b.status === "Received" || b.status === "In Progress") props["Assigned To"] = W.rel([session.staffId]);
-        if (b.status === "Completed") {
-          props["Completed Date"] = W.date(today());
-          props["Completion Note"] = W.text(b.note || "Completed");
-        } else if (b.note) {
-          props["Completion Note"] = W.text(b.note);
-        }
-        await updatePage(b.id, props);
-        return json(200, { ok: true });
+        const body = b.status === "Completed"
+          ? { action: "resolve", outcome: "referral_completed" }
+          : b.status === "Declined/Redirect"
+            ? { action: "resolve", outcome: "closed_without_scheduling" }
+            : { action: "start" };
+        body.idempotencyKey = actionKey("crew-referral-status");
+        if (b.note) body.workflowContext = { completionNote: b.note };
+        const result = await operationsRequest(`/v1/patient-requests/${encodeURIComponent(b.id)}/actions`, { actor: session, method: "POST", body });
+        return json(200, { ok: true, savedAt: result.request?.updatedAt, storage: "BHW Cloud" });
       }
       case "request-status": {
-        // Patient Request Triage Queue — journey status + ownership.
-        // Status is a Notion status-type property; Assigned To is read as a
-        // select by frontdesk-data, so we write the staff's display name.
         if (!b.id) return json(400, { error: "Missing request id" });
         const allowed = ["Not started", "Acknowledged", "In progress", "Done"];
         if (!allowed.includes(b.status)) return json(400, { error: "Bad status" });
-        const props = { "Status": W.status(b.status) };
-        // Take ownership when claiming or moving into an active stage.
-        if (b.claim || b.status === "Acknowledged" || b.status === "In progress") {
-          props["Assigned To"] = W.sel(session.name);
-        }
-        await updatePage(b.id, props);
-        return json(200, { ok: true, assignedTo: session.name });
+        const action = b.status === "Done" ? "resolve" : "start";
+        const current = await operationsRequest(`/v1/patient-requests/${encodeURIComponent(b.id)}`, { actor: session });
+        const request = current.request || current.patientRequest;
+        const result = await operationsRequest(`/v1/patient-requests/${encodeURIComponent(b.id)}/actions`, {
+          actor: session,
+          method: "POST",
+          body: {
+            action,
+            ...(action === "resolve" ? { outcome: request.requestType === "referral" ? "referral_completed" : "completed" } : {}),
+            idempotencyKey: actionKey("crew-request-status"),
+          },
+        });
+        return json(200, { ok: true, assignedTo: result.request?.assignedToName || session.name, savedAt: result.request?.updatedAt, storage: "BHW Cloud" });
       }
       case "referral-template-save": {
         // Save the current referral wording as a reusable template in Notion.
@@ -290,53 +179,76 @@ exports.handler = async (event) => {
         if (!b.from || !vis.includes(b.from)) return json(403, { error: "You can only hand off from your own division" });
         if (!b.patientId) return json(400, { error: "Pick a patient" });
         if (!b.summary) return json(400, { error: "A warm handoff needs a summary" });
-        const patientId = (await resolvePatientIndex(b.patientId, session)).indexId;
-        const page = await createPage(DB.handoffs, {
-          "Handoff": W.title(`${b.from} → ${b.to}`),
-          "Patient": W.rel([patientId]),
-          "From Division": W.sel(b.from),
-          "To Division": W.sel(b.to),
-          "From Staff": W.rel([session.staffId]),
-          "Summary": W.text(b.summary),
-          "Needs": { multi_select: (b.needs || []).map((n) => ({ name: n })) },
-          "Scheduled Date": W.date(b.scheduledDate || null),
-          "Status": W.sel("New"),
+        const patient = await requireCloudPatient(b.patientId, session);
+        const result = await operationsRequest("/v1/patient-requests", {
+          actor: session,
+          method: "POST",
+          body: {
+            id: actionKey("crew-handoff"),
+            bhwPatientId: patient.bhwPatientId,
+            requestType: "general",
+            priority: "routine",
+            source: "crewos",
+            sourceReference: "CrewOS warm handoff",
+            summary: b.summary,
+            notificationMode: "none",
+            manualNotifyOnly: true,
+            workflowContext: {
+              kind: "handoff",
+              fromDivision: b.from,
+              toDivision: b.to,
+              details: b.summary,
+              needs: b.needs || [],
+              scheduledDate: b.scheduledDate || "",
+            },
+          },
         });
-        return json(200, { ok: true, id: page.id });
+        const request = result.request || result.patientRequest;
+        return json(200, { ok: true, id: request.id || request.patientRequestId, savedAt: request.updatedAt, storage: "BHW Cloud" });
       }
       case "handoff-status": {
         const allowed = ["Acknowledged", "Scheduled", "Completed"];
         if (!allowed.includes(b.status)) return json(400, { error: "Bad status" });
-        const props = { "Status": W.sel(b.status) };
-        if (b.status === "Acknowledged") {
-          props["Acknowledged By"] = W.rel([session.staffId]);
-          props["Acknowledged At"] = W.date(today());
-        }
-        if (b.status === "Scheduled" && b.scheduledDate) props["Scheduled Date"] = W.date(b.scheduledDate);
-        await updatePage(b.id, props);
-        return json(200, { ok: true });
+        const body = b.status === "Completed"
+          ? { action: "resolve", outcome: "completed" }
+          : b.status === "Scheduled"
+            ? { action: "milestone", status: "waiting", workflowContext: { scheduledDate: b.scheduledDate || "" } }
+            : { action: "start" };
+        body.idempotencyKey = actionKey("crew-handoff-status");
+        const result = await operationsRequest(`/v1/patient-requests/${encodeURIComponent(b.id)}/actions`, { actor: session, method: "POST", body });
+        return json(200, { ok: true, savedAt: result.request?.updatedAt, storage: "BHW Cloud" });
       }
 
       /* ---------------- Minutes ---------------- */
       case "minutes-log": {
         if (!b.program || !b.minutes) return json(400, { error: "Program and minutes required" });
-        const patientId = b.patientId ? (await resolvePatientIndex(b.patientId, session)).indexId : "";
-        const page = await createPage(DB.minutes, {
-          "Entry": W.title(`${b.program} · ${b.minutes} min · ${today()}`),
-          "Staff": W.rel([session.staffId]),
-          "Program": W.sel(b.program),
-          "Patient": W.rel(patientId ? [patientId] : []),
-          "Date": W.date(b.date || today()),
-          "Minutes": W.num(b.minutes),
-          "Activity": W.sel(b.activity || "Coordination"),
-          "Note": W.text(b.note || ""),
-          "In CharmHealth": W.check(false),
+        const patient = await requireCloudPatient(b.patientId, session);
+        const date = b.date || today();
+        const result = await cloudRequest("/v1/care-management/logs", {
+          actor: session,
+          method: "POST",
+          body: {
+            bhwPatientId: patient.bhwPatientId,
+            entry: `${b.program} · ${b.minutes} min · ${date}`,
+            program: b.program,
+            type: "Staff activity",
+            serviceMonth: date,
+            minutes: b.minutes,
+            activities: b.activity || "Coordination",
+            notes: b.note || "",
+            coordinator: session.name,
+            inCharmHealth: false,
+          },
         });
-        return json(200, { ok: true, id: page.id });
+        return json(200, { ok: true, id: result.log.id, savedAt: result.log.updatedAt, storage: "BHW Cloud" });
       }
       case "minutes-charm": {
-        await updatePage(b.id, { "In CharmHealth": W.check(true) });
-        return json(200, { ok: true });
+        const result = await cloudRequest(`/v1/care-management/logs/${encodeURIComponent(b.id)}`, {
+          actor: session,
+          method: "PUT",
+          body: { inCharmHealth: true },
+        });
+        return json(200, { ok: true, savedAt: result.log.updatedAt, storage: "BHW Cloud" });
       }
 
       /* ---------------- Availability ---------------- */
@@ -413,133 +325,75 @@ exports.handler = async (event) => {
       }
 
       case "awv-save": {
-        const stepProp = { 1: "S1 HRA", 2: "S2 Office Tests", 3: "S3 Prevention Plan", 4: "S4 Nutrition & Activity", 5: "S5 ACP" }[b.step];
-        const props = {};
-        if (stepProp) {
-          props[stepProp] = W.sel(b.stepStatus || "Complete");
-          props[`Answers S${b.step}`] = W.text(JSON.stringify(b.answers || {}));
+        let current = null;
+        if (b.id) {
+          const list = await cloudRequest("/v1/wellness-visits", { actor: session });
+          current = (list.visits || []).find((visit) => visit.id === b.id) || null;
+          if (!current) return json(404, { error: "That AWV is no longer available. Refresh and try again." });
         }
-        if (b.flags) props["Flags"] = { multi_select: b.flags.map((n) => ({ name: n })) };
+        const payload = {};
+        if (b.step >= 1 && b.step <= 5) {
+          const steps = [...(current?.steps || Array(5).fill("Not Started"))];
+          const answers = [...(current?.answers || Array.from({ length: 5 }, () => ({})))];
+          steps[b.step - 1] = b.stepStatus || "Complete";
+          answers[b.step - 1] = b.answers || {};
+          payload.steps = steps;
+          payload.answers = answers;
+        }
+        if (b.flags) payload.flags = b.flags;
         if (b.computed) {
-          if (b.computed.miniCog !== undefined) props["Mini-Cog Score"] = W.num(b.computed.miniCog);
-          if (b.computed.diet !== undefined) props["Diet Score"] = W.num(b.computed.diet);
-          if (b.computed.exercise !== undefined) props["Exercise Min/Week"] = W.num(b.computed.exercise);
+          if (b.computed.miniCog !== undefined) payload.miniCog = b.computed.miniCog;
+          if (b.computed.diet !== undefined) payload.diet = b.computed.diet;
+          if (b.computed.exercise !== undefined) payload.exercise = b.computed.exercise;
         }
         if (b.status) {
-          props["Status"] = W.sel(b.status);
-          if (b.status === "Completed") {
-            await ensureAwvReviewProps();
-            props["Provider Review"] = W.sel("Pending Review");
-          }
+          payload.status = b.status;
+          if (b.status === "Completed") payload.review = "Pending Review";
         }
-        if (b.notes !== undefined) props["Notes"] = W.text(b.notes);
-        if (b.id) {
-          await updatePage(b.id, props);
-          return json(200, { ok: true, id: b.id });
+        if (b.notes !== undefined) payload.providerNote = b.notes;
+        if (current) {
+          const result = await cloudRequest(`/v1/wellness-visits/${encodeURIComponent(current.id)}`, {
+            actor: session,
+            method: "PUT",
+            body: payload,
+          });
+          return json(200, { ok: true, id: current.id, savedAt: result.visit.updatedAt, storage: "BHW Cloud" });
         }
         if (!b.patientId) return json(400, { error: "Pick a patient to start an AWV" });
-        const patientId = (await resolvePatientIndex(b.patientId, session)).indexId;
-        const page = await createPage(DB.awv, {
-          "Encounter": W.title(`AWV · ${today()}`),
-          "Patient": W.rel([patientId]),
-          "Conducted By": W.rel([session.staffId]),
-          "Date": W.date(today()),
-          "Status": W.sel("In Progress"),
-          ...props,
+        const patient = await requireCloudPatient(b.patientId, session);
+        const result = await cloudRequest(`/v1/patients/${encodeURIComponent(patient.bhwPatientId)}/wellness-visits`, {
+          actor: session,
+          method: "POST",
+          body: { date: today(), status: "In Progress", conductedBy: session.name, ...payload },
         });
-        return json(200, { ok: true, id: page.id });
+        return json(200, { ok: true, id: result.visit.id, savedAt: result.visit.updatedAt, storage: "BHW Cloud" });
       }
 
       case "cm-save": {
-        // The legacy assessment store has six answer slots. Keep the new
-        // in-person visit and results as a versioned pair in slot six until
-        // the protected Google Cloud assessment endpoint is available.
-        const cmProp = { 1:"S1 Intake", 2:"S2 School & Attention", 3:"S3 Social & Sensory", 4:"S4 Wellbeing & Context", 5:"S5 Screeners" }[b.step];
-        const props = {};
-        if (cmProp) {
-          props[cmProp] = W.sel(b.stepStatus || "Complete");
-          props[`Answers S${b.step}`] = W.text(JSON.stringify(b.answers || {}));
-        }
-        if (b.step === 6 || b.step === 7) {
-          const workflowAnswers = b.workflowAnswers || {};
-          const workflowStepStatus = b.workflowStepStatus || {};
-          props["S6 Results & Recs"] = W.sel(workflowStepStatus.results === "Complete" ? "Complete" : "In Progress");
-          props["Answers S6"] = W.text(encodeCmWorkflow({
-            __cmWorkflowV2: 1,
-            inPerson: workflowAnswers.inPerson || {},
-            results: workflowAnswers.results || {},
-            stepStatus: {
-              inPerson: workflowStepStatus.inPerson || "Not Started",
-              results: workflowStepStatus.results || "Not Started",
-            },
-          }));
-        }
-        if (b.ageGroup) props["Age Group"] = W.sel(b.ageGroup);
-        if (b.flags) props["Flags"] = { multi_select: b.flags.map((n) => ({ name: n })) };
-        if (b.screeners) props["Suggested Screeners"] = { multi_select: b.screeners.map((n) => ({ name: n })) };
-        if (b.status) props["Status"] = W.sel(b.status);
-        if (b.notes !== undefined) props["Notes"] = W.text(b.notes);
-        if (b.id) {
-          await updatePage(b.id, props);
-          return json(200, { ok: true, id: b.id });
-        }
-        if (!b.patientId) return json(400, { error: "Pick a patient to start an assessment" });
-        const patientId = (await resolvePatientIndex(b.patientId, session)).indexId;
-        const page = await createPage(DB.charmed, {
-          "Assessment": W.title(`CharmEd Assessment · ${today()}`),
-          "Patient": W.rel([patientId]),
-          "Clinician": W.rel([session.staffId]),
-          "Date": W.date(today()),
-          "Status": W.sel("Intake"),
-          ...props,
-        });
-        return json(200, { ok: true, id: page.id });
+        const assessment = await saveCloudCharmedAssessment(b, "peds", session);
+        return json(200, { ok: true, id: assessment.id, savedAt: assessment.updatedAt, storage: "BHW Cloud" });
       }
 
       case "cma-save": {
-        const cmaProp = { 1:"S1 Concerns & Function", 2:"S2 EF, Social & Sensory", 3:"S3 Mental Health & Cognition", 4:"S4 Substance, Injury & Trauma", 5:"S5 Vascular, Sleep & Change", 6:"S6 Screeners" }[b.step];
-        const props = {};
-        if (cmaProp) {
-          props[cmaProp] = W.sel(b.stepStatus || "Complete");
-          props[`Answers S${b.step}`] = W.text(JSON.stringify(b.answers || {}));
-        }
-        if (b.flags) props["Flags"] = { multi_select: b.flags.map((n) => ({ name: n })) };
-        if (b.screeners) props["Suggested Screeners"] = { multi_select: b.screeners.map((n) => ({ name: n })) };
-        if (b.status) props["Status"] = W.sel(b.status);
-        if (b.notes !== undefined) props["Notes"] = W.text(b.notes);
-        if (b.id) {
-          await updatePage(b.id, props);
-          return json(200, { ok: true, id: b.id });
-        }
-        if (!b.patientId) return json(400, { error: "Pick a patient to start an assessment" });
-        const patientId = (await resolvePatientIndex(b.patientId, session)).indexId;
-        const page = await createPage(DB.charmedAdult, {
-          "Assessment": W.title(`Adult Assessment · ${today()}`),
-          "Patient": W.rel([patientId]),
-          "Clinician": W.rel([session.staffId]),
-          "Date": W.date(today()),
-          "Status": W.sel("Intake"),
-          ...props,
-        });
-        return json(200, { ok: true, id: page.id });
+        const assessment = await saveCloudCharmedAssessment(b, "adult", session);
+        return json(200, { ok: true, id: assessment.id, savedAt: assessment.updatedAt, storage: "BHW Cloud" });
       }
 
       case "patient-select": {
         const bhwPatientId = String(b.bhwPatientId || "").trim().toUpperCase();
-        if (!/^BHW\d+$/i.test(bhwPatientId)) return json(400, { error: "Choose a patient from the Patient Registry" });
-        const { indexId, patient, linked, backfilled } = await resolvePatientIndex(bhwPatientId, session);
+        const patient = await requireCloudPatient(bhwPatientId, session);
 
         return json(200, {
           ok: true,
-          id: indexId,
+          id: patient.bhwPatientId,
           name: patient.name,
           bhwId: patient.bhwPatientId,
           dob: patient.dob,
           chart: patient.mrn || "",
-          insurance: indexInsurance(patient),
+          insurance: patient.insurancePlanName || patient.primaryPayer || "",
           memberId: patient.memberId || "",
-          linked,
-          backfilled,
+          savedAt: new Date().toISOString(),
+          storage: "BHW Cloud",
         });
       }
 
@@ -558,17 +412,10 @@ exports.handler = async (event) => {
             m[i][j] = Math.min(m[i-1][j] + 1, m[i][j-1] + 1, m[i-1][j-1] + (x[i-1] === y[j-1] ? 0 : 1));
           return m[x.length][y.length];
         };
-        // Dedup against BOTH lists (property names differ per DB), so we never
-        // create a duplicate in either the Master List or the Index.
-        const [idxPages, cloudPatients] = await Promise.all([queryDb(DB.patients), listCloudPatients(session)]);
-        const existingIdx = idxPages.map((pg) => ({
-          id: pg.id,
-          name: P.title(pg.properties["Patient Name"]),
-          bhwId: P.uid(pg.properties["BHW ID"]),
-          dob: P.date(pg.properties["DOB"]),
-          chart: P.text(pg.properties["CharmHealth Chart #"]),
-        }));
-        const existingMaster = cloudPatients.map((patient) => ({
+        // Search the one protected registry. A newly entered person receives a
+        // temporary holding ID until CharmHealth assigns the canonical BHW ID.
+        const cloudPatients = await listCloudPatients(session);
+        const existing = cloudPatients.map((patient) => ({
           id: patient.bhwPatientId,
           name: patient.name,
           bhwId: patient.bhwPatientId,
@@ -584,188 +431,163 @@ exports.handler = async (event) => {
           if (b.chart && p.chart && p.chart.trim() === b.chart.trim()) return true;       // same chart #
           return false;
         };
-        // Prefer Index dupes for returned ids (crewOS relations reference the
-        // Index); include Master-only dupes so we don't silently double-create.
-        const dupes = existingIdx.filter(isDupe)
-          .concat(existingMaster.filter((m) => isDupe(m) && !existingIdx.some((i) => norm(i.name) === norm(m.name) && i.dob === m.dob)));
+        const dupes = existing.filter(isDupe);
         const exact = dupes.find((p) => norm(p.name) === n && p.dob === b.dob);
         if (exact) return json(409, { error: `${exact.name} (${exact.bhwId}) already exists with this exact name and birthday — use the existing record.`, duplicates: dupes.map(({ id, name, bhwId, dob }) => ({ id, name, bhwId, dob })) });
         if (dupes.length && !b.force) return json(200, { duplicates: dupes.map(({ id, name, bhwId, dob }) => ({ id, name, bhwId, dob })) });
 
-        // Next BHW#### control number (the Master List's Patient Ctl No is a
-        // manual text field, so we derive the next number from both lists).
-        const maxNum = existingMaster.concat(existingIdx).reduce((mx, p) => {
-          const m = /BHW0*(\d+)/i.exec(p.bhwId || "");
-          return m ? Math.max(mx, parseInt(m[1], 10)) : mx;
-        }, 0);
-        const ctlNo = "BHW" + String(maxNum + 1).padStart(4, "0");
         const mbi = b.mbi ? String(b.mbi).replace(/[^A-Za-z0-9]/g, "").toUpperCase() : "";
-        const cloudPatient = {
-          bhwPatientId: ctlNo,
-          legalFirstName: parsedName.legalFirstName,
-          legalLastName: parsedName.legalLastName,
-          nameSuffix: parsedName.nameSuffix,
-          dateOfBirth: b.dob,
-          email: b.email || "",
-          guardianEmail: b.guardianEmail || "",
-          patientStatus: "active",
-          primaryPayer: b.insurance || "",
-          insurancePlanName: b.insurance || "",
-          memberId: b.memberId || "",
-          medicareMbi: mbi,
-          mrn: b.chart || "",
-          programEnrollment: Array.isArray(b.programs) ? b.programs : [],
-          source: { system: "crewhq-registration", importedAt: new Date().toISOString() },
-        };
-        // Write the authoritative Cloud record first. Transitional Notion rows
-        // below keep existing operational relations working during migration.
-        await cloudRequest(`/v1/patients/${encodeURIComponent(ctlNo)}`, {
-          actor: session, method: "PUT", body: cloudPatient,
+        const result = await cloudRequest("/v1/prospective-patients", {
+          actor: session,
+          method: "POST",
+          body: {
+            legalFirstName: parsedName.legalFirstName,
+            legalLastName: parsedName.legalLastName,
+            nameSuffix: parsedName.nameSuffix,
+            dateOfBirth: b.dob,
+            email: b.email || "",
+            guardianEmail: b.guardianEmail || "",
+            primaryPayer: b.insurance || "",
+            insurancePlanName: b.insurance || "",
+            memberId: b.memberId || "",
+            medicareMbi: mbi,
+            mrn: b.chart || "",
+            programEnrollment: Array.isArray(b.programs) ? b.programs : [],
+            intakeSource: "crewhq-registration",
+            source: { system: "crewhq-registration", importedAt: new Date().toISOString() },
+          },
         });
-
-        // 1) Transitional master-row mirror. Insurance goes to the free-text
-        //    Insurance Plan Name, never the controlled Payer select.
-        const masterProps = {
-          "Patient Name": W.title(name),
-          "Patient Ctl No": W.text(ctlNo),
-          "DOB": W.date(b.dob),
-        };
-        if (b.insurance) masterProps["Insurance Plan Name"] = W.text(b.insurance);
-        if (b.memberId) masterProps["Insurance Member ID"] = W.text(b.memberId);
-        if (b.chart) masterProps["MRN"] = W.text(b.chart);
-        if (mbi) masterProps["Medicare MBI"] = W.text(mbi);
-        if (b.email) masterProps["Email"] = { email: b.email };
-        if (b.guardianEmail) masterProps["Guardian Email"] = { email: b.guardianEmail };
-        const master = await createPage(MASTER_DB, masterProps);
-        await cloudRequest(`/v1/patients/${encodeURIComponent(ctlNo)}`, {
-          actor: session, method: "PUT",
-          body: { ...cloudPatient, source: { ...cloudPatient.source, recordId: master.id, recordUrl: master.url || "" } },
+        const patient = result.patient;
+        return json(200, {
+          ok: true,
+          id: patient.bhwPatientId,
+          bhwId: patient.bhwPatientId,
+          name,
+          prospective: true,
+          requiresReenrollment: true,
+          savedAt: patient.updatedAt || new Date().toISOString(),
+          storage: "BHW Cloud",
         });
-
-        // 2) Mirror into the Patient Index so crewOS ops-data + the "Patient"
-        //    relations keep working. crewOS references the Index id, so that's
-        //    what we return as `id`.
-        const indexProps = {
-          ...patientIndexProperties({ name, dob: b.dob, bhwPatientId: ctlNo }),
-          "Status": W.sel("Active"),
-        };
-        if (b.insurance) indexProps["Insurance"] = W.sel(b.insurance);
-        if (b.memberId) indexProps["Insurance Member ID"] = W.text(b.memberId);
-        if (mbi) indexProps["Medicare MBI"] = W.text(mbi);
-        if (b.email) indexProps["Email"] = { email: b.email };
-        if (b.guardianEmail) indexProps["Guardian Email"] = { email: b.guardianEmail };
-        if (b.programs && b.programs.length) indexProps["Active Divisions"] = { multi_select: b.programs.map((x) => ({ name: x })) };
-        const index = await createPage(DB.patients, indexProps);
-
-        return json(200, { ok: true, id: index.id, masterId: master.id, bhwId: ctlNo, name });
       }
 
       case "care-log-save": {
         if (!b.id) return json(400, { error: "Missing entry id" });
-        const props = {};
-        if (b.minutes !== undefined) props["Minutes Logged"] = W.num(b.minutes);
-        if (b.activities !== undefined) props["Activities Done"] = W.text(b.activities);
-        if (b.referrals !== undefined) props["Referrals Completed"] = W.text(b.referrals);
-        if (b.nextFollowUp !== undefined) props["Next Follow-up"] = W.date(b.nextFollowUp || null);
-        if (b.followUpStage !== undefined) props["Follow-up Stage"] = W.sel(b.followUpStage);
-        if (b.status !== undefined) props["Status"] = W.sel(b.status);
-        if (b.lastContact !== undefined) props["Last Contact"] = W.date(b.lastContact || null);
-        if (!Object.keys(props).length) return json(400, { error: "Nothing to update" });
-        await updatePage(b.id, props);
-        return json(200, { ok: true, id: b.id });
+        const updates = {};
+        for (const key of ["minutes", "activities", "referrals", "nextFollowUp", "followUpStage", "status", "lastContact", "notes"]) {
+          if (b[key] !== undefined) updates[key] = b[key];
+        }
+        if (!Object.keys(updates).length) return json(400, { error: "Nothing to update" });
+        const result = await cloudRequest(`/v1/care-management/logs/${encodeURIComponent(b.id)}`, {
+          actor: session,
+          method: "PUT",
+          body: updates,
+        });
+        return json(200, { ok: true, id: b.id, savedAt: result.log?.updatedAt || new Date().toISOString(), storage: "BHW Cloud" });
       }
 
       case "care-log-create": {
         const name = (b.name || "").trim();
         if (!name) return json(400, { error: "Patient name required" });
         const program = b.program || "TCM";
-        const props = {
-          "Entry": W.title(`${name} — ${program}${b.month ? " · " + b.month : ""}`),
-          "Program": W.sel(program),
-          "Type": W.sel(b.type || (program === "TCM" ? "Episode" : "Monthly")),
-          "Status": W.sel(b.status || "Open"),
-        };
-        if (b.patientId) props["Patient"] = W.rel([(await resolvePatientIndex(b.patientId, session)).indexId]);
-        if (b.ctlNo) props["Patient Ctl No"] = W.text(b.ctlNo);
-        if (b.month) props["Service Month"] = W.date(b.month + "-01");
-        if (b.episodeDate) props["Episode / Discharge Date"] = W.date(b.episodeDate);
-        if (b.icd) props["ICD-10 Codes"] = W.text(b.icd);
-        if (b.primaryDx) props["Primary Diagnosis"] = W.text(b.primaryDx);
-        if (b.memberId) props["Member ID"] = W.text(b.memberId);
-        if (b.notes) props["Notes"] = W.text(b.notes);
-        if (b.minutes !== undefined) props["Minutes Logged"] = W.num(b.minutes);
-        if (b.nextFollowUp) props["Next Follow-up"] = W.date(b.nextFollowUp);
-        if (b.followUpStage) props["Follow-up Stage"] = W.sel(b.followUpStage);
-        const page = await createPage(DB.careLog, props);
-        return json(200, { ok: true, id: page.id });
+        const requestedPatientId = String(b.bhwPatientId || b.ctlNo || b.patientId || "").trim().toUpperCase();
+        if (!/^BHW\d{4}$/.test(requestedPatientId)) {
+          return json(400, { error: "Choose the patient from the protected Patient Registry before creating a care log." });
+        }
+        const result = await cloudRequest("/v1/care-management/logs", {
+          actor: session,
+          method: "POST",
+          body: {
+            bhwPatientId: requestedPatientId,
+            entry: `${name} — ${program}${b.month ? ` · ${b.month}` : ""}`,
+            program,
+            type: b.type || (program === "TCM" ? "Episode" : "Monthly"),
+            status: b.status || "Open",
+            serviceMonth: b.month ? `${b.month}-01` : "",
+            episodeDate: b.episodeDate || "",
+            icd: b.icd || "",
+            primaryDx: b.primaryDx || "",
+            memberId: b.memberId || "",
+            notes: b.notes || "",
+            minutes: b.minutes,
+            nextFollowUp: b.nextFollowUp || "",
+            followUpStage: b.followUpStage || "",
+          },
+        });
+        return json(200, { ok: true, id: result.log.id, savedAt: result.log.updatedAt, storage: "BHW Cloud" });
       }
 
       case "prog-save": {
-        const props = {};
-        if (b.track) props["Track"] = W.sel(b.track);
-        if (b.stage) props["Stage"] = W.sel(b.stage);
-        if (b.startDate) props["Start Date"] = W.date(b.startDate);
-        if (b.battery) props["Baseline Battery"] = { multi_select: b.battery.map((n) => ({ name: n })) };
-        if (b.baselineDate) props["Baseline Date"] = W.date(b.baselineDate);
-        if (b.baselineSummary !== undefined) props["Baseline Summary"] = W.text(b.baselineSummary);
-        if (b.retestDate) props["Retest Date"] = W.date(b.retestDate);
-        if (b.retestSummary !== undefined) props["Retest Summary"] = W.text(b.retestSummary);
-        if (b.progressNote !== undefined) props["Progress Notes"] = W.text(b.progressNote);
+        const payload = {};
+        for (const key of ["track", "stage", "startDate", "battery", "baselineDate", "baselineSummary", "retestDate", "retestSummary", "progressNote"]) {
+          if (b[key] !== undefined) payload[key] = b[key];
+        }
         if (b.id) {
-          await updatePage(b.id, props);
-          return json(200, { ok: true, id: b.id });
+          const result = await cloudRequest(`/v1/charmed/program-enrollments/${encodeURIComponent(b.id)}`, {
+            actor: session,
+            method: "PUT",
+            body: payload,
+          });
+          return json(200, { ok: true, id: b.id, savedAt: result.enrollment.updatedAt, storage: "BHW Cloud" });
         }
         if (!b.patientId) return json(400, { error: "Pick a patient to enroll" });
-        const patientId = (await resolvePatientIndex(b.patientId, session)).indexId;
-        const page = await createPage(DB.charmedProgram, {
-          "Enrollment": W.title(`12-Week Program · ${today()}`),
-          "Patient": W.rel([patientId]),
-          "Clinician": W.rel([session.staffId]),
-          "Start Date": W.date(b.startDate || today()),
-          "Baseline Date": W.date(b.baselineDate || today()),
-          "Stage": W.sel("Enrolled"),
-          ...props,
+        const bhwPatientId = String(b.patientId || "").trim().toUpperCase();
+        if (!/^BHW\d{4}$/.test(bhwPatientId)) return json(400, { error: "Pick a patient from the protected Patient Registry." });
+        const result = await cloudRequest(`/v1/patients/${encodeURIComponent(bhwPatientId)}/charmed/program-enrollments`, {
+          actor: session,
+          method: "POST",
+          body: {
+            ...payload,
+            startDate: b.startDate || today(),
+            baselineDate: b.baselineDate || today(),
+            stage: b.stage || "Enrolled",
+          },
         });
-        return json(200, { ok: true, id: page.id });
+        return json(200, { ok: true, id: result.enrollment.id, savedAt: result.enrollment.updatedAt, storage: "BHW Cloud" });
       }
 
       case "ph-plan-save": {
-        const props = {};
+        const payload = { program: "The Porter House" };
         if (b.lrKind === "baseline" && b.lr) {
-          props["LR Baseline"] = W.text(JSON.stringify(b.lr));
-          props["Readiness Baseline %"] = W.num(b.lrPct);
+          payload.readinessBaseline = b.lr;
+          payload.readinessBaselinePercent = b.lrPct;
         }
         if (b.lrKind === "latest" && b.lr) {
-          props["LR Latest"] = W.text(JSON.stringify(b.lr));
-          props["Readiness Latest %"] = W.num(b.lrPct);
-          props["LR Latest Date"] = W.date(today());
+          payload.readinessLatest = b.lr;
+          payload.readinessLatestPercent = b.lrPct;
+          payload.readinessLatestDate = today();
         }
-        if (b.drivers) props["Symptom Drivers"] = { multi_select: b.drivers.map((n) => ({ name: n })) };
+        if (b.drivers) payload.symptomDrivers = b.drivers;
         if (b.screens) {
-          props["BH Screen Log"] = W.text(JSON.stringify(b.screens));
+          payload.behavioralHealthScreens = b.screens;
           const last = b.screens[b.screens.length - 1] || {};
-          if (last.phq9 !== undefined && last.phq9 !== "") props["Latest PHQ-9"] = W.num(+last.phq9);
-          if (last.gad7 !== undefined && last.gad7 !== "") props["Latest GAD-7"] = W.num(+last.gad7);
-          if (last.date) props["Latest Screen Date"] = W.date(last.date);
+          if (last.phq9 !== undefined && last.phq9 !== "") payload.latestPhq9 = +last.phq9;
+          if (last.gad7 !== undefined && last.gad7 !== "") payload.latestGad7 = +last.gad7;
+          if (last.date) payload.latestScreenDate = last.date;
         }
-        if (b.goals) props["Growth Goals"] = W.text(JSON.stringify(b.goals));
-        if (b.stage) props["Stage"] = W.sel(b.stage);
-        if (b.notes !== undefined) props["Notes"] = W.text(b.notes);
+        if (b.goals) payload.growthGoals = b.goals;
+        if (b.stage) payload.stage = b.stage;
+        if (b.notes !== undefined) payload.notes = b.notes;
         if (b.id) {
-          await updatePage(b.id, props);
-          return json(200, { ok: true, id: b.id });
+          const result = await cloudRequest(`/v1/program-care-plans/${encodeURIComponent(b.id)}`, {
+            actor: session,
+            method: "PUT",
+            body: payload,
+          });
+          return json(200, { ok: true, id: b.id, savedAt: result.plan.updatedAt, storage: "BHW Cloud" });
         }
         if (!b.patientId) return json(400, { error: "Pick a resident to start a growth plan" });
-        const patientId = (await resolvePatientIndex(b.patientId, session)).indexId;
-        const page = await createPage(DB.phplans, {
-          "Plan": W.title(`Growth Plan · ${today()}`),
-          "Resident": W.rel([patientId]),
-          "Case Lead": W.rel([session.staffId]),
-          "Move-In Date": W.date(b.moveIn || today()),
-          "Stage": W.sel("Month 1 — Stabilize & Assess"),
-          ...props,
+        const patient = await requireCloudPatient(b.patientId, session);
+        const result = await cloudRequest(`/v1/patients/${encodeURIComponent(patient.bhwPatientId)}/program-care-plans`, {
+          actor: session,
+          method: "POST",
+          body: {
+            ...payload,
+            moveInDate: b.moveIn || today(),
+            stage: b.stage || "Month 1 — Stabilize & Assess",
+            caseLead: session.name,
+          },
         });
-        return json(200, { ok: true, id: page.id });
+        return json(200, { ok: true, id: result.plan.id, savedAt: result.plan.updatedAt, storage: "BHW Cloud" });
       }
 
       case "cm-screening-link-patient": {
@@ -775,20 +597,19 @@ exports.handler = async (event) => {
         if (session.access !== "Admin" && !vis.includes("CharmEd Minds")) {
           return json(403, { error: "CharmEd Minds access is required to link this assessment." });
         }
-        const expectedDb = b.kind === "adult" ? DB.charmedAdult : DB.charmed;
-        const assessmentResponse = await httpJson("GET", `https://api.notion.com/v1/pages/${encodeURIComponent(b.assessmentId)}`, null, { timeoutMs: 12_000 });
-        if (!assessmentResponse.ok || normalizeNotionId(assessmentResponse.data?.parent?.database_id) !== normalizeNotionId(expectedDb)) {
+        const result = await cloudRequest(`/v1/charmed/assessments?kind=${encodeURIComponent(b.kind)}`, { actor: session });
+        const assessment = (result.assessments || []).find((item) => item.id === b.assessmentId);
+        if (!assessment) {
           return json(404, { error: "That CharmEd assessment is no longer available. Refresh and try again." });
         }
-        const linked = await resolvePatientIndex(b.patientId, session);
-        const patientResolution = linked.patient
-          ? { patient: linked.patient }
-          : await resolvePatient360Patient(linked.indexId, session, { backfill: false });
-        await updatePage(b.assessmentId, { "Patient": W.rel([linked.indexId]) });
+        const bhwPatientId = String(b.patientId || "").trim().toUpperCase();
+        if (assessment.bhwPatientId !== bhwPatientId) {
+          return json(409, { error: "This assessment is already linked to a different Patient Registry record. Review the identity before continuing." });
+        }
         return json(200, {
           ok: true,
-          indexId: linked.indexId,
-          bhwPatientId: patientResolution.patient.bhwPatientId,
+          indexId: bhwPatientId,
+          bhwPatientId,
         });
       }
 
@@ -797,7 +618,10 @@ exports.handler = async (event) => {
         if (session.access !== "Admin" && !vis.includes("CharmEd Minds")) {
           return json(403, { error: "CharmEd Minds access is required to verify this screening patient." });
         }
-        const { patient } = await resolvePatient360Patient(b.patientId, session, { backfill: false });
+        const patientId = String(b.patientId || "").trim().toUpperCase();
+        const patients = await listCloudPatients(session);
+        const patient = patients.find((item) => item.bhwPatientId === patientId);
+        if (!patient) return json(404, { error: "This assessment is not linked to an active Patient Registry record." });
         return json(200, { ok: true, ready: true, bhwPatientId: patient.bhwPatientId });
       }
 
@@ -819,7 +643,14 @@ exports.handler = async (event) => {
             return json(400, { error: `In-person or performance measures cannot be emailed: ${supervised.join(", ")}` });
           }
         }
-        const { patient } = await resolvePatient360Patient(patientId, session);
+        const assessmentResult = await cloudRequest(`/v1/charmed/assessments?kind=${encodeURIComponent(kind)}`, { actor: session });
+        const assessment = (assessmentResult.assessments || []).find((item) => item.id === assessmentId);
+        if (!assessment) return json(404, { error: "That CharmEd assessment is no longer available. Refresh and try again." });
+        const patients = await listCloudPatients(session);
+        const patient = patients.find((item) => item.bhwPatientId === assessment.bhwPatientId);
+        if (!patient || (String(patientId).toUpperCase() !== patient.bhwPatientId)) {
+          return json(409, { error: "The assessment and selected Patient Registry record do not match." });
+        }
         const result = await cloudRequest(`/v1/patients/${encodeURIComponent(patient.bhwPatientId)}/charmed/screening-invitations`, {
           actor: session,
           method: "POST",
@@ -838,14 +669,17 @@ exports.handler = async (event) => {
         const isProvider = /CRNP|PMHNP|MD|DO/i.test(session.role || "") || session.access === "Admin";
         if (!isProvider) return json(403, { error: "Only a provider can review and sign an AWV" });
         if (!b.id) return json(400, { error: "Missing encounter" });
-        await ensureAwvReviewProps();
-        await updatePage(b.id, {
-          "Provider Review": W.sel("Reviewed & Signed"),
-          "Signed By": W.text(`${session.name} · electronically signed via BHWcrewOS`),
-          "Signed Date": W.date(today()),
-          "Provider Note": W.text(b.note || ""),
+        const result = await cloudRequest(`/v1/wellness-visits/${encodeURIComponent(b.id)}`, {
+          actor: session,
+          method: "PUT",
+          body: {
+            review: "Reviewed & Signed",
+            signedBy: `${session.name} · electronically signed via BHWcrewOS`,
+            signedDate: today(),
+            providerNote: b.note || "",
+          },
         });
-        return json(200, { ok: true });
+        return json(200, { ok: true, savedAt: result.visit.updatedAt, storage: "BHW Cloud" });
       }
 
       default:

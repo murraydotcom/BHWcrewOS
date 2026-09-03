@@ -196,8 +196,10 @@ updateAlertsButton();
 async function tcmLog(i, btn){
   const h=HOSP[i]; if(!h) return;
   if(!CREW_TOKEN){ alert("Sign in to crewOS first — open this board from inside crewOS to log TCM."); return; }
+  if(!/^BHW\d{4}$/.test(String(h.bhwPatientId||""))){ alert("Match this hospital event to a patient in the protected Patient Registry before creating a TCM care log."); return; }
   const isHigh=h.complexity==="high";
   const payload={ action:"care-log-create", program:"TCM", type:"Episode", name:h.patient,
+    bhwPatientId:h.bhwPatientId,
     episodeDate:h._dISO, nextFollowUp:h._contactISO, followUpStage:"4 days", status:"Open",
     notes:["TCM — "+(isHigh?"99496 · 7-day visit":"99495 · 14-day visit"),
       h.facility?("facility: "+h.facility):"", h.dispo?("dispo: "+h.dispo):"",
@@ -243,7 +245,7 @@ function parseDischarges(text){
     if(/^\d+$/.test(dateRaw)) daysAgo=Number(dateRaw);
     else if(dateRaw){ const d=new Date(dateRaw); if(!isNaN(d.getTime())) date=d.toISOString().slice(0,10); }
     if(type==="discharge"&&!complexity) complexity="moderate"; if(type!=="discharge") complexity=null;
-    return {patient, type, event:eventRaw, facility, date, daysAgo, dispo, complexity};
+    return {patient,bhwPatientId:gi(a,["bhw patient id","bhw id","patient id"]),type,event:eventRaw,facility,date,daysAgo,dispo,complexity};
   }).filter(Boolean);
 }
 function hospitalToCloudRow(h,index=0){
@@ -253,7 +255,7 @@ function hospitalToCloudRow(h,index=0){
   else{const parts=label.split(/\s+/).filter(Boolean);last=parts.pop()||"";first=parts.join(" ");}
   const encounter=h.type==="ed"?"Emergency":h.type==="admit"?"Inpatient":/observation/i.test(h.event||"")?"Observation":"Inpatient";
   return {
-    "First Name":first,"Last Name":last,"Date of Birth":h.dob||"",
+    "First Name":first,"Last Name":last,"Date of Birth":h.dob||"","BHW Patient ID":h.bhwPatientId||"",
     "Patient Label":label,"Source Event ID":h.sourceEventId||"",
     "Source System":"CrewHQ Panel and Discharges","Encounter Type":encounter,
     "Admit Date / Time":h.admitDate||((h.type==="admit")?(h.date||""):""),
@@ -268,7 +270,7 @@ function cloudRowToHospital(row){
   const discharge=row["Discharge Date / Time"]||"",admit=row["Admit Date / Time"]||"";
   const type=/emergency|\bed\b/.test(encounter)?"ed":discharge?"discharge":"admit";
   const patient=row["Patient Label"]||[row["Last Name"],row["First Name"]].filter(Boolean).join(", ")||row["BHW Patient ID"]||"Unknown";
-  return {patient,type,event:row["Encounter Type"]||type,facility:row.Facility||row.Location||"",date:discharge||admit,
+  return {patient,bhwPatientId:row["BHW Patient ID"]||"",type,event:row["Encounter Type"]||type,facility:row.Facility||row.Location||"",date:discharge||admit,
     dispo:row["Discharge Disposition"]||"",complexity:row.Complexity||("discharge"===type?"moderate":null),
     complaint:row["Patient Complaint"]||"",dxCodes:row["Primary Diagnosis Codes"]||"",dxDesc:row["Primary Diagnosis Description"]||"",_row:row};
 }
@@ -287,7 +289,7 @@ document.getElementById("csvFile").addEventListener("change", function(e){
   const f=e.target.files&&e.target.files[0]; if(!f) return;
   const r=new FileReader(); r.onload=()=>{ document.getElementById("pasteBox").value=String(r.result||""); loadPasted(); }; r.readAsText(f);
 });
-function exportPanel(){ window.open("/.netlify/functions/crisp?action=panel","_blank"); }
+function exportPanel(){ window.location.href="/provider/tcm.html#cend-roster"; }
 
 async function loadSharedEvents(){
   if(!CLOUD)return false;

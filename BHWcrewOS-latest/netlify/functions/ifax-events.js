@@ -4,8 +4,9 @@
 // OS inbox shows it under "Faxes & other". Part of the Keragon replacement:
 // a direct webhook, no middleware.
 //
-// Env: NOTION_TOKEN, MASTER_DB_ID, QUEUE_DB_ID
-// Optional: IFAX_WEBHOOK_SECRET — if set, the webhook must present it as
+// Env: OPERATIONS_CLOUD_API_URL, FRONT_DESK_INTAKE_SECRET, FRONT_DESK_CLIENT_ID,
+// CREWHQ_CLOUD_TOKEN_SECRET, RCM_CLOUD_API_URL, and IFAX_WEBHOOK_SECRET.
+// The webhook must present the iFax secret as
 //   ?token=<secret> or an x-ifax-secret / x-webhook-secret header.
 //
 // Field names differ across fax providers, so every field is read defensively.
@@ -50,7 +51,7 @@ exports.handler = async (event) => {
       patientId, patientName, from, summary, source: "Fax",
       link: link ? `Fax: ${link}` : undefined, receivedISO: new Date().toISOString(),
     });
-    if (!r.ok) return { statusCode: 502, body: `notion error: ${r.error}` };
+    if (!r.ok) return { statusCode: 502, body: `operations intake error: ${r.error}` };
     return { statusCode: 200, body: JSON.stringify({ ok: true, source: "Fax", matched: r.matched }) };
   } catch (e) {
     return { statusCode: 500, body: String(e) };

@@ -4,12 +4,12 @@ How inbound patient communications reach the **Patient Requests** workflow.
 There is no Keragon / Make / Zapier in the loop. Dialpad's signed event is
 verified by the existing Netlify receiver and forwarded unchanged to the
 Google Cloud Run workflow API, where it is verified again and written to the
-Firestore-backed request and communication model. iFax/Gmail intake remains a
-transitional Notion path until those channels migrate.
+Firestore-backed request and communication model. iFax and Gmail intake use the
+same Cloud Patient Requests workflow and never create a separate queue.
 
 ```
 Dialpad → signed receiver → Cloud Run → patientRequests + communications → CrewOS / Chat
-iFax / Gmail → Netlify function → transitional Notion triage
+iFax / Gmail → verified receiver → Cloud Run → Patient Requests → CrewOS / Chat
 ```
 
 Every inbound function **fails closed**: it returns `503` and writes nothing

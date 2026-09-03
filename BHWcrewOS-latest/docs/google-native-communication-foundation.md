@@ -176,15 +176,13 @@ communication, three metadata-only audit events, and one idempotency receipt.
 - `operations-cloud-config` exposes only a configured HTTPS Cloud Run base URL.
 - `operations-cloud-token` exchanges a valid CrewOS session for a five-minute
   token with audience `bhw-operations-cloud`.
-- CrewOS boards can adopt `GET /v1/patient-requests` and status/task endpoints
-  one board at a time while Notion remains transitional.
-- `portal-message` uses Cloud Run when both `OPERATIONS_CLOUD_API_URL` and
-  `CARE_CONNECT_INTAKE_SECRET` are configured. If they are absent, its existing
-  Notion queue path remains available during transition.
+- CrewOS and Front Desk boards use `GET /v1/patient-requests` and the protected
+  status/task endpoints as their one operational queue.
+- `portal-message` uses Cloud Run only when both `OPERATIONS_CLOUD_API_URL` and
+  `CARE_CONNECT_INTAKE_SECRET` are configured. If either is absent, it fails
+  closed and does not write to a legacy queue.
 
-The existing Front Desk page is not switched in this phase. Configure Cloud
-intake only when staff also have a supported way to view the Google queue, or
-use the endpoints to build that view next.
+Front Desk reads and updates the same Google Patient Requests queue as CrewOS.
 
 ## Deployment dependencies
 
@@ -198,8 +196,8 @@ use the endpoints to build that view next.
 5. Add `OPERATIONS_CLOUD_API_URL` and the matching secrets to CrewOS/Netlify.
 6. Have Care Connect send a stable server-generated submission ID as the
    idempotency key.
-7. Before retiring Notion, migrate open triage records with source IDs and run a
-   reconciliation report. No migration script is included in this phase.
+7. Use the administrator Cloud migration page for sealed preview, human review,
+   section-by-section apply, and write-then-read reconciliation of history.
 
 Do not enable patient notification automation until consent lookup, template
 approval, Dialpad delivery callbacks, retry/dead-letter behavior, and operational

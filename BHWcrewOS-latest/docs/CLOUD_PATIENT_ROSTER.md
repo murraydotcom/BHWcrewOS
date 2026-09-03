@@ -1,20 +1,23 @@
 # Cloud patient roster routing
 
-The Google Cloud Run registry (`GET /v1/patients`) is the authoritative patient roster for CrewOS and provider tools. Netlify Functions access it server-side through `lib/cloud-patients.js` with a five-minute HMAC token; the signing secret is never sent to the browser.
+The protected Google Cloud Patient Registry (`GET /v1/patients`) is the one authoritative roster for CrewOS, Front Desk OS, RCM, and provider tools. CharmHealth remains the legal medical-record identity source; an assigned `BHW####` identifier takes priority. CrewOS never creates, renumbers, or mirrors that permanent ID.
 
-## Cloud-backed roster consumers
+## Current patient-linked consumers
 
-- Paperwork, Care Plan Studio, and CrewOS registration search: `patients.js`
-- Front desk, fax matching, requests, and document drafting: `frontdesk-data.js`
-- Patient Monitor list and detail: `monitor-data.js`
-- CrewCare portal roster and care-plan resolution: `console-data.js`
-- Dialpad/iFax/email triage patient matching: `lib/triage.js`
-- New-patient registration: Cloud-first write in `action.js`, followed by transitional operational mirrors
-- Care-management logs and monthly imports: Cloud identity resolution with Notion retained as the operational log
-- Panel Performance: Cloud identity enrichment with Notion retained for de-identified HEDIS/event records
+- Patient Registry, Patient 360, paperwork, Care Plan Studio, and registration search
+- Front Desk lookup, Patient Requests, referral documents, Dialpad, iFax, and Gmail matching
+- Care-management logs, monthly imports, Panel Performance, prevention, and care gaps
+- CharmEd assessments, programs, screeners, and questionnaire responses
+- Annual Wellness Visits and program care plans
+- CRISP/ADT event board and active CEND roster export
+- Patient Monitor, CrewCare compatibility view, Health Blueprint, and patient portal
 
-Provider registry, workflow, transcription, and Health Blueprint already use the same Cloud endpoint through `provider/cloud-queue.mjs`.
+Every active caller uses the canonical Cloud `bhwPatientId`. No normal patient response exposes or accepts an old Notion page ID. Shared phone or email values are not treated as unique identity; ambiguous contacts remain unmatched for staff review. Deceased, transferred, and prospective records may remain visible for history, but cannot start new care work.
 
-All shared CrewOS and Front Desk list labels are composed from the Cloud legal first, middle, legal last, and suffix fields. The BHW Patient ID stays with the display label wherever a staff member chooses a patient. Patient status remains separate from coverage and consent: non-active records stay visible for historical work, while deceased and transferred records are disabled only where staff would otherwise start new care work.
+New patients are created as protected prospective records with a temporary `TMP-...` ID. They receive their permanent `BHW####` only after CharmHealth enrollment, and the protected promotion workflow then updates the Cloud record.
 
-The CRISP/ADT discharge feed remains separate by design. Notion queue, care-log, patient-page, and quality-event records may retain imported source IDs for relationship compatibility, but they are not alternate patient rosters.
+## Historical migration
+
+The admin-only Cloud migration page can read the retired databases solely to relocate historical patient-linked records. It runs a sealed preview first, lists blocked identity matches, refuses a section with blockers, requires the exact approval phrase, suppresses patient notifications, and reports success only after Cloud read-back verifies every written record.
+
+Retired Notion databases are historical migration sources, not operational patient lists or save destinations. Non-patient reference data such as the specialist directory, staffing, rooms, schedules, and referral templates can be migrated separately without changing patient identity authority.

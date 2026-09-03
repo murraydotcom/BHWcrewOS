@@ -2,52 +2,47 @@
 // Returns only what the signed-in person's divisions permit. Admins see all.
  
 const { DB, queryDb, P, getSession, visibleDivisions, json } = require("./_lib");
-const { listCloudPatients } = require("./lib/cloud-patients");
-const { buildPatientDirectory, fallbackIndexDirectory } = require("./lib/crew-patient-directory");
-const zlib = require("zlib");
-
-function parseStoredAnswer(raw) {
-  const value = String(raw || "");
-  if (!value) return {};
-  if (value.startsWith("gz:")) {
-    return JSON.parse(zlib.gunzipSync(Buffer.from(value.slice(3), "base64")).toString("utf8"));
-  }
-  return JSON.parse(value);
-}
+const { cloudRequest, listCloudPatients } = require("./lib/cloud-patients");
+const { buildPatientDirectory } = require("./lib/crew-patient-directory");
+const { operationsRequest } = require("./lib/operations-cloud");
  
-function shapeReferral(pg) {
-  const p = pg.properties;
+function shapeReferral(request) {
+  const context = request.workflowContext || {};
+  const terminal = request.statusCategory === "completed";
   return {
-    id: pg.id,
-    title: P.title(p["Referral"]),
-    patient: P.rel(p["Patient"])[0] || null,
-    from: P.sel(p["From Division"]),
-    to: P.sel(p["To Division"]),
-    sentBy: P.rel(p["Sent By"])[0] || null,
-    type: P.sel(p["Referral Type"]),
-    device: P.sel(p["Device"]),
-    details: P.text(p["Details"]),
-    status: P.sel(p["Status"]),
-    completionNote: P.text(p["Completion Note"]),
-    sentDate: P.date(p["Sent Date"]),
-    completedDate: P.date(p["Completed Date"]),
-    priority: P.sel(p["Priority"]),
+    id: request.id || request.patientRequestId,
+    title: `${context.referralType || "Referral"} → ${context.toDivision || "Referral team"}`,
+    patient: request.bhwPatientId,
+    from: context.fromDivision || "Primary Care",
+    to: context.toDivision || "Care Management",
+    sentBy: request.createdBy || "",
+    type: context.referralType || "Division Referral",
+    device: context.device || "",
+    details: context.details || request.summary || "",
+    status: terminal ? (request.status === "closed_without_scheduling" ? "Declined/Redirect" : "Completed")
+      : request.statusCategory === "received" ? "Sent" : "In Progress",
+    completionNote: context.completionNote || "",
+    sentDate: String(context.historicalReceivedAt || request.createdAt || "").slice(0, 10),
+    completedDate: terminal ? String(request.resolvedAt || request.updatedAt || "").slice(0, 10) : "",
+    priority: request.priority === "urgent" ? "Urgent" : "Routine",
   };
 }
  
-function shapeHandoff(pg) {
-  const p = pg.properties;
+function shapeHandoff(request) {
+  const context = request.workflowContext || {};
   return {
-    id: pg.id,
-    title: P.title(p["Handoff"]),
-    patient: P.rel(p["Patient"])[0] || null,
-    from: P.sel(p["From Division"]),
-    to: P.sel(p["To Division"]),
-    fromStaff: P.rel(p["From Staff"])[0] || null,
-    summary: P.text(p["Summary"]),
-    needs: P.multi(p["Needs"]),
-    scheduledDate: P.date(p["Scheduled Date"]),
-    status: P.sel(p["Status"]),
+    id: request.id || request.patientRequestId,
+    title: `${context.fromDivision || "BHW"} → ${context.toDivision || "Front Desk"}`,
+    patient: request.bhwPatientId,
+    from: context.fromDivision || "Primary Care",
+    to: context.toDivision || "Front Desk",
+    fromStaff: request.createdBy || "",
+    summary: context.details || request.summary || "",
+    needs: context.needs || [],
+    scheduledDate: context.scheduledDate || "",
+    status: request.statusCategory === "completed" ? "Completed"
+      : request.statusCategory === "waiting" ? "Scheduled"
+        : request.statusCategory === "received" ? "New" : "Acknowledged",
   };
 }
  
@@ -77,19 +72,18 @@ exports.handler = async (event) => {
   const inVis = (d) => vis.includes(d);
  
   try {
-    const [staffPages, patientPages, roomPages, referralPages, handoffPages, schedulePages, minutePages, resourcePages, patientRegistry] =
+    const [staffPages, roomPages, schedulePages, resourcePages, patientRegistry, operationsRows, careLogRows, wellnessRows, programPlanRows, panelRows] =
       await Promise.all([
         queryDb(DB.staff),
-        queryDb(DB.patients),
         queryDb(DB.rooms),
-        queryDb(DB.referrals),
-        queryDb(DB.handoffs),
         queryDb(DB.schedule),
-        queryDb(DB.minutes), // still queried: admin minutes rollup (care-management billing) below still needs it
         queryDb(DB.resources),
-        listCloudPatients(session)
-          .then((patients) => ({ ready: true, patients, error: "" }))
-          .catch((error) => ({ ready: false, patients: [], error: error.message || "Patient Registry unavailable" })),
+        listCloudPatients(session),
+        operationsRequest("/v1/patient-requests?limit=500", { actor: session }),
+        cloudRequest("/v1/care-management/logs", { actor: session }),
+        cloudRequest("/v1/wellness-visits", { actor: session }),
+        cloudRequest("/v1/program-care-plans", { actor: session }),
+        cloudRequest("/v1/panel", { actor: session }),
       ]);
  
     const staff = staffPages.map((pg) => ({
@@ -101,31 +95,8 @@ exports.handler = async (event) => {
     }));
     const staffName = Object.fromEntries(staff.map((s) => [s.id, s.name]));
  
-    // Keep legacy relation IDs only as an operational bridge. Every picker is
-    // populated from the protected Google Cloud Patient Registry.
-    const indexPatients = patientPages.map((pg) => ({
-      id: pg.id,
-      name: P.title(pg.properties["Patient Name"]),
-      masterId: P.text(pg.properties["Patient ID #"]),
-      indexBhwId: P.uid(pg.properties["BHW ID"]),
-      chart: P.text(pg.properties["CharmHealth Chart #"]),
-      dob: P.date(pg.properties["DOB"]),
-      insurance: P.sel(pg.properties["Insurance"]),
-      memberId: P.text(pg.properties["Insurance Member ID"]),
-      hasMbi: !!P.text(pg.properties["Medicare MBI"]),
-      email: pg.properties["Email"]?.email || "",
-      guardianEmail: pg.properties["Guardian Email"]?.email || "",
-    }));
-    const directory = patientRegistry.ready
-      ? buildPatientDirectory(indexPatients, patientRegistry.patients)
-      : fallbackIndexDirectory(indexPatients);
+    const directory = buildPatientDirectory(patientRegistry);
     const { patients, patientLabel } = directory;
-    const patientBhwIdByKey = {};
-    for (const patient of patients) {
-      for (const key of [patient.id, patient.relationId, patient.bhwId]) {
-        if (key && patient.bhwId) patientBhwIdByKey[key] = patient.bhwId;
-      }
-    }
  
     const rooms = roomPages.map((pg) => ({
       id: pg.id,
@@ -135,9 +106,15 @@ exports.handler = async (event) => {
       active: P.check(pg.properties["Active"]),
     }));
  
-    // Division walls: a referral/handoff is visible if either end is in your divisions.
-    const referrals = referralPages.map(shapeReferral).filter((r) => inVis(r.from) || inVis(r.to));
-    const handoffs = handoffPages.map(shapeHandoff).filter((h) => inVis(h.from) || inVis(h.to));
+    // Division workflows are records in the one Google Operations Patient
+    // Requests queue, with their display context attached to the same record.
+    const operationRequests = operationsRows.requests || operationsRows.patientRequests || [];
+    const referrals = operationRequests
+      .filter((request) => request.workflowContext?.kind === "referral")
+      .map(shapeReferral).filter((r) => inVis(r.from) || inVis(r.to));
+    const handoffs = operationRequests
+      .filter((request) => request.workflowContext?.kind === "handoff")
+      .map(shapeHandoff).filter((h) => inVis(h.from) || inVis(h.to));
  
     // Schedule: your divisions' bookings + Shared; admins see everything.
     const schedule = schedulePages
@@ -145,9 +122,8 @@ exports.handler = async (event) => {
       .filter((b) => isAdmin || inVis(b.division) || b.division === "Shared")
       .sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start));
  
-    // Care-management minutes: no longer surfaced as personal time tracking (removed from My Space).
-    // Kept server-side only for the admin program rollup below (billing/care-management reporting).
     const monthKey = new Date().toISOString().slice(0, 7);
+    const minuteRows = careLogRows.logs || [];
  
     // Crew Projects: posted by team leads in Notion, shown to assigned staff in My Space.
     let crewProjects = [];
@@ -168,139 +144,92 @@ exports.handler = async (event) => {
  
     let awv = null;
     if (isAdmin || vis.includes("Care Management") || vis.includes("Primary Care")) {
-      const awvPages = await queryDb(DB.awv);
-      awv = awvPages.map((pg) => {
-        const p = pg.properties;
-        return {
-          id: pg.id,
-          patient: P.rel(p["Patient"])[0] || null,
-          date: P.date(p["Date"]),
-          status: P.sel(p["Status"]),
-          steps: ["S1 HRA","S2 Office Tests","S3 Prevention Plan","S4 Nutrition & Activity","S5 ACP"].map(k => P.sel(p[k]) || "Not Started"),
-          flags: P.multi(p["Flags"]),
-          review: P.sel(p["Provider Review"]) || "",
-          signedBy: P.text(p["Signed By"]),
-          signedDate: P.date(p["Signed Date"]),
-          miniCog: P.num(p["Mini-Cog Score"]),
-          answers: [1,2,3,4,5].map(i => { try { return JSON.parse(P.text(p[`Answers S${i}`]) || "{}"); } catch { return {}; } }),
-        };
-      }).sort((a,b) => (b.date||"").localeCompare(a.date||""));
+      awv = (wellnessRows.visits || []).map((visit) => ({
+        id: visit.id,
+        patient: visit.bhwPatientId,
+        date: visit.date,
+        status: visit.status,
+        steps: visit.steps || Array(5).fill("Not Started"),
+        flags: visit.flags || [],
+        review: visit.review || "",
+        signedBy: visit.signedBy || "",
+        signedDate: visit.signedDate || "",
+        miniCog: visit.miniCog,
+        answers: visit.answers || Array.from({ length: 5 }, () => ({})),
+      })).sort((a,b) => (b.date||"").localeCompare(a.date||""));
     }
  
     let charmed = null;
-    if (isAdmin || vis.includes("CharmEd Minds")) {
-      const cmPages = await queryDb(DB.charmed);
-      charmed = cmPages.map((pg) => {
-        const p = pg.properties;
-        let storedTail = {};
-        try { storedTail = parseStoredAnswer(P.text(p["Answers S6"])); } catch { storedTail = {}; }
-        const hasInPersonStep = storedTail && storedTail.__cmWorkflowV2 === 1;
-        const legacyTailStatus = P.sel(p["S6 Results & Recs"]) || "Not Started";
-        const patient = P.rel(p["Patient"])[0] || null;
-        return {
-          id: pg.id,
-          patient,
-          patientBhwId: patientBhwIdByKey[patient] || "",
-          date: P.date(p["Date"]),
-          status: P.sel(p["Status"]),
-          ageGroup: P.sel(p["Age Group"]),
-          steps: [
-            ...["S1 Intake","S2 School & Attention","S3 Social & Sensory","S4 Wellbeing & Context","S5 Screeners"].map(k => P.sel(p[k]) || "Not Started"),
-            hasInPersonStep ? (storedTail.stepStatus?.inPerson || "Not Started") : "Not Started",
-            hasInPersonStep ? (storedTail.stepStatus?.results || "Not Started") : legacyTailStatus,
-          ],
-          flags: P.multi(p["Flags"]),
-          screeners: P.multi(p["Suggested Screeners"]),
-          answers: [
-            ...[1,2,3,4,5].map(i => { try { return JSON.parse(P.text(p[`Answers S${i}`]) || "{}"); } catch { return {}; } }),
-            hasInPersonStep ? (storedTail.inPerson || {}) : {},
-            hasInPersonStep ? (storedTail.results || {}) : storedTail,
-          ],
-        };
-      }).sort((a,b) => (b.date||"").localeCompare(a.date||""));
-    }
- 
     let charmedAdult = null;
-    if (isAdmin || vis.includes("CharmEd Minds")) {
-      const cmaPages = await queryDb(DB.charmedAdult);
-      charmedAdult = cmaPages.map((pg) => {
-        const p = pg.properties;
-        const patient = P.rel(p["Patient"])[0] || null;
-        return {
-          id: pg.id,
-          patient,
-          patientBhwId: patientBhwIdByKey[patient] || "",
-          date: P.date(p["Date"]),
-          status: P.sel(p["Status"]),
-          steps: ["S1 Concerns & Function","S2 EF, Social & Sensory","S3 Mental Health & Cognition","S4 Substance, Injury & Trauma","S5 Vascular, Sleep & Change","S6 Screeners"].map(k => P.sel(p[k]) || "Not Started"),
-          flags: P.multi(p["Flags"]),
-          screeners: P.multi(p["Suggested Screeners"]),
-          answers: [1,2,3,4,5,6].map(i => { try { return JSON.parse(P.text(p[`Answers S${i}`]) || "{}"); } catch { return {}; } }),
-        };
-      }).sort((a,b) => (b.date||"").localeCompare(a.date||""));
-    }
- 
     let charmedProgram = null;
     if (isAdmin || vis.includes("CharmEd Minds")) {
-      const cpPages = await queryDb(DB.charmedProgram);
-      charmedProgram = cpPages.map((pg) => {
-        const p = pg.properties;
-        return {
-          id: pg.id,
-          patient: P.rel(p["Patient"])[0] || null,
-          track: P.sel(p["Track"]),
-          startDate: P.date(p["Start Date"]),
-          stage: P.sel(p["Stage"]),
-          battery: P.multi(p["Baseline Battery"]),
-          baselineDate: P.date(p["Baseline Date"]),
-          retestDate: P.date(p["Retest Date"]),
-        };
-      }).sort((a,b) => (a.startDate||"").localeCompare(b.startDate||""));
+      const [assessmentResult, enrollmentResult, responseResult] = await Promise.all([
+        cloudRequest("/v1/charmed/assessments", { actor: session }),
+        cloudRequest("/v1/charmed/program-enrollments", { actor: session }),
+        cloudRequest("/v1/charmed/responses", { actor: session }),
+      ]);
+      const shapeAssessment = (assessment) => ({
+        ...assessment,
+        patient: assessment.bhwPatientId,
+        patientBhwId: assessment.bhwPatientId,
+        steps: assessment.steps || [],
+        flags: assessment.flags || [],
+        screeners: assessment.screeners || [],
+        answers: assessment.answers || [],
+      });
+      const responsesByAssessment = new Map();
+      for (const response of responseResult.responses || []) {
+        if (!responsesByAssessment.has(response.assessmentId)) responsesByAssessment.set(response.assessmentId, []);
+        responsesByAssessment.get(response.assessmentId).push(response);
+      }
+      const assessments = (assessmentResult.assessments || []).map((assessment) => ({
+        ...shapeAssessment(assessment),
+        responses: responsesByAssessment.get(assessment.id) || [],
+      }));
+      charmed = assessments.filter((assessment) => assessment.kind === "peds");
+      charmedAdult = assessments.filter((assessment) => assessment.kind === "adult");
+      charmedProgram = (enrollmentResult.enrollments || []).map((enrollment) => ({
+        ...enrollment,
+        patient: enrollment.bhwPatientId,
+      }));
     }
  
     let phPlans = null;
     if (isAdmin || vis.includes("The Porter House")) {
-      const phPages = await queryDb(DB.phplans);
-      const pj = (v) => { try { return JSON.parse(v || "null"); } catch { return null; } };
-      phPlans = phPages.map((pg) => {
-        const p = pg.properties;
-        return {
-          id: pg.id,
-          patient: P.rel(p["Resident"])[0] || null,
-          moveIn: P.date(p["Move-In Date"]),
-          stage: P.sel(p["Stage"]),
-          basePct: P.num(p["Readiness Baseline %"]),
-          latestPct: P.num(p["Readiness Latest %"]),
-          baseline: pj(P.text(p["LR Baseline"])) || null,
-          latest: pj(P.text(p["LR Latest"])) || null,
-          lrLatestDate: P.date(p["LR Latest Date"]),
-          drivers: P.multi(p["Symptom Drivers"]),
-          screens: pj(P.text(p["BH Screen Log"])) || [],
-          phq: P.num(p["Latest PHQ-9"]),
-          gad: P.num(p["Latest GAD-7"]),
-          screenDate: P.date(p["Latest Screen Date"]),
-          goals: pj(P.text(p["Growth Goals"])) || [],
-        };
-      }).sort((a,b) => (a.moveIn||"").localeCompare(b.moveIn||""));
+      phPlans = (programPlanRows.plans || []).filter((plan) => plan.program === "The Porter House").map((plan) => ({
+        id: plan.id,
+        patient: plan.bhwPatientId,
+        moveIn: plan.moveInDate || "",
+        stage: plan.stage || "",
+        basePct: plan.readinessBaselinePercent || 0,
+        latestPct: plan.readinessLatestPercent || 0,
+        baseline: plan.readinessBaseline || null,
+        latest: plan.readinessLatest || null,
+        lrLatestDate: plan.readinessLatestDate || "",
+        drivers: plan.symptomDrivers || [],
+        screens: plan.behavioralHealthScreens || [],
+        phq: plan.latestPhq9,
+        gad: plan.latestGad7,
+        screenDate: plan.latestScreenDate || "",
+        goals: plan.growthGoals || [],
+      })).sort((a,b) => (a.moveIn||"").localeCompare(b.moveIn||""));
     }
  
     let prevention = null;
     if (isAdmin || vis.includes("Primary Care") || vis.includes("Care Management")) {
-      const prevPages = await queryDb("14204ec7428d4813b158966356cbec51");
-      prevention = prevPages.map((pg) => {
-        const p = pg.properties;
-        return {
-          id: pg.id,
-          patient: P.rel(p["Patient"])[0] || null,
-          lastChecked: P.date(p["Last Checked"]),
-          coverage: P.sel(p["Coverage"]),
-          planType: P.sel(p["Plan Type"]),
-          maName: P.text(p["MA Plan Name"]),
-          awvLast: P.date(p["AWV Last Date"]),
-          awvNext: P.date(p["AWV Next Eligible"]),
-          awvStatus: P.sel(p["AWV Status"]) || "Unknown",
-        };
-      });
+      prevention = (panelRows.profiles || []).filter((profile) => (
+        profile.coverage || profile.planType || profile.awvLastDate || profile.awvNextEligibleDate
+      )).map((profile) => ({
+        id: profile.id || profile.bhwPatientId,
+        patient: profile.bhwPatientId,
+        lastChecked: String(profile.updatedAt || "").slice(0, 10),
+        coverage: profile.coverage || "",
+        planType: profile.planType || "",
+        maName: profile.medicareAdvantagePlanName || "",
+        awvLast: profile.awvLastDate || "",
+        awvNext: profile.awvNextEligibleDate || "",
+        awvStatus: profile.awvStatus || "Unknown",
+      }));
     }
  
     // Admin Master stays admin-only. Porter House census opens to everyone naturally,
@@ -308,24 +237,23 @@ exports.handler = async (event) => {
     let adminRollup = null;
     let porterhouse = null;
     if (isAdmin || vis.includes("The Porter House")) {
-      const phPages = await queryDb(DB.porterhouse);
-      porterhouse = phPages.map((pg) => ({
-        id: pg.id,
-        resident: P.title(pg.properties["Resident"]),
-        phId: P.uid(pg.properties["PH ID"]),
-        unit: P.text(pg.properties["Room/Unit"]),
-        alsoReceives: P.multi(pg.properties["Also Receives"]),
-        status: P.sel(pg.properties["Status"]),
-        admit: P.date(pg.properties["Admit Date"]),
+      porterhouse = (programPlanRows.plans || []).filter((plan) => plan.program === "The Porter House").map((plan) => ({
+        id: plan.id,
+        resident: patientLabel[plan.bhwPatientId] || plan.bhwPatientId,
+        phId: plan.programPatientId || "",
+        unit: plan.roomUnit || "",
+        alsoReceives: plan.alsoReceives || [],
+        status: plan.residentStatus || plan.stage || "Active",
+        admit: plan.moveInDate || "",
       }));
     }
     if (isAdmin) {
       adminRollup = {};
-      for (const pg of minutePages) {
-        const d = P.date(pg.properties["Date"]) || "";
+      for (const log of minuteRows) {
+        const d = log.serviceMonth || log.episodeDate || "";
         if (!d.startsWith(monthKey)) continue;
-        const prog = P.sel(pg.properties["Program"]) || "—";
-        adminRollup[prog] = (adminRollup[prog] || 0) + (P.num(pg.properties["Minutes"]) || 0);
+        const prog = log.program || "—";
+        adminRollup[prog] = (adminRollup[prog] || 0) + (Number(log.minutes) || 0);
       }
     }
  
@@ -348,8 +276,8 @@ exports.handler = async (event) => {
       staffName,
       patients,
       patientLabel,
-      patientRegistryReady: patientRegistry.ready,
-      patientRegistryError: patientRegistry.error,
+      patientRegistryReady: true,
+      patientRegistryError: "",
       rooms: rooms.filter((r) => r.active),
       referrals,
       handoffs,

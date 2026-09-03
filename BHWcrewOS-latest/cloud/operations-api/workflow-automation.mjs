@@ -6,6 +6,24 @@ const slug = (value) => cleanText(value, 100).toLowerCase().replace(/[\s_]+/g, "
 const unique = (values) => [...new Set((Array.isArray(values) ? values : []).filter(Boolean))];
 const nowIso = (now = new Date()) => (now instanceof Date ? now : new Date(now)).toISOString();
 
+function workflowContext(value = {}) {
+  const input = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const date = cleanText(input.scheduledDate, 10);
+  return {
+    kind: ["referral", "handoff", "patient-request"].includes(slug(input.kind)) ? slug(input.kind) : "patient-request",
+    fromDivision: cleanText(input.fromDivision, 80),
+    toDivision: cleanText(input.toDivision, 80),
+    referralType: cleanText(input.referralType, 120),
+    device: cleanText(input.device, 120),
+    details: cleanText(input.details, 4000),
+    needs: unique((Array.isArray(input.needs) ? input.needs : []).slice(0, 30).map((item) => cleanText(item, 160))),
+    scheduledDate: /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : "",
+    completionNote: cleanText(input.completionNote, 2000),
+    historicalReceivedAt: cleanText(input.historicalReceivedAt, 40),
+    legacyStatus: cleanText(input.legacyStatus, 120),
+  };
+}
+
 export const REQUEST_TYPES = Object.freeze(["refill", "referral", "prior_auth", "billing_rcm", "general"]);
 export const REQUEST_PRIORITIES = Object.freeze(["routine", "time-sensitive", "urgent", "emergency"]);
 export const REQUEST_ACTIONS = Object.freeze(["assign", "start", "milestone", "resolve", "reopen", "escalate", "unassign"]);
@@ -197,6 +215,7 @@ export function sanitizePatientRequest(input = {}, { user = {}, now = new Date()
     manualNotifyOnly: input.manualNotifyOnly === true,
     notificationMode: ["automatic", "manual", "none"].includes(cleanText(input.notificationMode, 20).toLowerCase())
       ? cleanText(input.notificationMode, 20).toLowerCase() : "automatic",
+    workflowContext: workflowContext(input.workflowContext),
     version: 1,
     processedActionKeys: [],
     statusHistory: [{ status, category: state.category, at: timestamp, actor }],
@@ -369,6 +388,7 @@ export function applyPatientRequestAction(request, input = {}, { user = {}, now 
     }] : (request.statusHistory || []),
     updatedAt: timestamp,
     updatedBy: actorSub,
+    workflowContext: workflowContext({ ...(request.workflowContext || {}), ...(input.workflowContext || {}) }),
   };
   return { request: next, duplicate: false, actionHash, statusChanged, previousStatus: request.status, action };
 }

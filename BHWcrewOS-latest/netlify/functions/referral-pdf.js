@@ -8,6 +8,7 @@
 // Requires dependency: pdf-lib (in package.json). Env: DASH_KEY (optional gate).
 
 const { PDFDocument, rgb } = require('pdf-lib');
+const { getSession } = require('./_lib');
 
 const PROVIDERS = {
   amaris:  { name: 'Murray, Amaris',  spec: 'Family Medicine — CRNP' },
@@ -25,9 +26,8 @@ const d10 = s => (s || '').replace(/\D/g, '').slice(-10);
 exports.handler = async (event) => {
   try {
     if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'POST only' };
+    if (!getSession(event)) return { statusCode: 401, body: 'Sign in to CrewOS again' };
     const b = JSON.parse(event.body || '{}');
-    if (process.env.DASH_KEY && b.key !== process.env.DASH_KEY)
-      return { statusCode: 401, body: 'bad key' };
 
     const doc = await PDFDocument.load(Buffer.from(BASE_PDF, 'base64'));
     const page = doc.getPages()[0];
