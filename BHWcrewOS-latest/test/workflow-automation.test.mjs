@@ -101,6 +101,29 @@ test("workflow milestones distinguish sent/scheduled states from completed outco
   assert.equal(general.status, "completed");
 });
 
+test("Care Connect check-ins create a clinician-only review workflow without patient notification", () => {
+  let review = sanitizePatientRequest({
+    id: "synthetic-checkin-review",
+    bhwPatientId: "BHW0000",
+    requestType: "clinical-review",
+    source: "care-connect",
+    sourceReference: "2026-08-30-primary",
+    summary: "Daily check-in ready for clinician review",
+    manualNotifyOnly: true,
+    notificationMode: "none",
+  }, { user: USER, now: NOON });
+  assert.equal(review.requestType, "clinical_review");
+  assert.equal(review.serviceLine, "clinical");
+  assert.equal(review.assignedTeam, "clinical");
+  assert.equal(review.status, "review_received");
+  assert.equal(review.notificationMode, "none");
+  assert.doesNotMatch(JSON.stringify(review), /symptom|vital|medication|nutrition value/i);
+  review = act(review, "start");
+  assert.equal(review.status, "review_in_progress");
+  review = act(review, "resolve", {}, 2);
+  assert.equal(review.status, "review_completed");
+});
+
 test("notification rules cover receipt, progress, waiting and terminal states without patient details", () => {
   const rules = defaultNotificationRules();
   for (const requestType of ["refill", "referral", "prior_auth", "billing_rcm", "general"]) {

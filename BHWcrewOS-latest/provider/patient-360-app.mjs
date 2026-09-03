@@ -1,7 +1,8 @@
 import { createEncounterCloudClient } from "./cloud-queue.mjs";
 import { BODY_PROFILES, patientBodyProfile } from "./patient-360-body-profile.mjs";
 
-const PATIENT_ID = "BHW0000";
+const requestedPatientId = new URLSearchParams(location.search).get("patient") || "";
+const PATIENT_ID = /^BHW\d{4}$/.test(requestedPatientId) ? requestedPatientId : "BHW0000";
 const THEME_KEY = "bhw_provider_theme_v1";
 const ATLAS_EVIDENCE_CODES = ["D", "S", "H", "A", "I", "R", "U"];
 const ATLAS_SYSTEMS = [
@@ -22,6 +23,7 @@ let cloudClient = null;
 let activeRecord = null;
 let activeWorkflowConnection = { connected: false, encounters: [] };
 let activeAtlasConnection = { connected: false, workspace: null };
+let healthCoreClient = null;
 const $ = (id) => document.getElementById(id);
 const esc = (value) => String(value ?? "").replace(/[&<>\"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[character]));
 const compact = (values) => values.filter((value) => value !== null && value !== undefined && String(value).trim() !== "");
@@ -304,7 +306,8 @@ const PAGE_LINKS = [
 ];
 
 function pageNavigation(view) {
-  return `<nav class="page-nav" aria-label="Patient 360 pages">${PAGE_LINKS.map(([key, label, href]) => `<a class="${key === view ? "active" : ""}" ${key === view ? 'aria-current="page"' : ""} href="${href}">${esc(label)}</a>`).join("")}</nav>`;
+  const patientQuery = `?patient=${encodeURIComponent(PATIENT_ID)}`;
+  return `<nav class="page-nav" aria-label="Patient 360 pages">${PAGE_LINKS.map(([key, label, href]) => `<a class="${key === view ? "active" : ""}" ${key === view ? 'aria-current="page"' : ""} href="${href}${patientQuery}">${esc(label)}</a>`).join("")}</nav>`;
 }
 
 function fullHero(context) {
@@ -319,7 +322,18 @@ function compactHeader(context) {
 
 function safeNotice(context) {
   const { sourceOmitted, frontendOmitted } = context;
-  return `<div class="safe-notice"><b>Safe pilot record:</b> locked to BHW0000 with no real-patient record query. Protected synthetic workflow evidence may be loaded from Health Core. ${sourceOmitted} restricted source record(s) and ${frontendOmitted} additional presentation item(s) were withheld. Blank sections mean not documented or not connected - never "normal" or "absent."</div>`;
+  const scopeMessage = PATIENT_ID === "BHW0000"
+    ? "<b>Safe pilot record:</b> locked to BHW0000 with no real-patient record query. Protected synthetic workflow evidence may be loaded from Health Core."
+    : "<b>Patient-scoped clinical view:</b> Health Core released only the selected BHW Patient ID to this authorized CrewHQ session.";
+  return `<div class="safe-notice">${scopeMessage} ${sourceOmitted} restricted source record(s) and ${frontendOmitted} additional presentation item(s) were withheld. Blank sections mean not documented or not connected - never "normal" or "absent."</div>`;
+}
+
+function preservePatientLinks(root = document) {
+  root.querySelectorAll('a[href^="patient-360"]').forEach((anchor) => {
+    const url = new URL(anchor.getAttribute("href"), location.href);
+    url.searchParams.set("patient", PATIENT_ID);
+    anchor.setAttribute("href", `${url.pathname.split("/").pop()}${url.search}${url.hash}`);
+  });
 }
 
 function overviewPageLegacy(context) {
@@ -592,6 +606,142 @@ function preventiveCarePanel(preventiveCare = {}) {
   return `<section class="panel" style="margin-top:15px"><div class="panel-head"><div><h3>Preventive care &amp; health screenings</h3><span class="panel-subtitle">Age, documented anatomy/history, condition, and source evidence remain separate and reviewable</span></div><span class="badge warning">Provider review only</span></div><div class="panel-body"><div class="source-strip"><div class="source-cell"><span>CRISP state</span><b>${esc(crisp.connectionState || "not connected")}</b></div><div class="source-cell"><span>CRISP evidence</span><b>${esc(crisp.evidenceCount || 0)}</b></div><div class="source-cell"><span>Last source update</span><b>${esc(dateText(crisp.lastUpdatedAt))}</b></div><div class="source-cell"><span>Automation</span><b>Orders disabled</b></div></div><div class="table-wrap" style="margin-top:14px"><table><thead><tr><th>Measure / eligibility</th><th>Status</th><th>Last completed</th><th>Next due</th><th>Source</th><th>Visit action</th></tr></thead><tbody>${rows || `<tr><td colspan="6">No preventive measure status is connected.</td></tr>`}</tbody></table></div><div class="record-boundary"><b>Evidence boundary</b><span>CRISP can confirm or supplement a completion. A missing CRISP row does not prove the service was not done, and a suggested visit action is not an order or referral.</span></div></div></section>`;
 }
 
+const checkinLabels = Object.freeze({
+  feeling: "Feeling", motivation: "Motivation", sleep: "Sleep", movement: "Movement",
+  outside: "Time outside", people: "Social connection", nutrition: "Nutrition plan",
+  bp: "Blood pressure", hr: "Heart rate", wt: "Weight", glu: "Glucose",
+  temp: "Temperature", o2: "Oxygen saturation", steps: "Steps",
+  p: "Protein", c: "Carbohydrate", f: "Fat", fiber: "Fiber", sugar: "Sugar",
+  sodium: "Sodium", vitd: "Vitamin D", vitc: "Vitamin C", iron: "Iron",
+  calcium: "Calcium", potassium: "Potassium", magnesium: "Magnesium",
+});
+
+const checkinUnits = Object.freeze({
+  hr: "bpm", wt: "lb", glu: "mg/dL", temp: "°F", o2: "%",
+  p: "g", c: "g", f: "g", fiber: "g", sugar: "g", sodium: "mg",
+  vitd: "µg", vitc: "mg", iron: "mg", calcium: "mg", potassium: "mg", magnesium: "mg",
+});
+
+function checkinPairs(value = {}, units = {}) {
+  return Object.entries(value || {}).filter(([, item]) => item !== "" && item !== null && item !== undefined).map(([key, item]) =>
+    `<li><span>${esc(checkinLabels[key] || statusText(key))}</span><b>${esc(item)}${units[key] ? ` ${esc(units[key])}` : ""}</b></li>`).join("");
+}
+
+function checkinList(title, values = [], empty = "Nothing reported in this section.") {
+  const items = Array.isArray(values) ? values.filter(Boolean) : [];
+  return `<div class="checkin-clinical-block"><span>${esc(title)}</span>${items.length ? `<ul>${items.map((item) => `<li>${esc(item)}</li>`).join("")}</ul>` : `<p>${esc(empty)}</p>`}</div>`;
+}
+
+function monitoringAnswerBlocks(checkin, catalog = []) {
+  const definitions = new Map(catalog.map((module) => [module.id, module]));
+  const responses = Array.isArray(checkin.moduleResponses) ? checkin.moduleResponses : [];
+  return responses.map((response) => {
+    const module = definitions.get(response.moduleId) || {};
+    const questions = new Map((module.questions || []).map((question) => [question.id, question.prompt]));
+    const rows = Object.entries(response.answers || {}).map(([questionId, answer]) => {
+      const value = Array.isArray(answer) ? answer.join(", ") : answer;
+      return `<li><span>${esc(questions.get(questionId) || statusText(questionId))}</span><b>${esc(value)}</b></li>`;
+    }).join("");
+    return rows ? `<div class="checkin-clinical-block monitoring-response-block"><span>${esc(module.title || "Program focus")}</span><ul class="checkin-pairs">${rows}</ul></div>` : "";
+  }).join("");
+}
+
+function patientCheckinCard(checkin, monitoringCatalog = []) {
+  const reviewState = checkin.review?.state || "pending-clinician-review";
+  const reviewSignals = Array.isArray(checkin.reviewSignals) ? checkin.reviewSignals : [];
+  const well = checkinPairs(checkin.well);
+  const vitals = checkinPairs(checkin.vitals);
+  const nutrition = checkinPairs(checkin.nutrition, checkinUnits);
+  return `<article class="patient-checkin-card">
+    <div class="patient-checkin-head"><div><span>${esc(statusText(checkin.program || "program"))}</span><b>${esc(dateText(checkin.submittedAt || checkin.date, true))}</b></div><div class="patient-checkin-statuses">${reviewSignals.some((signal) => signal.priority === "same-day") ? badge("high", "same-day review") : ""}${badge(reviewState)}</div></div>
+    <div class="patient-checkin-facts"><span><b>${esc(checkin.waterCups ?? 0)}</b> water cup(s)</span><span><b>${esc((checkin.foods || []).length)}</b> food item(s)</span><span><b>${esc((checkin.medicationsTaken || []).length)}</b> medication response(s)</span></div>
+    <div class="patient-checkin-grid">
+      <div class="checkin-clinical-block"><span>Daily pattern</span>${well ? `<ul class="checkin-pairs">${well}</ul>` : "<p>Nothing reported in this section.</p>"}</div>
+      ${checkinList("Symptoms reported", checkin.symptoms)}
+      <div class="checkin-clinical-block"><span>Patient-entered readings</span>${vitals ? `<ul class="checkin-pairs">${vitals}</ul>` : "<p>No readings entered.</p>"}</div>
+      ${checkinList("Medications marked taken", checkin.medicationsTaken)}
+      ${checkinList("Food log", checkin.foods)}
+      <div class="checkin-clinical-block"><span>Nutrition totals</span>${nutrition ? `<ul class="checkin-pairs">${nutrition}</ul>` : "<p>No nutrition totals recorded.</p>"}</div>
+      ${monitoringAnswerBlocks(checkin, monitoringCatalog)}
+    </div>
+    ${reviewSignals.length ? `<div class="checkin-review-signals"><b>Review focus</b>${reviewSignals.map((signal) => `<span>${esc(signal.note || statusText(signal.questionId))}</span>`).join("")}</div>` : ""}
+    <div class="record-boundary"><b>Source</b><span>Patient-entered in BHW Care Connect. Values are displayed from Health Core and have not been interpreted here.</span></div>
+  </article>`;
+}
+
+function patientCheckinPanel(context, { full = false } = {}) {
+  const checkins = context.patientCheckins;
+  const pending = checkins.filter((item) => (item.review?.state || "pending-clinician-review") === "pending-clinician-review").length;
+  const displayed = checkins.slice(0, full ? 30 : 1);
+  return `<section class="panel patient-checkins"><div class="panel-head"><div><h3>Patient check-ins</h3><span class="panel-subtitle">Patient-entered details from Care Connect, stored in Health Core</span></div><div class="panel-actions">${badge(pending ? "pending" : "reviewed", pending ? `${pending} awaiting review` : "No pending review")}<a class="btn" href="/bhw-patient-monitor-list.html">Patient monitoring</a></div></div><div class="panel-body">${displayed.length ? displayed.map((checkin) => patientCheckinCard(checkin, context.monitoringModuleCatalog)).join("") : `<div class="empty-note">No Care Connect check-in is connected for this patient.</div>`}${!full && checkins.length > 1 ? `<a class="more-note" href="patient-360-data.html?patient=${encodeURIComponent(PATIENT_ID)}">Open all ${checkins.length} check-ins in Clinical Data</a>` : ""}</div></section>`;
+}
+
+const monitoringProgramLabels = Object.freeze({
+  mind: "Mind & Mood Recovery",
+  charmed: "CharmEd Minds · Brain Health & Neurodivergence",
+});
+
+function monitoringPlanEditor(program, context) {
+  const plan = context.monitoringPlans.find((item) => item.program === program) || {};
+  const selectedModules = new Map((plan.modules || []).map((module) => [module.moduleId, module]));
+  const catalog = context.monitoringModuleCatalog.filter((module) => module.program === program);
+  const status = plan.status || "draft";
+  const statusOptions = [["draft","Draft"],["active","Active · clinician approved"],["paused","Paused"]]
+    .map(([value,label]) => `<option value="${value}"${status === value ? " selected" : ""}>${label}</option>`).join("");
+  const modules = catalog.map((module) => {
+    const selected = selectedModules.get(module.id);
+    const enabled = selected?.enabled !== false && Boolean(selected);
+    const selectedQuestions = new Set(selected?.questionIds || module.questions.map((question) => question.id));
+    const questions = module.questions.map((question) => `<label class="monitoring-question-choice"><input type="checkbox" data-monitoring-question="${esc(question.id)}"${selectedQuestions.has(question.id) ? " checked" : ""}><span>${esc(question.prompt)}</span></label>`).join("");
+    const weeklyDay = Number.isInteger(selected?.dayOfWeek) ? selected.dayOfWeek : 4;
+    const dayOptions = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"].map((label,index) => `<option value="${index}"${weeklyDay === index ? " selected" : ""}>${label}</option>`).join("");
+    return `<article class="monitoring-module-control" data-monitoring-module="${esc(module.id)}"><label class="monitoring-module-toggle"><input type="checkbox" data-monitoring-module-enabled${enabled ? " checked" : ""}><span><b>${esc(module.title)}</b><small>${esc(module.description)}</small></span></label>${module.cadence === "weekly" ? `<label class="monitoring-day">Weekly day<select data-monitoring-day>${dayOptions}</select></label>` : `<span class="monitoring-cadence">Daily</span>`}<details${enabled ? " open" : ""}><summary>Choose questions</summary><div class="monitoring-question-choices">${questions}</div></details></article>`;
+  }).join("");
+  return `<form class="monitoring-plan-editor" data-monitoring-program="${program}"><div class="monitoring-plan-title"><div><span>${esc(monitoringProgramLabels[program])}</span><b>${plan.version ? `Plan version ${esc(plan.version)}` : "No plan saved"}</b></div>${badge(status)}</div><div class="monitoring-plan-settings"><label>Status<select data-monitoring-status>${statusOptions}</select></label><label>Questions per check-in<input data-monitoring-limit type="number" min="3" max="8" value="${esc(plan.dailyQuestionLimit || (program === "charmed" ? 6 : 5))}"></label></div><div class="monitoring-module-controls">${modules}</div><div class="monitoring-plan-actions"><button class="btn primary" type="submit">Save monitoring plan</button><span data-monitoring-save-state>Not changed.</span></div></form>`;
+}
+
+function monitoringPlanPanel(context) {
+  return `<section class="panel monitoring-plan-panel"><div class="panel-head"><div><h3>Individualized check-in plan</h3><span class="panel-subtitle">Choose a brief daily focus and rotating deeper questions for Care Connect</span></div>${badge("clinician approval", "Clinician approval required")}</div><div class="panel-body"><div class="monitoring-plan-boundary">Only active, clinician-approved plans are shown to the patient. Care Connect sends the full answers to Health Core; the Patient Requests queue receives only the review reference, priority, and signal count.</div><div class="monitoring-plan-grid">${Object.keys(monitoringProgramLabels).map((program) => monitoringPlanEditor(program, context)).join("")}</div></div></section>`;
+}
+
+function wireMonitoringPlanControls(context) {
+  document.querySelectorAll("[data-monitoring-program]").forEach((form) => {
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const program = form.dataset.monitoringProgram;
+      const state = form.querySelector("[data-monitoring-save-state]");
+      const button = form.querySelector("button[type='submit']");
+      if (!healthCoreClient?.savePatientMonitoringPlan) { state.textContent = "Not saved. Health Core is not connected."; return; }
+      const current = context.monitoringPlans.find((item) => item.program === program) || {};
+      const modules = [...form.querySelectorAll("[data-monitoring-module]")].filter((row) => row.querySelector("[data-monitoring-module-enabled]").checked).map((row) => ({
+        moduleId: row.dataset.monitoringModule,
+        enabled: true,
+        ...(row.querySelector("[data-monitoring-day]") ? { dayOfWeek: Number(row.querySelector("[data-monitoring-day]").value) } : {}),
+        questionIds: [...row.querySelectorAll("[data-monitoring-question]:checked")].map((input) => input.dataset.monitoringQuestion),
+      })).filter((module) => module.questionIds.length);
+      const payload = {
+        status: form.querySelector("[data-monitoring-status]").value,
+        dailyQuestionLimit: Number(form.querySelector("[data-monitoring-limit]").value),
+        briefMode: true,
+        modules,
+        interventions: current.interventions || [],
+        reviewRules: current.reviewRules || [],
+        patientPreferences: current.patientPreferences || { plainLanguage: true, oneQuestionAtATime: false },
+      };
+      state.textContent = "Saving…"; button.disabled = true;
+      try {
+        const result = await healthCoreClient.savePatientMonitoringPlan(PATIENT_ID, program, payload);
+        const saved = result?.monitoringPlan;
+        state.textContent = saved ? `Saved to BHW Cloud · version ${saved.version} · ${statusText(saved.status)}` : "Not saved. Health Core did not confirm the plan.";
+      } catch (error) {
+        state.textContent = `Not saved. ${error.message || "Review the plan and try again."}`;
+      } finally {
+        button.disabled = false;
+      }
+    });
+  });
+}
+
 function overviewPage(context) {
   const { patient, conditions, observations, medications, encounters, tasks, carePlans, allergies, reports, goals, serviceRequests, clinicalImpressions, timeline, careTeams, preventiveCare } = context;
   const activeMedications = medications.filter((item) => !["stopped","cancelled","completed","entered-in-error"].includes(String(item.status).toLowerCase()));
@@ -621,6 +771,8 @@ function overviewPage(context) {
     </div></div>
     <div class="overview-clinical-grid"><section class="panel lab-panel"><div class="panel-head"><h3>Important labs & trends</h3><a class="btn" href="patient-360-data.html">All results</a></div><div class="panel-body">${trendGraphic(observations)}</div></section><section class="panel"><div class="panel-head"><h3>What is due next</h3><span class="badge warning">Verify orders</span></div><div class="panel-body due-grid"><div><span>Next laboratory work</span>${compactItems(labDue,(item)=>`<b>${esc(titleText(item))}</b><small>${esc(dateText(item.occurrenceDateTime || item.authoredOn))}</small>`,"No next-lab order or due date is connected.",2)}</div><div><span>Screening or prevention</span>${compactItems(screenings,(item)=>`<b>${esc(item.label || titleText(item))}</b><small>${esc(statusText(item.status || "recorded"))}${item.visitAction?.providerApprovalRequired ? " · provider review" : ""}</small>`,"No screening due status is connected.",2)}</div></div></section></div>
     <div class="overview-clinical-grid"><section class="panel"><div class="panel-head"><h3>Nutrition & individualized plan</h3><a class="btn" href="patient-360-plan.html">Full care plan</a></div><div class="panel-body personalized-grid"><div><span>Nutrition plan</span>${compactItems(nutrition,(item)=>`<b>${esc(titleText(item))}</b><small>${esc(item.description || item.status || "recorded")}</small>`,"No structured individualized nutrition plan is connected.",2)}</div><div><span>Patient-specific details</span><ul class="clinical-list"><li><b>${esc(patient.gender && patient.gender !== "unknown" ? patient.gender : "Administrative gender not recorded")}</b><small>Identity details should remain patient-confirmed</small></li><li><b>${esc(carePlans[0] ? titleText(carePlans[0]) : "Health Blueprint not connected")}</b><small>Current individualized care framework</small></li></ul></div></div></section><section class="panel"><div class="panel-head"><h3>Prominent timeline</h3><a class="btn" href="patient-360-timeline.html">Full timeline</a></div><div class="panel-body prominent-timeline">${latestTimeline.length ? latestTimeline.map((event)=>`<div><time>${esc(dateText(event.date))}</time><span><b>${esc(event.label || event.type)}</b><small>${esc(event.type || "Clinical event")}</small></span></div>`).join("") : `<p class="overview-empty">No high-value timeline events are connected.</p>`}</div></section></div>
+    ${patientCheckinPanel(context)}
+    ${monitoringPlanPanel(context)}
     ${visitDocumentationPanel(context)}
   </section>`;
 }
@@ -700,12 +852,12 @@ function contextPage(context) {
 
 function planPage(context) {
   const { conditions, urgentItems, medications, unresolvedTasks, carePlans, gaps, serviceRequests, goals, tasks } = context;
-  return `<section class="worksheet"><div class="worksheet-heading"><span class="section-number coral">5</span><h2>Current Snapshot & Feasible Care Plan</h2><p>The five-minute team huddle view</p></div><div class="two-col"><div class="panel"><div class="panel-head"><h3>Current patient snapshot</h3><span class="badge neutral">Documented facts only</span></div><div class="panel-body snapshot-grid"><div class="snapshot"><h4>What matters most now</h4><p>${conditions.length ? esc(conditions.map((item) => conceptText(item.code)).join(" - ")) : "No condition priority has been returned."}</p></div><div class="snapshot coral"><h4>Active destabilizers / escalation</h4><p>${urgentItems.length ? esc(urgentItems.map(titleText).join(" - ")) : "No structured escalation flag returned. Verify clinically."}</p></div><div class="snapshot green"><h4>Protective compensations / resources</h4><p>No structured protective resource has been returned.</p></div><div class="snapshot"><h4>Current treatment and care work</h4><p>${compact([medications.length ? `${medications.length} medication(s)` : "", unresolvedTasks.length ? `${unresolvedTasks.length} open task(s)` : "", carePlans.length ? `${carePlans.length} care plan(s)` : ""]).join(" - ") || "No active treatment item has been returned."}</p></div><div class="snapshot"><h4>Unanswered questions / data gaps</h4><p>${gaps.length ? esc(`Missing structured ${gaps.join(", ")}.`) : "Core digital categories are represented."}</p></div><div class="snapshot blue"><h4>Required coordination</h4><p>${serviceRequests.length ? esc(serviceRequests.map(titleText).join(" - ")) : "No structured referral or coordination request has been returned."}</p></div></div></div><div class="panel"><div class="panel-head"><h3>Care plan and goals</h3><span class="badge complete">Source-linked</span></div><div class="panel-body">${list([...goals, ...carePlans, ...tasks], (item) => renderResourceItem(item, compact([item.resourceType, item.status, item.intent]).join(" - ")), "No structured goals, care plans or tasks are available.")}</div></div></div><div class="panel" style="margin-top:15px"><div class="panel-head"><h3>Ideal plan vs. feasible next step</h3><span class="badge warning">Do not infer missing ownership</span></div><div class="panel-body"><div class="table-wrap"><table><thead><tr><th>PSCM target</th><th>Documented clinical plan</th><th>Feasible next step / resource</th><th>Owner / timing</th></tr></thead><tbody>${careRows(carePlans, tasks, goals)}</tbody></table></div></div></div></section>`;
+  return `<section class="worksheet"><div class="worksheet-heading"><span class="section-number coral">5</span><h2>Current Snapshot & Feasible Care Plan</h2><p>The five-minute team huddle view</p></div><div class="two-col"><div class="panel"><div class="panel-head"><h3>Current patient snapshot</h3><span class="badge neutral">Documented facts only</span></div><div class="panel-body snapshot-grid"><div class="snapshot"><h4>What matters most now</h4><p>${conditions.length ? esc(conditions.map((item) => conceptText(item.code)).join(" - ")) : "No condition priority has been returned."}</p></div><div class="snapshot coral"><h4>Active destabilizers / escalation</h4><p>${urgentItems.length ? esc(urgentItems.map(titleText).join(" - ")) : "No structured escalation flag returned. Verify clinically."}</p></div><div class="snapshot green"><h4>Protective compensations / resources</h4><p>No structured protective resource has been returned.</p></div><div class="snapshot"><h4>Current treatment and care work</h4><p>${compact([medications.length ? `${medications.length} medication(s)` : "", unresolvedTasks.length ? `${unresolvedTasks.length} open task(s)` : "", carePlans.length ? `${carePlans.length} care plan(s)` : ""]).join(" - ") || "No active treatment item has been returned."}</p></div><div class="snapshot"><h4>Unanswered questions / data gaps</h4><p>${gaps.length ? esc(`Missing structured ${gaps.join(", ")}.`) : "Core digital categories are represented."}</p></div><div class="snapshot blue"><h4>Required coordination</h4><p>${serviceRequests.length ? esc(serviceRequests.map(titleText).join(" - ")) : "No structured referral or coordination request has been returned."}</p></div></div></div><div class="panel"><div class="panel-head"><h3>Care plan and goals</h3><span class="badge complete">Source-linked</span></div><div class="panel-body">${list([...goals, ...carePlans, ...tasks], (item) => renderResourceItem(item, compact([item.resourceType, item.status, item.intent]).join(" - ")), "No structured goals, care plans or tasks are available.")}</div></div></div><div class="panel" style="margin-top:15px"><div class="panel-head"><h3>Ideal plan vs. feasible next step</h3><span class="badge warning">Do not infer missing ownership</span></div><div class="panel-body"><div class="table-wrap"><table><thead><tr><th>PSCM target</th><th>Documented clinical plan</th><th>Feasible next step / resource</th><th>Owner / timing</th></tr></thead><tbody>${careRows(carePlans, tasks, goals)}</tbody></table></div></div></div></section>${monitoringPlanPanel(context)}`;
 }
 
 function dataPage(context) {
   const { conditions, medications, allergies, observations, reports, procedures, immunizations, documents, encounters, serviceRequests, tasks, carePlans, goals, preventiveCare } = context;
-  return `<section class="worksheet"><div class="worksheet-heading"><span class="section-number gold">6</span><h2>Digital Clinical Data Spine</h2><p>The complete structured record behind the overview</p></div>${visitDocumentationPanel(context, { full: true })}${preventiveCarePanel(preventiveCare)}<div class="data-grid">${dataCard("Conditions & problem list", conditions, (item) => renderResourceItem(item, compact([item.clinicalStatus?.coding?.[0]?.code, item.verificationStatus?.coding?.[0]?.code, item.onsetDateTime ? `onset ${dateText(item.onsetDateTime)}` : ""]).join(" - ")), "No condition resource is connected.")}${dataCard("Medications", medications, (item) => renderResourceItem(item, medicationDetail(item)), "No medication requests are available.")}${dataCard("Allergies & intolerances", allergies, (item) => renderResourceItem(item, compact([item.clinicalStatus?.coding?.[0]?.code, item.criticality]).join(" - ")), "No allergy resource is connected.")}${dataCard("Results & trends", [...observations, ...reports], (item) => renderResourceItem(item, item.resourceType === "Observation" ? observationDetail(item) : compact([item.status, dateText(item.effectiveDateTime)]).join(" - ")), "No result or diagnostic report is connected.")}${dataCard("Procedures & imaging", procedures, (item) => renderResourceItem(item, compact([item.status, dateText(item.performedDateTime)]).join(" - ")), "No procedure or imaging resource is connected.")}${dataCard("Immunizations", immunizations, (item) => renderResourceItem(item, compact([item.status, dateText(item.occurrenceDateTime)]).join(" - ")), "No immunization resource is connected.")}${dataCard("Documents & provenance", documents, (item) => renderResourceItem(item, compact([item.status, dateText(item.date)]).join(" - ")), "No source document reference is connected.")}${dataCard("Encounters", encounters, (item) => renderResourceItem(item, compact([item.status, dateText(item.period?.start)]).join(" - ")), "No encounter resource is connected.")}${dataCard("Orders, referrals & tasks", [...serviceRequests, ...tasks], (item) => renderResourceItem(item, compact([item.resourceType, item.status, item.intent]).join(" - ")), "No structured order, referral or task is connected.")}${dataCard("Care plans & goals", [...carePlans, ...goals], (item) => renderResourceItem(item, compact([item.resourceType, item.status, item.intent]).join(" - ")), "No care-plan or goal resource is connected.")}</div></section>`;
+  return `<section class="worksheet"><div class="worksheet-heading"><span class="section-number gold">6</span><h2>Digital Clinical Data Spine</h2><p>The complete structured record behind the overview</p></div>${patientCheckinPanel(context, { full: true })}${visitDocumentationPanel(context, { full: true })}${preventiveCarePanel(preventiveCare)}<div class="data-grid">${dataCard("Conditions & problem list", conditions, (item) => renderResourceItem(item, compact([item.clinicalStatus?.coding?.[0]?.code, item.verificationStatus?.coding?.[0]?.code, item.onsetDateTime ? `onset ${dateText(item.onsetDateTime)}` : ""]).join(" - ")), "No condition resource is connected.")}${dataCard("Medications", medications, (item) => renderResourceItem(item, medicationDetail(item)), "No medication requests are available.")}${dataCard("Allergies & intolerances", allergies, (item) => renderResourceItem(item, compact([item.clinicalStatus?.coding?.[0]?.code, item.criticality]).join(" - ")), "No allergy resource is connected.")}${dataCard("Results & trends", [...observations, ...reports], (item) => renderResourceItem(item, item.resourceType === "Observation" ? observationDetail(item) : compact([item.status, dateText(item.effectiveDateTime)]).join(" - ")), "No result or diagnostic report is connected.")}${dataCard("Procedures & imaging", procedures, (item) => renderResourceItem(item, compact([item.status, dateText(item.performedDateTime)]).join(" - ")), "No procedure or imaging resource is connected.")}${dataCard("Immunizations", immunizations, (item) => renderResourceItem(item, compact([item.status, dateText(item.occurrenceDateTime)]).join(" - ")), "No immunization resource is connected.")}${dataCard("Documents & provenance", documents, (item) => renderResourceItem(item, compact([item.status, dateText(item.date)]).join(" - ")), "No source document reference is connected.")}${dataCard("Encounters", encounters, (item) => renderResourceItem(item, compact([item.status, dateText(item.period?.start)]).join(" - ")), "No encounter resource is connected.")}${dataCard("Orders, referrals & tasks", [...serviceRequests, ...tasks], (item) => renderResourceItem(item, compact([item.resourceType, item.status, item.intent]).join(" - ")), "No structured order, referral or task is connected.")}${dataCard("Care plans & goals", [...carePlans, ...goals], (item) => renderResourceItem(item, compact([item.resourceType, item.status, item.intent]).join(" - ")), "No care-plan or goal resource is connected.")}</div></section>`;
 }
 
 function sourcesPage(context) {
@@ -863,17 +1015,22 @@ function render(record, workflowConnection = { connected: false, encounters: [] 
   const clinicalImpressions = resourcesOf(resources, "ClinicalImpression");
   const careTeams = resourcesOf(resources, "CareTeam");
   const systems = Array.isArray(record.systems) ? record.systems.filter(isDisplayable) : [];
+  const patientCheckins = Array.isArray(record.patientCheckins) ? record.patientCheckins.filter(isDisplayable) : [];
+  const monitoringPlans = Array.isArray(record.monitoringPlans) ? record.monitoringPlans.filter(isDisplayable) : [];
+  const monitoringModuleCatalog = Array.isArray(record.monitoringModuleCatalog) ? record.monitoringModuleCatalog.filter(isDisplayable) : [];
   const unresolvedTasks = tasks.filter((item) => !["completed", "cancelled", "failed", "rejected"].includes(String(item.status).toLowerCase()));
   const urgentItems = resources.filter((item) => ["stat", "asap", "urgent", "critical"].includes(String(item.priority || item.status).toLowerCase()));
   const gaps = [[allergies.length,"allergies"],[immunizations.length,"immunizations"],[procedures.length,"procedures"],[documents.length,"source documents"],[clinicalImpressions.length,"clinician mechanism synthesis"]].filter(([count]) => !count).map(([, label]) => label);
   const sourceOmitted = Number(record.restrictedRecordsOmitted || 0);
   const displayName = normalizePatientName(patient.name?.[0] || {});
   const preventiveCare = record.preventiveCare || { measures: [], crisp: {} };
-  const context = { record, resources, patient, displayName, conditions, observations, medications, encounters, tasks, carePlans, systems, allergies, reports, procedures, immunizations, documents, goals, serviceRequests, clinicalImpressions, careTeams, preventiveCare, unresolvedTasks, urgentItems, timeline, frontendOmitted, sourceOmitted, gaps, workflowConnection, workflowEncounters: workflowConnection.encounters || [], atlasConnection };
+  const context = { record, resources, patient, displayName, conditions, observations, medications, encounters, tasks, carePlans, systems, allergies, reports, procedures, immunizations, documents, goals, serviceRequests, clinicalImpressions, careTeams, patientCheckins, monitoringPlans, monitoringModuleCatalog, preventiveCare, unresolvedTasks, urgentItems, timeline, frontendOmitted, sourceOmitted, gaps, workflowConnection, workflowEncounters: workflowConnection.encounters || [], atlasConnection };
   const pageRenderers = { overview: overviewPage, atlas: atlasPage, timeline: timelinePage, mechanism: mechanismPage, context: contextPage, plan: planPage, data: dataPage, sources: sourcesPage };
   const header = view === "overview" ? fullHero(context) : compactHeader(context);
   $("content").innerHTML = `${header}${pageNavigation(view)}${safeNotice(context)}${(pageRenderers[view] || overviewPage)(context)}`;
   if (view === "atlas") wireAtlasEntry(context);
+  preservePatientLinks(document);
+  wireMonitoringPlanControls(context);
 }
 
 async function load() {
@@ -883,6 +1040,7 @@ async function load() {
     const client = await createEncounterCloudClient();
     if (!client) throw new Error("Google Cloud is not configured for this site.");
     cloudClient = client;
+    healthCoreClient = client;
     const body = await client.healthRecord(PATIENT_ID);
     if (!body?.healthRecord) throw new Error("The synthetic Health Core record was not returned.");
     let workflowConnection = { connected: true, encounters: [] };
@@ -933,5 +1091,7 @@ $("theme").onclick = () => {
 $("refresh").onclick = load;
 $("print").onclick = () => window.print();
 if (localStorage.getItem(THEME_KEY) === "dark") document.documentElement.dataset.theme = "dark";
+const sideNote = document.querySelector(".side-note");
+if (sideNote) sideNote.innerHTML = "Longitudinal Health Core view.<br><br>Patient-scoped and role protected.";
 load();
 

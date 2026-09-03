@@ -6,7 +6,7 @@ const slug = (value) => cleanText(value, 100).toLowerCase().replace(/[\s_]+/g, "
 const unique = (values) => [...new Set((Array.isArray(values) ? values : []).filter(Boolean))];
 const nowIso = (now = new Date()) => (now instanceof Date ? now : new Date(now)).toISOString();
 
-export const REQUEST_TYPES = Object.freeze(["refill", "referral", "prior_auth", "billing_rcm", "general"]);
+export const REQUEST_TYPES = Object.freeze(["refill", "referral", "prior_auth", "billing_rcm", "clinical_review", "general"]);
 export const REQUEST_PRIORITIES = Object.freeze(["routine", "time-sensitive", "urgent", "emergency"]);
 export const REQUEST_ACTIONS = Object.freeze(["assign", "start", "milestone", "resolve", "reopen", "escalate", "unassign"]);
 
@@ -111,6 +111,22 @@ export const WORKFLOW_DEFINITIONS = Object.freeze({
       { label: "With RCM", status: "rcm_referred" },
       { label: "Waiting on payer", status: "waiting_on_payer" },
     ],
+  },
+  clinical_review: {
+    label: "Clinical review",
+    serviceLine: "clinical",
+    assignedTeam: "clinical",
+    allowedRoles: ["ma-bha", "care-manager", "provider", "pmhnp", "operations-manager", "executive"],
+    received: "review_received",
+    inProgress: "review_in_progress",
+    defaultResolution: "review_completed",
+    statuses: {
+      review_received: { category: "received", label: "Awaiting review", notify: false, message: "" },
+      review_in_progress: { category: "in_progress", label: "In review", notify: false, message: "" },
+      review_completed: { category: "completed", label: "Reviewed", notify: false, message: "" },
+    },
+    cardOutcomes: [{ label: "Reviewed", status: "review_completed" }],
+    cardMilestones: [],
   },
   general: {
     label: "Patient request",

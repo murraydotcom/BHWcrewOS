@@ -75,7 +75,7 @@ body{font-family:'Montserrat','OpenSans',system-ui,sans-serif;color:var(--ink);f
     <div class="mk"><svg viewBox="0 0 48 48" width="24" height="24"><path d="M10 24h5l3-7 5 15 4-11 2 4h9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
     <div>
       <h1>Patient Monitor</h1>
-      <div class="sub">Live roster from the Patients Master List — everyone enrolled in a monitoring program. Click anyone to open their monitor.</div>
+      <div class="sub">Patient Registry roster with Health Core check-ins ready for clinician review. Open a patient in Patient 360 for clinical details.</div>
     </div>
     <div class="right">
       <span class="chip"><span class="pulse"></span>Live</span>
@@ -85,7 +85,7 @@ body{font-family:'Montserrat','OpenSans',system-ui,sans-serif;color:var(--ink);f
   </div>
 
   <div class="body">
-    <div class="sec-h"><span class="t">Scheduled today</span><span class="n" id="ciN">0</span><span class="live">patients whose next visit is dated today</span></div>
+    <div class="sec-h"><span class="t">Check-ins awaiting clinician review</span><span class="n" id="ciN">0</span><span class="live" id="reviewMeta">references only · clinical values stay in Health Core</span></div>
     <div class="checkin" id="checkin"></div>
 
     <div class="sec-h"><span class="t">Monitored patients</span><span class="live" id="rosterMeta"></span></div>
@@ -94,22 +94,33 @@ body{font-family:'Montserrat','OpenSans',system-ui,sans-serif;color:var(--ink);f
 
 </div>
 
-<script>
-// Live roster from the Patients Master List via monitor-data. Each row links to
-// the single-patient monitor by real Notion page id (?patient=<uuid>).
+<script type="module">
+import { createOperationsCloudClient } from "/provider/operations-queue.mjs";
+
+// The roster supplies identity display. The operations queue supplies only a
+// patient/check-in reference and review state; clinical values stay in Health Core.
 const API='/.netlify/functions/monitor-data';
 const TOKEN=sessionStorage.getItem('crewos_token')||'';
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function initials(n){return (n||'?').split(/[ ,]+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();}
-function href(p){ return '/bhw-patient-monitor.html?patient='+encodeURIComponent(p.id); }
+function patientId(p){return String(p?.bhwPatientId||p?.mrn||p?.id||'').trim();}
+function href(p){ return '/provider/patient-360.html?patient='+encodeURIComponent(patientId(p)); }
 function fmtD(d){ if(!d) return ''; const t=new Date(d.slice(0,10)+'T00:00:00'); return isNaN(t)?'':t.toLocaleDateString('en-US',{month:'numeric',day:'numeric'}); }
 function isToday(d){ return !!d && d.slice(0,10)===new Date().toISOString().slice(0,10); }
 
-function checkinCard(p){ return `
-  <a class="ci" href="${href(p)}">
-    <span class="av">${initials(p.name)}</span>
-    <div><div class="nm">${esc(p.name)}</div><div class="mt">${esc(p.program||'Scheduled today')}</div></div>
-    <div class="st"><div class="b"><span class="d"></span>Today</div><div class="tm">${esc(p.mrn||'')}</div></div>
+function programName(reference){
+  const key=String(reference||'').split('-').pop();
+  return ({primary:'Primary Care',mind:'Mind & Mood',charmed:'CharmEd Minds',flow:'Flow'})[key]||'Care Connect';
+}
+function reviewCard(request, rosterById){
+  const id=patientId(request);
+  const patient=rosterById.get(id)||{bhwPatientId:id,name:request.patientName||id||'Patient'};
+  const submitted=request.updatedAt||request.createdAt||'';
+  return `
+  <a class="ci" href="${href(patient)}">
+    <span class="av">${initials(patient.name)}</span>
+    <div><div class="nm">${esc(patient.name)}</div><div class="mt">${esc(programName(request.sourceReference))} · ${esc(id)}</div></div>
+    <div class="st"><div class="b"><span class="d"></span>Review</div><div class="tm">${esc(submitted?new Date(submitted).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'Pending')}</div></div>
   </a>`; }
 function rosterRow(p){
   const right = p.nextVisit ? `Next ${fmtD(p.nextVisit)}` : (p.lastVisit ? `Seen ${fmtD(p.lastVisit)}` : '—');
@@ -129,11 +140,21 @@ async function load(){
     const d=await r.json();
     if(!r.ok) throw new Error(d.error||'load failed');
     const roster=Array.isArray(d.patients)?d.patients:[];
-    const today=roster.filter(p=>isToday(p.nextVisit));
-    document.getElementById('ciN').textContent=today.length;
-    checkinEl.innerHTML = today.length
-      ? today.map(checkinCard).join('')
-      : '<div style="color:var(--ink-mute);font-size:12px;padding:4px 2px">No one scheduled for today yet.</div>';
+    const rosterById=new Map(roster.map(p=>[patientId(p),p]).filter(([id])=>id));
+    let reviews=[];
+    try{
+      const operations=await createOperationsCloudClient();
+      if(!operations) throw new Error('operations queue unavailable');
+      const requests=await operations.listPatientRequests({status:'open',serviceLine:'clinical',assignedTeam:'clinical',limit:100});
+      reviews=requests.filter(request=>request.requestType==='clinical_review'&&/^\d{4}-\d{2}-\d{2}-(primary|mind|charmed|flow)$/.test(String(request.sourceReference||'')));
+      document.getElementById('reviewMeta').textContent='references only · clinical values stay in Health Core';
+    }catch{
+      document.getElementById('reviewMeta').textContent='review queue unavailable · roster remains available';
+    }
+    document.getElementById('ciN').textContent=reviews.length;
+    checkinEl.innerHTML = reviews.length
+      ? reviews.map(request=>reviewCard(request,rosterById)).join('')
+      : '<div style="color:var(--ink-mute);font-size:12px;padding:4px 2px">No Care Connect check-ins are awaiting review.</div>';
     document.getElementById('rosterMeta').textContent =
       roster.length ? `${roster.length}${d.capped?'+':''} patient${roster.length===1?'':'s'}` : '';
     listEl.innerHTML = roster.length
@@ -141,7 +162,7 @@ async function load(){
       : '<div style="color:var(--ink-mute);padding:16px">No patients are enrolled in a monitoring program yet.</div>';
   }catch(e){
     document.getElementById('ciN').textContent='0';
-    checkinEl.innerHTML='';
+    checkinEl.innerHTML='<div style="color:var(--alert);padding:4px 2px">The clinician review queue is unavailable.</div>';
     listEl.innerHTML='<div style="color:var(--alert);padding:16px">Couldn’t load the roster. Reload the page.</div>';
   }
 }

@@ -179,6 +179,15 @@ export async function createEncounterCloudClient(fetchImpl = fetch) {
         body: JSON.stringify(input),
       });
     },
+    async patientMonitoringPlan(bhwPatientId = "BHW0000", program = "mind") {
+      return request(`/v1/patients/${encodeURIComponent(bhwPatientId)}/monitoring-plans/${encodeURIComponent(program)}`);
+    },
+    async savePatientMonitoringPlan(bhwPatientId = "BHW0000", program = "mind", monitoringPlan = {}) {
+      return request(`/v1/patients/${encodeURIComponent(bhwPatientId)}/monitoring-plans/${encodeURIComponent(program)}`, {
+        method: "PUT",
+        body: JSON.stringify(monitoringPlan),
+      });
+    },
     async patientVisitNotes(bhwPatientId = "BHW0000") {
       return request(`/v1/patients/${encodeURIComponent(bhwPatientId)}/visit-notes`);
     },
