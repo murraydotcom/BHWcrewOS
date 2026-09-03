@@ -1,5 +1,6 @@
 import { createEncounterCloudClient } from "./cloud-queue.mjs";
 import { BODY_PROFILES, patientBodyProfile } from "./patient-360-body-profile.mjs";
+import { CLINICAL_TIMELINE_CATEGORIES, clinicalTimelineCounts, clinicalTimelineEvents } from "./patient-360-timeline.mjs";
 
 const PATIENT_ID = "BHW0000";
 const THEME_KEY = "bhw_provider_theme_v1";
@@ -152,6 +153,58 @@ function systemCards(systems) {
 
 function timelineItems(timeline) {
   return list(timeline, (event) => `<article class="timeline-item"><b>${esc(event.label || event.type || "Timeline event")}</b><div class="meta">${esc(event.type || "Event")} - ${esc(dateText(event.date))}</div>${event.physiologicDomains?.length ? `<div class="timeline-tags">${event.physiologicDomains.map((domain) => `<span>${esc(statusText(domain))}</span>`).join("")}</div>` : ""}</article>`, "No high-value turning points are available yet.");
+}
+
+function timelineCategoryLabel(category) {
+  return CLINICAL_TIMELINE_CATEGORIES.find((item) => item.id === category)?.label || "Clinical milestone";
+}
+
+function clinicalTimelineDetail(event, resources) {
+  const resource = resources.find((item) => item.resourceType === event.type && item.id === event.resourceId);
+  if (!resource) return event.summary || event.detail || "Further clinical detail is not connected to this timeline entry.";
+  if (resource.resourceType === "Condition") {
+    return compact([
+      resource.clinicalStatus?.coding?.[0]?.code ? `Status: ${statusText(resource.clinicalStatus.coding[0].code)}` : "",
+      resource.onsetDateTime ? `Onset: ${dateText(resource.onsetDateTime)}` : "",
+      resource.note?.[0]?.text,
+    ]).join(" · ") || "Diagnosis details are not connected.";
+  }
+  if (resource.resourceType === "Observation") return observationDetail(resource);
+  if (resource.resourceType === "MedicationRequest") return compact([statusText(resource.status), resource.dosageInstruction?.[0]?.text]).join(" · ");
+  if (resource.resourceType === "Encounter") return compact([statusText(resource.status), resource.type?.[0] ? conceptText(resource.type[0]) : ""]).join(" · ");
+  return event.summary || event.detail || compact([resource.status, resource.interpretation?.[0]?.text]).map(statusText).join(" · ") || "Clinical detail is not connected.";
+}
+
+function clinicalTimelineItems(events, resources) {
+  if (!events.length) return `<div class="empty-note" data-timeline-empty>No diagnosis, flare-up, life/function, imaging/result, treatment, hospital or procedure event is connected yet. Blank means undocumented or not connected - not clinically absent.</div>`;
+  return events.map((event) => `<article class="timeline-item category-${esc(event.clinicalCategory)}" data-timeline-event="${esc(event.clinicalCategory)}"><div class="timeline-item-head"><span class="timeline-category">${esc(timelineCategoryLabel(event.clinicalCategory))}</span><time>${esc(dateText(event.date))}</time></div><b>${esc(event.label || event.title || event.type || "Clinical milestone")}</b><p>${esc(clinicalTimelineDetail(event, resources))}</p>${event.physiologicDomains?.length ? `<div class="timeline-tags">${event.physiologicDomains.map((domain) => `<span>${esc(statusText(domain))}</span>`).join("")}</div>` : ""}</article>`).join("");
+}
+
+function clinicalTimelineControls(events) {
+  const counts = clinicalTimelineCounts(events);
+  const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
+  return `<div class="timeline-controls" role="group" aria-label="Filter clinical timeline"><button class="timeline-filter active" type="button" data-timeline-filter="all" aria-pressed="true">All clinical <span>${total}</span></button>${CLINICAL_TIMELINE_CATEGORIES.map(({ id, label }) => `<button class="timeline-filter" type="button" data-timeline-filter="${esc(id)}" aria-pressed="false">${esc(label)} <span>${counts[id]}</span></button>`).join("")}</div>`;
+}
+
+function wireClinicalTimeline() {
+  const filters = [...document.querySelectorAll("[data-timeline-filter]")];
+  const events = [...document.querySelectorAll("[data-timeline-event]")];
+  const empty = $("timeline-filter-empty");
+  for (const filter of filters) filter.addEventListener("click", () => {
+    const selected = filter.dataset.timelineFilter;
+    let visible = 0;
+    for (const event of events) {
+      const show = selected === "all" || event.dataset.timelineEvent === selected;
+      event.hidden = !show;
+      if (show) visible += 1;
+    }
+    for (const button of filters) {
+      const active = button === filter;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
+    }
+    if (empty) empty.hidden = visible !== 0;
+  });
 }
 
 function mechanismMap(clinicalImpressions) {
@@ -606,7 +659,7 @@ function overviewPage(context) {
   const sdoh = [...observations, ...serviceRequests, ...tasks].filter((item) => itemContains(item,["housing","food insecurity","transportation","financial","caregiver","social determinant","utility"]));
   const triggers = [...clinicalImpressions, ...timeline].filter((item) => itemContains(item,["trigger","infection","stress","sleep loss","exposure","trauma","hormonal"]));
   const priorities = goals.length ? goals : conditions;
-  const latestTimeline = timeline.slice(0,4);
+  const latestTimeline = clinicalTimelineEvents(timeline).slice(0,4);
   return `<section class="worksheet health-overview"><div class="worksheet-heading"><span class="section-number overview">360</span><h2>Whole-Person Health Snapshot</h2><p>What is active, important, due, and shaping this patient's health now</p></div>
     <div class="health360-map"><div class="health-column">
       <article class="health-callout coral"><div class="callout-head"><span>Active symptoms & diagnoses</span><a href="patient-360-data.html">Problem list</a></div>${compactItems(conditions,(item)=>`<b>${esc(conceptText(item.code))}</b><small>${esc(statusText(item.clinicalStatus?.coding?.[0]?.code || item.status || "recorded"))}</small>`,"No active condition or symptom record is connected.")}</article>
@@ -687,7 +740,8 @@ function atlasPage(context) {
 }
 
 function timelinePage(context) {
-  return `<section class="worksheet"><div class="worksheet-heading"><span class="section-number">2</span><h2>Layered Longitudinal Timeline</h2><p>High-value turning points with source-aware clinical context</p></div><div class="two-col"><div class="panel"><div class="panel-head"><h3>Function trajectory</h3><span class="badge warning">Awaiting measures</span></div><div class="panel-body"><div class="trajectory"></div><div class="trajectory-labels"><span>Improved</span><span>Baseline</span><span>Declined</span></div><div class="empty-note" style="margin-top:12px">Future digital layer: graph patient-reported function, symptom burden, objective measures and major interventions without turning association into causation.</div></div></div><div class="panel"><div class="panel-head"><h3>Clinical timeline</h3><span class="meta">Newest first</span></div><div class="panel-body timeline">${timelineItems(context.timeline)}</div></div></div></section>`;
+  const events = clinicalTimelineEvents(context.timeline);
+  return `<section class="worksheet clinical-timeline-page"><div class="worksheet-heading"><span class="section-number">2</span><h2>Longitudinal Clinical Timeline</h2><p>Diagnoses, symptom flare-ups, major life and functional changes, imaging and important results, treatment changes, hospital care and procedures</p></div><div class="panel clinical-timeline-panel"><div class="panel-head"><div><h3>Clinical turning points</h3><span class="panel-subtitle">Newest first · routine referral and coordination updates are kept out of this view</span></div><span class="badge neutral">Source-linked</span></div><div class="panel-body">${clinicalTimelineControls(context.timeline)}<div class="timeline clinical-event-list">${clinicalTimelineItems(events, context.resources)}<div class="empty-note" id="timeline-filter-empty" hidden>No events are connected in this category. Blank means undocumented or not connected - not clinically absent.</div></div></div></div><div class="two-col timeline-secondary"><div class="panel"><div class="panel-head"><h3>Function & symptom trajectory</h3><span class="badge warning">Awaiting measures</span></div><div class="panel-body"><div class="trajectory"></div><div class="trajectory-labels"><span>Improved</span><span>Baseline</span><span>Declined</span></div><div class="empty-note" style="margin-top:12px">This graph will compare patient-reported function, symptom burden, objective measures and major interventions without treating association as causation.</div></div></div><div class="panel"><div class="panel-head"><h3>What belongs here</h3><span class="badge neutral">Clinical history</span></div><div class="panel-body timeline-scope-list"><div><b>Primary history</b><span>New diagnoses, onset or resolution, symptom flare-ups and remissions</span></div><div><b>Meaningful change</b><span>Life events, functional decline or recovery, treatment response and adverse effects</span></div><div><b>Major evidence</b><span>Imaging findings, important results, emergency or hospital care, surgery and procedures</span></div><div><b>Kept elsewhere</b><span>Referral sent, scheduling and routine coordination remain in Patient Operations and the care plan</span></div></div></div></div></section>`;
 }
 
 function mechanismPage(context) {
@@ -874,6 +928,7 @@ function render(record, workflowConnection = { connected: false, encounters: [] 
   const header = view === "overview" ? fullHero(context) : compactHeader(context);
   $("content").innerHTML = `${header}${pageNavigation(view)}${safeNotice(context)}${(pageRenderers[view] || overviewPage)(context)}`;
   if (view === "atlas") wireAtlasEntry(context);
+  if (view === "timeline") wireClinicalTimeline();
 }
 
 async function load() {
