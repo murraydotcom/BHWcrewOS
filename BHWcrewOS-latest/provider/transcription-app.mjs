@@ -4,6 +4,7 @@ import {
   MAX_VISIT_SECONDS,
   SEGMENT_SECONDS,
 } from "./transcription-segments.mjs";
+import { createScreenWakeLockController } from "./transcription-wake-lock.mjs";
 
 const SYNTHETIC_PATIENT_ID = "BHW0000";
 const SYNTHETIC_CONSENT = "synthetic-role-play";
@@ -34,6 +35,7 @@ let sessionVersion = 0;
 let verifiedConsent = null;
 let consentLookupVersion = 0;
 let crewSessionChannel = null;
+let wakeWarningState = "";
 
 function showToast(message) {
   $("toast").textContent = message;
@@ -51,6 +53,33 @@ function selectedPatientId() { return $("patient").value; }
 function isSynthetic() { return selectedPatientId() === SYNTHETIC_PATIENT_ID; }
 function consentMode() { return isSynthetic() ? SYNTHETIC_CONSENT : LIVE_CONSENT; }
 function hasVerifiedConsent() { return Boolean(verifiedConsent?.eligible); }
+function renderScreenWakeStatus({ state }) {
+  const messages = {
+    idle: "Screen awake protection starts with recording",
+    requesting: "Turning on screen awake protection…",
+    active: "Screen awake protection active · keep this tab visible",
+    hidden: "Screen protection needs attention · return to this tab",
+    released: "Screen awake protection was released · keep the screen on",
+    unsupported: "Screen awake protection unavailable · disable device sleep",
+    unavailable: "Screen awake protection unavailable · keep the screen on",
+  };
+  const status = $("wakeStatus");
+  status.dataset.state = state;
+  status.textContent = messages[state] || messages.idle;
+  const warning = ["hidden", "released", "unsupported", "unavailable"].includes(state);
+  if (warning && visitActive && wakeWarningState !== state) {
+    wakeWarningState = state;
+    showToast("Screen awake protection is not active. Keep this tab visible and disable device sleep until the visit is safely transcribed.");
+  } else if (state === "active" || state === "idle") {
+    wakeWarningState = "";
+  }
+}
+
+const screenWakeLock = createScreenWakeLockController({
+  wakeLock: navigator.wakeLock,
+  visibilityState: () => document.visibilityState,
+  onStatus: renderScreenWakeStatus,
+});
 function crewSignInUrl() {
   const next = `${location.pathname}${location.search}${location.hash}`;
   return `/crewos?next=${encodeURIComponent(next)}`;
@@ -138,6 +167,7 @@ function handleSegmentError(error, segment) {
 
 function finishSuccessfulVisit(snapshot) {
   if (!visitFinishing || snapshot.processing || snapshot.retained || snapshot.completed !== snapshot.total) return;
+  void screenWakeLock.release();
   visitActive = false;
   visitFinishing = false;
   lockSelection(false);
@@ -196,6 +226,7 @@ function beginSegmentRecorder() {
     if (visitFinishing || completedReason === "finish") {
       stopTracks();
       if (!blob.size && queueSnapshot().total === 0) {
+        void screenWakeLock.release();
         visitActive = false;
         visitFinishing = false;
         lockSelection(false);
@@ -308,6 +339,7 @@ async function refreshRecordingConsent() {
 }
 
 function clearSession({ resetAttestations = true } = {}) {
+  void screenWakeLock.release();
   sessionVersion += 1;
   visitActive = false;
   visitFinishing = false;
@@ -477,6 +509,7 @@ $("start").onclick = async () => {
     segmentElapsedSeconds = 0;
     lockSelection(true);
     beginSegmentRecorder();
+    void screenWakeLock.request();
     timerHandle = setInterval(() => {
       if (recorder?.state === "recording") {
         elapsedSeconds += 1;
@@ -498,6 +531,7 @@ $("start").onclick = async () => {
     recorder = null;
     visitActive = false;
     visitFinishing = false;
+    void screenWakeLock.release();
     stopTracks();
     lockSelection(false);
     updateStartAvailability();
@@ -511,10 +545,12 @@ $("pause").onclick = () => {
   if (!recorder) return;
   if (recorder.state === "recording") {
     recorder.pause();
+    void screenWakeLock.release();
     $("pause").textContent = "Resume";
     setState("Paused · keep this tab open");
   } else if (recorder.state === "paused") {
     recorder.resume();
+    void screenWakeLock.request();
     $("pause").textContent = "Pause";
     setState(`${isSynthetic() ? "Recording synthetic role-play" : "Recording consented visit"} · protected segments transcribe automatically`);
   }
@@ -555,8 +591,13 @@ window.addEventListener("beforeunload", (event) => {
 });
 window.addEventListener("pagehide", () => {
   crewSessionChannel?.close();
+  void screenWakeLock.release();
   stopTracks();
   discardAudio();
+});
+document.addEventListener("visibilitychange", () => {
+  if (!visitActive || recorder?.state === "paused") return;
+  void screenWakeLock.handleVisibilityChange();
 });
 
 if ("BroadcastChannel" in globalThis) {

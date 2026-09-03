@@ -182,10 +182,11 @@ test("the CrewHQ TCM page labels a user-selected CRISP workbook with allowed pro
 });
 
 test("CrewHQ frontend exposes verified consent, retry-safe segments, and the provider gate", async () => {
-  const [html, app, segments, registry, registryHtml, gate, crewos] = await Promise.all([
+  const [html, app, segments, wakeLock, registry, registryHtml, gate, crewos] = await Promise.all([
     readFile(new URL("../provider/transcription.html", import.meta.url), "utf8"),
     readFile(new URL("../provider/transcription-app.mjs", import.meta.url), "utf8"),
     readFile(new URL("../provider/transcription-segments.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../provider/transcription-wake-lock.mjs", import.meta.url), "utf8"),
     readFile(new URL("../provider/patient-registry-app.mjs", import.meta.url), "utf8"),
     readFile(new URL("../provider/patient-registry.html", import.meta.url), "utf8"),
     readFile(new URL("../crew-provider-gate.js", import.meta.url), "utf8"),
@@ -212,9 +213,19 @@ test("CrewHQ frontend exposes verified consent, retry-safe segments, and the pro
   assert.match(html, /up to two hours/i);
   assert.match(html, /five-minute protected segments/i);
   assert.match(html, /failed audio remains in this open tab for Retry/i);
+  assert.match(html, /id="wakeStatus"/);
+  assert.match(html, /supported devices are asked to keep the screen awake/i);
+  assert.match(html, /transcription-app\.mjs\?v=20260902-3/);
   assert.match(app, /elapsedSeconds >= maxVisitSeconds/);
   assert.match(app, /segmentElapsedSeconds >= segmentSeconds/);
   assert.match(app, /beforeunload/);
+  assert.match(app, /createScreenWakeLockController/);
+  assert.match(app, /screenWakeLock\.request\(\)/);
+  assert.match(app, /screenWakeLock\.release\(\)/);
+  assert.match(app, /screenWakeLock\.handleVisibilityChange\(\)/);
+  assert.match(wakeLock, /wakeLock\.request\("screen"\)/);
+  assert.match(wakeLock, /emit\("unsupported"\)/);
+  assert.match(wakeLock, /emit\(desired \? "released" : "idle"\)/);
   assert.match(html, /id="reauth" hidden/);
   assert.match(app, /window\.open\(crewSignInUrl\(\), "_blank", "noopener"\)/);
   assert.match(app, /new BroadcastChannel\("bhw-crew-session-v1"\)/);
