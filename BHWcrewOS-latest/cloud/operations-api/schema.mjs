@@ -30,6 +30,7 @@ export const PATIENT_REQUEST_TYPES = Object.freeze([
   "billing",
   "records",
   "clinical-question",
+  "clinical-review",
   "other",
 ]);
 

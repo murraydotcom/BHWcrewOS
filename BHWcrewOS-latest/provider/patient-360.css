@@ -175,3 +175,27 @@ body[data-p360-view] .btn.primary{background:var(--page-accent);border-color:var
 @media(max-width:780px){.atlas-entry-workspace>summary{align-items:flex-start;flex-wrap:wrap}.atlas-entry-workspace>summary small{order:3;width:100%;margin:0;text-align:left}.atlas-entry-guidance{grid-template-columns:1fr}.atlas-entry-guidance a{text-align:left}.atlas-editor-prompts{grid-template-columns:1fr}.atlas-location-editor-row{grid-template-columns:34px 1fr}.atlas-location-editor-row>label,.atlas-location-editor-row>.atlas-evidence-editor,.atlas-location-editor-row>.atlas-location-remove{grid-column:2}.atlas-location-finding{grid-column:2}.atlas-review-bar{grid-template-columns:1fr;min-width:0}.atlas-review-actions{display:grid;justify-content:stretch}.atlas-review-actions .btn{width:100%}.atlas-view-status{align-items:flex-start;flex-direction:column}}
 @media print{.atlas-entry-panel,.atlas-view-status{display:none!important}}
 
+/* Care Connect daily check-ins: clinical values stay inside Patient 360. */
+.panel-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.patient-checkin-card{padding:16px;border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb,var(--card) 88%,var(--page-soft, var(--teal-soft)));margin-bottom:12px}
+.patient-checkin-card:last-child{margin-bottom:0}
+.patient-checkin-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+.patient-checkin-head>div{display:grid;gap:2px}
+.patient-checkin-head span{font-size:var(--text-xs);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--page-accent,var(--teal))}
+.patient-checkin-head b{font-size:var(--text-base)}
+.patient-checkin-facts{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.patient-checkin-facts span{padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-size:var(--text-xs);color:var(--muted)}
+.patient-checkin-facts b{color:var(--ink)}
+.patient-checkin-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.checkin-clinical-block{min-width:0;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+.checkin-clinical-block>span{display:block;margin-bottom:7px;font-size:var(--text-sm);font-weight:700}
+.checkin-clinical-block p{margin:0;color:var(--muted);font-size:var(--text-sm);line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+.checkin-clinical-block ul{margin:0;padding-left:18px;color:var(--muted)}
+.checkin-clinical-block li{font-size:var(--text-sm);line-height:1.5;margin:2px 0}
+.checkin-pairs{list-style:none;padding:0!important}
+.checkin-pairs li{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line);padding:5px 0}
+.checkin-pairs li:last-child{border-bottom:0}
+.checkin-pairs b{color:var(--ink);text-align:right}
+.patient-checkin-card>.record-boundary{margin-top:12px}
+@media(max-width:780px){.patient-checkin-grid{grid-template-columns:1fr}.panel-actions{justify-content:flex-start}.patient-checkin-head{align-items:flex-start}}
+
