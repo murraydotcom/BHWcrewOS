@@ -36,8 +36,8 @@
       <label class="check"><input type="checkbox" id="sessionConsent" disabled><span id="sessionConsentText">Select a patient to confirm recording agreement for this visit.</span></label>
       <div class="meter"><div class="timer" id="timer">00:00</div><div class="state" id="state">Ready</div></div>
       <div class="controls"><button class="btn primary" id="start" disabled>Start recording</button><button class="btn" id="pause" disabled>Pause</button><button class="btn" id="finish" disabled>Finish</button></div>
-      <div class="controls"><button class="btn primary" id="transcribe" disabled>Retry retained audio</button><button class="btn danger" id="clear">Clear audio and draft</button></div>
-      <div class="privacy"><b>Keep this tab open until every segment is transcribed.</b> No audio is written to Firestore or browser storage. Each five-minute segment passes through a private temporary Google Cloud Storage object that is deleted after processing. The browser releases a segment only after its transcript succeeds; failed audio remains in this open tab for Retry. Closing or reloading the tab clears any audio still held in page memory. Server logs contain the provider, consent mode, time, byte count, model, and a protected patient reference—not the audio, transcript, patient name, or BHW ID. Real-patient mode is permitted only while BHW’s Google Cloud BAA is active.</div>
+      <div class="controls"><button class="btn primary" id="transcribe" disabled>Retry retained audio</button><button class="btn" id="reauth" hidden>Open CrewHQ sign-in in a new tab</button><button class="btn danger" id="clear">Clear audio and draft</button></div>
+      <div class="privacy"><b>Keep this tab open until every segment is transcribed.</b> No audio is written to Firestore or browser storage. Each five-minute segment passes through a private temporary Google Cloud Storage object that is deleted after processing. The browser releases a segment only after its transcript succeeds; failed audio remains in this open tab for Retry. If CrewHQ asks you to sign in again, use the new-tab sign-in button, return here, and Retry. Closing or reloading this tab clears any audio still held in page memory. Server logs contain the provider, consent mode, time, byte count, model, and a protected patient reference—not the audio, transcript, patient name, or BHW ID. Real-patient mode is permitted only while BHW’s Google Cloud BAA is active.</div>
     </div>
     <div class="card"><h3>2 · Provider review</h3><div class="field"><label>Editable transcript draft</label><textarea id="transcript" placeholder="The transcript draft will appear here." spellcheck="true"></textarea></div><div class="meta" id="meta"></div>
       <label class="check"><input type="checkbox" id="reviewed"><span>I reviewed this draft for accuracy and completeness. It is not a signed note or the legal medical record.</span></label>
@@ -45,7 +45,7 @@
     </div>
   </section>
 </div></main></div><div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script type="module" src="transcription-app.mjs?v=20260902-1"></script>
+<script type="module" src="transcription-app.mjs?v=20260902-2"></script>
 </body></html>
 
 

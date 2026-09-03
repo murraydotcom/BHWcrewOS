@@ -182,13 +182,14 @@ test("the CrewHQ TCM page labels a user-selected CRISP workbook with allowed pro
 });
 
 test("CrewHQ frontend exposes verified consent, retry-safe segments, and the provider gate", async () => {
-  const [html, app, segments, registry, registryHtml, gate] = await Promise.all([
+  const [html, app, segments, registry, registryHtml, gate, crewos] = await Promise.all([
     readFile(new URL("../provider/transcription.html", import.meta.url), "utf8"),
     readFile(new URL("../provider/transcription-app.mjs", import.meta.url), "utf8"),
     readFile(new URL("../provider/transcription-segments.mjs", import.meta.url), "utf8"),
     readFile(new URL("../provider/patient-registry-app.mjs", import.meta.url), "utf8"),
     readFile(new URL("../provider/patient-registry.html", import.meta.url), "utf8"),
     readFile(new URL("../crew-provider-gate.js", import.meta.url), "utf8"),
+    readFile(new URL("../index.html", import.meta.url), "utf8"),
   ]);
   assert.match(html, /crew-provider-gate\.js/);
   assert.doesNotMatch(html, /auth-gate\.js/);
@@ -214,6 +215,10 @@ test("CrewHQ frontend exposes verified consent, retry-safe segments, and the pro
   assert.match(app, /elapsedSeconds >= maxVisitSeconds/);
   assert.match(app, /segmentElapsedSeconds >= segmentSeconds/);
   assert.match(app, /beforeunload/);
+  assert.match(html, /id="reauth" hidden/);
+  assert.match(app, /window\.open\(crewSignInUrl\(\), "_blank", "noopener"\)/);
+  assert.match(app, /new BroadcastChannel\("bhw-crew-session-v1"\)/);
+  assert.match(crewos, /channel\.postMessage\(\{type:"crew-session",token:TOKEN\}\)/);
   assert.match(segments, /await onTranscript/);
   assert.match(segments, /segment\.blob = null/);
   assert.match(registry, /Verify signed consent/);

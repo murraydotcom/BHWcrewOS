@@ -327,6 +327,11 @@ async function doLogin(){
     const data = await res.json();
     if(!res.ok) throw new Error(data.error||"Sign-in failed");
     TOKEN = data.token; sessionStorage.setItem("crewos_token",TOKEN);
+    try{
+      const channel = new BroadcastChannel("bhw-crew-session-v1");
+      channel.postMessage({type:"crew-session",token:TOKEN});
+      channel.close();
+    }catch{}
     if(redirectToRequestedPage()) return;
     document.getElementById("login").style.display="none";
     document.getElementById("app").style.display="block";
