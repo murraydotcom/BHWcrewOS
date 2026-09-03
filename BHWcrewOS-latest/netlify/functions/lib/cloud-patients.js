@@ -36,7 +36,11 @@ async function cloudRequest(path, { actor, method = "GET", body } = {}) {
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || `Google Cloud patient registry returned ${response.status}`);
+  if (!response.ok) {
+    const error = new Error(data.error || `Google Cloud patient registry returned ${response.status}`);
+    error.status = response.status;
+    throw error;
+  }
   return data;
 }
 
@@ -63,15 +67,20 @@ function parsePatientName(value, explicitSuffix = "") {
 }
 
 const fullName = (p) => [p.legalFirstName, p.middleName, p.legalLastName, p.nameSuffix].filter(Boolean).join(" ").trim();
-const sourceRecordId = (p) => p.source?.recordId || p.sourceRecordId || "";
-const sourceUrl = (p) => p.source?.recordUrl || p.sourceUrl || "";
-
 function legacyPatient(p) {
+  const {
+    source: _legacySource,
+    sourceRelations: _legacySourceRelations,
+    sourceRecordId: _legacySourceRecordId,
+    sourceUrl: _legacySourceUrl,
+    patientPageUrl: _legacyPatientPageUrl,
+    ...cloudPatient
+  } = p || {};
   const programs = Array.isArray(p.programEnrollment) ? p.programEnrollment : [];
   const snapshot = p.clinicalSnapshot || {};
   const status = p.patientStatus || "";
   return {
-    ...p,
+    ...cloudPatient,
     id: p.bhwPatientId,
     bhwId: p.bhwPatientId,
     ctl: p.bhwPatientId,
@@ -83,11 +92,6 @@ function legacyPatient(p) {
     mco: p.medicaidMco || "",
     insurance: p.insurancePlanName || p.primaryPayer || p.payerName || "",
     member: p.memberId || "",
-    pageUrl: p.patientPageUrl || "",
-    page: p.patientPageUrl || "",
-    sourceUrl: sourceUrl(p),
-    pageId: sourceRecordId(p),
-    notionPageId: sourceRecordId(p),
     program: programs.join(" · "),
     programs,
     status,
@@ -109,7 +113,7 @@ async function listCloudPatients(actor) {
 async function findCloudPatient(id, actor) {
   const value = String(id || "").trim();
   const patients = await listCloudPatients(actor);
-  return patients.find((p) => p.bhwPatientId === value || p.notionPageId === value) || null;
+  return patients.find((p) => p.bhwPatientId === value) || null;
 }
 
 function searchCloudPatients(patients, query, limit = 25) {

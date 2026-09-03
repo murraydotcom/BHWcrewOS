@@ -271,6 +271,7 @@ const qp = new URLSearchParams(location.search);
 const slug = (qp.get("q")||"").toLowerCase();
 const Q = QUESTIONNAIRES[slug];
 const caseId = qp.get("case")||"", ptParam = qp.get("pt")||"";
+const screeningId = qp.get("screening")||slug, responseToken = qp.get("responseToken")||"";
 const app = document.getElementById("app");
 let state = { who:(Q&&Q.who)||"Self" };
 const esc = (s)=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -294,6 +295,7 @@ function renderQ(item,i){
 
 function render(){
   if(!Q){ app.innerHTML='<div class="card"><div class="done"><div class="big">🔍</div><h2>Questionnaire not found</h2><p class="lede">This link may be out of date — please contact the BHW office.</p></div></div>'; return; }
+  if(!caseId || !responseToken){ app.innerHTML='<div class="card"><div class="done"><div class="big">🔒</div><h2>Open this task from your patient portal</h2><p class="lede">For your privacy, this questionnaire must be opened from the secure task assigned to you. Sign in to the BHW patient portal or ask the office to send a new invitation.</p></div></div>'; return; }
   document.documentElement.style.setProperty("--acc",Q.acc);
   document.documentElement.style.setProperty("--acc-grad",Q.accGrad);
   const whoOpts=["Self","Parent/Caregiver","Staff"];
@@ -375,7 +377,7 @@ async function submit(){
   const flags=(Q.flags?Q.flags(answers):[]).join(", ");
   try{
     const r=await fetch("/.netlify/functions/questionnaire-submit",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({slug, patientLabel, bhwId, who:state.who, transcript, answers, flags, case:caseId, hp:document.getElementById("hp").value})});
+      body:JSON.stringify({slug, screeningId, responseToken, patientLabel, bhwId, who:state.who, transcript, answers, flags, case:caseId, hp:document.getElementById("hp").value})});
     const d=await r.json().catch(()=>({}));
     if(!r.ok||!d.ok) throw new Error(d.error||"Something went wrong.");
     buildSummary({patientLabel, bhwId, pairs});

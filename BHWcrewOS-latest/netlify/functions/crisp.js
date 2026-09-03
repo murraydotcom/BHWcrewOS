@@ -1,135 +1,98 @@
-/* ============================================================================
- * CRISP CEND / ENS integration  —  Hospital & TCM board
- * ----------------------------------------------------------------------------
- * CRISP (Maryland's HIE) does NOT expose a simple public "pull ENS" API.
- * The real flow is roster-in, notifications-out:
+/*
+ * CRISP CEND / ENS integration.
  *
- *   1. PANEL OUT   You submit a patient panel (CSV) to CRISP — via the
- *                  Self-Service Panel Loader, SFTP, or Direct — refreshed at
- *                  least every 90 days.  (GET ?action=panel builds that CSV.)
- *   2. NOTIFY IN   CRISP pushes a notification whenever a paneled patient has
- *                  an encounter: an HL7 ADT message (to an endpoint/EHR) or a
- *                  PDF/flat file over the Direct protocol / SFTP.
- *                  (POST here ingests one message → a normalized event.)
- *   3. READ        The dashboard reads normalized events. (GET ?feed=adt)
+ * - Signed-in CrewOS staff read the protected Google Cloud ADT event store.
+ * - CRISP webhook deliveries require CRISP_INGEST_TOKEN and are forwarded to
+ *   the RCM Cloud API with the CrewOS server credential.
+ * - CEND exports are built only from the authoritative Cloud Patient Registry.
  *
- * Because Netlify functions are stateless, ingested events should be persisted
- * (this scaffold writes to / reads from a Notion "ADT / Encounters" database
- * when NOTION_TOKEN + NOTION_DB_ADT are set). Until CRISP_* env vars are set,
- * every path returns representative sample data so the UI is demonstrable.
- *
- * Env vars:
- *   CRISP_INGEST_TOKEN   shared secret CRISP includes when POSTing to this URL
- *   CRISP_SFTP_HOST/…    (optional) if you poll an SFTP drop instead of webhook
- *   NOTION_TOKEN         (optional) to persist + read events
- *   NOTION_DB_ADT        (optional) the ADT/Encounters database id
- * ==========================================================================*/
+ * No patient event is read from or written to Notion, and this function never
+ * falls back to sample patients when protected configuration is unavailable.
+ */
 
-const { parseHL7ADT, parseDelimited } = require('./lib/adt');
+const { parseHL7ADT, parseDelimited } = require("./lib/adt");
+const { getSession } = require("./_lib");
+const { cloudRequest, listCloudPatients } = require("./lib/cloud-patients");
 
-const CRISP_ENABLED = !!(process.env.CRISP_INGEST_TOKEN || process.env.CRISP_SFTP_HOST);
-const NOTION_TOKEN  = process.env.NOTION_TOKEN;
-const NOTION_DB_ADT = process.env.NOTION_DB_ADT;
+const json = (statusCode, body) => ({
+  statusCode,
+  headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+  body: JSON.stringify(body),
+});
 
 exports.handler = async (event) => {
-  const q = event.queryStringParameters || {};
-  const method = event.httpMethod || 'GET';
+  const method = event.httpMethod || "GET";
+  const query = event.queryStringParameters || {};
   try {
-    if (method === 'POST')   return await ingest(event);   // CRISP → normalized event
-    if (q.action === 'panel') return panelCsv();            // roster → CEND CSV
-    return await adtFeed(event);                                 // default: GET ?feed=adt
-  } catch (e) {
-    return json({ ok: false, error: e.message });
+    if (method === "POST") return await ingest(event);
+    if (method !== "GET") return json(405, { ok: false, error: "GET or POST only" });
+    const session = getSession(event);
+    if (!session) return json(401, { ok: false, error: "Sign in to CrewOS again" });
+    if (query.action === "panel") return await panelCsv(query, session);
+    return await adtFeed(session);
+  } catch (error) {
+    return json(error.status || 502, { ok: false, error: error.message || "CRISP Cloud request failed" });
   }
 };
 
-/* ---- READ: normalized ADT events for the dashboard ----------------------- */
-async function adtFeed(event) {
-  // Real ADT data (PHI) only flows to a signed-in crewOS session; otherwise the
-  // client falls back to its built-in sample board so the page is demonstrable.
-  const { getSession } = require('./_lib');
-  const session = getSession(event);
-  if (session && NOTION_TOKEN && NOTION_DB_ADT) {
-    const rows = await readNotionAdt();
-    return json({ ok: true, sampleMode: false, rosterSync: process.env.CRISP_ROSTER_SYNCED || 'synced', rows });
-  }
-  return json({ ok: true, sampleMode: true, rosterSync: session ? 'no ADT store — set NOTION_DB_ADT' : 'sample — sign in for live data', rows: [] });
+async function adtFeed(session) {
+  const result = await cloudRequest("/v1/crisp-events", { actor: session });
+  const snapshot = result.snapshot || { updatedAt: "", events: [] };
+  return json(200, {
+    ok: true,
+    sampleMode: false,
+    storage: "BHW Cloud",
+    savedAt: snapshot.updatedAt || "",
+    rosterSync: process.env.CRISP_ROSTER_SYNCED || "not-recorded",
+    rows: Array.isArray(snapshot.events) ? snapshot.events : [],
+  });
 }
 
-/* ---- INGEST: one CRISP notification → a normalized event ----------------- */
 async function ingest(event) {
-  // Fail closed: require the shared secret CRISP sends — no anonymous ADT writes.
   if (!process.env.CRISP_INGEST_TOKEN) {
-    return { statusCode: 503, body: JSON.stringify({ ok: false, error: 'CRISP_INGEST_TOKEN not set' }) };
+    return json(503, { ok: false, error: "CRISP ingest is not configured" });
   }
-  const token = (event.headers['x-crisp-token'] || event.headers['X-CRISP-Token'] || '');
+  const token = event.headers?.["x-crisp-token"] || event.headers?.["X-CRISP-Token"] || "";
   if (token !== process.env.CRISP_INGEST_TOKEN) {
-    return { statusCode: 401, body: JSON.stringify({ ok: false, error: 'bad ingest token' }) };
+    return json(401, { ok: false, error: "CRISP ingest authorization failed" });
   }
-  const body = event.body || '';
-  const normalized = body.trimStart().startsWith('MSH')
-    ? parseHL7ADT(body)              // HL7 v2 ADT message
-    : parseDelimited(body);          // ENS flat-file row / JSON
-
-  if (NOTION_TOKEN && NOTION_DB_ADT) await writeNotionAdt(normalized);
-  return json({ ok: true, normalized });   // echo so the webhook is testable
-}
-
-/* ---- PANEL OUT: build the CEND patient-panel CSV ------------------------- */
-function panelCsv() {
-  const cols = ['LastName','FirstName','DOB','Gender','Address1','City','State','Zip','MRN','MemberID','PanelID'];
-  // Live: replace `roster` with your active-patient export (e.g. from Notion/EHR).
-  const roster = [
-    ['Ellison','Jordan','1986-04-12','M','100 Main St','Baltimore','MD','21201','BHW1001','MD8840217','BHW-PRIMARY'],
-    ['Ruiz','Maria','1958-01-17','F','8 Elm Ct','Columbia','MD','21044','BHW1003','MCR770021','BHW-CCM'],
-  ];
-  const esc = v => /[",\n]/.test(v) ? '"' + String(v).replace(/"/g,'""') + '"' : v;
-  const csv = [cols.join(',')].concat(roster.map(r => r.map(esc).join(','))).join('\n');
-  return { statusCode: 200, headers: { 'Content-Type': 'text/csv', 'Content-Disposition': 'attachment; filename="CEND_panel.csv"' }, body: csv };
-}
-
-/* ---- Notion persistence (optional) --------------------------------------- */
-async function writeNotionAdt(ev) {
-  await fetch('https://api.notion.com/v1/pages', {
-    method: 'POST',
-    headers: notionHeaders(),
-    body: JSON.stringify({
-      parent: { database_id: NOTION_DB_ADT },
-      properties: {
-        Patient:    { title: [{ text: { content: ev.patient || '' } }] },
-        Type:       { select: { name: ev.type || 'update' } },
-        Event:      { rich_text: [{ text: { content: ev.event || '' } }] },
-        Facility:   { rich_text: [{ text: { content: ev.facility || '' } }] },
-        Date:       ev.date ? { date: { start: ev.date } } : { date: null },
-        Disposition:{ rich_text: [{ text: { content: ev.dispo || '' } }] },
-        Complexity: ev.complexity ? { select: { name: ev.complexity } } : { select: null },
-        Source:     { rich_text: [{ text: { content: ev.source || 'CRISP ENS' } }] },
-      }
-    })
+  const body = event.body || "";
+  const normalized = body.trimStart().startsWith("MSH") ? parseHL7ADT(body) : parseDelimited(body);
+  normalized.source = normalized.source || "CRISP ENS";
+  normalized.receivedAt = new Date().toISOString();
+  const result = await cloudRequest("/v1/crisp-events", {
+    actor: { staffId: "crisp-ingest", name: "CRISP ENS", role: "system" },
+    method: "POST",
+    body: normalized,
+  });
+  return json(result.duplicate ? 200 : 201, {
+    ok: true,
+    duplicate: Boolean(result.duplicate),
+    eventId: result.event?.id || "",
+    savedAt: result.snapshot?.updatedAt || normalized.receivedAt,
+    storage: "BHW Cloud",
   });
 }
-async function readNotionAdt() {
-  const r = await fetch(`https://api.notion.com/v1/databases/${NOTION_DB_ADT}/query`, {
-    method: 'POST', headers: notionHeaders(),
-    body: JSON.stringify({ page_size: 100, sorts: [{ property: 'Date', direction: 'descending' }] })
-  });
-  const j = await r.json();
-  const txt = p => (p?.rich_text?.[0]?.plain_text) || (p?.title?.[0]?.plain_text) || '';
-  return (j.results || []).map(pg => {
-    const P = pg.properties || {};
-    return {
-      patient: txt(P.Patient), type: P.Type?.select?.name || 'discharge',
-      event: txt(P.Event), facility: txt(P.Facility),
-      date: P.Date?.date?.start || null, dispo: txt(P.Disposition),
-      complexity: P.Complexity?.select?.name || null, source: txt(P.Source)
+
+async function panelCsv(query, session) {
+  const { buildCendRosterFile } = await import("../../engine/cend-roster.mjs");
+  const patients = await listCloudPatients(session);
+  const result = buildCendRosterFile(patients, { subscriberCode: query.subscriber || query.panelId || "" });
+  if (!result.ok) {
+    const messages = {
+      "subscriber-required": "Enter the CRISP subscriber code supplied during CEND enrollment",
+      "no-active-patients": "No active permanent patients are available for the CEND roster",
+      "incomplete-demographics": `${result.incompleteCount} active patient records need complete demographics before export`,
     };
-  });
-}
-function notionHeaders() {
-  return { 'Authorization': `Bearer ${NOTION_TOKEN}`, 'Notion-Version': '2022-06-28', 'Content-Type': 'application/json' };
-}
-
-/* ---- helpers ------------------------------------------------------------- */
-function json(obj) {
-  return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj) };
+    return json(400, { ok: false, reason: result.reason, error: messages[result.reason] || "CEND roster could not be built" });
+  }
+  return {
+    statusCode: 200,
+    headers: {
+      "Content-Type": "text/csv",
+      "Content-Disposition": `attachment; filename="${result.filename}"`,
+      "Cache-Control": "no-store",
+    },
+    body: result.csv,
+  };
 }

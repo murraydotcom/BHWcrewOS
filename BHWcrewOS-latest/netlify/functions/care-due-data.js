@@ -1,116 +1,99 @@
-// netlify/functions/care-due-data.js — the single "start your day" worklist for
-// care management (bhw-care-due.html). Session-gated, read-only. Merges three
-// sources into one sorted list:
-//   1. CCM/APCM/TCM follow-ups from the Care Management Log that are due
-//      (overdue / today / this week), from the Next Follow-up date.
-//   2. CCM/APCM patients not started this month (no contact, no minutes).
-//   3. Open inbound patient requests from the Front Desk triage queue.
-//
-//   POST {}  →  { today, endOfWeek, followups, notStarted, requests, counts }
+// Protected start-of-day list. Care-management records come from RCM Cloud;
+// inbound requests come from the one Google Operations Patient Requests queue.
 
-const { DB, queryDb, P, getSession, json } = require("./_lib");
-const { listCloudPatients } = require("./lib/cloud-patients");
+const { getSession, json } = require("./_lib");
+const { cloudRequest, listCloudPatients } = require("./lib/cloud-patients");
+const { operationsRequest } = require("./lib/operations-cloud");
 
-const QUEUE_DB = process.env.QUEUE_DB_ID || "de7906906a134b65bb0fc6966ba20b13";
-const people = (p) => (p?.people || []).map((u) => u.name).filter(Boolean).join(", ");
-const qsel = (p) => p?.select?.name || p?.status?.name || "";
-const qtext = (p) => p?.rich_text?.[0]?.plain_text || p?.title?.[0]?.plain_text || "";
-const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const iso = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+function patientRequestView(request = {}) {
+  return {
+    id: request.id || request.requestId || "",
+    type: request.requestType || request.type || "Patient request",
+    source: request.source || request.sourceChannel || "",
+    priority: request.priority || "routine",
+    status: request.status || "open",
+    sla: request.sla || request.slaStatus || "",
+    received: request.receivedAt || request.createdAt || "",
+    summary: request.summary || request.reason || "",
+    name: request.patientLabel || request.patientName || request.bhwPatientId || "Protected patient",
+    assigned: request.assignedTo || request.owner || "",
+  };
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return json(405, { error: "POST only" });
   const session = getSession(event);
-  if (!session) return json(401, { error: "Sign in to crewOS again." });
-  if (!process.env.NOTION_TOKEN) return json(503, { error: "NOTION_TOKEN is not set on this site" });
+  if (!session) return json(401, { error: "Sign in to CrewOS again." });
 
   const now = new Date();
   const today = iso(now);
-  const eowDate = new Date(now); eowDate.setDate(eowDate.getDate() + ((7 - now.getDay()) % 7)); // through Sunday
-  const eow = iso(eowDate);
+  const endOfWeekDate = new Date(now);
+  endOfWeekDate.setDate(endOfWeekDate.getDate() + ((7 - now.getDay()) % 7));
+  const endOfWeek = iso(endOfWeekDate);
   const month = today.slice(0, 7);
-  const DONE = new Set(["Complete", "Billed"]);
+  const done = new Set(["complete", "billed"]);
 
   try {
-    const [logs, roster] = await Promise.all([queryDb(DB.careLog), listCloudPatients(session)]);
-    const byBhwId = new Map(roster.map((patient) => [patient.bhwPatientId, patient]));
-    const bySourceId = new Map(roster.filter((patient) => patient.notionPageId).map((patient) => [patient.notionPageId, patient]));
+    const [logResult, roster, requestResult] = await Promise.all([
+      cloudRequest("/v1/care-management/logs", { actor: session }),
+      listCloudPatients(session),
+      operationsRequest("/v1/patient-requests?status=open&limit=100", { actor: session })
+        .catch(() => ({ requests: [] })),
+    ]);
+    const byId = new Map(roster.map((patient) => [patient.bhwPatientId, patient]));
     const followups = [];
     const notStarted = [];
-    for (const pg of logs) {
-      const p = pg.properties;
-      const it = {
-        id: pg.id,
-        name: (P.title(p["Entry"]) || "").split(" — ")[0] || P.title(p["Entry"]),
-        program: P.sel(p["Program"]),
-        ctlNo: P.text(p["Patient Ctl No"]),
-        month: P.date(p["Service Month"]),
-        minutes: P.num(p["Minutes Logged"]),
-        nextFollowUp: P.date(p["Next Follow-up"]),
-        stage: P.sel(p["Follow-up Stage"]),
-        status: P.sel(p["Status"]) || "Open",
-        coordinator: people(p["Care Coordinator"]),
-        lastContact: P.date(p["Last Contact"]),
-        patientId: P.rel(p["Patient"])[0] || "",
+    for (const log of Array.isArray(logResult.logs) ? logResult.logs : []) {
+      const patient = byId.get(log.bhwPatientId);
+      const item = {
+        ...log,
+        name: patient?.name || log.entry || log.bhwPatientId,
+        ctlNo: log.bhwPatientId,
+        month: log.serviceMonth || "",
+        stage: log.followUpStage || "",
+        status: log.status || "Open",
+        patientId: log.bhwPatientId,
+        payer: patient?.payer || "",
+        rosterLinked: Boolean(patient),
       };
-      const registryPatient = byBhwId.get(it.ctlNo) || bySourceId.get(it.patientId);
-      if (registryPatient) {
-        it.bhwPatientId = registryPatient.bhwPatientId;
-        it.name = registryPatient.name || it.name;
-        it.payer = registryPatient.payer;
-        it.rosterLinked = true;
-      } else {
-        it.bhwPatientId = "";
-        it.rosterLinked = false;
-      }
-      if (it.nextFollowUp && !DONE.has(it.status) && it.nextFollowUp <= eow) {
-        it.bucket = it.nextFollowUp < today ? "overdue" : it.nextFollowUp === today ? "today" : "week";
-        followups.push(it);
-      } else if ((it.program === "CCM" || it.program === "APCM") &&
-        (it.month || "").slice(0, 7) === month && !DONE.has(it.status) &&
-        !it.nextFollowUp && !it.lastContact && !(it.minutes > 0)) {
-        notStarted.push(it);
+      if (item.nextFollowUp && !done.has(item.status.toLowerCase()) && item.nextFollowUp <= endOfWeek) {
+        item.bucket = item.nextFollowUp < today ? "overdue" : item.nextFollowUp === today ? "today" : "week";
+        followups.push(item);
+      } else if (["CCM", "APCM"].includes(item.program)
+          && item.month.slice(0, 7) === month && !done.has(item.status.toLowerCase())
+          && !item.nextFollowUp && !item.lastContact && !(item.minutes > 0)) {
+        notStarted.push(item);
       }
     }
     const rank = { overdue: 0, today: 1, week: 2 };
-    followups.sort((a, b) =>
-      (rank[a.bucket] - rank[b.bucket]) ||
-      (a.nextFollowUp || "").localeCompare(b.nextFollowUp || "") ||
-      a.name.localeCompare(b.name));
-    notStarted.sort((a, b) => a.name.localeCompare(b.name));
+    followups.sort((left, right) => rank[left.bucket] - rank[right.bucket]
+      || left.nextFollowUp.localeCompare(right.nextFollowUp) || left.name.localeCompare(right.name));
+    notStarted.sort((left, right) => left.name.localeCompare(right.name));
 
-    // inbound patient requests (open) from the triage queue
-    let requests = [];
-    try {
-      const q = await queryDb(QUEUE_DB);
-      requests = q.map((r) => {
-        const p = r.properties;
-        return {
-          id: r.id,
-          type: qsel(p["Request Type"]),
-          source: qsel(p["Source"]),
-          priority: qsel(p["Priority"]),
-          status: qsel(p["Status"]),
-          sla: p["⚠️ SLA"]?.formula?.string || "",
-          received: p["Received"]?.date?.start || "",
-          summary: qtext(p["Summary"]),
-          name: qtext(p["Patient Name"]),
-          assigned: qsel(p["Assigned To"]),
-        };
-      }).filter((r) => r.status && !["Done", "Resolved", "Closed"].includes(r.status));
-      requests.sort((a, b) => (b.received || "").localeCompare(a.received || ""));
-    } catch (_) { /* queue optional — leave empty if unreachable */ }
+    const requestRows = Array.isArray(requestResult.requests)
+      ? requestResult.requests : Array.isArray(requestResult.patientRequests) ? requestResult.patientRequests : [];
+    const requests = requestRows.map(patientRequestView)
+      .filter((request) => !["done", "resolved", "closed"].includes(String(request.status).toLowerCase()))
+      .sort((left, right) => String(right.received).localeCompare(String(left.received)));
 
     return json(200, {
-      today, endOfWeek: eow, followups, notStarted, requests,
+      today,
+      endOfWeek,
+      followups,
+      notStarted,
+      requests,
       counts: {
-        overdue: followups.filter((f) => f.bucket === "overdue").length,
-        today: followups.filter((f) => f.bucket === "today").length,
-        week: followups.filter((f) => f.bucket === "week").length,
+        overdue: followups.filter((item) => item.bucket === "overdue").length,
+        today: followups.filter((item) => item.bucket === "today").length,
+        week: followups.filter((item) => item.bucket === "week").length,
         notStarted: notStarted.length,
         requests: requests.length,
       },
+      storage: "BHW Cloud",
     });
-  } catch (err) {
-    return json(500, { error: String(err.message || err) });
+  } catch (error) {
+    return json(500, { error: String(error.message || error) });
   }
 };
