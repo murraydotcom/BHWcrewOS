@@ -92,7 +92,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
     <tr><td><b>Positive ANA?</b></td><td>Analyze an ANA result, immune patterns, 100 conditions, management protocols</td><td>Providers</td></tr>
     <tr><td><b>Hormone Analysis</b></td><td>Lab-based hormone interpretation with ratios and patterns</td><td>Providers</td></tr>
     <tr><td><b>Billing Toolkit</b></td><td>Care management documentation, audit tool, and every preventive code with its ICD-10</td><td>Billing role, providers</td></tr>
-    <tr><td><b>BHWCrewCare Portal</b></td><td>Provider side — clinical inbox, care plan builder, post results, patient roster</td><td>Providers</td></tr>
+    <tr><td><b>BHW CrewCare</b></td><td>Provider doorway to the Google Patient Requests queue, Health 360 Care Plans, and the protected Patient Registry</td><td>Providers</td></tr>
     <tr><td><b>Patient page previews</b></td><td>What patients see for each program</td><td>Anyone, for reference</td></tr>
   </table>
 </div>
@@ -332,22 +332,22 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
   <div class="tip"><b>If access fails:</b> verify the patient’s approved contact information in the authoritative record, then escalate the access problem. Never send detailed medical information by ordinary SMS as a workaround.</div>
 </div>
 
-<h2><span class="n">06</span>BHWCrewCare Portal — the provider side</h2>
-<div class="sec" data-k="crewcare console care plan builder publish week results interpretation roster">
-  <h3>Building a care plan <span class="who">Providers</span></h3>
+<h2><span class="n">06</span>BHW CrewCare — the provider side</h2>
+<div class="sec" data-k="crewcare health 360 care plan patient requests registry results interpretation roster">
+  <h3>Building or updating a care plan <span class="who">Providers</span></h3>
   <ol>
-    <li>Open <b>BHWCrewCare Portal</b> → <b>Care plan builder</b>.</li>
-    <li>Pick the patient, tap <b>Load their care plan</b> — their existing plan appears on the left.</li>
-    <li>The plan is written once; the patient's page shows it. Weekly release of each section is meant to run automatically once that automation is set up — it is not something staff publish by hand every week.</li>
+    <li>Open <b>BHW CrewCare</b> → <b>Health 360</b>.</li>
+    <li>Pick the verified Patient Registry patient and open <b>Health 360</b>, or start the program care-plan form.</li>
+    <li>Save the draft to <b>BHW Cloud</b>. A licensed clinician reviews it before marking the patient copy “It’s Ready.”</li>
   </ol>
-  <div class="tip"><b>Until the weekly automation is live,</b> the whole plan simply lives on the patient's page. No one needs to remember to publish a section each week.</div>
-  <h3 style="margin-top:16px">Posting a lab result</h3>
+  <div class="tip"><b>One record:</b> integrated labs, the five physiologic domains, program actions, medication/supplement tolerance and benefit, and follow-up all live in the same Health Blueprint.</div>
+  <h3 style="margin-top:16px">Lab results and between-visit work</h3>
   <ol>
-    <li><b>Post results</b> tab → pick the patient → enter the lab and value.</li>
-    <li>Write <b>what it means for them</b> in plain language.</li>
-    <li>Tap <b>Post to patient page</b>.</li>
+    <li>Add interpreted lab results in <b>Health 360 Care Plans</b>; do not post them to an older patient page.</li>
+    <li>Use <b>Patient Requests</b> for between-visit follow-up so Front Desk and CrewOS see the same work item.</li>
+    <li>Send only the approved no-PHI “It’s Ready” notice after the Blueprint passes clinical review.</li>
   </ol>
-  <div class="rule"><b>A patient never sees a raw number alone.</b> The system won't post without your interpretation — that's on purpose.</div>
+  <div class="rule"><b>Do not create a second patient page or patient list.</b> Patient identity comes from the Google Cloud Patient Registry, and patient-care drafts save to that patient's protected Health 360 record.</div>
 </div>
 
 <h2><span class="n">06b</span>Staff tools — paperwork, documents &amp; fax</h2>
@@ -358,7 +358,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
     <tr><th>Tool</th><th>What it does</th></tr>
     <tr><td><b>Patient Requests</b></td><td>The authoritative command center for routed patient work. Assign, start, record exact milestones/outcomes, escalate, review communications/delivery, and—when enabled—send approved no-PHI notifications through Dialpad.</td></tr>
     <tr><td><b>Paperwork Studio</b></td><td>Chart pulls, prior auth, disability, FMLA &amp; MTA. Paste a note and <b>AI read note</b> pre-fills it, fills the real agency/payer PDF, and can <b>📠 Fax</b> it out.</td></tr>
-    <tr><td><b>Care Plan Studio</b></td><td>Branded, patient-ready annual care plans per program — pull the existing patient, tailor it, and print/Save-PDF. Use the current Google-backed patient workflow; do not start new Notion storage.</td></tr>
+    <tr><td><b>Care Plan Studio</b></td><td>Branded, patient-ready annual care plans per program — pull the existing patient, tailor it, print/Save-PDF, and save the draft to the same BHW Cloud Health Blueprint.</td></tr>
     <tr><td><b>Document Builder</b></td><td>Patient handouts, after-visit summaries, care plans, letters, and medication lists — branded, print/Save-PDF. Includes <b>✨ Draft with AI</b> (below).</td></tr>
     <tr><td><b>Send a Fax</b></td><td>Fax any PDF out through the practice line — pick a file, enter the number, send.</td></tr>
     <tr><td><b>Patient Monitor</b></td><td>Live roster of who's checking in and active today.</td></tr>
