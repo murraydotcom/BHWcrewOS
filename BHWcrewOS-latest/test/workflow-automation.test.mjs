@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   applyPatientRequestAction,
   buildGoogleChatCard,
+  canActOnRequest,
   defaultNotificationRules,
   normalizeStaffRole,
   quietHoursState,
@@ -30,6 +31,17 @@ test("active CrewOS roster titles normalize to least-privilege workflow roles", 
   for (const [rosterTitle, workflowRole] of expected) {
     assert.equal(normalizeStaffRole(rosterTitle), workflowRole, rosterTitle);
   }
+});
+
+test("non-provider staff can work every request type while providers retain focused access", () => {
+  const billing = syntheticRequest("billing_rcm");
+  const referral = syntheticRequest("referral");
+  assert.equal(canActOnRequest(billing, { role: "Medical Assistant" }), true);
+  assert.equal(canActOnRequest(billing, { role: "BH Coordinator" }), true);
+  assert.equal(canActOnRequest(referral, { role: "RCM" }), true);
+  assert.equal(canActOnRequest(referral, { role: "CRNP", sub: "crew:provider" }), false);
+  assert.equal(canActOnRequest({ ...referral, status: "escalated", statusCategory: "escalated" }, { role: "CRNP", sub: "crew:provider" }), true);
+  assert.equal(canActOnRequest({ ...referral, escalationReason: "Synthetic escalation" }, { role: "CRNP", sub: "crew:provider" }), true);
 });
 
 function syntheticRequest(requestType, id = `synthetic-${requestType.replaceAll("_", "-")}`) {
