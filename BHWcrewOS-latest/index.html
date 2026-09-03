@@ -1921,7 +1921,8 @@ function openNewPatient(){
     <input type="text" id="np-search" placeholder="Search by name or BHW ID — then choose" autocomplete="off" oninput="npSearch()">
     <div id="np-results"></div>
     <div id="np-matched"></div>
-    <label>Full name *</label><input type="text" id="np-name" placeholder="First Last">
+    <label>Full legal name *</label><input type="text" id="np-name" placeholder="First Middle Last">
+    <label>Suffix</label><select id="np-suffix"><option value="">None</option><option>Jr</option><option>Sr</option><option>II</option><option>III</option><option>IV</option><option>V</option></select>
     <label>Date of birth *</label><input type="date" id="np-dob">
     <label>Insurance</label><select id="np-ins"><option value="">Select…</option>${NP_INS.map(i=>`<option>${i}</option>`).join("")}</select>
     <label>Insurance member ID</label><input type="text" id="np-mem" placeholder="From the card">
@@ -1988,6 +1989,7 @@ async function npSubmit(force){
   const body = {
     action: "patient-create",
     name: document.getElementById("np-name").value.trim(),
+    nameSuffix: document.getElementById("np-suffix").value,
     dob: document.getElementById("np-dob").value,
     insurance: document.getElementById("np-ins").value || undefined,
     memberId: document.getElementById("np-mem").value.trim() || undefined,

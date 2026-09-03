@@ -10,7 +10,7 @@
 //   patient-select (link an existing Cloud patient to the transitional Index)
 
 const { DB, DIVISIONS, httpJson, queryDb, createPage, updatePage, P, W, getSession, visibleDivisions, json } = require("./_lib");
-const { cloudRequest, listCloudPatients } = require("./lib/cloud-patients");
+const { cloudRequest, listCloudPatients, parsePatientName } = require("./lib/cloud-patients");
 const zlib = require("zlib");
 
 // Google Cloud is the authoritative patient list. During migration, new
@@ -544,7 +544,8 @@ exports.handler = async (event) => {
       }
 
       case "patient-create": {
-        const name = (b.name || "").trim();
+        const parsedName = parsePatientName(b.name, b.nameSuffix);
+        const name = parsedName.name;
         if (!name) return json(400, { error: "Patient name is required" });
         if (!b.dob) return json(400, { error: "Date of birth is required" });
         const norm = (s) => (s || "").toLowerCase().replace(/[^a-z]/g, "");
@@ -599,11 +600,11 @@ exports.handler = async (event) => {
         }, 0);
         const ctlNo = "BHW" + String(maxNum + 1).padStart(4, "0");
         const mbi = b.mbi ? String(b.mbi).replace(/[^A-Za-z0-9]/g, "").toUpperCase() : "";
-        const nameParts = name.split(/\s+/).filter(Boolean);
         const cloudPatient = {
           bhwPatientId: ctlNo,
-          legalFirstName: nameParts.slice(0, -1).join(" ") || nameParts[0],
-          legalLastName: nameParts.length > 1 ? nameParts.at(-1) : "Unknown",
+          legalFirstName: parsedName.legalFirstName,
+          legalLastName: parsedName.legalLastName,
+          nameSuffix: parsedName.nameSuffix,
           dateOfBirth: b.dob,
           email: b.email || "",
           guardianEmail: b.guardianEmail || "",

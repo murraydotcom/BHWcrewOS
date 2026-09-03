@@ -74,7 +74,7 @@ function ageText(birthDate) {
 }
 
 function normalizePatientName(name = {}) {
-  const raw = compact([...(name.given || []), name.family]).join(" ") || "Synthetic Patient";
+  const raw = compact([...(name.given || []), name.family, ...(name.suffix || [])]).join(" ") || "Synthetic Patient";
   return raw.replace(/\b(\w+)\s+\1\b/gi, "$1");
 }
 

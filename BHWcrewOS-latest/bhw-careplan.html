@@ -372,12 +372,15 @@ $("siCancel").addEventListener("click",()=>$("signin").classList.remove("on"));
 $("siGo").addEventListener("click",doLogin);
 $("siPin").addEventListener("keydown",e=>{ if(e.key==="Enter") doLogin(); });
 async function doLogin(){ const staffId=$("siStaff").value, pin=$("siPin").value.trim(); if(!staffId||!pin) return; const { ok, d }=await post("auth",{action:"login",staffId,pin}); if(ok&&d.token){ TOKEN=d.token; sessionStorage.setItem("crewos_token",TOKEN); $("signin").classList.remove("on"); setConnected(d.user?.name||d.name); } else { $("siErr").style.display="flex"; $("siErrTxt").textContent=d.error||"Sign-in failed."; } }
-async function loadPatients(){ const { ok, status, d }=await post("patients",{action:"list"}); if(status===401){ TOKEN=""; sessionStorage.removeItem("crewos_token"); setConnected(); return; } if(ok&&d.patients){ PATIENTS=d.patients; $("patientOptions").innerHTML=PATIENTS.map(p=>`<option value="${esc(p.name)}${p.dob?` (${fmtDate(p.dob)})`:""}">`).join(""); } }
+function patientChoice(p){ return `${p.name}${p.bhwId?` — ${p.bhwId}`:""}${p.dob?` · DOB ${fmtDate(p.dob)}`:""}${p.status&&p.status!=="active"?` · ${p.status}`:""}`; }
+async function loadPatients(){ const { ok, status, d }=await post("patients",{action:"list"}); if(status===401){ TOKEN=""; sessionStorage.removeItem("crewos_token"); setConnected(); return; } if(ok&&d.patients){ PATIENTS=d.patients; $("patientOptions").innerHTML=PATIENTS.map(p=>`<option ${p.selectable===false?'disabled ':''}value="${esc(patientChoice(p))}">`).join(""); } }
 $("patientPickBtn").addEventListener("click",()=>{
   const raw=$("patientSearch").value.trim(); if(!raw) return;
-  const q=raw.split(" (")[0].toLowerCase();
-  const p=PATIENTS.find(x=>x.name.toLowerCase()===q)||PATIENTS.find(x=>x.name.toLowerCase().includes(q));
+  const id=(raw.match(/\bBHW\d{4}\b/i)||[])[0]?.toUpperCase();
+  const q=raw.split(" — ")[0].split(" (")[0].toLowerCase();
+  const p=(id&&PATIENTS.find(x=>(x.bhwId||x.bhwPatientId)===id))||PATIENTS.find(x=>patientChoice(x)===raw)||PATIENTS.find(x=>x.name.toLowerCase()===q)||PATIENTS.find(x=>x.name.toLowerCase().includes(q));
   if(!p){ $("patientHint").textContent="No match — check the name."; return; }
+  if(p.selectable===false){ $("patientHint").textContent=`${p.name} (${p.bhwId}) is ${p.status}; a new care plan cannot be started from this list.`; return; }
   $("f-patient").value=p.name; if(p.dob)$("f-dob").value=String(p.dob).slice(0,10); if(p.bhwId)$("f-bhwid").value=p.bhwId;
   if(Array.isArray(p.icds)&&p.icds.length){ const lines=p.icds.map(i=>`${i.code}${i.label?` — ${i.label}`:""}`).join("\n"); $("f-focus").value=lines; }
   $("patientHint").textContent=`Loaded ${p.name}${p.bhwId?` (${p.bhwId})`:""}`+(p.icds&&p.icds.length?` · ${p.icds.length} condition(s) from the chart.`:"");

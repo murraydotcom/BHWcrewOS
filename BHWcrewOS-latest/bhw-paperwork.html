@@ -516,13 +516,16 @@ async function loadPatients(){
   const { ok, status, d } = await post("patients",{action:"list"});
   if(status===401) return expire("Session expired — reconnect.");
   if(ok && d.patients){ PATIENTS=d.patients;
-    $("patientOptions").innerHTML = PATIENTS.map(p=>`<option value="${esc(p.name)}${p.dob?` (${fmtDate(p.dob)})`:""}">`).join(""); }
+    $("patientOptions").innerHTML = PATIENTS.map(p=>`<option ${p.selectable===false?'disabled ':''}value="${esc(patientChoice(p))}">`).join(""); }
 }
+function patientChoice(p){ return `${p.name}${p.bhwId?` — ${p.bhwId}`:""}${p.dob?` · DOB ${fmtDate(p.dob)}`:""}${p.status&&p.status!=="active"?` · ${p.status}`:""}`; }
 $("patientPickBtn").addEventListener("click", ()=>{
   const raw=$("patientSearch").value.trim(); if(!raw) return;
-  const q=raw.split(" (")[0].toLowerCase();
-  const p = PATIENTS.find(x=>x.name.toLowerCase()===q) || PATIENTS.find(x=>x.name.toLowerCase().includes(q));
+  const id=(raw.match(/\bBHW\d{4}\b/i)||[])[0]?.toUpperCase();
+  const q=raw.split(" — ")[0].split(" (")[0].toLowerCase();
+  const p = (id&&PATIENTS.find(x=>(x.bhwId||x.bhwPatientId)===id)) || PATIENTS.find(x=>patientChoice(x)===raw) || PATIENTS.find(x=>x.name.toLowerCase()===q) || PATIENTS.find(x=>x.name.toLowerCase().includes(q));
   if(!p){ $("patientHint").textContent="No match — check the name."; return; }
+  if(p.selectable===false){ $("patientHint").textContent=`${p.name} (${p.bhwId}) is ${p.status}; new paperwork cannot be started from this list.`; return; }
   state.fields.patient=p.name;
   if(p.dob) state.fields.dob=p.dob;
   if(p.chart && packet().fields.includes("mrn")) state.fields.mrn=p.chart;

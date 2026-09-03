@@ -33,3 +33,24 @@ test("CrewHQ exposes the protected Patient Registry as a first-class tool", asyn
   assert.match(workflowApp, /patient\.nameSuffix/);
   assert.match(transcriptionApp, /patient\.nameSuffix/);
 });
+
+test("CrewOS and Front Desk patient lists keep Cloud identity, suffix, and status together", async () => {
+  const files = await Promise.all([
+    "bhw-front-desk.html", "bhw-documents.html", "bhw-paperwork.html",
+    "bhw-careplan.html", "bhw-crewcare-portal.html",
+  ].map(async (name) => [name, await readFile(new URL(`../${name}`, import.meta.url), "utf8")]));
+  const source = Object.fromEntries(files);
+
+  for (const [name, html] of files) {
+    const scripts = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)].map((match) => match[1]);
+    for (const script of scripts) assert.doesNotThrow(() => new Function(script), `${name} inline script should compile`);
+  }
+
+  assert.match(source["bhw-front-desk.html"], /m\.status&&m\.status!=='active'/);
+  assert.match(source["bhw-documents.html"], /m\.ctl.*m\.status&&m\.status!=='active'/);
+  assert.match(source["bhw-paperwork.html"], /patientChoice\(p\).*p\.bhwId/s);
+  assert.match(source["bhw-paperwork.html"], /p\.selectable===false/);
+  assert.match(source["bhw-careplan.html"], /patientChoice\(p\).*p\.bhwId/s);
+  assert.match(source["bhw-careplan.html"], /p\.selectable===false/);
+  assert.match(source["bhw-crewcare-portal.html"], /o\.disabled=p\.selectable===false/);
+});

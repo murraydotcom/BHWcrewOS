@@ -332,7 +332,7 @@ exports.handler = async (event) => {
         statusCode: 200,
         headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
         body: JSON.stringify({
-          matches: [{ id: BHW0000.id, name: BHW0000.name, ctl: BHW0000.ctl, dob: BHW0000.dob, phone: '' }],
+          matches: [{ id: BHW0000.id, name: BHW0000.name, ctl: BHW0000.ctl, dob: BHW0000.dob, phone: '', status: BHW0000.status }],
           patient: BHW0000,
           requests: [],
         }),
@@ -390,7 +390,14 @@ exports.handler = async (event) => {
 
     // Return EVERY match so the desk can pick the right person when names
     // collide (e.g. two "Amaris"). Sorted by name for a stable chooser.
-    const matches = results.map(p => ({ id:p.id, name:p.name, ctl:p.bhwPatientId, dob:p.dob || '', phone:p.phone || '' })).sort((a, b) => a.name.localeCompare(b.name));
+    const matches = results.map(p => ({
+      id: p.id,
+      name: p.name,
+      ctl: p.bhwPatientId,
+      dob: p.dob || '',
+      phone: p.phone || '',
+      status: p.status || '',
+    })).sort((a, b) => a.name.localeCompare(b.name));
 
     // Exactly one match -> include full detail, so single-hit search is unchanged.
     if (results.length === 1) {

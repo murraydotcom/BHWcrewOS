@@ -524,7 +524,7 @@ async function lookup(){
     if(!res.ok)throw new Error(res.status);
     const d=await res.json();
     // Back-compat: older responses returned only {patient}; new ones return {matches,[patient]}.
-    const matches=d.matches||(d.patient?[{id:d.patient.id,name:d.patient.name,ctl:d.patient.ctl,dob:d.patient.dob,phone:d.patient.phone}]:[]);
+    const matches=d.matches||(d.patient?[{id:d.patient.id,name:d.patient.name,ctl:d.patient.ctl,dob:d.patient.dob,phone:d.patient.phone,status:d.patient.status}]:[]);
     if(!matches.length){$('lkstatus').textContent='No match found — could be a new patient. Check spelling or search the Master List directly.';return;}
     if(d.patient){ renderProfile(d.patient,d.requests); return; }   // single hit → straight to the profile
     renderChooser(matches);                                          // multiple → let the desk pick
@@ -536,7 +536,7 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;',
 function renderChooser(matches){
   $('profile').classList.remove('show');
   const rows=matches.map(m=>`<button type="button" onclick="selectPatient('${m.id}')" style="display:block;width:100%;text-align:left;padding:10px 12px;margin:6px 0;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:pointer;font:inherit">
-      <b>${esc(m.name)}</b><span style="color:var(--ink-soft)">${m.dob?` · DOB ${fmtDate(m.dob)}`:''}${m.ctl?` · ${esc(m.ctl)}`:''}${m.phone?` · ${esc(m.phone)}`:''}</span>
+      <b>${esc(m.name)}</b><span style="color:var(--ink-soft)">${m.dob?` · DOB ${fmtDate(m.dob)}`:''}${m.ctl?` · ${esc(m.ctl)}`:''}${m.phone?` · ${esc(m.phone)}`:''}${m.status&&m.status!=='active'?` · ${esc(m.status)}`:''}</span>
     </button>`).join('');
   $('lkstatus').innerHTML=`<div style="margin-top:8px"><div style="font-weight:600;margin-bottom:4px">${matches.length} patients match — choose one:</div>${rows}</div>`;
 }
