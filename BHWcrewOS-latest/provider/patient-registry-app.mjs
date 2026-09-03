@@ -34,6 +34,7 @@ function patientFields(patient = {}, prefix = "d", includeId = false) {
     includeId ? field(`${prefix}Id`, "BHW Patient ID", patient.bhwPatientId || "") : "",
     field(`${prefix}First`, "Legal first name", patient.legalFirstName || ""),
     field(`${prefix}Last`, "Legal last name", patient.legalLastName || ""),
+    field(`${prefix}Suffix`, "Suffix", patient.nameSuffix || ""),
     field(`${prefix}Preferred`, "Preferred name", patient.preferredName || ""),
     field(`${prefix}Dob`, "Date of birth", patient.dateOfBirth || "", "date"),
     field(`${prefix}Phone`, "Primary phone", patient.phone || "", "tel"),
@@ -52,6 +53,7 @@ function readPatient(prefix, bhwPatientId = "") {
     bhwPatientId: (bhwPatientId || $(`${prefix}Id`)?.value || "").trim().toUpperCase(),
     legalFirstName: $(`${prefix}First`).value.trim(),
     legalLastName: $(`${prefix}Last`).value.trim(),
+    nameSuffix: $(`${prefix}Suffix`).value.trim(),
     preferredName: $(`${prefix}Preferred`).value.trim(),
     dateOfBirth: $(`${prefix}Dob`).value,
     phone: $(`${prefix}Phone`).value.trim(),
@@ -135,7 +137,7 @@ function visiblePatients() {
   const filter = $("statusFilter").value;
   return patients.filter((patient) => {
     const matchesStatus = filter === "all" || (filter === "needs-review" ? patient.coverageStatus === "needs-review" : patient.patientStatus === filter);
-    const haystack = [patient.bhwPatientId, patient.legalFirstName, patient.legalLastName, patient.preferredName, patient.phone, patient.primaryPayer, patient.memberId].join(" ").toLowerCase();
+    const haystack = [patient.bhwPatientId, patient.legalFirstName, patient.legalLastName, patient.nameSuffix, patient.preferredName, patient.phone, patient.primaryPayer, patient.memberId].join(" ").toLowerCase();
     return matchesStatus && (!query || haystack.includes(query));
   });
 }
@@ -151,7 +153,7 @@ function renderKpis() {
 function renderRows() {
   const visible = visiblePatients();
   $("patientRows").innerHTML = visible.length ? visible.map((patient) => {
-    const name = `${patient.legalLastName}, ${patient.preferredName || patient.legalFirstName}`;
+    const name = `${patient.legalLastName}${patient.nameSuffix ? ` ${patient.nameSuffix}` : ""}, ${patient.preferredName || patient.legalFirstName}`;
     const coverageClass = patient.coverageStatus === "verified" ? "complete" : "warning";
     return `<tr data-id="${esc(patient.bhwPatientId)}" class="${patient.bhwPatientId === selectedId ? "on" : ""}"><td><b>${esc(patient.bhwPatientId)}</b></td><td>${esc(name)}</td><td>${esc(patient.dateOfBirth)}</td><td>${esc(patient.phone || "—")}</td><td>${esc(patient.primaryPayer || "—")}<br><span class="badge ${coverageClass}">${esc(patient.coverageStatus)}</span></td><td>${esc(patient.patientStatus)}</td></tr>`;
   }).join("") : '<tr><td colspan="6"><div class="empty">No patient records match this view.</div></td></tr>';
@@ -161,7 +163,8 @@ function renderRows() {
 function renderDetail() {
   const patient = patients.find((item) => item.bhwPatientId === selectedId);
   if (!patient) { $("detail").innerHTML = '<div class="empty">Select a patient to review the master record.</div>'; return; }
-  $("detail").innerHTML = `<div class="card-head"><div><h3>${esc(patient.bhwPatientId)} · ${esc(patient.legalLastName)}, ${esc(patient.preferredName || patient.legalFirstName)}</h3><div class="privacy">Last verified ${patient.lastVerifiedAt ? new Date(patient.lastVerifiedAt).toLocaleString() : "not recorded"}</div></div><span class="badge ${patient.coverageStatus === "verified" ? "complete" : "warning"}">${esc(patient.coverageStatus)}</span></div><div class="detail"><div class="formgrid">${patientFields(patient)}</div><div class="actions"><button class="btn primary" id="savePatient">Save verified changes</button><button class="btn" id="startEncounter">Create encounter</button></div><div class="privacy">Patient-reported changes must be verified before they replace this authoritative record. This registry supports operations; CharmHealth remains the legal medical record.</div><div class="consent-panel" id="recordingConsentPanel"><div class="privacy">Loading signed consent status…</div></div></div>`;
+  const displayedLastName = `${patient.legalLastName}${patient.nameSuffix ? ` ${patient.nameSuffix}` : ""}`;
+  $("detail").innerHTML = `<div class="card-head"><div><h3>${esc(patient.bhwPatientId)} · ${esc(displayedLastName)}, ${esc(patient.preferredName || patient.legalFirstName)}</h3><div class="privacy">Last verified ${patient.lastVerifiedAt ? new Date(patient.lastVerifiedAt).toLocaleString() : "not recorded"}</div></div><span class="badge ${patient.coverageStatus === "verified" ? "complete" : "warning"}">${esc(patient.coverageStatus)}</span></div><div class="detail"><div class="formgrid">${patientFields(patient)}</div><div class="actions"><button class="btn primary" id="savePatient">Save verified changes</button><button class="btn" id="startEncounter">Create encounter</button></div><div class="privacy">Patient-reported changes must be verified before they replace this authoritative record. This registry supports operations; CharmHealth remains the legal medical record.</div><div class="consent-panel" id="recordingConsentPanel"><div class="privacy">Loading signed consent status…</div></div></div>`;
   $("savePatient").onclick = async () => {
     const next = readPatient("d", patient.bhwPatientId);
     const error = validationMessage(next);
@@ -201,7 +204,7 @@ $("create").onclick = async () => {
   try {
     const response = await client.savePatient(patient);
     patients.push(response.patient);
-    patients.sort((left, right) => `${left.legalLastName}|${left.legalFirstName}`.localeCompare(`${right.legalLastName}|${right.legalFirstName}`));
+    patients.sort((left, right) => `${left.legalLastName}|${left.nameSuffix || ""}|${left.legalFirstName}`.localeCompare(`${right.legalLastName}|${right.nameSuffix || ""}|${right.legalFirstName}`));
     selectedId = response.patient.bhwPatientId;
     $("modal").classList.remove("on");
     render();

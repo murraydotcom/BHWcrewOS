@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 
 const PATIENT_FIELDS = [
-  "bhwPatientId", "legalFirstName", "legalLastName", "preferredName", "dateOfBirth",
+  "bhwPatientId", "legalFirstName", "legalLastName", "nameSuffix", "preferredName", "dateOfBirth",
   "phone", "email", "patientStatus", "primaryPayer", "memberId", "coverageStatus",
   "referralSource", "responsibleStaff", "lastVerifiedAt",
 ];

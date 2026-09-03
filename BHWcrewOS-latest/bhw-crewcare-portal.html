@@ -363,7 +363,8 @@ async function boot(){
     ['r-pat','bp-pat'].forEach(id=>{
       const s=$(id); s.innerHTML='<option value="">Choose patient…</option>';
       PATIENTS.forEach((p,i)=>{const o=document.createElement('option');o.value=i;
-        o.textContent=`${p.name}${p.ctl?' · '+p.ctl:''}${p.pageId?'':' — ⚠ no page linked'}`;s.appendChild(o);});
+        o.disabled=p.selectable===false;
+        o.textContent=`${p.name}${p.ctl?' · '+p.ctl:''}${p.status&&p.status!=='active'?' · '+p.status:''}${p.pageId?'':' — ⚠ no page linked'}`;s.appendChild(o);});
     });
     renderPatients();
   }catch(e){ $('pt-table').innerHTML=`<div class="warn">Couldn't load patients: ${e.message}</div>`; }
@@ -371,9 +372,9 @@ async function boot(){
 }
 
 function renderPatients(){
-  let h='<table><tr><th>Patient</th><th>Ctl #</th><th>Program</th><th>Payer</th><th>Patient page</th></tr>';
+  let h='<table><tr><th>Patient</th><th>Ctl #</th><th>Status</th><th>Program</th><th>Payer</th><th>Patient page</th></tr>';
   PATIENTS.forEach(p=>{
-    h+=`<tr><td><b>${p.name}</b></td><td>${p.ctl||''}</td><td>${p.program||''}</td><td>${p.payer||''}</td>
+    h+=`<tr><td><b>${p.name}</b></td><td>${p.ctl||''}</td><td>${p.status||'not recorded'}</td><td>${p.program||''}</td><td>${p.payer||''}</td>
     <td>${p.pageUrl?`<a href="${p.pageUrl}" target="_blank" rel="noopener">Open ↗</a>`:'<span class="warn">not linked</span>'}</td></tr>`;
   });
   $('pt-table').innerHTML=h+'</table>';

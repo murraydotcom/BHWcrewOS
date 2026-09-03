@@ -83,12 +83,12 @@ test("Patient Registry proxy verifies CrewOS and calls Google Cloud server-side"
         Authorization: `Bearer ${signedCrewToken()}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ action: "save-patient", patient: { bhwPatientId: "BHW9999", legalFirstName: "Synthetic", ignored: "drop-me" } }),
+      body: JSON.stringify({ action: "save-patient", patient: { bhwPatientId: "BHW9999", legalFirstName: "Synthetic", nameSuffix: "III", ignored: "drop-me" } }),
     }));
     assert.equal(saveResponse.status, 200);
     assert.equal(outbound[1].url, "https://rcm.example.test/v1/patients/BHW9999");
     assert.equal(outbound[1].options.method, "PUT");
-    assert.deepEqual(JSON.parse(outbound[1].options.body), { bhwPatientId: "BHW9999", legalFirstName: "Synthetic" });
+    assert.deepEqual(JSON.parse(outbound[1].options.body), { bhwPatientId: "BHW9999", legalFirstName: "Synthetic", nameSuffix: "III" });
 
     const consentResponse = await registryHandler(new Request("https://bhwcrewos.example/.netlify/functions/patient-registry", {
       method: "POST",
