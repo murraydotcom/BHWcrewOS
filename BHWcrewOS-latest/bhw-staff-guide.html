@@ -51,7 +51,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
 <header>
   <img src="/assets/bhw-medical-logo.png" alt="BHW Medical" onerror="this.style.display='none'">
   <div><h1>Staff Guide — Where Everything Is</h1><div class="sub">BHW Medical Group · BHWcrewOS</div></div>
-  <div class="updated">Updated September 1, 2026<br>Patient Requests training + alerts</div>
+  <div class="updated">Updated September 3, 2026<br>Patient Requests training + alert choices</div>
 </header>
 
 <button class="print" onclick="window.print()">Print this guide</button>
@@ -86,7 +86,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
     <tr><td><b>Admin Master</b></td><td>Every division at once — open referrals, aging, full schedule, minutes rollup</td><td>Owner, operations lead</td></tr>
     <tr><td><b>My Space</b></td><td>Your role &amp; responsibilities, the office calendar, your availability</td><td>Everyone</td></tr>
     <tr><td><b>Patient Requests</b></td><td>The authoritative staff work queue for patient calls, texts, portal messages, voicemails, referrals, prior authorizations, medication requests, billing requests, and general follow-up</td><td>Everyone, filtered by role and service line</td></tr>
-    <tr><td><b>🔔 CrewOS alerts</b></td><td>Unread, role-routed alerts for new unassigned, assigned-to-you, urgent, overdue, and escalated requests. Each alert opens the exact request.</td><td>Everyone while signed in</td></tr>
+    <tr><td><b>🔔 CrewOS alerts</b></td><td>Optional alerts for new unassigned, assigned-to-you, urgent, overdue, and escalated requests. Open the bell and use <b>Notifications on/off</b> for that device. Providers receive provider-attention items only.</td><td>Every signed-in staff member chooses</td></tr>
     <tr><td><b>Front Desk OS</b></td><td>Patient lookup, referral finder/generator, fax tools, and front-desk operational snapshots. Work communication requests in Patient Requests so they are not duplicated.</td><td>Front desk role</td></tr>
     <tr><td><b>Panel &amp; Discharges</b></td><td>Utilization, HEDIS scorecard, hospital discharge tracking</td><td>Owner, care coordination role</td></tr>
     <tr><td><b>Positive ANA?</b></td><td>Analyze an ANA result, immune patterns, 100 conditions, management protocols</td><td>Providers</td></tr>
@@ -147,7 +147,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
     <tr><td><b>11–15 min</b></td><td>Show Notify patient eligibility and communications/delivery results.</td><td>Explains no-PHI, suppression, quiet-hours, duplicate-send, and automation-gate rules.</td></tr>
   </table>
   <div class="tip"><b>Process flow:</b> Alert or intake → open the record → confirm route and urgency → assign → start → do the work → record the exact milestone → notify only if eligible → verify delivery → resolve or escalate.</div>
-  <div class="tip"><b>Current release:</b> the CrewOS queue, alert bell, and Google Chat mirror are available. Automated patient SMS is gated off. A patient message counts only when Notify patient is available, the send is accepted, and the communications record shows the resulting delivery state.</div>
+  <div class="tip"><b>Current release:</b> the CrewOS queue, optional alert bell, and Google Chat mirror are available. Non-provider staff can receive alerts across request types; providers receive triage/provider-question, assigned-provider, urgent, safety, waiting-on-clinician, and escalated alerts. Automated patient SMS is gated off. A patient message counts only when Notify patient is available, the send is accepted, and the communications record shows the resulting delivery state.</div>
   <div class="rule"><b>Training data only:</b> use synthetic/de-identified records labeled <b>BHW0000</b>. Never create, display, text, or test with a real patient's name, phone number, date of birth, diagnosis, medication, payer, or appointment.</div>
 </div>
 
@@ -159,6 +159,8 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
     <li>Click an alert to open the exact record in <b>Patient Requests</b>. The alert itself contains workflow labels only—not patient names or request details.</li>
     <li>Opening the alert panel marks the alert as read. It does <b>not</b> assign, start, resolve, or otherwise change the request.</li>
     <li>Google Chat mirrors safe alerts and quick actions when configured. <b>CrewOS remains the authoritative work queue.</b></li>
+    <li>Open the CrewOS alert bell and choose <b>Notifications on</b> or <b>Notifications off</b>. This preference is saved for the signed-in staff member on that device.</li>
+    <li>Google Chat has its own per-person space notification setting. Turning off the CrewOS bell does not mute Google Chat; each staff member can choose All, For you, or Off in Google Chat.</li>
   </ul>
   <div class="rule"><b>Read is not resolved.</b> A bell count disappearing only means you opened the alert panel. The request stays open until the correct workflow action is recorded.</div>
 </div>
@@ -285,7 +287,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
   <h3>Primary Care providers <span class="who">NP role</span></h3>
   <ul>
     <li><b>Land on:</b> Primary Care page.</li>
-    <li><b>Daily:</b> check your alert bell, work the clinical/medication/authorization requests assigned to you, and document the exact outcome in Patient Requests.</li>
+    <li><b>Daily:</b> check the alert bell for triage/provider questions, items assigned to you, waiting-on-clinician work, urgent or safety concerns, and escalations. Routine operational request alerts stay with non-provider staff.</li>
     <li><b>Tools:</b> Positive ANA?, Hormone Analysis, Billing Toolkit for preventive codes, BHWCrewCare Portal for care plans and results.</li>
     <li><b>Referrals:</b> Primary Care page → <span class="path">Front Desk OS — lookup &amp; referrals</span> → look up patient → find specialist → generate.</li>
   </ul>

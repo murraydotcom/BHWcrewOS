@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { alertKey, collectSafeAlerts, roleRoutes, safeAlertForRequest } from "../bhw-alert-center.mjs";
+import {
+  alertKey,
+  collectSafeAlerts,
+  decodeSession,
+  requiresProviderAlert,
+  roleRoutes,
+  safeAlertForRequest,
+} from "../bhw-alert-center.mjs";
 
 const synthetic = (overrides = {}) => ({
   id: "BHW0000-ALERT-1",
@@ -20,18 +27,36 @@ const synthetic = (overrides = {}) => ({
   ...overrides,
 });
 
-test("role routes keep routine alerts inside the responsible service line", () => {
-  assert.deepEqual(roleRoutes({ role: "Medical Assistant" }).sort(), ["authorizations", "clinical", "medication"]);
+test("non-provider staff can receive every request type while providers receive attention-only alerts", () => {
+  assert.deepEqual(roleRoutes({ role: "Medical Assistant" }), ["*"]);
   assert.ok(roleRoutes({ role: "Office Manager" }).includes("*"));
-  assert.deepEqual(
-    collectSafeAlerts([synthetic()], { staffId: "synthetic-ma", name: "Synthetic MA", role: "Medical Assistant" }),
-    [],
-    "a medication role does not receive a routine front-desk request",
-  );
   assert.equal(
-    collectSafeAlerts([synthetic()], { staffId: "synthetic-front", name: "Synthetic Front Desk", role: "Front Desk" }).length,
+    collectSafeAlerts([synthetic()], { staffId: "synthetic-ma", name: "Synthetic MA", role: "Medical Assistant" }).length,
     1,
   );
+  const provider = { staffId: "synthetic-provider", name: "Synthetic Provider", role: "CRNP" };
+  assert.deepEqual(roleRoutes(provider), ["provider_attention"]);
+  assert.equal(collectSafeAlerts([synthetic()], provider).length, 0, "routine work does not alert a provider");
+  assert.equal(collectSafeAlerts([synthetic({ status: "escalated", statusCategory: "escalated" })], provider).length, 1);
+  assert.equal(collectSafeAlerts([synthetic({ escalationReason: "Synthetic escalation" })], provider).length, 1);
+  assert.equal(requiresProviderAlert(synthetic({ status: "waiting_on_clinician", statusCategory: "waiting" }), provider), true);
+});
+
+test("CrewOS two-part signed sessions initialize the alert center identity", () => {
+  const payload = Buffer.from(JSON.stringify({
+    staffId: "synthetic-staff",
+    name: "Synthetic Staff",
+    role: "Medical Assistant",
+    access: "Staff",
+    divisions: ["Primary Care"],
+  })).toString("base64url");
+  assert.deepEqual(decodeSession(`${payload}.synthetic-signature`), {
+    staffId: "synthetic-staff",
+    name: "Synthetic Staff",
+    role: "Medical Assistant",
+    access: "Staff",
+    divisions: ["primary care"],
+  });
 });
 
 test("alerts contain workflow metadata and a deep link but no patient details", () => {
@@ -62,6 +87,8 @@ test("the installed alert module never requests browser notifications", async ()
   const source = await readFile(new URL("../bhw-alert-center.mjs", import.meta.url), "utf8");
   assert.doesNotMatch(source, /Notification\.requestPermission|new Notification/);
   assert.match(source, /bhw-alert-bell/);
+  assert.match(source, /bhw-alert-enabled-v1/);
+  assert.match(source, /Notifications off/);
   assert.match(source, /bhw:requests-updated/);
 });
 

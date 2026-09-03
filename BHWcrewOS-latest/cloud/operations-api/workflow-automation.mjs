@@ -242,10 +242,38 @@ export function normalizeStaffRole(value) {
   return aliases[normalized] || normalized;
 }
 
+const NON_PROVIDER_QUEUE_ROLES = new Set([
+  "front-desk", "ma-bha", "care-manager", "rcm", "operations-manager", "executive",
+]);
+
+export function isProviderRole(value) {
+  return ["provider", "pmhnp"].includes(normalizeStaffRole(value));
+}
+
+export function requiresProviderAttention(request = {}, user = {}) {
+  const status = slug(request.status || request.statusCategory);
+  const category = slug(request.statusCategory);
+  const priority = slug(request.priority);
+  const assignedTo = cleanText(request.assignedTo || request.assignedToId, 200);
+  const actorSub = cleanText(user.sub || user.id || (user.staffId ? `crew:${user.staffId}` : ""), 200);
+  return ["urgent", "emergency"].includes(priority)
+    || (Array.isArray(request.safetyFlags) && request.safetyFlags.length > 0)
+    || status === "escalated"
+    || category === "escalated"
+    || Boolean(request.escalatedAt || request.escalationReason)
+    || status === "waiting-on-clinician"
+    || /(?:triage|provider|clinician).*(?:question|review)|(?:question|review).*(?:provider|clinician)/.test(status)
+    || Boolean(assignedTo && actorSub && assignedTo === actorSub);
+}
+
 export function canActOnRequest(request, user = {}) {
   const role = normalizeStaffRole(user.role);
-  return ["system", "executive", "operations-manager"].includes(role)
-    || (Array.isArray(request.allowedRoles) && request.allowedRoles.includes(role));
+  if (role === "system" || NON_PROVIDER_QUEUE_ROLES.has(role)) return true;
+  if (isProviderRole(role)) {
+    return requiresProviderAttention(request, user)
+      || (Array.isArray(request.allowedRoles) && request.allowedRoles.includes(role));
+  }
+  return false;
 }
 
 export function applyPatientRequestAction(request, input = {}, { user = {}, now = new Date() } = {}) {

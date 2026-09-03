@@ -17,9 +17,33 @@ const TYPE_LABELS = Object.freeze({
 const clean = (value, max = 160) => String(value ?? "").trim().slice(0, max);
 const normalized = (value) => clean(value).toLowerCase().replaceAll("-", "_");
 
-function decodeSession(token) {
+export function isProviderActor(actor = {}) {
+  const access = clean(actor.access).toLowerCase();
+  if (/admin|administrator|executive|owner|office manager|director/.test(access)) return false;
+  const role = clean(actor.role).toLowerCase();
+  return /crnp|pmhnp|fnp|\bnp\b|\bmd\b|\bdo\b|physician|provider|prescriber|psychiatrist/.test(role);
+}
+
+export function requiresProviderAlert(request = {}, actor = {}) {
+  const status = normalized(request.status || request.statusCategory);
+  const category = normalized(request.statusCategory);
+  const priority = normalized(request.priority);
+  const route = normalized(request.assignedTeam || request.serviceLine);
+  return ["urgent", "emergency"].includes(priority)
+    || (Array.isArray(request.safetyFlags) && request.safetyFlags.length > 0)
+    || status === "escalated"
+    || category === "escalated"
+    || Boolean(request.escalatedAt || request.escalationReason)
+    || status === "waiting_on_clinician"
+    || /triage|provider_question|provider_review|clinician_question|clinician_review/.test(status)
+    || /triage|provider_review/.test(route)
+    || isAssignedTo(request, actor);
+}
+
+export function decodeSession(token) {
   try {
-    const encoded = String(token || "").split(".")[1] || "";
+    const segments = String(token || "").split(".");
+    const encoded = segments.length === 2 ? segments[0] : segments[1] || "";
     const base64 = encoded.replaceAll("-", "+").replaceAll("_", "/").padEnd(Math.ceil(encoded.length / 4) * 4, "=");
     const payload = JSON.parse(atob(base64));
     return {
@@ -37,20 +61,8 @@ function decodeSession(token) {
 export function roleRoutes(actor = {}) {
   const role = `${clean(actor.role)} ${clean(actor.access)}`.toLowerCase();
   if (/admin|administrator|executive|owner|office manager|director/.test(role)) return ["*"];
-  const routes = new Set((actor.divisions || []).map(normalized).filter(Boolean));
-  if (/crnp|pmhnp|fnp|\bnp\b|\bmd\b|\bdo\b|provider|medical assistant|\bma\b/.test(role)) {
-    ["clinical", "medication", "authorizations"].forEach((route) => routes.add(route));
-  }
-  if (/coordinator|care manager|chronic care|behavioral health|bh assistant/.test(role)) {
-    ["care_coordination", "referrals", "patient_access"].forEach((route) => routes.add(route));
-  }
-  if (/billing|revenue|\brcm\b/.test(role)) {
-    ["revenue_cycle", "rcm"].forEach((route) => routes.add(route));
-  }
-  if (/front desk|reception|office assistant|porter house/.test(role)) {
-    ["front_desk", "patient_access", "general"].forEach((route) => routes.add(route));
-  }
-  return [...routes];
+  if (isProviderActor(actor)) return ["provider_attention"];
+  return role.trim() ? ["*"] : [];
 }
 
 function isAssignedTo(request, actor) {
@@ -87,6 +99,9 @@ export function safeAlertForRequest(request, actor = {}, now = Date.now()) {
   const dueAt = Date.parse(request.dueAt || request.slaDueAt || "");
   const overdue = /overdue|breach/.test(normalized(request.sla)) || (Number.isFinite(dueAt) && dueAt < now);
   const urgent = ["urgent", "emergency"].includes(priority) || (Array.isArray(request.safetyFlags) && request.safetyFlags.length > 0);
+  const providerOnly = isProviderActor(actor);
+  const providerAttention = requiresProviderAlert(request, actor);
+  if (providerOnly && !providerAttention) return null;
 
   let reason = "";
   let severity = "routine";
@@ -94,11 +109,12 @@ export function safeAlertForRequest(request, actor = {}, now = Date.now()) {
   else if (category === "escalated" || status === "escalated") { reason = "Escalated"; severity = "urgent"; }
   else if (overdue) { reason = "Overdue"; severity = "warning"; }
   else if (assignedToMe) { reason = "Assigned to you"; }
+  else if (providerAttention) { reason = "Needs provider"; severity = "warning"; }
   else if (unassigned && ["received", "new", ""].includes(category)) { reason = "Needs an owner"; }
   else return null;
 
   const actorRoutes = roleRoutes(actor);
-  const canSeeRoute = actorRoutes.includes("*") || actorRoutes.includes(route);
+  const canSeeRoute = providerOnly ? providerAttention : actorRoutes.includes("*") || actorRoutes.includes(route);
   if (!assignedToMe && !canSeeRoute) return null;
 
   const type = normalized(request.requestType || request.type || "general");
@@ -135,6 +151,13 @@ function saveJson(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage can be disabled */ }
 }
 
+function storedBoolean(key, fallback = true) {
+  try {
+    const value = localStorage.getItem(key);
+    return value === null ? fallback : JSON.parse(value) !== false;
+  } catch { return fallback; }
+}
+
 function escapeHtml(value) {
   return String(value || "").replace(/[&<>"']/g, (character) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
@@ -153,7 +176,7 @@ function injectStyles() {
     .bhw-alert-count{position:absolute;right:-5px;top:-5px;min-width:20px;height:20px;padding:0 5px;border-radius:20px;background:#b0525a;color:#fff;border:2px solid #fff;display:grid;place-items:center;font-size:10px;font-weight:800}
     .bhw-alert-count[hidden]{display:none}.bhw-alert-panel[hidden]{display:none}
     .bhw-alert-panel{position:absolute;right:0;top:52px;width:min(380px,calc(100vw - 28px));max-height:min(610px,calc(100vh - 84px));overflow:hidden;background:#fff;border:1px solid #dfe5e3;border-radius:17px;box-shadow:0 18px 55px rgba(34,48,58,.24)}
-    .bhw-alert-head{display:flex;align-items:center;gap:10px;padding:14px 15px;border-bottom:1px solid #eee9e2;background:#fcfaf6}.bhw-alert-head b{font-size:14px}.bhw-alert-head span{margin-left:auto;font-size:10px;font-weight:800;color:#5b6b76;text-transform:uppercase;letter-spacing:.05em}
+    .bhw-alert-head{display:flex;align-items:center;gap:10px;padding:14px 15px;border-bottom:1px solid #eee9e2;background:#fcfaf6}.bhw-alert-head b{font-size:14px}.bhw-alert-toggle{margin-left:auto;border:1px solid #cfdcda;border-radius:20px;background:#fff;color:#3c7c78;padding:6px 9px;font:800 10px/1 Montserrat,Inter,system-ui,sans-serif;cursor:pointer}.bhw-alert-toggle[aria-pressed="false"]{color:#6f7b82;background:#f2f3f3}
     .bhw-alert-list{max-height:490px;overflow:auto;padding:7px}.bhw-alert-item{display:block;text-decoration:none;color:inherit;padding:11px;border-radius:12px;border:1px solid transparent}.bhw-alert-item:hover{background:#f4f8f7;border-color:#dcebe8}
     .bhw-alert-item+.bhw-alert-item{border-top-color:#eee9e2}.bhw-alert-top{display:flex;align-items:center;gap:8px}.bhw-alert-type{font-size:12px;font-weight:800}.bhw-alert-reason{margin-left:auto;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:4px 7px;border-radius:20px;background:#eaf2f1;color:#3c7c78}
     .bhw-alert-item.urgent .bhw-alert-reason{background:#f6e2e2;color:#9a424b}.bhw-alert-item.warning .bhw-alert-reason{background:#fbf1dd;color:#8a6a26}
@@ -177,7 +200,7 @@ function createUi() {
       <span class="bhw-alert-count" hidden>0</span>
     </button>
     <div class="bhw-alert-panel" hidden>
-      <div class="bhw-alert-head"><b>CrewOS alerts</b><span>Role routed</span></div>
+      <div class="bhw-alert-head"><b>CrewOS alerts</b><button class="bhw-alert-toggle" type="button" aria-pressed="true">Notifications on</button></div>
       <div class="bhw-alert-list"></div>
       <div class="bhw-alert-foot"><a href="/bhw-requests.html">Open Patient Requests →</a></div>
     </div>`;
@@ -197,7 +220,7 @@ function createUi() {
   } else {
     document.body.append(root, toast);
   }
-  return { root, button: root.querySelector(".bhw-alert-bell"), badge: root.querySelector(".bhw-alert-count"), panel: root.querySelector(".bhw-alert-panel"), list: root.querySelector(".bhw-alert-list"), toast };
+  return { root, button: root.querySelector(".bhw-alert-bell"), toggle: root.querySelector(".bhw-alert-toggle"), badge: root.querySelector(".bhw-alert-count"), panel: root.querySelector(".bhw-alert-panel"), list: root.querySelector(".bhw-alert-list"), toast };
 }
 
 function startAlertCenter(token) {
@@ -206,7 +229,9 @@ function startAlertCenter(token) {
   const ui = createUi();
   const seenKey = `bhw-alert-seen-v1:${actor.staffId}`;
   const knownKey = `bhw-alert-known-v1:${actor.staffId}`;
+  const enabledKey = `bhw-alert-enabled-v1:${actor.staffId}`;
   let current = [];
+  let notificationsEnabled = storedBoolean(enabledKey, true);
   let clientPromise;
   let toastTimer;
   let refreshing = false;
@@ -232,9 +257,11 @@ function startAlertCenter(token) {
   function render() {
     const notRead = unread();
     ui.badge.textContent = notRead.length > 99 ? "99+" : String(notRead.length);
-    ui.badge.hidden = notRead.length === 0;
-    ui.button.setAttribute("aria-label", notRead.length ? `Open CrewOS alerts, ${notRead.length} unread` : "Open CrewOS alerts");
-    ui.list.innerHTML = current.length ? current.map((alert) => `
+    ui.badge.hidden = !notificationsEnabled || notRead.length === 0;
+    ui.button.setAttribute("aria-label", !notificationsEnabled ? "Open CrewOS alerts, notifications off" : notRead.length ? `Open CrewOS alerts, ${notRead.length} unread` : "Open CrewOS alerts");
+    ui.toggle.textContent = notificationsEnabled ? "Notifications on" : "Notifications off";
+    ui.toggle.setAttribute("aria-pressed", String(notificationsEnabled));
+    ui.list.innerHTML = !notificationsEnabled ? '<div class="bhw-alert-empty"><b>Notifications are off on this device.</b><br>You can turn them back on at any time.</div>' : current.length ? current.map((alert) => `
       <a class="bhw-alert-item ${escapeHtml(alert.severity)}" href="${escapeHtml(alert.href)}" data-alert-key="${escapeHtml(alert.key)}">
         <span class="bhw-alert-top"><span class="bhw-alert-type">${escapeHtml(alert.label)}</span><span class="bhw-alert-reason">${escapeHtml(alert.reason)}</span></span>
         <span class="bhw-alert-meta">${escapeHtml(alert.status)} · ${escapeHtml(alert.route)}</span>
@@ -246,7 +273,7 @@ function startAlertCenter(token) {
     const known = storageJson(knownKey, []);
     const knownSet = new Set(Array.isArray(known) ? known : []);
     const newAlerts = current.filter((alert) => !knownSet.has(alert.key));
-    if (knownSet.size && newAlerts.length) {
+    if (notificationsEnabled && knownSet.size && newAlerts.length) {
       const first = newAlerts[0];
       toast(newAlerts.length === 1 ? `${first.label} · ${first.reason}` : `${newAlerts.length} new CrewOS alerts`);
     }
@@ -275,6 +302,14 @@ function startAlertCenter(token) {
     ui.button.setAttribute("aria-expanded", String(opening));
     if (opening) { markSeen(current.map((alert) => alert.key)); render(); }
   });
+  ui.toggle.addEventListener("click", (event) => {
+    event.stopPropagation();
+    notificationsEnabled = !notificationsEnabled;
+    saveJson(enabledKey, notificationsEnabled);
+    if (!notificationsEnabled) markSeen(current.map((alert) => alert.key));
+    render();
+    if (notificationsEnabled) toast("CrewOS notifications are on for this device.");
+  });
   ui.list.addEventListener("click", (event) => {
     const link = event.target.closest("[data-alert-key]");
     if (link) markSeen([link.dataset.alertKey]);
@@ -287,7 +322,7 @@ function startAlertCenter(token) {
   });
   window.addEventListener("bhw:requests-updated", (event) => refresh(event.detail?.requests));
   document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
-  window.BHWAlerts = Object.freeze({ refresh });
+  window.BHWAlerts = Object.freeze({ refresh, enabled: () => notificationsEnabled });
   refresh();
   setInterval(refresh, POLL_MS);
   return true;
