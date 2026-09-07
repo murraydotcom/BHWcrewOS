@@ -29,7 +29,7 @@ exports.handler = async (event) => {
   };
   const payload = Buffer.from(JSON.stringify(claims)).toString("base64url");
   const signature = crypto.createHmac("sha256", secret).update(payload).digest("base64url");
-  return json(200, { ok: true, token: `${payload}.${signature}`, expiresIn: 300 });
+  return json(200, { ok: true, token: `${payload}.${signature}`, expiresIn: 300, role: claims.role });
 };
 
 exports._test = { operationsRole };

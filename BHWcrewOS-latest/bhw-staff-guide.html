@@ -51,7 +51,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
 <header>
   <img src="/assets/bhw-medical-logo.png" alt="BHW Medical" onerror="this.style.display='none'">
   <div><h1>Staff Guide — Where Everything Is</h1><div class="sub">BHW Medical Group · BHWcrewOS</div></div>
-  <div class="updated">Updated September 3, 2026<br>Patient Requests training + alert choices</div>
+  <div class="updated">Updated September 7, 2026<br>Patient Requests categories + alert choices</div>
 </header>
 
 <button class="print" onclick="window.print()">Print this guide</button>
@@ -142,7 +142,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
   <table>
     <tr><th>Time</th><th>Trainer demonstrates</th><th>Trainee does</th></tr>
     <tr><td><b>0–3 min</b></td><td>Open the alert bell, explain role routing, then open the exact request.</td><td>States why opening an alert does not resolve the request.</td></tr>
-    <tr><td><b>3–7 min</b></td><td>Review filters, request history, routed team, current owner, and communications.</td><td>Finds one unclaimed synthetic request and identifies the correct service line.</td></tr>
+    <tr><td><b>3–7 min</b></td><td>Review the request-type totals and filter, request history, routed team, current owner, and communications.</td><td>Finds one unclaimed synthetic request and identifies the correct category and service line.</td></tr>
     <tr><td><b>7–11 min</b></td><td>Use Assign to me, Start, an exact milestone, and Escalate.</td><td>Completes the same sequence on a different synthetic request.</td></tr>
     <tr><td><b>11–15 min</b></td><td>Show Notify patient eligibility and communications/delivery results.</td><td>Explains no-PHI, suppression, quiet-hours, duplicate-send, and automation-gate rules.</td></tr>
   </table>
@@ -168,7 +168,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
 <div class="sec" data-k="patient requests command center assign start milestone resolve escalate notify patient communications delivery status">
   <h3>How to work a request <span class="who">Assigned role</span></h3>
   <ol>
-    <li><b>Select the request</b> in the left work queue. The right side shows status history, route, owner, communications, and delivery results.</li>
+    <li><b>Check the category mix or use the request-type filter</b>, then select the request in the left work queue. The right side shows status history, route, owner, communications, and delivery results.</li>
     <li>If it is unclaimed, tap <b>Assign to me</b>. Tap <b>Start</b> when you begin the work.</li>
     <li>Choose the exact milestone that happened—do not skip ahead. Use <b>Escalate</b> when the request needs a higher role or cannot safely continue.</li>
     <li>Use <b>Notify patient</b> only when it is available. Select or write a no-PHI message, confirm the no-PHI box, and send through the approved BHW line.</li>
@@ -182,6 +182,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
     <tr><td><b>Billing</b></td><td>With RCM ≠ waiting on payer ≠ resolved</td><td>RCM/billing team</td></tr>
     <tr><td><b>General</b></td><td>Received → in progress → waiting or completed</td><td>Routed service line</td></tr>
   </table>
+  <div class="rule"><b>If the category is wrong:</b> do not work it under a misleading referral, authorization, billing, or medication status. An operations administrator can use <b>Correct category</b> while the request is Received or In progress. The correction resets ownership, reroutes the Chat mirror, writes an audit event, and does not send a patient text. A waiting or completed request must first be moved back to an active state so its nuanced milestone is not silently rewritten.</div>
 </div>
 
 <div class="sec" data-k="patient request responsibility raci accountable responsible consulted informed handoff">
@@ -205,6 +206,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
     <tr><td><b>SMS suppressed / consent unavailable / phone match ambiguous</b></td><td>Do not claim the patient was notified. Use the approved fallback workflow or ask the service-line lead.</td></tr>
     <tr><td><b>Queued for quiet hours</b></td><td>Leave it queued. The system rechecks consent and suppression before release.</td></tr>
     <tr><td><b>“automation-not-enabled”</b></td><td>No SMS was sent. Tell the operations lead; do not retry repeatedly.</td></tr>
+    <tr><td><b>The request category is wrong</b></td><td>Stop before recording a category-specific milestone. Ask an operations administrator to use Correct category; never treat Referral sent, PA submitted, With RCM, or another nuanced state as interchangeable.</td></tr>
     <tr><td><b>Urgent/emergency symptoms or safety concern</b></td><td>Follow the emergency rule in section 10 first. The queue never replaces 988/911 or immediate provider notification.</td></tr>
   </table>
 </div>

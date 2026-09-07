@@ -17,6 +17,12 @@ test("Patient Requests is the command center and Google Chat is only a mirror", 
   assert.match(script, /pa_submitted/);
   assert.match(script, /referral_sent/);
   assert.match(script, /closed_without_scheduling/);
+  assert.match(html, /requestTypeFilter/);
+  assert.match(script, /clinical_review/);
+  assert.match(script, /correctRequestType/);
+  assert.match(script, /'reclassify'/);
+  assert.match(script, /Referral generator/);
+  assert.match(script, /Care Connect/);
   assert.match(script, /noPhiAttestation:true/);
   assert.match(script, /CREWHQ_SESSION_EXPIRED/);
   assert.match(script, /crewosSigninUrl/);
@@ -41,7 +47,7 @@ test("Patient Requests uses the dedicated Operations token exchange and one Goog
     }
     if (url === "/.netlify/functions/operations-cloud-token") {
       assert.equal(options.headers.Authorization, "Bearer synthetic-crew-session");
-      return new Response(JSON.stringify({ token: "synthetic-cloud-token", expiresIn: 300 }), { status: 200 });
+      return new Response(JSON.stringify({ token: "synthetic-cloud-token", expiresIn: 300, role: "operations-manager" }), { status: 200 });
     }
     assert.equal(options.headers.Authorization, "Bearer synthetic-cloud-token");
     if (String(url).includes("/v1/patient-requests?") && options.method !== "POST") {
@@ -66,6 +72,7 @@ test("Patient Requests uses the dedicated Operations token exchange and one Goog
     const client = await createOperationsCloudClient(fetchImpl);
     const requests = await client.listPatientRequests({ status: "open", serviceLine: "clinical", assignedTeam: "clinical", bhwPatientId: "BHW0000" });
     assert.equal(requests[0].id, "synthetic-request-1");
+    assert.equal(client.currentRole, "operations-manager");
     const listUrl = String(calls.find((call) => call.url.includes("/v1/patient-requests?")).url);
     assert.match(listUrl, /serviceLine=clinical/);
     assert.match(listUrl, /assignedTeam=clinical/);

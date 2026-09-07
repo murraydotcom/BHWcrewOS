@@ -354,7 +354,7 @@ export function createWorkflowService(repository, {
   }
 
   async function recordChatAttempt(request, user, status, reason = "", delivery = {}) {
-    const id = deterministicId("google-chat", request.id, request.version, status === "sent" ? "sync" : reason || status);
+    const id = deterministicId("google-chat", request.id, request.version, reason || (status === "sent" ? "sync" : status));
     const result = await reserveCommunication(baseCommunication(request, {
       id,
       channel: "google_chat",
@@ -380,16 +380,35 @@ export function createWorkflowService(repository, {
       return { status: "suppressed", reason: "chat-not-configured" };
     }
     try {
-      const delivery = request.chatMessageName
-        ? await chat.updateRequestCard(request, request.chatMessageName)
-        : await chat.sendRequestCard(request);
+      const targetSpace = typeof chat.spaceFor === "function" ? chat.spaceFor(request) : "";
+      const currentSpace = request.chatSpace || String(request.chatMessageName || "").split("/messages/")[0];
+      const rerouted = Boolean(request.chatMessageName && targetSpace && currentSpace && targetSpace !== currentSpace);
+      if (rerouted) {
+        try {
+          const previousDelivery = await chat.updateRequestCard(request, request.chatMessageName);
+          await recordChatAttempt(
+            request,
+            user,
+            previousDelivery.providerStatus === "update-gated" ? "suppressed" : "sent",
+            previousDelivery.providerStatus === "update-gated" ? "rerouted-old-card-update-gated" : "rerouted-old-card",
+            previousDelivery,
+          );
+        } catch (error) {
+          await recordChatAttempt(request, user, "failed", "rerouted-old-card-update-failed", { providerStatus: error.providerStatus });
+        }
+      }
+      const delivery = rerouted
+        ? await chat.sendRequestCard(request)
+        : request.chatMessageName
+          ? await chat.updateRequestCard(request, request.chatMessageName)
+          : await chat.sendRequestCard(request);
       if (delivery.messageName && delivery.messageName !== request.chatMessageName && typeof repository.attachChatDelivery === "function") {
         await repository.attachChatDelivery(request.id, delivery);
         request.chatMessageName = delivery.messageName;
         request.chatSpace = delivery.space || request.chatSpace || "";
       }
       await recordChatAttempt(request, user, delivery.providerStatus === "update-gated" ? "suppressed" : "sent",
-        delivery.providerStatus === "update-gated" ? "card-updates-gated" : "", delivery);
+        delivery.providerStatus === "update-gated" ? "card-updates-gated" : rerouted ? "rerouted-new-card" : "", delivery);
       return { status: delivery.providerStatus === "update-gated" ? "suppressed" : "sent", delivery };
     } catch (error) {
       await recordChatAttempt(request, user, "failed", cleanText(error.code || "provider-error", 80), {
@@ -453,12 +472,16 @@ export function createWorkflowService(repository, {
     await recordAudit(`patient-request.${result.action}`, saved, user, {
       previousStatus: result.previousStatus,
       status: saved.status,
+      previousRequestType: result.previousRequestType || saved.requestType,
+      requestType: saved.requestType,
       version: saved.version,
     });
     const chatSource = user.source === "google-chat";
     const [chatResult, notification] = await Promise.all([
       syncChat(saved, user, { skipApi: chatSource }),
-      result.statusChanged ? notifyForCurrentState(saved, user) : Promise.resolve({ status: "not-applicable", reason: "status-unchanged" }),
+      result.statusChanged && result.action !== "reclassify"
+        ? notifyForCurrentState(saved, user)
+        : Promise.resolve({ status: "not-applicable", reason: result.action === "reclassify" ? "request-type-correction" : "status-unchanged" }),
     ]);
     return { request: saved, duplicate: false, chat: chatResult, notification };
   }

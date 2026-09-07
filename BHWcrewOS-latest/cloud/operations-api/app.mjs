@@ -106,6 +106,17 @@ function frontDeskReferralActor(request, environment) {
   );
 }
 
+function requireFrontDeskReferralIntent(body = {}) {
+  const metadata = body.sourceMetadata && typeof body.sourceMetadata === "object" ? body.sourceMetadata : {};
+  const suppliedType = String(body.requestType || "referral").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  const sourcePage = String(metadata.sourcePage || "").trim().toLowerCase();
+  const documentState = String(metadata.referralDocumentState || "").trim().toLowerCase();
+  const destination = String(metadata.referralDestination || "").trim();
+  if (suppliedType !== "referral" || sourcePage !== "bhw-front-desk" || documentState !== "generated" || !destination) {
+    throw apiError(400, "referral_intent_required", "the referral intake route only accepts generated Front Desk referrals");
+  }
+}
+
 function workflowActor(actor = {}) {
   return {
     ...actor,
@@ -208,6 +219,7 @@ export function createOperationsApp({
         const actor = frontDeskReferralActor(request, environment);
         const idempotencyKey = requireIdempotencyKey(request.headers.get("idempotency-key"));
         const body = await readJson(request);
+        requireFrontDeskReferralIntent(body);
         const timestamp = now().toISOString();
         const bundle = buildPatientRequestBundle({
           ...body,

@@ -22,6 +22,7 @@ export async function createOperationsCloudClient(fetchImpl = fetch) {
 
   let token = "";
   let tokenExpiresAt = 0;
+  let currentRole = "";
 
   async function getToken(force = false) {
     if (!force && token && tokenExpiresAt > Date.now() + 30000) return token;
@@ -44,6 +45,7 @@ export async function createOperationsCloudClient(fetchImpl = fetch) {
     }
     const body = await response.json();
     token = body.token;
+    currentRole = String(body.role || "").trim().toLowerCase();
     tokenExpiresAt = Date.now() + Number(body.expiresIn || 300) * 1000;
     return token;
   }
@@ -72,6 +74,7 @@ export async function createOperationsCloudClient(fetchImpl = fetch) {
 
   return {
     apiBase: config.apiBase,
+    get currentRole() { return currentRole; },
     async listPatientRequests({ status = "open", serviceLine = "", assignedTo = "", assignedTeam = "", bhwPatientId = "", limit = 100 } = {}) {
       const params = new URLSearchParams({ status, limit: String(Math.max(1, Math.min(500, Number(limit) || 100))) });
       if (serviceLine) params.set("serviceLine", serviceLine);

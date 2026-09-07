@@ -485,6 +485,25 @@ test("Front Desk referral intake creates one patient-linked workflow record with
   assert.equal(repository.requests.size, 1);
 });
 
+test("Front Desk referral intake rejects generic requests sent through the referral-only route", async () => {
+  const { app, repository } = fixture();
+  const response = await app(frontDeskReferralRequest({
+    bhwPatientId: "BHW0000",
+    requestType: "general",
+    priority: "routine",
+    summary: "Synthetic general request",
+    message: "Synthetic general request",
+    sourceMetadata: {
+      sourceRecordId: "front-desk-request:synthetic-wrong-route",
+      sourcePage: "bhw-front-desk",
+    },
+  }, "front-desk-request:synthetic-wrong-route"));
+  assert.equal(response.status, 400);
+  const body = await response.json();
+  assert.equal(body.code, "referral_intent_required");
+  assert.equal(repository.requests.size, 0);
+});
+
 test("historical Front Desk intake preserves its received time and suppresses notifications", async () => {
   const { app, repository } = fixture();
   const response = await app(frontDeskPatientRequest({

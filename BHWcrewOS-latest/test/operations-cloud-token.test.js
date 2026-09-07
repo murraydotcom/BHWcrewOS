@@ -23,7 +23,9 @@ test("CrewOS exchanges a signed session for a five-minute operations token", asy
     headers: { authorization: `Bearer ${sessionToken()}` },
   });
   assert.equal(response.statusCode, 200);
-  const token = JSON.parse(response.body).token;
+  const responseBody = JSON.parse(response.body);
+  const token = responseBody.token;
+  assert.equal(responseBody.role, "front-desk");
   const [payload, signature] = token.split(".");
   const expected = crypto.createHmac("sha256", process.env.CREWOS_OPERATIONS_TOKEN_SECRET).update(payload).digest("base64url");
   assert.equal(signature, expected);
@@ -49,7 +51,9 @@ test("CrewOS Admin access receives operations-manager queue visibility", async (
     },
   });
   assert.equal(response.statusCode, 200);
-  const [payload] = JSON.parse(response.body).token.split(".");
+  const responseBody = JSON.parse(response.body);
+  assert.equal(responseBody.role, "operations-manager");
+  const [payload] = responseBody.token.split(".");
   const claims = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
   assert.equal(claims.role, "operations-manager");
 });

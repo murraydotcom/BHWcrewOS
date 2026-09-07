@@ -26,7 +26,7 @@ function workflowContext(value = {}) {
 
 export const REQUEST_TYPES = Object.freeze(["refill", "referral", "prior_auth", "billing_rcm", "clinical_review", "general"]);
 export const REQUEST_PRIORITIES = Object.freeze(["routine", "time-sensitive", "urgent", "emergency"]);
-export const REQUEST_ACTIONS = Object.freeze(["assign", "start", "milestone", "resolve", "reopen", "escalate", "unassign"]);
+export const REQUEST_ACTIONS = Object.freeze(["assign", "start", "milestone", "resolve", "reopen", "escalate", "unassign", "reclassify"]);
 
 const COMMON_RECEIVED = "BHW Medical Group: We received your request. Your care team will post details securely.";
 const COMMON_IN_PROGRESS = "BHW Medical Group: Your care team is working on your request. Detailed updates stay in your secure BHW page.";
@@ -326,6 +326,72 @@ export function applyPatientRequestAction(request, input = {}, { user = {}, now 
   const actorSub = cleanText(user.sub, 200);
   const actorName = cleanText(user.name || user.email || user.sub || "Staff", 160);
   const currentState = statusDefinition(request.requestType, request.status);
+
+  if (action === "reclassify") {
+    if (!["operations-manager", "executive"].includes(normalizeStaffRole(user.role))) {
+      throw Object.assign(new Error("operations role is required to correct a request type"), { status: 403 });
+    }
+    const requestType = normalizeRequestType(input.requestType || input.type);
+    if (requestType === request.requestType) {
+      throw Object.assign(new Error("choose a different request type"), { status: 409 });
+    }
+    if (currentState.category === "completed") {
+      throw Object.assign(new Error("reopen the request before correcting its type"), { status: 409 });
+    }
+    if (currentState.category === "waiting") {
+      throw Object.assign(new Error("start the waiting request before correcting its type so a nuanced milestone is not misrepresented"), { status: 409 });
+    }
+    const target = WORKFLOW_DEFINITIONS[requestType];
+    const nextStatus = currentState.category === "escalated"
+      ? "escalated"
+      : currentState.category === "received" ? target.received : target.inProgress;
+    const nextState = statusDefinition(requestType, nextStatus);
+    const next = {
+      ...request,
+      requestType,
+      serviceLine: target.serviceLine,
+      assignedTeam: target.assignedTeam,
+      allowedRoles: [...target.allowedRoles],
+      routing: { ...(request.routing || {}), targetSystem: "crewos", assignedTeam: target.assignedTeam },
+      status: nextStatus,
+      statusCategory: nextState.category,
+      statusLabel: nextState.label,
+      statusChangedAt: timestamp,
+      assignedTo: "",
+      assignedToName: "",
+      assignedAt: "",
+      resolvedAt: "",
+      workflowContext: workflowContext({
+        ...(request.workflowContext || {}),
+        kind: requestType === "referral" ? "referral" : "patient-request",
+        ...(input.workflowContext || {}),
+      }),
+      version: Math.max(1, Number(request.version) || 1) + 1,
+      processedActionKeys: [...(request.processedActionKeys || []).slice(-39), actionHash],
+      statusHistory: [...(request.statusHistory || []).slice(-49), {
+        status: nextStatus,
+        category: nextState.category,
+        at: timestamp,
+        actor: actorSub,
+        action,
+        previousRequestType: request.requestType,
+        requestType,
+      }],
+      updatedAt: timestamp,
+      updatedBy: actorSub,
+    };
+    return {
+      request: next,
+      duplicate: false,
+      actionHash,
+      statusChanged: nextStatus !== request.status,
+      previousStatus: request.status,
+      previousRequestType: request.requestType,
+      requestType,
+      action,
+    };
+  }
+
   let nextStatus = request.status;
   let assignedTo = request.assignedTo || "";
   let assignedToName = request.assignedToName || "";

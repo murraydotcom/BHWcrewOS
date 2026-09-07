@@ -101,6 +101,27 @@ test("workflow milestones distinguish sent/scheduled states from completed outco
   assert.equal(general.status, "completed");
 });
 
+test("operations can correct a request type without carrying a misleading workflow state", () => {
+  const referral = syntheticRequest("referral");
+  const corrected = act(referral, "reclassify", { requestType: "general" });
+  assert.equal(corrected.requestType, "general");
+  assert.equal(corrected.serviceLine, "patient-access");
+  assert.equal(corrected.assignedTeam, "front-desk");
+  assert.equal(corrected.status, "received");
+  assert.equal(corrected.assignedTo, "");
+  assert.equal(corrected.statusHistory.at(-1).action, "reclassify");
+  assert.equal(corrected.statusHistory.at(-1).previousRequestType, "referral");
+
+  assert.throws(() => applyPatientRequestAction(referral, {
+    action: "reclassify",
+    requestType: "general",
+    idempotencyKey: "synthetic-front-desk-reclassify",
+  }, { user: { sub: "crew:synthetic-front-desk", role: "front-desk" }, now: NOON }), /operations role/i);
+
+  const waiting = act(act(referral, "start"), "milestone", { status: "referral_sent" }, 2);
+  assert.throws(() => act(waiting, "reclassify", { requestType: "general" }, 3), /start the waiting request/i);
+});
+
 test("Care Connect check-ins create a clinician-only review workflow without patient notification", () => {
   let review = sanitizePatientRequest({
     id: "synthetic-checkin-review",
@@ -328,6 +349,63 @@ function inMemoryRepository() {
     async saveNotificationRule(rule) { rules.set(rule.id, structuredClone(rule)); },
   };
 }
+
+test("type correction is audited, reroutes Chat, and never triggers a patient SMS", async () => {
+  const repository = inMemoryRepository();
+  const sentSms = [];
+  const sentChat = [];
+  const updatedChat = [];
+  const service = createWorkflowService(repository, {
+    environment: {
+      PATIENT_WORKFLOW_AUTOMATION_ENABLED: "true",
+      PATIENT_PORTAL_URL: "https://health.bhwmedical.org/",
+      SMS_TIME_ZONE: "America/New_York",
+      SMS_QUIET_HOURS_START: "20:00",
+      SMS_QUIET_HOURS_END: "08:00",
+    },
+    dialpad: {
+      configured: true,
+      async sendSms(message) { sentSms.push(structuredClone(message)); return { providerMessageId: `sms-${sentSms.length}` }; },
+    },
+    chat: {
+      enabled: true,
+      spaceFor(request) { return `spaces/${request.assignedTeam}`; },
+      async sendRequestCard(request) {
+        sentChat.push({ type: request.requestType, team: request.assignedTeam });
+        return { space: `spaces/${request.assignedTeam}`, messageName: `spaces/${request.assignedTeam}/messages/${request.id}`, providerStatus: "sent" };
+      },
+      async updateRequestCard(request, messageName) {
+        updatedChat.push({ type: request.requestType, messageName });
+        return { space: messageName.split("/messages/")[0], messageName, providerStatus: "updated" };
+      },
+    },
+    clock: () => NOON,
+  });
+
+  const created = await service.createRequest({
+    id: "synthetic-type-correction",
+    bhwPatientId: "BHW0000",
+    requestType: "referral",
+    source: "synthetic-test",
+    summary: "De-identified request",
+  }, USER);
+  const smsBeforeCorrection = sentSms.length;
+  const corrected = await service.action(created.request.id, {
+    action: "reclassify",
+    requestType: "general",
+    expectedVersion: created.request.version,
+    idempotencyKey: "synthetic-type-correction:general",
+  }, USER);
+
+  assert.equal(corrected.request.requestType, "general");
+  assert.equal(corrected.notification.reason, "request-type-correction");
+  assert.equal(sentSms.length, smsBeforeCorrection);
+  assert.equal(updatedChat.at(-1).messageName.startsWith("spaces/referrals/"), true);
+  assert.deepEqual(sentChat.at(-1), { type: "general", team: "front-desk" });
+  const audit = repository.audit.find((event) => event.eventType === "patient-request.reclassify");
+  assert.equal(audit.metadata.previousRequestType, "referral");
+  assert.equal(audit.metadata.requestType, "general");
+});
 
 test("synthetic end-to-end transitions send through one idempotent Dialpad path for all five request types", async () => {
   const repository = inMemoryRepository();

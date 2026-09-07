@@ -93,6 +93,9 @@
   .filters input::placeholder{color:rgba(255,255,255,.72)}
   .filters select{max-width:165px}
   .filters select option{color:var(--ink);background:#fff}
+  .type-correction{display:inline-flex;align-items:center;gap:7px;padding-left:8px;border-left:1px solid var(--line)}
+  .type-correction label{font-size:.62rem;font-weight:800;color:var(--ink-mute)}
+  .type-correction select{font:inherit;font-size:.68rem;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:8px;padding:7px 9px}
 
   /* timeline */
   .dategroup{display:grid;grid-template-columns:66px 1fr;gap:16px;margin-bottom:6px}
@@ -222,6 +225,15 @@
     <button data-f="done"     onclick="setFilter('done',this)">Completed</button>
     <input id="requestSearch" type="search" placeholder="Search requests" aria-label="Search requests">
     <select id="teamFilter" aria-label="Filter by routed team"><option value="">All routed teams</option></select>
+    <select id="requestTypeFilter" aria-label="Filter by request type" onchange="setRequestType(this.value)">
+      <option value="">All request types</option>
+      <option value="refill">Medication requests</option>
+      <option value="referral">Referrals</option>
+      <option value="prior_auth">Prior authorizations</option>
+      <option value="billing_rcm">Billing requests</option>
+      <option value="clinical_review">Clinical reviews</option>
+      <option value="general">General patient requests</option>
+    </select>
     <span class="live"><span class="pulse"></span><span>Google live · 45s</span></span>
   </div>
 
@@ -259,11 +271,13 @@ let ITEMS=[];
 let FILTER='all';
 let STAFF=''; // retained for roster compatibility; routing filters use TEAM
 let TEAM='';
+let REQUEST_TYPE='';
 let SEARCH='';
 let SELECTED=new URLSearchParams(location.search).get('request')||'';
 let DETAIL_LOAD=0;
 let ROSTER=[]; // active staff names, pulled from the crewOS Staff & Roles roster
 let CLOUD_CLIENT_PROMISE=null;
+let CURRENT_ROLE='';
 
 async function cloudClient(){
   if(!CLOUD_CLIENT_PROMISE) CLOUD_CLIENT_PROMISE=import('/provider/operations-queue.mjs')
@@ -289,6 +303,8 @@ const STATUS_FOR={ new:'Not started', ack:'Acknowledged', prog:'In progress', do
 
 function srcLabel(source){
   const s=(source||'').toLowerCase();
+  if(s==='front-desk-os') return 'Referral generator';
+  if(s==='care-connect') return 'Care Connect';
   if(/portal/.test(s)) return 'Portal message';
   if(/text|sms/.test(s)) return 'Text message';
   if(/voicemail/.test(s)) return 'Voicemail';
@@ -369,6 +385,7 @@ function yesterdayKey(){ const d=new Date(); d.setDate(d.getDate()-1); return da
 function passFilter(it){
   const st=stageOf(it.status,it.statusCategory);
   if(TEAM && (it.assignedTeam||it.serviceLine||'')!==TEAM) return false;
+  if(REQUEST_TYPE && uiType(it)!==REQUEST_TYPE) return false;
   if(SEARCH){
     const hay=[it.name,it.id,it.requestType,it.statusLabel,it.status,it.assignedTeam,it.serviceLine,it.assigned,it.source].join(' ').toLowerCase();
     if(!hay.includes(SEARCH))return false;
@@ -382,20 +399,28 @@ function passFilter(it){
 
 // ---- render ----
 const UI_WORKFLOWS={
-  medication:{label:'Medication request',milestones:[['Waiting on clinician','waiting_on_clinician'],['Waiting on pharmacy','waiting_on_pharmacy']],outcomes:[['Complete','refill_completed'],['Needs visit','needs_visit']]},
-  referral:{label:'Referral request',milestones:[['Referral sent','referral_sent'],['Ready to schedule','ready_to_schedule']],outcomes:[['Scheduled','scheduled'],['Close','closed_without_scheduling']]},
-  prior_auth:{label:'Prior authorization',milestones:[['PA submitted','pa_submitted']],outcomes:[['Approved','pa_approved'],['Denied','pa_denied']]},
-  billing:{label:'Billing request',milestones:[['With RCM','rcm_referred'],['Waiting on payer','waiting_on_payer']],outcomes:[['Resolve','billing_resolved']]},
-  general:{label:'Patient request',milestones:[['Waiting','waiting']],outcomes:[['Resolve','completed']]},
+  refill:{label:'Medication request',shortLabel:'medication request',milestones:[['Waiting on clinician','waiting_on_clinician'],['Waiting on pharmacy','waiting_on_pharmacy']],outcomes:[['Complete','refill_completed'],['Needs visit','needs_visit']]},
+  referral:{label:'Referral request',shortLabel:'referral',milestones:[['Referral sent','referral_sent'],['Ready to schedule','ready_to_schedule']],outcomes:[['Scheduled','scheduled'],['Close','closed_without_scheduling']]},
+  prior_auth:{label:'Prior authorization',shortLabel:'prior authorization',milestones:[['PA submitted','pa_submitted']],outcomes:[['Approved','pa_approved'],['Denied','pa_denied']]},
+  billing_rcm:{label:'Billing request',shortLabel:'billing request',milestones:[['With RCM','rcm_referred'],['Waiting on payer','waiting_on_payer']],outcomes:[['Resolve','billing_resolved']]},
+  clinical_review:{label:'Clinical review',shortLabel:'clinical review',milestones:[],outcomes:[['Reviewed','review_completed']]},
+  general:{label:'Patient request',shortLabel:'general request',milestones:[['Waiting','waiting']],outcomes:[['Resolve','completed']]},
 };
 function uiType(it){
   const value=String(it.requestType||it.type||'general').toLowerCase().replaceAll('-','_');
-  if(['refill','medication_refill','medication'].includes(value))return 'medication';
+  if(['refill','medication_refill','medication'].includes(value))return 'refill';
   if(['prior_authorization','prior_auth','pa'].includes(value))return 'prior_auth';
-  if(['billing_rcm','billing','rcm'].includes(value))return 'billing';
+  if(['billing_rcm','billing','rcm'].includes(value))return 'billing_rcm';
   return UI_WORKFLOWS[value]?value:'general';
 }
 function workflowUI(it){return UI_WORKFLOWS[uiType(it)];}
+function requestTypeOptions(selected){
+  return Object.entries(UI_WORKFLOWS).map(([value,definition])=>`<option value="${value}" ${value===selected?'selected':''}>${esc(definition.label)}</option>`).join('');
+}
+function requestMix(rows){
+  const counts=rows.reduce((map,item)=>{const type=uiType(item);map[type]=(map[type]||0)+1;return map;},{});
+  return Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([type,count])=>`${count} ${UI_WORKFLOWS[type].shortLabel}${count===1?'':'s'}`).join(' · ');
+}
 function humanStatus(it){
   return it.statusLabel||String(it.status||'received').replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
 }
@@ -414,7 +439,8 @@ function render(){
   teamSelect.value=TEAM;
 
   const shown=ITEMS.filter(passFilter);
-  document.getElementById('queueSummary').textContent=`${shown.length} shown · ${unclaimed} unclaimed`;
+  const mix=requestMix(shown);
+  document.getElementById('queueSummary').textContent=`${shown.length} shown · ${unclaimed} unclaimed${mix?' · '+mix:''}`;
   const feed=document.getElementById('feed');
   const sorted=shown.sort((a,b)=>(b.received||'').localeCompare(a.received||''));
   if(!sorted.length) feed.innerHTML=`<div class="empty">No requests match this view.</div>`;
@@ -461,6 +487,9 @@ function detailActions(it){
   for(const [label,outcome] of ui.outcomes)buttons.push(actionButton(label,it,'resolve',{outcome},'done'));
   buttons.push(`<button type="button" class="btn" onclick="escalateRequest(decodeURIComponent('${encodeURIComponent(String(it.id))}'))">Escalate</button>`);
   if(it.canSms)buttons.push(`<button type="button" class="btn" onclick="openReply(decodeURIComponent('${encodeURIComponent(String(it.id))}'),'sms','detailReply')">Notify patient</button>`);
+  if(['operations-manager','executive'].includes(CURRENT_ROLE)&&!['waiting','completed'].includes(it.statusCategory)){
+    buttons.push(`<span class="type-correction"><label for="requestTypeCorrection">Correct category</label><select id="requestTypeCorrection">${requestTypeOptions(uiType(it))}</select><button type="button" class="btn" onclick="correctRequestType(decodeURIComponent('${encodeURIComponent(String(it.id))}'))">Save</button></span>`);
+  }
   return buttons.join('');
 }
 function historyHTML(it){
@@ -554,12 +583,25 @@ function openReply(id,mode,slotId){
 function setFilter(f,btn){ FILTER=f; document.querySelectorAll('.filters button').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); render(); }
 function setStaff(n){ STAFF=n; render(); }
 function setTeam(value){TEAM=value;render();}
+function setRequestType(value){REQUEST_TYPE=value;SELECTED='';render();}
+
+async function correctRequestType(id){
+  const it=ITEMS.find(item=>item.id===id), select=document.getElementById('requestTypeCorrection');
+  if(!it||!select)return;
+  const requestType=select.value;
+  if(requestType===uiType(it)){showActionError('Choose a different request type.');return;}
+  const label=UI_WORKFLOWS[requestType]?.label||'request';
+  if(!confirm(`Change this to ${label}? Ownership will reset so the correct team can claim it. No patient text message will be sent.`))return;
+  await runRequestAction(id,'reclassify',{requestType,expectedVersion:it.version});
+}
 
 // ---- data ----
 async function load(){
   const banner=document.getElementById('banner');
   try{
-    const rows=await (await cloudClient()).listPatientRequests({status:'',limit:500});
+    const client=await cloudClient();
+    const rows=await client.listPatientRequests({status:'',limit:500});
+    CURRENT_ROLE=client.currentRole||'';
     ITEMS=rows.map(r=>({
       ...r,
       type:r.requestType,
