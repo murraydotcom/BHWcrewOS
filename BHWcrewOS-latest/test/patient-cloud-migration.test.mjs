@@ -5,7 +5,7 @@ import { readFile } from "node:fs/promises";
 
 const require = createRequire(import.meta.url);
 const { createResolver, publicPreview, sealIdentity, verifyIdentity, sealPreparedPreview, verifyPreparedPreview, signPreview, verifyPreview } = require("../netlify/functions/lib/patient-cloud-migration.js");
-const { chunkFrontDeskRecords } = require("../netlify/functions/patient-cloud-migration.js");
+const { chunkFrontDeskRecords, prepareApplyBatches } = require("../netlify/functions/patient-cloud-migration.js");
 
 const session = { staffId: "synthetic-admin", access: "Admin" };
 const secret = "synthetic-preview-secret";
@@ -80,6 +80,28 @@ test("approved Patient Requests are split below the protected bulk body ceiling"
   }
 });
 
+test("one approved Patient Request section becomes complete sealed apply batches", () => {
+  const requests = Array.from({ length: 53 }, (_, index) => ({
+    sourceId: `synthetic-${index}`,
+    target: {
+      kind: "frontdesk",
+      submissionId: `legacy-request:synthetic-${String(index).padStart(4, "0")}`,
+      body: { bhwPatientId: "BHW0000", notificationMode: "none", message: "Synthetic migration request" },
+    },
+  }));
+  const input = { rosterCount: 1, datasets: { patientRequests: { key: "patientRequests", sourceCount: 60, sourceError: "", ready: requests, blocked: Array.from({ length: 7 }, (_, index) => ({ sourceId: `blocked-${index}` })) } } };
+  const batches = prepareApplyBatches(input, "patientRequests");
+  assert.equal(batches.length, 3);
+  assert.deepEqual(batches.flatMap((batch) => batch.datasets.patientRequests.ready), requests);
+  for (const [index, batch] of batches.entries()) {
+    const dataset = batch.datasets.patientRequests;
+    assert.equal(dataset.blocked.length, 0);
+    assert.equal(dataset.blockedCount, 7);
+    assert.equal(dataset.applyBatchIndex, index);
+    assert.equal(dataset.applyBatchCount, 3);
+  }
+});
+
 test("the authoritative Cloud name and DOB repair a conflicting legacy BHW ID", () => {
   const resolver = createResolver([
     { bhwPatientId: "BHW0001", name: "First Synthetic", dob: "2000-01-01" },
@@ -108,12 +130,16 @@ test("migration UI is session-gated, starts with preview, and distinguishes veri
   assert.match(handler, /body\.action === "identity"/);
   assert.match(handler, /prepareMigration\(session, datasetKeys, identity\)/);
   assert.match(handler, /verifyPreparedPreview\(body\.previewToken, session, process\.env\.SESSION_SECRET, key\)/);
-  assert.match(handler, /blockedRemaining: dataset\.blocked\.length/);
+  assert.match(handler, /blockedRemaining: Number\.isFinite\(dataset\.blockedCount\)/);
   assert.match(handler, /chunkFrontDeskRecords\(frontDesk\)/);
+  assert.match(handler, /prepareApplyBatches\(prepared, key\)/);
+  assert.match(handler, /previewTokens/);
   assert.match(handler, /body\.action === "preview"\) \{\s*const identity = verifyIdentity/);
   assert.doesNotMatch(handler, /dataset\.blocked\.length\) return json\(409/);
   assert.match(html, /PREVIEW_GROUPS/);
   assert.match(html, /identityToken/);
+  assert.match(html, /data\.previewTokens/);
+  assert.match(html, /batch \$\{index\+1\} of \$\{tokens\.length\}/);
   assert.doesNotMatch(html, /action:"apply"[^\n]+identityToken/);
   const migration = await readFile(new URL("../netlify/functions/lib/patient-cloud-migration.js", import.meta.url), "utf8");
   assert.doesNotMatch(migration, /patientIndex:\s*DB\.patients/);

@@ -83,6 +83,25 @@ function chunkFrontDeskRecords(records, { maxBytes = FRONT_DESK_BULK_TARGET_BYTE
   return output;
 }
 
+function prepareApplyBatches(prepared, key) {
+  const dataset = prepared.datasets[key];
+  if (!dataset || !dataset.ready.length) return [];
+  const readyBatches = key === "patientRequests" ? chunkFrontDeskRecords(dataset.ready) : [dataset.ready];
+  return readyBatches.map((ready, batchIndex) => ({
+    rosterCount: prepared.rosterCount,
+    datasets: {
+      [key]: {
+        ...dataset,
+        ready,
+        blocked: [],
+        blockedCount: dataset.blocked.length,
+        applyBatchIndex: batchIndex,
+        applyBatchCount: readyBatches.length,
+      },
+    },
+  }));
+}
+
 async function writeDataset(records, session) {
   const frontDesk = records.filter((record) => record.target.kind === "frontdesk");
   const standard = records.filter((record) => record.target.kind !== "frontdesk");
@@ -176,14 +195,18 @@ exports.handler = async (event) => {
       if (!datasetKeys.length) return json(400, { error: "Choose at least one migration section to preview." });
       const prepared = await prepareMigration(session, datasetKeys, identity);
       if (Object.keys(prepared.datasets).length !== datasetKeys.length) return json(400, { error: "An unknown migration section was requested." });
+      const previewTokens = Object.fromEntries(datasetKeys.map((key) => [key,
+        prepareApplyBatches(prepared, key).map((batch) => sealPreparedPreview(batch, session, process.env.SESSION_SECRET)),
+      ]));
       return json(200, {
         ok: true,
         previewOnly: true,
         preview: publicPreview(prepared),
         // The exact approved write payload stays encrypted, authenticated,
-        // session-bound, and short-lived. Apply consumes this immutable seal
-        // instead of rereading a large legacy source after approval.
-        previewToken: sealPreparedPreview(prepared, session, process.env.SESSION_SECRET),
+        // session-bound, short-lived, and divided into ingress-safe batches.
+        // Apply consumes these immutable seals instead of rereading a large
+        // legacy source after approval.
+        previewTokens,
         expiresInMinutes: 30,
         confirmation: CONFIRMATION,
       });
@@ -213,7 +236,7 @@ exports.handler = async (event) => {
         savedAt: new Date().toISOString(),
         writtenCount: receipts.length,
         verifiedCount,
-        blockedRemaining: dataset.blocked.length,
+        blockedRemaining: Number.isFinite(dataset.blockedCount) ? dataset.blockedCount : dataset.blocked.length,
       });
     }
     return json(400, { error: "Choose preview or apply." });
@@ -223,3 +246,4 @@ exports.handler = async (event) => {
 };
 
 exports.chunkFrontDeskRecords = chunkFrontDeskRecords;
+exports.prepareApplyBatches = prepareApplyBatches;
