@@ -6,7 +6,7 @@
 const { getSession, json } = require("./_lib");
 const { cloudRequest } = require("./lib/cloud-patients");
 const { operationsRequest, createFrontDeskIntake, createFrontDeskIntakeBulk } = require("./lib/operations-cloud");
-const { prepareMigration, publicPreview, signPreview, verifyPreview } = require("./lib/patient-cloud-migration");
+const { prepareIdentity, prepareMigration, publicPreview, sealIdentity, verifyIdentity, signPreview, verifyPreview } = require("./lib/patient-cloud-migration");
 
 const CONFIRMATION = "APPLY APPROVED CLOUD MIGRATION";
 
@@ -58,7 +58,7 @@ async function writeDataset(records, session) {
   const receipts = await mapLimit(standard, 4, (record) => writeRecord(record, session));
   if (!frontDesk.length) return receipts;
 
-  const batches = await mapLimit(chunks(frontDesk, 250), 4, async (batch) => {
+  const batches = await mapLimit(chunks(frontDesk, 300), 6, async (batch) => {
     const result = await createFrontDeskIntakeBulk(batch.map((record) => record.target));
     if (!result || result.verifiedCount !== batch.length) {
       throw new Error(`BHW Cloud bulk read-back verified ${result?.verifiedCount || 0} of ${batch.length} Patient Requests.`);
@@ -126,12 +126,23 @@ exports.handler = async (event) => {
   try { body = JSON.parse(event.body || "{}"); } catch { return json(400, { error: "Bad JSON" }); }
 
   try {
+    if (body.action === "identity") {
+      const identity = await prepareIdentity(session);
+      return json(200, {
+        ok: true,
+        rosterCount: identity.roster.length,
+        identityToken: sealIdentity(identity, session, process.env.SESSION_SECRET),
+        expiresInMinutes: 30,
+      });
+    }
+
     const datasetKey = String(body.dataset || "");
-    // Applying one approved section must not reread every unrelated legacy
-    // database. This keeps the protected request within the synchronous limit
-    // and verifies the selected source against its own preview seal.
-    const prepared = await prepareMigration(session, body.action === "apply" ? [datasetKey] : null);
+    const identity = verifyIdentity(body.identityToken, session, process.env.SESSION_SECRET);
     if (body.action === "preview") {
+      const datasetKeys = [...new Set((Array.isArray(body.datasets) ? body.datasets : []).map((value) => String(value || "")).filter(Boolean))];
+      if (!datasetKeys.length) return json(400, { error: "Choose at least one migration section to preview." });
+      const prepared = await prepareMigration(session, datasetKeys, identity);
+      if (Object.keys(prepared.datasets).length !== datasetKeys.length) return json(400, { error: "An unknown migration section was requested." });
       return json(200, {
         ok: true,
         previewOnly: true,
@@ -144,6 +155,9 @@ exports.handler = async (event) => {
 
     if (body.action === "apply") {
       const key = datasetKey;
+      // Applying one approved section rereads only that legacy source and its
+      // required dependency, then verifies it against the section preview.
+      const prepared = await prepareMigration(session, [key], identity);
       const dataset = prepared.datasets[key];
       if (!dataset) return json(400, { error: "Choose a migration section." });
       if (body.confirmation !== CONFIRMATION) return json(400, { error: `Type ${CONFIRMATION} exactly.` });

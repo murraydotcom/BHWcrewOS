@@ -35,7 +35,9 @@
 <script>
 const API="/.netlify/functions/patient-cloud-migration";
 const PHRASE="APPLY APPROVED CLOUD MIGRATION";
-let previewToken="", previewData=null;
+const DATASET_ORDER=["referrals","handoffs","patientRequests","careLogs","minutes","wellnessVisits","charmedPeds","charmedAdults","charmedPrograms","programPlans","porterCensus","prevention","careGaps","panelProfiles","panelEvents","questionnaires","screeners","crispArchive"];
+const PREVIEW_GROUPS=[["patientRequests"],["careGaps"],["referrals","handoffs","careLogs","minutes","wellnessVisits","charmedPeds","charmedAdults","charmedPrograms","programPlans","porterCensus","prevention","panelProfiles","panelEvents","questionnaires","screeners","crispArchive"]];
+let identityToken="", previewTokens={}, previewData=null;
 const $=id=>document.getElementById(id);
 const esc=value=>String(value==null?"":value).replace(/[&<>\"]/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[char]));
 function token(){try{return sessionStorage.getItem("crewos_token")||""}catch{return""}}
@@ -55,12 +57,20 @@ function render(preview){
 function syncButtons(){const approved=$("confirmation").value===PHRASE;document.querySelectorAll(".apply").forEach(button=>{const row=previewData?.datasets.find(item=>item.key===button.dataset.key);button.disabled=!approved||!row||row.sourceError||row.blockedCount||!row.readyCount||button.dataset.saved==="1"})}
 $("confirmation").addEventListener("input",syncButtons);
 $("preview").addEventListener("click",async()=>{
-  $("preview").disabled=true;setState("saving","Checking protected sources…");
-  try{const data=await call({action:"preview"});previewToken=data.previewToken;render(data.preview);setState("","Preview only — no records changed")}catch(error){setState("error",`Not saved · ${error.message}`)}finally{$("preview").disabled=false}
+  $("preview").disabled=true;identityToken="";previewTokens={};previewData=null;$("results").hidden=true;$("approval").hidden=true;setState("saving","Building the protected Cloud identity crosswalk…");
+  try{
+    const identity=await call({action:"identity"});identityToken=identity.identityToken;const datasets=[];
+    for(let index=0;index<PREVIEW_GROUPS.length;index++){
+      setState("saving",`Checking protected sources · step ${index+1} of ${PREVIEW_GROUPS.length}…`);
+      const data=await call({action:"preview",datasets:PREVIEW_GROUPS[index],identityToken});
+      data.preview.datasets.forEach(row=>{datasets.push(row);previewTokens[row.key]=data.previewToken});
+    }
+    datasets.sort((a,b)=>DATASET_ORDER.indexOf(a.key)-DATASET_ORDER.indexOf(b.key));render({rosterCount:identity.rosterCount,datasets});setState("","Preview only — no records changed");
+  }catch(error){identityToken="";previewTokens={};setState("error",`Not saved · ${error.message}`)}finally{$("preview").disabled=false}
 });
 $("results").addEventListener("click",async event=>{
   const button=event.target.closest(".apply");if(!button)return;const key=button.dataset.key;button.disabled=true;button.textContent="Saving…";setState("saving","Saving to BHW Cloud…");
-  try{const data=await call({action:"apply",dataset:key,confirmation:$("confirmation").value,previewToken});button.dataset.saved="1";button.textContent=`Saved ${data.verifiedCount}`;const stamp=new Date(data.savedAt).toLocaleString();setState("saved",`Saved to BHW Cloud · ${stamp} · ${data.verifiedCount} read back`)}catch(error){button.textContent="Apply section";setState("error",`Not saved · ${error.message}`);syncButtons()}
+  try{const data=await call({action:"apply",dataset:key,confirmation:$("confirmation").value,previewToken:previewTokens[key],identityToken});button.dataset.saved="1";button.textContent=`Saved ${data.verifiedCount}`;const stamp=new Date(data.savedAt).toLocaleString();setState("saved",`Saved to BHW Cloud · ${stamp} · ${data.verifiedCount} read back`)}catch(error){button.textContent="Apply section";setState("error",`Not saved · ${error.message}`);syncButtons()}
 });
 </script>
 </body>

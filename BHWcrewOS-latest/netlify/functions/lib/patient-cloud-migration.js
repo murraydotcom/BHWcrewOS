@@ -58,25 +58,26 @@ function sourceLabel(page, propertyNames = []) {
   return page.id;
 }
 
-function createResolver(roster, indexPages = []) {
+function createResolver(roster, indexPages = [], indexEntries = []) {
   const byId = new Map(roster.map((patient) => [patient.bhwPatientId, patient]));
   const bySource = uniqueMap(roster, (patient) => patient.source?.recordId || patient.sourceRecordId);
   const byNameDob = uniqueMap(roster, (patient) => `${nameKey(patient.name)}|${dateOnly(patient.dob)}`);
   const byMember = uniqueMap(roster, (patient) => patient.memberId);
   const byMrn = uniqueMap(roster, (patient) => patient.mrn);
-  const index = new Map();
+  const index = new Map(indexEntries);
 
   const direct = ({ bhwPatientId, name, dob, memberId, mrn, sourceId } = {}) => {
-    if (name && dob) {
-      const patient = one(byNameDob, `${nameKey(name)}|${dateOnly(dob)}`);
-      if (patient) return { bhwPatientId: patient.bhwPatientId, patient, reason: "" };
-    }
     const id = canonicalBhw(bhwPatientId);
-    if (id && byId.has(id)) {
+    if (id) {
+      if (!byId.has(id)) return { bhwPatientId: "", reason: "The recorded canonical BHW ID is not present in the Cloud Patient Registry." };
       const patient = byId.get(id);
       if (name && nameKey(name) !== nameKey(patient.name)) return { bhwPatientId: "", reason: "The recorded BHW ID belongs to a different legal name." };
       if (dob && dateOnly(dob) !== dateOnly(patient.dob)) return { bhwPatientId: "", reason: "The recorded BHW ID belongs to a different date of birth." };
       return { bhwPatientId: id, patient, reason: "" };
+    }
+    if (name && dob) {
+      const patient = one(byNameDob, `${nameKey(name)}|${dateOnly(dob)}`);
+      if (patient) return { bhwPatientId: patient.bhwPatientId, patient, reason: "" };
     }
     const sourcePatient = sourceId ? one(bySource, sourceId) : null;
     if (sourcePatient) return { bhwPatientId: sourcePatient.bhwPatientId, patient: sourcePatient, reason: "" };
@@ -104,6 +105,39 @@ function createResolver(roster, indexPages = []) {
     return direct({ bhwPatientId: id, sourceId: id });
   };
   return { byId, byNameDob, byMember, byMrn, direct, relation };
+}
+
+function normalizeRoster(patients) {
+  return (Array.isArray(patients) ? patients : []).map((patient) => ({
+    bhwPatientId: patient.bhwPatientId,
+    name: patient.name || [patient.legalFirstName, patient.middleName, patient.legalLastName, patient.nameSuffix].filter(Boolean).join(" ").trim(),
+    dob: patient.dob || patient.dateOfBirth || "",
+    memberId: patient.memberId || "",
+    mrn: patient.mrn || "",
+    sourceRecordId: patient.sourceRecordId || patient.source?.recordId || "",
+  }));
+}
+
+async function prepareIdentity(session) {
+  const [registryResult, indexSource] = await Promise.all([
+    cloudRequest("/v1/patients", { actor: session }),
+    safeQuery(DB.patients),
+  ]);
+  if (indexSource.error) throw new Error(`The legacy relationship crosswalk could not be read: ${indexSource.error}`);
+  const roster = normalizeRoster(registryResult.patients);
+  const authoritative = createResolver(roster);
+  const indexEntries = indexSource.rows.map((page) => {
+    const p = page.properties || {};
+    const resolved = authoritative.direct({
+      bhwPatientId: P.text(p["Patient ID #"]) || P.text(p["Patient Ctl No"]),
+      name: P.title(p["Patient Name"]),
+      dob: P.date(p.DOB),
+      mrn: P.text(p["CharmHealth Chart #"]),
+      sourceId: page.id,
+    });
+    return [page.id, { bhwPatientId: resolved.bhwPatientId || "", reason: resolved.reason || "" }];
+  });
+  return { roster, indexEntries };
 }
 
 function targetRecord(page, bhwPatientId, target, label) {
@@ -146,7 +180,7 @@ function requestStatus(type, legacy) {
   return "received";
 }
 
-async function prepareMigration(session, requestedDatasetKeys = null) {
+async function prepareMigration(session, requestedDatasetKeys = null, identity = null) {
   const sourceIds = {
     patientRequests: LEGACY_QUEUE_DB,
     referrals: DB.referrals,
@@ -169,22 +203,19 @@ async function prepareMigration(session, requestedDatasetKeys = null) {
   };
   const names = Object.keys(sourceIds);
   const requested = Array.isArray(requestedDatasetKeys) ? new Set(requestedDatasetKeys) : null;
-  const loadNames = requested ? names.filter((name) => requested.has(name)) : names;
-  const [registryResult, ...loaded] = await Promise.all([
-    cloudRequest("/v1/patients", { actor: session }),
-    ...loadNames.map((name) => safeQuery(sourceIds[name])),
-  ]);
-  const roster = (Array.isArray(registryResult.patients) ? registryResult.patients : []).map((patient) => ({
-    ...patient,
-    name: [patient.legalFirstName, patient.middleName, patient.legalLastName, patient.nameSuffix].filter(Boolean).join(" ").trim(),
-    dob: patient.dateOfBirth || "",
-  }));
+  const dependencies = { panelEvents: ["panelProfiles"], questionnaires: ["charmedPeds", "charmedAdults"], screeners: ["charmedPeds", "charmedAdults"] };
+  const loadSet = requested ? new Set([...requested]) : new Set(names);
+  if (requested) for (const name of requested) for (const dependency of dependencies[name] || []) loadSet.add(dependency);
+  const loadNames = names.filter((name) => loadSet.has(name));
+  const loaded = await Promise.all(loadNames.map((name) => safeQuery(sourceIds[name])));
+  const protectedIdentity = identity || await prepareIdentity(session);
+  const roster = normalizeRoster(protectedIdentity.roster);
   const loadedByName = Object.fromEntries(loadNames.map((name, index) => [name, loaded[index]]));
   const sources = Object.fromEntries(names.map((name) => [name, loadedByName[name] || { rows: [], error: "" }]));
-  // Historical relationships are accepted only when the authoritative Cloud
-  // Registry itself retains the legacy source record. The retired Patient
-  // Index is never used as a second identity authority.
-  const resolver = createResolver(roster);
+  // The retired Patient Index contributes only its page-to-patient crosswalk.
+  // Every crosswalk entry was resolved against the authoritative Cloud roster;
+  // it cannot create, rename, or override a Cloud patient identity.
+  const resolver = createResolver(roster, [], protectedIdentity.indexEntries);
   const datasets = {};
   const group = (key, label) => (datasets[key] = collection(key, label, sources[key]));
 
@@ -360,7 +391,10 @@ async function prepareMigration(session, requestedDatasetKeys = null) {
     crisp.ready.push(targetRecord(page, resolved.bhwPatientId, { kind: "rcm", path: "/v1/crisp-events", method: "POST", body: { patient: label || "Unmatched historical patient", bhwPatientId: resolved.bhwPatientId, type: P.sel(p.Type) || "update", event: P.text(p.Event), facility: P.text(p.Facility), date: dateOnly(P.date(p.Date) || page.created_time), dispo: P.text(p.Disposition), complexity: P.sel(p.Complexity), source: P.text(p.Source) || "Legacy CRISP archive", receivedAt: page.created_time } }, label));
   }
 
-  return { rosterCount: roster.length, datasets };
+  const selectedDatasets = requested
+    ? Object.fromEntries(Object.entries(datasets).filter(([key]) => requested.has(key)))
+    : datasets;
+  return { rosterCount: roster.length, datasets: selectedDatasets };
 }
 
 function stable(value) {
@@ -375,6 +409,44 @@ function digestDataset(dataset) {
     ready: dataset.ready,
     blocked: dataset.blocked,
   }))).digest("base64url");
+}
+
+function identityCipherKey(secret) {
+  if (!secret) throw new Error("SESSION_SECRET is required to protect the migration crosswalk");
+  return crypto.createHash("sha256").update(`patient-cloud-migration-identity:${secret}`).digest();
+}
+
+function sealIdentity(identity, session, secret, now = Date.now()) {
+  const iv = crypto.randomBytes(12);
+  const key = identityCipherKey(secret);
+  const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
+  const plaintext = zlib.gzipSync(Buffer.from(JSON.stringify({
+    sub: session.staffId || session.sub,
+    exp: now + 30 * 60 * 1000,
+    identity,
+  }), "utf8"));
+  const ciphertext = Buffer.concat([cipher.update(plaintext), cipher.final()]);
+  return ["v1", iv.toString("base64url"), cipher.getAuthTag().toString("base64url"), ciphertext.toString("base64url")].join(".");
+}
+
+function verifyIdentity(token, session, secret, now = Date.now()) {
+  const value = String(token || "");
+  if (!value || Buffer.byteLength(value, "utf8") > 4 * 1024 * 1024) {
+    throw Object.assign(new Error("Run a new protected preview first."), { status: 409 });
+  }
+  try {
+    const [version, ivValue, tagValue, ciphertextValue] = value.split(".");
+    if (version !== "v1" || !ivValue || !tagValue || !ciphertextValue) throw new Error("invalid token");
+    const decipher = crypto.createDecipheriv("aes-256-gcm", identityCipherKey(secret), Buffer.from(ivValue, "base64url"));
+    decipher.setAuthTag(Buffer.from(tagValue, "base64url"));
+    const compressed = Buffer.concat([decipher.update(Buffer.from(ciphertextValue, "base64url")), decipher.final()]);
+    const claims = JSON.parse(zlib.gunzipSync(compressed).toString("utf8"));
+    if (claims.exp < now || claims.sub !== (session.staffId || session.sub)) throw new Error("expired token");
+    if (!Array.isArray(claims.identity?.roster) || !Array.isArray(claims.identity?.indexEntries)) throw new Error("invalid identity");
+    return claims.identity;
+  } catch {
+    throw Object.assign(new Error("The protected identity crosswalk expired or is not valid. Run the preview again."), { status: 409 });
+  }
 }
 
 function signPreview(prepared, session, secret, now = Date.now()) {
@@ -415,4 +487,4 @@ function publicPreview(prepared) {
   };
 }
 
-module.exports = { prepareMigration, publicPreview, signPreview, verifyPreview };
+module.exports = { createResolver, prepareIdentity, prepareMigration, publicPreview, sealIdentity, verifyIdentity, signPreview, verifyPreview };
