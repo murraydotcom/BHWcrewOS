@@ -83,6 +83,7 @@ test("Clinical cloud exchange requires recent server-signed step-up authenticati
   const claims = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
   assert.equal(claims.scope, "clinical");
   assert.equal(claims.sub, "crew:synthetic-staff-id");
+  assert.equal(claims.healthRole, "crnp");
   assert.ok(claims.exp - claims.iat <= 300);
 });
 

@@ -29,6 +29,10 @@ function searchableEventText(event = {}) {
 }
 
 export function clinicalTimelineCategory(event = {}) {
+  const explicitCategory = String(event.clinicalCategory || "").trim().toLowerCase();
+  if (CLINICAL_TIMELINE_CATEGORIES.some(({ id }) => id === explicitCategory) && explicitCategory !== "diagnosis") {
+    return explicitCategory;
+  }
   const type = String(event.type || "").toLowerCase().replace(/[^a-z]/g, "");
   const text = searchableEventText(event);
   if (OPERATIONAL_TYPES.has(type) || OPERATIONAL_TEXT.test(text)) return null;

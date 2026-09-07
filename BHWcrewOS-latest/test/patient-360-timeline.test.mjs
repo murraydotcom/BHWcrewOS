@@ -20,6 +20,7 @@ test("clinical timeline recognizes additional meaningful turning points", () => 
   assert.equal(clinicalTimelineCategory({ type: "Encounter", label: "Emergency department visit" }), "acute-care");
   assert.equal(clinicalTimelineCategory({ type: "Procedure", label: "Synthetic surgery" }), "acute-care");
   assert.equal(clinicalTimelineCategory({ type: "Observation", label: "Important synthetic laboratory result" }), "imaging-result");
+  assert.equal(clinicalTimelineCategory({ type: "Basic", clinicalCategory: "life-function", label: "Synthetic function change" }), "life-function");
 });
 
 test("clinical timeline counts filters without counting referrals or coordination", () => {
@@ -40,4 +41,9 @@ test("timeline page prioritizes clinical turning points and names its boundaries
   assert.match(app, /Referral sent, scheduling and routine coordination remain in Patient Operations and the care plan/);
   assert.match(app, /const latestTimeline = clinicalTimelineEvents\(timeline\)\.slice\(0,4\)/);
   assert.match(app, /wireClinicalTimeline/);
+  assert.match(app, /Add clinical event/);
+  assert.match(app, /Unlock clinical entry/);
+  assert.match(app, /Save clinical draft/);
+  assert.match(app, /Approve for Patient 360/);
+  assert.match(app, /Diagnoses, medications, labs and imaging should continue to flow from their authoritative records/);
 });
