@@ -20,12 +20,6 @@ function createFetch(requests) {
     if (url === "/.netlify/functions/rcm-cloud-token") {
       return jsonResponse({ token: "short-cloud-token", expiresIn: 300 });
     }
-    if (url === "/.netlify/functions/auth") {
-      return jsonResponse({ token: "clinical-session-token", expiresIn: 900, user: { role: "CRNP" } });
-    }
-    if (url === "/.netlify/functions/bhw-capture-clinical-token") {
-      return jsonResponse({ token: "short-clinical-token", expiresIn: 300 });
-    }
     return jsonResponse({ ok: true, eligible: true, consent: { status: "current" } });
   };
 }
@@ -41,7 +35,6 @@ test("CrewHQ keeps its protected token exchange while using consent-aware transc
   await client.patientVisitNotes("BHW12/34");
   await client.patientAtlas("BHW12/34");
   await client.savePatientAtlas("BHW12/34", { action: "save-draft", content: { primaryConcern: "Synthetic concern" } });
-  await client.unlockClinical("2468");
   await client.patientClinicalEvents("BHW12/34");
   await client.savePatientClinicalEvent("BHW12/34", { action: "save-draft", content: { title: "Synthetic flare" } });
   await client.recordingConsent("BHW12/34");
@@ -70,12 +63,10 @@ test("CrewHQ keeps its protected token exchange while using consent-aware transc
   const atlasWrite = requests.find(({ url, options }) => url.endsWith("/v1/patients/BHW12%2F34/atlas") && options.method === "PUT");
   assert.equal(JSON.parse(atlasWrite.options.body).action, "save-draft");
 
-  const clinicalTokenRequest = requests.find(({ url }) => url === "/.netlify/functions/bhw-capture-clinical-token");
-  assert.equal(clinicalTokenRequest.options.headers.Authorization, "Bearer clinical-session-token");
-  const clinicalUnlock = requests.find(({ url }) => url === "/.netlify/functions/auth");
-  assert.deepEqual(JSON.parse(clinicalUnlock.options.body), { action: "clinical-login", pin: "2468" });
+  assert.equal(requests.some(({ url }) => url === "/.netlify/functions/bhw-capture-clinical-token"), false);
+  assert.equal(requests.some(({ url }) => url === "/.netlify/functions/auth"), false);
   const clinicalEventRead = requests.find(({ url, options }) => url.endsWith("/v1/patients/BHW12%2F34/clinical-events") && !options.method);
-  assert.equal(clinicalEventRead.options.headers.Authorization, "Bearer short-clinical-token");
+  assert.equal(clinicalEventRead.options.headers.Authorization, "Bearer short-cloud-token");
   const clinicalEventWrite = requests.find(({ url, options }) => url.endsWith("/v1/patients/BHW12%2F34/clinical-events") && options.method === "PUT");
   assert.equal(JSON.parse(clinicalEventWrite.options.body).action, "save-draft");
 

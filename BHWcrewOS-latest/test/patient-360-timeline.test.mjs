@@ -42,7 +42,8 @@ test("timeline page prioritizes clinical turning points and names its boundaries
   assert.match(app, /const latestTimeline = clinicalTimelineEvents\(timeline\)\.slice\(0,4\)/);
   assert.match(app, /wireClinicalTimeline/);
   assert.match(app, /Add clinical event/);
-  assert.match(app, /Unlock clinical entry/);
+  assert.doesNotMatch(app, /CrewOS PIN|Unlock clinical entry/);
+  assert.match(app, /active BHW Clinical Intelligence session/);
   assert.match(app, /Save clinical draft/);
   assert.match(app, /Approve for Patient 360/);
   assert.match(app, /Diagnoses, medications, labs and imaging should continue to flow from their authoritative records/);
