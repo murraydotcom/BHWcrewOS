@@ -8,6 +8,7 @@ const libPath = require.resolve("../netlify/functions/_lib.js");
 const cloudPath = require.resolve("../netlify/functions/lib/cloud-patients.js");
 const operationsPath = require.resolve("../netlify/functions/lib/operations-cloud.js");
 const actionPath = require.resolve("../netlify/functions/action.js");
+const REQUEST_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{7,99}$/;
 
 const cloudPatient = {
   bhwPatientId: "BHW0613",
@@ -138,6 +139,29 @@ test("a workflow submits the canonical Cloud Registry ID directly", async () => 
   assert.equal(operationCalls.length, 1);
   assert.equal(operationCalls[0].path, "/v1/patient-requests");
   assert.equal(operationCalls[0].options.body.bhwPatientId, "BHW0613");
+  assert.match(operationCalls[0].options.body.id, REQUEST_ID_PATTERN);
+});
+
+test("warm handoff creates a valid operations request ID for the synthetic patient", async () => {
+  const syntheticPatient = { ...cloudPatient, bhwPatientId: "BHW0000" };
+  const { handler, notionWrites, operationCalls } = loadAction({ patients: [syntheticPatient] });
+  const response = await handler({
+    httpMethod: "POST",
+    body: JSON.stringify({
+      action: "handoff-create",
+      patientId: "BHW0000",
+      from: "Primary Care",
+      to: "Care Management",
+      summary: "Synthetic warm handoff request ID test",
+      needs: ["Consultation"],
+    }),
+  });
+  assert.equal(response.statusCode, 200);
+  assert.equal(notionWrites.length, 0);
+  assert.equal(operationCalls.length, 1);
+  assert.equal(operationCalls[0].path, "/v1/patient-requests");
+  assert.equal(operationCalls[0].options.body.bhwPatientId, "BHW0000");
+  assert.match(operationCalls[0].options.body.id, REQUEST_ID_PATTERN);
 });
 
 test("new registrations receive a temporary Cloud ID and preserve a suffix", async () => {
