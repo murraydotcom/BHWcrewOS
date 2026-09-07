@@ -44,5 +44,11 @@ export async function createPatientRegistryClient(fetchImpl = fetch, storage = g
     saveRecordingConsent(bhwPatientId, consent) {
       return request("save-recording-consent", { bhwPatientId, consent });
     },
+    portalAccess(bhwPatientId) {
+      return request("portal-access", { bhwPatientId });
+    },
+    savePortalAccess(bhwPatientId, access) {
+      return request("save-portal-access", { bhwPatientId, access });
+    },
   };
 }

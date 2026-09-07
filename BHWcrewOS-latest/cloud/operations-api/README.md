@@ -42,6 +42,7 @@ HR data.
 | `CREWOS_OPERATIONS_TOKEN_SECRET` | Shared only with the CrewOS token exchange |
 | `CARE_CONNECT_INTAKE_SECRET` | Shared only with the Care Connect server/bridge |
 | `CARE_CONNECT_PATIENT_IDENTITY_SECRET` | Separate Care Connect credential for verified-contact patient matching |
+| `PATIENT_PORTAL_PILOT_ENABLED` | Organization kill switch for real-patient identity resolution; defaults to disabled |
 | `CARE_CONNECT_CLIENT_ID` | Optional; defaults to `care-connect` |
 | `FRONT_DESK_INTAKE_SECRET` | Server-only secret used by the Front Desk referral bridge |
 | `FRONT_DESK_CLIENT_ID` | Optional; defaults to `front-desk-os` |
@@ -80,6 +81,7 @@ collections. Do not put either secret or a service-account key in the repo.
 | `POST /v1/intake/front-desk-patient-requests` | Front Desk server bridge | Create one matched or unresolved inbound fax/email request in the authoritative queue |
 | `POST /v1/intake/front-desk-referrals/:id/actions` | Front Desk server bridge | Record referral sent/ready/scheduled milestones without exposing the server secret |
 | `POST /v1/patient-identity/resolve` | Care Connect server, after OTP verification | Unique active Google patient-registry match using direct contact + DOB |
+| `GET/PUT /v1/patient-portal-access/:BHW####` | CrewHQ | Review or update the adult Primary Care pilot gate; invitation copy is preview-only and never sent by this API |
 | `GET/POST /v1/patient-requests` | CrewOS | List or create operational requests |
 | `GET /v1/patient-requests/:id` | CrewOS | Read one request |
 | `POST /v1/patient-requests/:id/actions` | CrewOS / Chat | Assign, start, milestone, resolve, reopen, escalate, or unassign |

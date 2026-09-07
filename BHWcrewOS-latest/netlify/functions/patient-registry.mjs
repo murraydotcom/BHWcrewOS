@@ -69,6 +69,26 @@ function cloudToken(session) {
   return `${payload}.${signature}`;
 }
 
+function operationsToken(session) {
+  const secret = env("CREWOS_OPERATIONS_TOKEN_SECRET");
+  if (!secret) throw Object.assign(new Error("CrewHQ patient portal access is not configured"), { status: 503 });
+  const now = Math.floor(Date.now() / 1000);
+  const role = String(session.role || session.healthRole || session.access || "staff").trim().toLowerCase().replace(/\s+/g, "-");
+  const claims = {
+    sub: `crew:${session.staffId || "server"}`,
+    staffId: session.staffId || "server",
+    name: session.name || "CrewOS staff",
+    role,
+    iss: "bhw-crewhq",
+    aud: "bhw-operations-cloud",
+    iat: now,
+    exp: now + 300,
+  };
+  const payload = Buffer.from(JSON.stringify(claims)).toString("base64url");
+  const signature = crypto.createHmac("sha256", secret).update(payload).digest("base64url");
+  return `${payload}.${signature}`;
+}
+
 async function cloudRequest(path, session, { method = "GET", body } = {}) {
   const base = safeApiBase(env("RCM_CLOUD_API_URL"));
   if (!base) throw Object.assign(new Error("Patient Registry cloud access is not configured"), { status: 503 });
@@ -83,6 +103,24 @@ async function cloudRequest(path, session, { method = "GET", body } = {}) {
   const result = await cloudResponse.json().catch(() => ({}));
   if (!cloudResponse.ok) {
     throw Object.assign(new Error(result.error || `Patient Registry returned ${cloudResponse.status}`), { status: cloudResponse.status });
+  }
+  return result;
+}
+
+async function operationsRequest(path, session, { method = "GET", body } = {}) {
+  const base = safeApiBase(env("OPERATIONS_CLOUD_API_URL"));
+  if (!base) throw Object.assign(new Error("Patient portal pilot access is not configured"), { status: 503 });
+  const operationsResponse = await fetch(`${base}${path}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${operationsToken(session)}`,
+      ...(body ? { "Content-Type": "application/json" } : {}),
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const result = await operationsResponse.json().catch(() => ({}));
+  if (!operationsResponse.ok) {
+    throw Object.assign(new Error(result.message || result.error || `Patient portal access returned ${operationsResponse.status}`), { status: operationsResponse.status });
   }
   return result;
 }
@@ -128,6 +166,15 @@ export default async (request) => {
         const id = patientId(body.bhwPatientId);
         const consent = pick(body.consent, CONSENT_FIELDS);
         return response(200, await cloudRequest(`/v1/patients/${encodeURIComponent(id)}/recording-consent`, session, { method: "PUT", body: consent }));
+      }
+      case "portal-access": {
+        const id = patientId(body.bhwPatientId);
+        return response(200, await operationsRequest(`/v1/patient-portal-access/${encodeURIComponent(id)}`, session));
+      }
+      case "save-portal-access": {
+        const id = patientId(body.bhwPatientId);
+        const access = body.access && typeof body.access === "object" && !Array.isArray(body.access) ? body.access : {};
+        return response(200, await operationsRequest(`/v1/patient-portal-access/${encodeURIComponent(id)}`, session, { method: "PUT", body: access }));
       }
       default:
         return response(400, { ok: false, error: "Unknown Patient Registry action" });

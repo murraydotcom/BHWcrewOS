@@ -43,6 +43,12 @@ test("CrewHQ keeps patient maintenance tools inside the protected Patient Regist
   assert.match(registry, /Patient 360 — Synthetic/);
   assert.match(registryApp, /patient\.nameSuffix/);
   assert.match(registryApp, /"Suffix"/);
+  assert.match(registryApp, /Care Connect pilot access/);
+  assert.match(registryApp, /Adult Primary Care pilot/);
+  assert.match(registryApp, /proxy and guardian access disabled/i);
+  assert.match(registryApp, /invitationPreview/);
+  assert.match(registryApp, /No invitation was sent/);
+  assert.match(registryApp, /portalAccessStatus/);
   assert.match(workflowApp, /patient\.nameSuffix/);
   assert.match(transcriptionApp, /patient\.nameSuffix/);
 });
