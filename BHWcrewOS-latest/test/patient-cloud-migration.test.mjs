@@ -72,12 +72,16 @@ test("migration UI is session-gated, starts with preview, and distinguishes veri
   assert.match(html, /Saved to BHW Cloud/);
   assert.match(html, /read back/);
   assert.match(html, /Not saved/);
+  assert.match(html, /Apply \$\{row\.readyCount\} verified only/);
+  assert.match(html, /blocked remain not saved/);
   assert.match(handler, /createFrontDeskIntakeBulk/);
   assert.match(handler, /result\.verifiedCount !== batch\.length/);
   assert.match(handler, /key === "patientRequests"/);
   assert.match(handler, /body\.action === "identity"/);
   assert.match(handler, /prepareMigration\(session, datasetKeys, identity\)/);
   assert.match(handler, /prepareMigration\(session, \[key\], identity\)/);
+  assert.match(handler, /blockedRemaining: dataset\.blocked\.length/);
+  assert.doesNotMatch(handler, /dataset\.blocked\.length\) return json\(409/);
   assert.match(html, /PREVIEW_GROUPS/);
   assert.match(html, /identityToken/);
   const migration = await readFile(new URL("../netlify/functions/lib/patient-cloud-migration.js", import.meta.url), "utf8");

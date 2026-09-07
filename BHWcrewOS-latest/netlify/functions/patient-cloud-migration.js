@@ -1,7 +1,7 @@
 // Admin-only, sealed preview/apply migration for historical patient-linked
-// operational records. Preview never writes. Apply is dataset-scoped,
-// requires an unchanged preview and refuses partial migration when rows remain
-// blocked, so retiring a legacy relation cannot silently orphan history.
+// operational records. Preview never writes. Apply is dataset-scoped and
+// writes only Cloud-verified rows; blocked rows remain in the legacy source and
+// are reported as not saved so no unresolved history is silently orphaned.
 
 const { getSession, json } = require("./_lib");
 const { cloudRequest } = require("./lib/cloud-patients");
@@ -163,7 +163,7 @@ exports.handler = async (event) => {
       if (body.confirmation !== CONFIRMATION) return json(400, { error: `Type ${CONFIRMATION} exactly.` });
       verifyPreview(body.previewToken, prepared, session, process.env.SESSION_SECRET, key);
       if (dataset.sourceError) return json(409, { error: "The legacy source could not be read. Nothing was changed." });
-      if (dataset.blocked.length) return json(409, { error: `${dataset.blocked.length} record(s) still need a verified patient match. Nothing was changed.` });
+      if (!dataset.ready.length) return json(409, { error: "This section has no Cloud-verified records to save. Nothing was changed." });
 
       const receipts = await writeDataset(dataset.ready, session);
       const verifiedCount = await verifyReadback(key, dataset.ready, receipts, session);
@@ -177,6 +177,7 @@ exports.handler = async (event) => {
         savedAt: new Date().toISOString(),
         writtenCount: receipts.length,
         verifiedCount,
+        blockedRemaining: dataset.blocked.length,
       });
     }
     return json(400, { error: "Choose preview or apply." });

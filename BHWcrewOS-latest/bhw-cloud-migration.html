@@ -21,12 +21,12 @@
     <div class="content">
       <h1>Move historical patient-linked records to BHW Cloud</h1>
       <p class="lede">This protected tool checks every older CrewOS relationship against the canonical Google Cloud Patient Registry. It never guesses a patient. Shared contacts, mismatched IDs, and incomplete identities are held for review.</p>
-      <div class="notice"><b>First step: preview only.</b> No record changes during preview. A section can be applied only when every row in that section has a verified patient match. Applying does not message patients or post migration notices to staff chat.</div>
+      <div class="notice"><b>First step: preview only.</b> No record changes during preview. Applying a section saves only its Cloud-verified rows; blocked rows remain in the legacy source and stay marked not saved. Applying does not message patients or post migration notices to staff chat.</div>
       <div class="toolbar"><button class="btn primary" id="preview">Run protected preview</button><span class="state" id="state">Not started</span></div>
       <div id="summary"></div>
       <section id="results" class="card" hidden></section>
       <section id="approval" hidden>
-        <div class="notice"><b>Approval phrase</b><br>Type <code>APPLY APPROVED CLOUD MIGRATION</code> to enable complete, unblocked sections. Each save is immediately read back before it is shown as saved.</div>
+        <div class="notice"><b>Approval phrase</b><br>Type <code>APPLY APPROVED CLOUD MIGRATION</code> to enable Cloud-verified rows. Blocked rows remain untouched. Each save is immediately read back before it is shown as saved.</div>
         <input id="confirmation" class="confirm" autocomplete="off" placeholder="Type the approval phrase exactly">
       </section>
     </div>
@@ -51,10 +51,10 @@ function blockedRows(items){return items.map(item=>`<div><b>${esc(item.label||it
 function render(preview){
   previewData=preview; const totals=preview.datasets.reduce((out,row)=>({source:out.source+row.sourceCount,ready:out.ready+row.readyCount,blocked:out.blocked+row.blockedCount}),{source:0,ready:0,blocked:0});
   $("summary").innerHTML=`<div class="notice"><b>${totals.source} historical source rows reviewed</b> · ${totals.ready} verified migration records · ${totals.blocked} blocked for identity review · ${preview.rosterCount} canonical patients checked</div>`;
-  $("results").innerHTML=preview.datasets.map(row=>`<div class="row" data-key="${esc(row.key)}"><div class="label">${esc(row.label)}<div class="small">${row.sourceError?`Unavailable: ${esc(row.sourceError)}`:"Protected source read completed"}</div></div><div><div class="num">${row.sourceCount}</div><div class="cap">Source rows</div></div><div><div class="num">${row.readyCount}</div><div class="cap">Verified</div></div><div><div class="num ${row.blockedCount?"bad":""}">${row.blockedCount}</div><div class="cap">Blocked</div></div><button class="btn apply" data-key="${esc(row.key)}" ${row.sourceError||row.blockedCount||!row.readyCount?"disabled":""}>Apply section</button></div>${row.blockedCount?`<details><summary>Review ${row.blockedCount} blocked record(s)</summary><div class="blocked">${blockedRows(row.blocked)}</div></details>`:""}`).join("");
+  $("results").innerHTML=preview.datasets.map(row=>`<div class="row" data-key="${esc(row.key)}"><div class="label">${esc(row.label)}<div class="small">${row.sourceError?`Unavailable: ${esc(row.sourceError)}`:"Protected source read completed"}</div></div><div><div class="num">${row.sourceCount}</div><div class="cap">Source rows</div></div><div><div class="num">${row.readyCount}</div><div class="cap">Verified</div></div><div><div class="num ${row.blockedCount?"bad":""}">${row.blockedCount}</div><div class="cap">Blocked</div></div><button class="btn apply" data-key="${esc(row.key)}" ${row.sourceError||!row.readyCount?"disabled":""}>${row.blockedCount?`Apply ${row.readyCount} verified only`:"Apply section"}</button></div>${row.blockedCount?`<details><summary>Review ${row.blockedCount} blocked record(s)</summary><div class="blocked">${blockedRows(row.blocked)}</div></details>`:""}`).join("");
   $("results").hidden=false;$("approval").hidden=false;syncButtons();
 }
-function syncButtons(){const approved=$("confirmation").value===PHRASE;document.querySelectorAll(".apply").forEach(button=>{const row=previewData?.datasets.find(item=>item.key===button.dataset.key);button.disabled=!approved||!row||row.sourceError||row.blockedCount||!row.readyCount||button.dataset.saved==="1"})}
+function syncButtons(){const approved=$("confirmation").value===PHRASE;document.querySelectorAll(".apply").forEach(button=>{const row=previewData?.datasets.find(item=>item.key===button.dataset.key);button.disabled=!approved||!row||row.sourceError||!row.readyCount||button.dataset.saved==="1"})}
 $("confirmation").addEventListener("input",syncButtons);
 $("preview").addEventListener("click",async()=>{
   $("preview").disabled=true;identityToken="";previewTokens={};previewData=null;$("results").hidden=true;$("approval").hidden=true;setState("saving","Building the protected Cloud identity crosswalk…");
@@ -70,7 +70,7 @@ $("preview").addEventListener("click",async()=>{
 });
 $("results").addEventListener("click",async event=>{
   const button=event.target.closest(".apply");if(!button)return;const key=button.dataset.key;button.disabled=true;button.textContent="Saving…";setState("saving","Saving to BHW Cloud…");
-  try{const data=await call({action:"apply",dataset:key,confirmation:$("confirmation").value,previewToken:previewTokens[key],identityToken});button.dataset.saved="1";button.textContent=`Saved ${data.verifiedCount}`;const stamp=new Date(data.savedAt).toLocaleString();setState("saved",`Saved to BHW Cloud · ${stamp} · ${data.verifiedCount} read back`)}catch(error){button.textContent="Apply section";setState("error",`Not saved · ${error.message}`);syncButtons()}
+  try{const data=await call({action:"apply",dataset:key,confirmation:$("confirmation").value,previewToken:previewTokens[key],identityToken});button.dataset.saved="1";button.textContent=`Saved ${data.verifiedCount}`;const stamp=new Date(data.savedAt).toLocaleString();const blocked=data.blockedRemaining?` · ${data.blockedRemaining} blocked remain not saved`:"";setState("saved",`Saved to BHW Cloud · ${stamp} · ${data.verifiedCount} read back${blocked}`)}catch(error){const row=previewData?.datasets.find(item=>item.key===key);button.textContent=row?.blockedCount?`Apply ${row.readyCount} verified only`:"Apply section";setState("error",`Not saved · ${error.message}`);syncButtons()}
 });
 </script>
 </body>
