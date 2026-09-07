@@ -272,8 +272,8 @@ let FILTER='all';
 let STAFF=''; // retained for roster compatibility; routing filters use TEAM
 let TEAM='';
 let REQUEST_TYPE='';
-let SEARCH='';
 let SELECTED=new URLSearchParams(location.search).get('request')||'';
+let SEARCH=SELECTED.trim().toLowerCase();
 let DETAIL_LOAD=0;
 let ROSTER=[]; // active staff names, pulled from the crewOS Staff & Roles roster
 let CLOUD_CLIENT_PROMISE=null;
@@ -670,6 +670,7 @@ async function loadRoster(){
 }
 
 if(TOKEN){document.getElementById('me').textContent='signed in';}
+document.getElementById('requestSearch').value=SEARCH;
 document.getElementById('requestSearch').addEventListener('input',event=>{SEARCH=event.target.value.trim().toLowerCase();render();});
 document.getElementById('teamFilter').addEventListener('change',event=>setTeam(event.target.value));
 loadRoster();

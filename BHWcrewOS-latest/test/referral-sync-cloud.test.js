@@ -112,3 +112,9 @@ test("Patient Requests presents scheduled before referral completion", () => {
   assert.match(page, /outcomes:\[\['Complete','referral_completed'\],\['Close','closed_without_scheduling'\]\]/);
   assert.doesNotMatch(page, /outcomes:\[\['Scheduled','scheduled'\]/);
 });
+
+test("Patient Requests limits a request deep link to the selected record", () => {
+  const page = fs.readFileSync(path.join(__dirname, "..", "bhw-requests.html"), "utf8");
+  assert.match(page, /let SELECTED=new URLSearchParams\(location\.search\)\.get\('request'\)\|\|'';\s*let SEARCH=SELECTED\.trim\(\)\.toLowerCase\(\);/);
+  assert.match(page, /document\.getElementById\('requestSearch'\)\.value=SEARCH;/);
+});
