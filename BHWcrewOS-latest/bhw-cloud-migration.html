@@ -63,14 +63,24 @@ $("preview").addEventListener("click",async()=>{
     for(let index=0;index<PREVIEW_GROUPS.length;index++){
       setState("saving",`Checking protected sources · step ${index+1} of ${PREVIEW_GROUPS.length}…`);
       const data=await call({action:"preview",datasets:PREVIEW_GROUPS[index],identityToken});
-      data.preview.datasets.forEach(row=>{datasets.push(row);previewTokens[row.key]=data.previewToken});
+      data.preview.datasets.forEach(row=>{datasets.push(row);previewTokens[row.key]=data.previewTokens?.[row.key]||[]});
     }
     datasets.sort((a,b)=>DATASET_ORDER.indexOf(a.key)-DATASET_ORDER.indexOf(b.key));render({rosterCount:identity.rosterCount,datasets});setState("","Preview only — no records changed");
   }catch(error){identityToken="";previewTokens={};setState("error",`Not saved · ${error.message}`)}finally{$("preview").disabled=false}
 });
 $("results").addEventListener("click",async event=>{
   const button=event.target.closest(".apply");if(!button)return;const key=button.dataset.key;button.disabled=true;button.textContent="Saving…";setState("saving","Saving to BHW Cloud…");
-  try{const data=await call({action:"apply",dataset:key,confirmation:$("confirmation").value,previewToken:previewTokens[key]});button.dataset.saved="1";button.textContent=`Saved ${data.verifiedCount}`;const stamp=new Date(data.savedAt).toLocaleString();const blocked=data.blockedRemaining?` · ${data.blockedRemaining} blocked remain not saved`:"";setState("saved",`Saved to BHW Cloud · ${stamp} · ${data.verifiedCount} read back${blocked}`)}catch(error){const row=previewData?.datasets.find(item=>item.key===key);button.textContent=row?.blockedCount?`Apply ${row.readyCount} verified only`:"Apply section";setState("error",`Not saved · ${error.message}`);syncButtons()}
+  const row=previewData?.datasets.find(item=>item.key===key);const tokens=previewTokens[key]||[];let verifiedCount=0;let savedAt="";
+  try{
+    if(!tokens.length)throw new Error("Run a new protected preview first.");
+    for(let index=0;index<tokens.length;index++){
+      setState("saving",`Saving to BHW Cloud · batch ${index+1} of ${tokens.length}…`);
+      const data=await call({action:"apply",dataset:key,confirmation:$("confirmation").value,previewToken:tokens[index]});
+      verifiedCount+=data.verifiedCount;savedAt=data.savedAt;
+    }
+    if(verifiedCount!==row.readyCount)throw new Error(`Cloud read-back verified ${verifiedCount} of ${row.readyCount} records. Stop and review before retrying.`);
+    button.dataset.saved="1";button.textContent=`Saved ${verifiedCount}`;const stamp=new Date(savedAt).toLocaleString();const blocked=row.blockedCount?` · ${row.blockedCount} blocked remain not saved`:"";setState("saved",`Saved to BHW Cloud · ${stamp} · ${verifiedCount} read back${blocked}`);
+  }catch(error){button.textContent=row?.blockedCount?`Apply ${row.readyCount} verified only`:"Apply section";const partial=verifiedCount?`${verifiedCount} of ${row?.readyCount||0} read back · `:"";setState("error",`Not fully saved · ${partial}${error.message}`);syncButtons()}
 });
 </script>
 </body>
