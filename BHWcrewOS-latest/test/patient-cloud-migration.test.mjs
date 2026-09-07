@@ -52,14 +52,13 @@ test("legacy relationship crosswalk is encrypted, session-bound, and expires", (
   assert.throws(() => verifyIdentity(token, session, secret, 31 * 60 * 1_000), /expired or is not valid/i);
 });
 
-test("a recorded canonical BHW ID cannot be reassigned by a legacy name match", () => {
+test("the authoritative Cloud name and DOB repair a conflicting legacy BHW ID", () => {
   const resolver = createResolver([
     { bhwPatientId: "BHW0001", name: "First Synthetic", dob: "2000-01-01" },
     { bhwPatientId: "BHW0002", name: "Second Synthetic", dob: "2000-02-02" },
   ]);
-  const mismatch = resolver.direct({ bhwPatientId: "BHW0001", name: "Second Synthetic", dob: "2000-02-02" });
-  assert.equal(mismatch.bhwPatientId, "");
-  assert.match(mismatch.reason, /different legal name/i);
+  const repaired = resolver.direct({ bhwPatientId: "BHW0001", name: "Second Synthetic", dob: "2000-02-02" });
+  assert.equal(repaired.bhwPatientId, "BHW0002");
   const verified = resolver.direct({ bhwPatientId: "BHW0001", name: "First Synthetic", dob: "2000-01-01" });
   assert.equal(verified.bhwPatientId, "BHW0001");
 });

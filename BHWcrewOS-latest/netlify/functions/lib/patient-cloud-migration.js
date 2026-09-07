@@ -67,6 +67,13 @@ function createResolver(roster, indexPages = [], indexEntries = []) {
   const index = new Map(indexEntries);
 
   const direct = ({ bhwPatientId, name, dob, memberId, mrn, sourceId } = {}) => {
+    // The legacy BHW field may contain a temporary or formerly colliding ID.
+    // A unique legal-name + DOB match to the authoritative Cloud Registry wins;
+    // the old ID is used only when those stronger demographics are unavailable.
+    if (name && dob) {
+      const patient = one(byNameDob, `${nameKey(name)}|${dateOnly(dob)}`);
+      if (patient) return { bhwPatientId: patient.bhwPatientId, patient, reason: "" };
+    }
     const id = canonicalBhw(bhwPatientId);
     if (id) {
       if (!byId.has(id)) return { bhwPatientId: "", reason: "The recorded canonical BHW ID is not present in the Cloud Patient Registry." };
@@ -74,10 +81,6 @@ function createResolver(roster, indexPages = [], indexEntries = []) {
       if (name && nameKey(name) !== nameKey(patient.name)) return { bhwPatientId: "", reason: "The recorded BHW ID belongs to a different legal name." };
       if (dob && dateOnly(dob) !== dateOnly(patient.dob)) return { bhwPatientId: "", reason: "The recorded BHW ID belongs to a different date of birth." };
       return { bhwPatientId: id, patient, reason: "" };
-    }
-    if (name && dob) {
-      const patient = one(byNameDob, `${nameKey(name)}|${dateOnly(dob)}`);
-      if (patient) return { bhwPatientId: patient.bhwPatientId, patient, reason: "" };
     }
     const sourcePatient = sourceId ? one(bySource, sourceId) : null;
     if (sourcePatient) return { bhwPatientId: sourcePatient.bhwPatientId, patient: sourcePatient, reason: "" };
