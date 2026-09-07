@@ -24,6 +24,7 @@ let cloudClient = null;
 let activeRecord = null;
 let activeWorkflowConnection = { connected: false, encounters: [] };
 let activeAtlasConnection = { connected: false, workspace: null };
+let activeClinicalEventConnection = { connected: false, workspace: null };
 let healthCoreClient = null;
 const $ = (id) => document.getElementById(id);
 const esc = (value) => String(value ?? "").replace(/[&<>\"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[character]));
@@ -162,6 +163,14 @@ function timelineCategoryLabel(category) {
 }
 
 function clinicalTimelineDetail(event, resources) {
+  if (event.providerReviewed) {
+    return compact([
+      event.detail,
+      event.status ? `Status: ${statusText(event.status)}` : "",
+      event.sourceType ? `Source: ${statusText(event.sourceType)}` : "",
+      event.sourceReference,
+    ]).join(" · ") || "Provider-reviewed clinical event.";
+  }
   const resource = resources.find((item) => item.resourceType === event.type && item.id === event.resourceId);
   if (!resource) return event.summary || event.detail || "Further clinical detail is not connected to this timeline entry.";
   if (resource.resourceType === "Condition") {
@@ -179,7 +188,13 @@ function clinicalTimelineDetail(event, resources) {
 
 function clinicalTimelineItems(events, resources) {
   if (!events.length) return `<div class="empty-note" data-timeline-empty>No diagnosis, flare-up, life/function, imaging/result, treatment, hospital or procedure event is connected yet. Blank means undocumented or not connected - not clinically absent.</div>`;
-  return events.map((event) => `<article class="timeline-item category-${esc(event.clinicalCategory)}" data-timeline-event="${esc(event.clinicalCategory)}"><div class="timeline-item-head"><span class="timeline-category">${esc(timelineCategoryLabel(event.clinicalCategory))}</span><time>${esc(dateText(event.date))}</time></div><b>${esc(event.label || event.title || event.type || "Clinical milestone")}</b><p>${esc(clinicalTimelineDetail(event, resources))}</p>${event.physiologicDomains?.length ? `<div class="timeline-tags">${event.physiologicDomains.map((domain) => `<span>${esc(statusText(domain))}</span>`).join("")}</div>` : ""}</article>`).join("");
+  return events.map((event) => {
+    const tags = compact([
+      ...(event.physiologicDomains || []).map(statusText),
+      event.providerReviewed ? "Provider reviewed" : "",
+    ]);
+    return `<article class="timeline-item category-${esc(event.clinicalCategory)}" data-timeline-event="${esc(event.clinicalCategory)}"><div class="timeline-item-head"><span class="timeline-category">${esc(timelineCategoryLabel(event.clinicalCategory))}</span><time>${esc(dateText(event.date))}</time></div><b>${esc(event.label || event.title || event.type || "Clinical milestone")}</b><p>${esc(clinicalTimelineDetail(event, resources))}</p>${tags.length ? `<div class="timeline-tags">${tags.map((tag) => `<span>${esc(tag)}</span>`).join("")}</div>` : ""}</article>`;
+  }).join("");
 }
 
 function clinicalTimelineControls(events) {
@@ -188,7 +203,43 @@ function clinicalTimelineControls(events) {
   return `<div class="timeline-controls" role="group" aria-label="Filter clinical timeline"><button class="timeline-filter active" type="button" data-timeline-filter="all" aria-pressed="true">All clinical <span>${total}</span></button>${CLINICAL_TIMELINE_CATEGORIES.map(({ id, label }) => `<button class="timeline-filter" type="button" data-timeline-filter="${esc(id)}" aria-pressed="false">${esc(label)} <span>${counts[id]}</span></button>`).join("")}</div>`;
 }
 
-function wireClinicalTimeline() {
+function clinicalEventWorkspacePanel(context) {
+  const connection = context.clinicalEventConnection || { connected: false, workspace: null };
+  if (!connection.connected) {
+    return `<section class="panel clinical-event-entry-panel"><div class="panel-head"><div><h3>Add clinical event</h3><span class="panel-subtitle">Manual entry is protected by Clinical mode and provider review.</span></div><span class="badge warning">Entry locked</span></div><div class="panel-body"><div class="clinical-event-unlock-copy"><b>The timeline itself remains available.</b><span>${esc(connection.error || "Verify your CrewOS PIN in Clinical mode to save or approve a clinical event.")}</span></div><form id="clinical-event-unlock-form"><label><span>CrewOS PIN</span><input id="clinical-event-pin" type="password" inputmode="numeric" autocomplete="current-password" minlength="4" maxlength="8" pattern="[0-9]{4,8}" required></label><button class="btn primary" id="clinical-event-unlock" type="submit">Unlock clinical entry</button><span id="clinical-event-unlock-status" role="status"></span></form></div></section>`;
+  }
+  const draft = connection.workspace?.draft || null;
+  const content = draft?.content || {};
+  const approvedCount = connection.workspace?.approvedEvents?.length || 0;
+  const savedText = draft ? `Saved to BHW Cloud · ${dateText(draft.savedAt, true)}` : "Not saved";
+  const categoryOptions = CLINICAL_TIMELINE_CATEGORIES.filter(({ id }) => id !== "diagnosis");
+  const statusOptions = [["documented","Documented"],["suspected","Suspected"],["historical","Historical"],["active","Active"],["improving","Improving"],["resolved","Resolved"],["urgent","Urgent / destabilizing"]];
+  const sourceOptions = [["patient-reported","Patient reported"],["visit-documentation","Visit documentation"],["outside-record","Outside record"],["clinician-observation","Clinician observation"],["other","Other source"]];
+  const option = (value, label, selected) => `<option value="${esc(value)}" ${value === selected ? "selected" : ""}>${esc(label)}</option>`;
+  return `<section class="panel clinical-event-entry-panel"><div class="panel-head"><div><h3>Add clinical event</h3><span class="panel-subtitle">Use this only when the meaningful event is not already arriving from a connected clinical source.</span></div>${draft ? '<span class="badge warning">Provider review required</span>' : '<span class="badge neutral">No draft</span>'}</div><div class="panel-body"><details class="clinical-event-entry" ${draft ? "open" : ""}><summary><span>Open clinical-event entry</span><small>${approvedCount} manually entered event${approvedCount === 1 ? "" : "s"} approved</small></summary><form id="clinical-event-editor"><div class="clinical-event-guidance"><b>Draft first</b><span>Saving does not publish the event. An authorized provider must review it before it appears in Patient 360.</span><span>Diagnoses, medications, labs and imaging should continue to flow from their authoritative records whenever possible.</span></div><input type="hidden" id="clinical-event-id" value="${esc(draft?.eventId || "")}"><div class="clinical-event-fields"><label><span>Event date *</span><input type="date" id="clinical-event-date" required value="${esc(content.eventDate || new Date().toISOString().slice(0, 10))}"></label><label><span>Event type *</span><select id="clinical-event-category" required><option value="">Choose an event type</option>${categoryOptions.map(({ id, label }) => option(id, label, content.category)).join("")}</select></label><label class="wide"><span>Short title *</span><input type="text" id="clinical-event-title" maxlength="200" required placeholder="What changed?" value="${esc(content.title || "")}"></label><label class="wide"><span>Clinical details</span><textarea id="clinical-event-detail" maxlength="4000" rows="4" placeholder="Symptoms, function, response, finding, or other relevant context">${esc(content.detail || "")}</textarea></label><label><span>Status</span><select id="clinical-event-status">${statusOptions.map(([value, label]) => option(value, label, content.status || "documented")).join("")}</select></label><label><span>Source / evidence</span><select id="clinical-event-source">${sourceOptions.map(([value, label]) => option(value, label, content.sourceType || "patient-reported")).join("")}</select></label><label class="wide"><span>Source reference</span><input type="text" id="clinical-event-source-reference" maxlength="500" placeholder="Visit date, outside report, patient call, or document reference" value="${esc(content.sourceReference || "")}"></label></div><div class="clinical-event-review-bar"><div><b id="clinical-event-save-state" data-state="${draft ? "saved" : "not-saved"}">${esc(savedText)}</b><span>${draft ? `Draft revision ${draft.revision} is not visible in the timeline until provider approval.` : "No manual clinical event has been started."}</span></div><div class="clinical-event-review-actions"><button type="button" class="btn primary" id="clinical-event-save-draft">Save clinical draft</button><label class="clinical-event-approval-check"><input type="checkbox" id="clinical-event-approval-attestation" ${draft ? "" : "disabled"}> I reviewed this saved draft against the patient record.</label><button type="button" class="btn" id="clinical-event-approve-draft" disabled>Approve for Patient 360</button></div></div></form></details></div></section>`;
+}
+
+function collectClinicalEventEditor() {
+  return {
+    eventId: $("clinical-event-id")?.value || "",
+    eventDate: $("clinical-event-date")?.value || "",
+    category: $("clinical-event-category")?.value || "",
+    title: $("clinical-event-title")?.value || "",
+    detail: $("clinical-event-detail")?.value || "",
+    status: $("clinical-event-status")?.value || "documented",
+    sourceType: $("clinical-event-source")?.value || "other",
+    sourceReference: $("clinical-event-source-reference")?.value || "",
+  };
+}
+
+function setClinicalEventSaveState(text, state = "not-saved") {
+  const indicator = $("clinical-event-save-state");
+  if (!indicator) return;
+  indicator.textContent = text;
+  indicator.dataset.state = state;
+}
+
+function wireClinicalTimeline(context) {
   const filters = [...document.querySelectorAll("[data-timeline-filter]")];
   const events = [...document.querySelectorAll("[data-timeline-event]")];
   const empty = $("timeline-filter-empty");
@@ -206,6 +257,75 @@ function wireClinicalTimeline() {
       button.setAttribute("aria-pressed", String(active));
     }
     if (empty) empty.hidden = visible !== 0;
+  });
+
+  const unlockForm = $("clinical-event-unlock-form");
+  unlockForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!unlockForm.reportValidity() || !cloudClient) return;
+    const button = $("clinical-event-unlock");
+    const status = $("clinical-event-unlock-status");
+    if (button) button.disabled = true;
+    if (status) status.textContent = "Verifying…";
+    try {
+      await cloudClient.unlockClinical($("clinical-event-pin")?.value || "");
+      const result = await cloudClient.patientClinicalEvents(PATIENT_ID);
+      activeClinicalEventConnection = { connected: true, workspace: result.workspace || null };
+      render(activeRecord, activeWorkflowConnection, activeAtlasConnection, activeClinicalEventConnection);
+    } catch (error) {
+      if (status) status.textContent = error.message || "Clinical entry could not be unlocked.";
+      if (button) button.disabled = false;
+    }
+  });
+
+  const form = $("clinical-event-editor");
+  if (!form || !cloudClient || !context.clinicalEventConnection?.connected) return;
+  const saveButton = $("clinical-event-save-draft");
+  const approveButton = $("clinical-event-approve-draft");
+  const attestation = $("clinical-event-approval-attestation");
+  const draft = context.clinicalEventConnection.workspace?.draft || null;
+  const markDirty = () => {
+    setClinicalEventSaveState("Not saved", "not-saved");
+    if (attestation) attestation.checked = false;
+    if (approveButton) approveButton.disabled = true;
+  };
+  form.addEventListener("input", (event) => {
+    if (event.target !== attestation) markDirty();
+  });
+  attestation?.addEventListener("change", () => {
+    if (approveButton) approveButton.disabled = !draft || !attestation.checked;
+  });
+  saveButton?.addEventListener("click", async () => {
+    if (!form.reportValidity()) return;
+    saveButton.disabled = true;
+    if (approveButton) approveButton.disabled = true;
+    setClinicalEventSaveState("Saving…", "saving");
+    try {
+      const result = await cloudClient.savePatientClinicalEvent(PATIENT_ID, { action: "save-draft", content: collectClinicalEventEditor() });
+      activeClinicalEventConnection = { connected: true, workspace: result.workspace || null };
+      render(activeRecord, activeWorkflowConnection, activeAtlasConnection, activeClinicalEventConnection);
+    } catch (error) {
+      setClinicalEventSaveState(`Not saved · ${error.message || "try again"}`, "not-saved");
+      saveButton.disabled = false;
+    }
+  });
+  approveButton?.addEventListener("click", async () => {
+    if (!draft || !attestation?.checked) return;
+    approveButton.disabled = true;
+    saveButton.disabled = true;
+    setClinicalEventSaveState("Saving provider approval…", "saving");
+    try {
+      const result = await cloudClient.savePatientClinicalEvent(PATIENT_ID, { action: "approve", expectedRevision: draft.revision });
+      activeClinicalEventConnection = { connected: true, workspace: result.workspace || null };
+      const refreshed = await cloudClient.healthRecord(PATIENT_ID);
+      if (!refreshed?.healthRecord) throw new Error("The approved event was saved, but the timeline refresh did not complete.");
+      activeRecord = refreshed.healthRecord;
+      render(activeRecord, activeWorkflowConnection, activeAtlasConnection, activeClinicalEventConnection);
+    } catch (error) {
+      setClinicalEventSaveState(`Draft saved; approval not completed · ${error.message || "try again"}`, "not-saved");
+      approveButton.disabled = false;
+      saveButton.disabled = false;
+    }
   });
 }
 
@@ -893,7 +1013,7 @@ function atlasPage(context) {
 
 function timelinePage(context) {
   const events = clinicalTimelineEvents(context.timeline);
-  return `<section class="worksheet clinical-timeline-page"><div class="worksheet-heading"><span class="section-number">2</span><h2>Longitudinal Clinical Timeline</h2><p>Diagnoses, symptom flare-ups, major life and functional changes, imaging and important results, treatment changes, hospital care and procedures</p></div><div class="panel clinical-timeline-panel"><div class="panel-head"><div><h3>Clinical turning points</h3><span class="panel-subtitle">Newest first · routine referral and coordination updates are kept out of this view</span></div><span class="badge neutral">Source-linked</span></div><div class="panel-body">${clinicalTimelineControls(context.timeline)}<div class="timeline clinical-event-list">${clinicalTimelineItems(events, context.resources)}<div class="empty-note" id="timeline-filter-empty" hidden>No events are connected in this category. Blank means undocumented or not connected - not clinically absent.</div></div></div></div><div class="two-col timeline-secondary"><div class="panel"><div class="panel-head"><h3>Function & symptom trajectory</h3><span class="badge warning">Awaiting measures</span></div><div class="panel-body"><div class="trajectory"></div><div class="trajectory-labels"><span>Improved</span><span>Baseline</span><span>Declined</span></div><div class="empty-note" style="margin-top:12px">This graph will compare patient-reported function, symptom burden, objective measures and major interventions without treating association as causation.</div></div></div><div class="panel"><div class="panel-head"><h3>What belongs here</h3><span class="badge neutral">Clinical history</span></div><div class="panel-body timeline-scope-list"><div><b>Primary history</b><span>New diagnoses, onset or resolution, symptom flare-ups and remissions</span></div><div><b>Meaningful change</b><span>Life events, functional decline or recovery, treatment response and adverse effects</span></div><div><b>Major evidence</b><span>Imaging findings, important results, emergency or hospital care, surgery and procedures</span></div><div><b>Kept elsewhere</b><span>Referral sent, scheduling and routine coordination remain in Patient Operations and the care plan</span></div></div></div></div></section>`;
+  return `<section class="worksheet clinical-timeline-page"><div class="worksheet-heading"><span class="section-number">2</span><h2>Longitudinal Clinical Timeline</h2><p>Diagnoses, symptom flare-ups, major life and functional changes, imaging and important results, treatment changes, hospital care and procedures</p></div>${clinicalEventWorkspacePanel(context)}<div class="panel clinical-timeline-panel"><div class="panel-head"><div><h3>Clinical turning points</h3><span class="panel-subtitle">Newest first · routine referral and coordination updates are kept out of this view</span></div><span class="badge neutral">Source-linked</span></div><div class="panel-body">${clinicalTimelineControls(context.timeline)}<div class="timeline clinical-event-list">${clinicalTimelineItems(events, context.resources)}<div class="empty-note" id="timeline-filter-empty" hidden>No events are connected in this category. Blank means undocumented or not connected - not clinically absent.</div></div></div></div><div class="two-col timeline-secondary"><div class="panel"><div class="panel-head"><h3>Function & symptom trajectory</h3><span class="badge warning">Awaiting measures</span></div><div class="panel-body"><div class="trajectory"></div><div class="trajectory-labels"><span>Improved</span><span>Baseline</span><span>Declined</span></div><div class="empty-note" style="margin-top:12px">This graph will compare patient-reported function, symptom burden, objective measures and major interventions without treating association as causation.</div></div></div><div class="panel"><div class="panel-head"><h3>What belongs here</h3><span class="badge neutral">Clinical history</span></div><div class="panel-body timeline-scope-list"><div><b>Primary history</b><span>New diagnoses, onset or resolution, symptom flare-ups and remissions</span></div><div><b>Meaningful change</b><span>Life events, functional decline or recovery, treatment response and adverse effects</span></div><div><b>Major evidence</b><span>Imaging findings, important results, emergency or hospital care, surgery and procedures</span></div><div><b>Kept elsewhere</b><span>Referral sent, scheduling and routine coordination remain in Patient Operations and the care plan</span></div></div></div></div></section>`;
 }
 
 function mechanismPage(context) {
@@ -1021,7 +1141,7 @@ function wireAtlasEntry(context) {
     try {
       const result = await cloudClient.savePatientAtlas(PATIENT_ID, { action: "save-draft", content: collectAtlasEditor() });
       activeAtlasConnection = { connected: true, workspace: result.workspace || null };
-      render(activeRecord, activeWorkflowConnection, activeAtlasConnection);
+      render(activeRecord, activeWorkflowConnection, activeAtlasConnection, activeClinicalEventConnection);
     } catch (error) {
       setAtlasSaveState(`Not saved · ${error.message || "try again"}`, "not-saved");
       saveButton.disabled = false;
@@ -1036,7 +1156,7 @@ function wireAtlasEntry(context) {
     try {
       const result = await cloudClient.savePatientAtlas(PATIENT_ID, { action: "approve", expectedRevision: draft.revision });
       activeAtlasConnection = { connected: true, workspace: result.workspace || null };
-      render(activeRecord, activeWorkflowConnection, activeAtlasConnection);
+      render(activeRecord, activeWorkflowConnection, activeAtlasConnection, activeClinicalEventConnection);
     } catch (error) {
       setAtlasSaveState(`Draft saved; approval not saved · ${error.message || "try again"}`, "not-saved");
       approveButton.disabled = false;
@@ -1045,7 +1165,7 @@ function wireAtlasEntry(context) {
   });
 }
 
-function render(record, workflowConnection = { connected: false, encounters: [] }, atlasConnection = { connected: false, workspace: null }) {
+function render(record, workflowConnection = { connected: false, encounters: [] }, atlasConnection = { connected: false, workspace: null }, clinicalEventConnection = { connected: false, workspace: null }) {
   const view = document.body.dataset.p360View || "overview";
   const originalResources = allResources(record);
   const resources = originalResources.filter(isDisplayable);
@@ -1078,12 +1198,12 @@ function render(record, workflowConnection = { connected: false, encounters: [] 
   const sourceOmitted = Number(record.restrictedRecordsOmitted || 0);
   const displayName = normalizePatientName(patient.name?.[0] || {});
   const preventiveCare = record.preventiveCare || { measures: [], crisp: {} };
-  const context = { record, resources, patient, displayName, conditions, observations, medications, encounters, tasks, carePlans, systems, allergies, reports, procedures, immunizations, documents, goals, serviceRequests, clinicalImpressions, careTeams, patientCheckins, monitoringPlans, monitoringModuleCatalog, preventiveCare, unresolvedTasks, urgentItems, timeline, frontendOmitted, sourceOmitted, gaps, workflowConnection, workflowEncounters: workflowConnection.encounters || [], atlasConnection };
+  const context = { record, resources, patient, displayName, conditions, observations, medications, encounters, tasks, carePlans, systems, allergies, reports, procedures, immunizations, documents, goals, serviceRequests, clinicalImpressions, careTeams, patientCheckins, monitoringPlans, monitoringModuleCatalog, preventiveCare, unresolvedTasks, urgentItems, timeline, frontendOmitted, sourceOmitted, gaps, workflowConnection, workflowEncounters: workflowConnection.encounters || [], atlasConnection, clinicalEventConnection };
   const pageRenderers = { overview: overviewPage, atlas: atlasPage, timeline: timelinePage, mechanism: mechanismPage, context: contextPage, plan: planPage, data: dataPage, sources: sourcesPage };
   const header = view === "overview" ? fullHero(context) : compactHeader(context);
   $("content").innerHTML = `${header}${pageNavigation(view)}${safeNotice(context)}${(pageRenderers[view] || overviewPage)(context)}`;
   if (view === "atlas") wireAtlasEntry(context);
-  if (view === "timeline") wireClinicalTimeline();
+  if (view === "timeline") wireClinicalTimeline(context);
   preservePatientLinks(document);
   wireMonitoringPlanControls(context);
 }
@@ -1125,10 +1245,26 @@ async function load() {
           : (error.message || "The protected Atlas workspace could not be read."),
       };
     }
+    let clinicalEventConnection = { connected: true, workspace: null };
+    try {
+      const result = await client.patientClinicalEvents(PATIENT_ID);
+      clinicalEventConnection.workspace = result.workspace || null;
+    } catch (error) {
+      clinicalEventConnection = {
+        connected: false,
+        workspace: null,
+        error: [401, 403].includes(error.status)
+          ? "Verify your CrewOS PIN in Clinical mode to save or approve a clinical event."
+          : [404, 502, 503].includes(error.status)
+            ? "The protected clinical-event connection is awaiting its Health Core release."
+            : (error.message || "The protected clinical-event workspace could not be read."),
+      };
+    }
     activeRecord = body.healthRecord;
     activeWorkflowConnection = workflowConnection;
     activeAtlasConnection = atlasConnection;
-    render(activeRecord, activeWorkflowConnection, activeAtlasConnection);
+    activeClinicalEventConnection = clinicalEventConnection;
+    render(activeRecord, activeWorkflowConnection, activeAtlasConnection, activeClinicalEventConnection);
     $("status").className = "badge complete";
     $("status").textContent = "Health Core connected";
   } catch (error) {
