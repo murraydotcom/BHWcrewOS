@@ -252,9 +252,11 @@ input:focus,select:focus,button:focus-visible{outline:2.5px solid var(--seaglass
 <!-- ================= PATIENTS ================= -->
 <section class="tab" id="tab-patients">
   <div class="card">
-    <div class="eyebrow">Add patient</div>
-    <label class="f" for="pLabel">MRN or initials (no full names)</label>
-    <input type="text" id="pLabel" placeholder="e.g. MRN 10482 or J.D.">
+    <div class="eyebrow">Add Patient Registry record to this panel</div>
+    <label class="f req" for="pRegistrySearch">Patient</label>
+    <input type="text" id="pRegistrySearch" list="pRegistryOptions" placeholder="Search name, BHW ID, DOB, MRN, or member ID" autocomplete="off">
+    <datalist id="pRegistryOptions"></datalist>
+    <p class="muted" id="pRegistryStatus" style="margin-top:6px">Choose an existing protected Patient Registry record. This creates only the panel-program link.</p>
     <label class="f" for="pPayer">Payer</label>
     <select id="pPayer">
       <option>Medicare</option><option>Medicaid — UHC Community Plan</option>
@@ -406,8 +408,10 @@ input:focus,select:focus,button:focus-visible{outline:2.5px solid var(--seaglass
 
 /* ============ API client ============ */
 const API='/.netlify/functions/panel-data';
-const CACHE_KEY='bhw-panel-cache', BENCH_KEY='bhw-panel-bench', KEY_KEY='bhw-panel-key';
-let state={patients:[],events:[]};
+ const CACHE_KEY='bhw-panel-cache', BENCH_KEY='bhw-panel-bench', KEY_KEY='bhw-panel-key';
+ let state={patients:[],events:[]};
+ let registryPatientHits=[];
+ let registrySearchTimer=null;
 let bench={admit:280,ed:650};
 let online=false;
 let CLOUD=null;
@@ -416,18 +420,43 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function headers(){ const h={'Content-Type':'application/json'}; const k=localStorage.getItem(KEY_KEY); if(k)h['x-dash-key']=k; return h; }
 
-async function api(action,payload){
+ async function api(action,payload){
   const res=await fetch(API,{method:'POST',headers:headers(),body:JSON.stringify({action,payload})});
   if(!res.ok){ const e=await res.json().catch(()=>({})); throw new Error(e.error||('HTTP '+res.status)); }
-  return res.json();
-}
+   return res.json();
+ }
+ function patientDisplay(patient){return patient?.registryName||patient?.label||'Unknown';}
+ function registryChoice(patient){return `${patient.name} — ${patient.bhwPatientId}${patient.dob?` · DOB ${patient.dob}`:''}${patient.mrn?` · MRN ${patient.mrn}`:''}`;}
+ function applyRegistryChoice(){
+   const id=(($('pRegistrySearch').value.match(/\bBHW\d{4}\b/i)||[])[0]||'').toUpperCase();
+   const patient=registryPatientHits.find(item=>item.bhwPatientId===id);
+   if(!patient)return;
+   $('pRegistrySearch').value=registryChoice(patient);
+   $('pRegistryStatus').textContent=`Selected ${patient.bhwPatientId} from the protected Patient Registry.`;
+   if(patient.payer)$('pPayer').value=[...$('pPayer').options].some(option=>option.value===patient.payer)?patient.payer:$('pPayer').value;
+   if(patient.legalFirstName)$('pFirst').value=patient.legalFirstName;
+   if(patient.legalLastName)$('pLast').value=patient.legalLastName;
+   if(patient.dob)$('pDob').value=String(patient.dob).slice(0,10);
+ }
+ async function searchRegistryPatients(){
+   const query=$('pRegistrySearch').value.trim();
+   if(query.length<2){registryPatientHits=[];$('pRegistryOptions').innerHTML='';$('pRegistryStatus').textContent='Type at least two characters to search the protected Patient Registry.';return;}
+   $('pRegistryStatus').textContent='Searching the protected Patient Registry…';
+   try{
+     const result=await api('searchRegistry',{query});
+     registryPatientHits=(result.patients||[]).filter(patient=>patient.selectable!==false);
+     $('pRegistryOptions').innerHTML=registryPatientHits.map(patient=>`<option value="${esc(registryChoice(patient))}"></option>`).join('');
+     $('pRegistryStatus').textContent=registryPatientHits.length?`${registryPatientHits.length} current Registry match${registryPatientHits.length===1?'':'es'} · choose one`:'No current Patient Registry match.';
+     applyRegistryChoice();
+   }catch(error){registryPatientHits=[];$('pRegistryOptions').innerHTML='';$('pRegistryStatus').textContent='Patient Registry unavailable — no older patient list is being shown.';}
+ }
 async function refresh(){
   setPill('syncing…',false);
   try{
     const res=await fetch(API,{headers:headers()});
-    if(!res.ok){ const e=await res.json().catch(()=>({})); throw new Error(e.error||('HTTP '+res.status)); }
-    state=await res.json();
-    try{ localStorage.setItem(CACHE_KEY,JSON.stringify(state)); }catch(e){}
+     if(!res.ok){ const e=await res.json().catch(()=>({})); throw new Error(e.error||('HTTP '+res.status)); }
+     state=await res.json();
+     try{ localStorage.setItem(CACHE_KEY,JSON.stringify({...state,patients:(state.patients||[]).map(({registryName,...patient})=>patient)})); }catch(e){}
     online=true; setPill('synced · Notion',false);
   }catch(err){
     online=false;
@@ -483,7 +512,7 @@ function mergeCloudRows(rows){
 }
 function panelEventToCloudRow(patient,payload,sourceEventId,extra={}){
   const encounter=payload.type==='ed'?'Emergency':payload.type==='uc'?'Urgent Care':payload.type==='obs'?'Observation':'Inpatient';
-  return {'Patient Label':patient.label,'BHW Patient ID':patient.bhwPatientId||'','Source Event ID':sourceEventId||'',
+  return {'Patient Label':patientDisplay(patient),'BHW Patient ID':patient.bhwPatientId||'','Source Event ID':sourceEventId||'',
     'Source System':'CrewHQ Panel and Discharges','Encounter Type':encounter,'Admit Date / Time':payload.date||'',
     'Discharge Date / Time':payload.type==='ed'||payload.type==='uc'||payload.type==='obs'||payload.discharge?(payload.dateTo||payload.date||''):'',
     'Discharge Disposition':extra.disposition||'',Facility:payload.facility||'','Patient Complaint':extra.complaint||payload.reason||'',
@@ -627,17 +656,17 @@ function renderOverview(){
 function programChip(pr){ return `<span class="chip ${pr==='none'?'none':pr.toLowerCase()}">${pr==='none'?'No program':pr}</span>`; }
 function renderPatients(){
   const q=($('pSearch').value||'').toLowerCase();
-  const list=state.patients.filter(p=>p.label.toLowerCase().includes(q))
-    .sort((a,b)=>a.label.localeCompare(b.label));
+  const list=state.patients.filter(p=>patientDisplay(p).toLowerCase().includes(q)||String(p.bhwPatientId||'').toLowerCase().includes(q))
+    .sort((a,b)=>patientDisplay(a).localeCompare(patientDisplay(b)));
   $('patientList').innerHTML=list.length?list.map(p=>`
     <div class="row tap" data-open="${p.id}">
-      <div class="grow"><div class="t">${esc(p.label)}</div>
+      <div class="grow"><div class="t">${esc(patientDisplay(p))}</div>
       <div class="s">${esc(p.payer)}${p.enrollDate?' · enrolled '+p.enrollDate:''}</div></div>
-      ${p.cloudOnly?'<span class="chip obs">Hospital feed</span>':programChip(p.program)}
+      ${p.cloudOnly?'<span class="chip obs">Hospital feed</span>':!p.rosterLinked?'<span class="chip warn">Registry link required</span>':programChip(p.program)}
     </div>`).join('')
     :'<div class="empty">No patients yet. Add your CCM panel above — include a few non-enrolled patients as a comparison group.</div>';
-  $('ePatient').innerHTML=state.patients.filter(p=>!p.cloudOnly).sort((a,b)=>a.label.localeCompare(b.label))
-    .map(p=>`<option value="${p.id}">${esc(p.label)} — ${esc(p.payer)}</option>`).join('');
+  $('ePatient').innerHTML=state.patients.filter(p=>!p.cloudOnly&&p.rosterLinked).sort((a,b)=>a.label.localeCompare(b.label))
+    .map(p=>`<option value="${p.id}">${esc(p.registryName||p.label)} — ${esc(p.bhwPatientId)} · ${esc(p.payer)}</option>`).join('');
 }
 
 /* ============ Render: events ============ */
@@ -651,7 +680,7 @@ function renderEvents(){
     const p=state.patients.find(x=>x.id===ev.patientId);
     const tries=[ev.outreach1,ev.outreach2,ev.outreach3].filter(Boolean).length;
     return `<div class="row tap" data-open-event="${ev.id}">
-      <div class="grow"><div class="t">${esc(p?p.label:'Unknown')}</div>
+      <div class="grow"><div class="t">${esc(patientDisplay(p))}</div>
       <div class="s">${evDates(ev)} · ${esc(ev.facility)} · ${tries} outreach ${tries===1?'call':'calls'}${ev.discharge?'':' · discharge info pending'}</div></div>
       <span class="chip queue">No appt</span></div>`;
   }).join('')
@@ -661,7 +690,7 @@ function renderEvents(){
   $('eventList').innerHTML=list.length?list.map(ev=>{
     const p=state.patients.find(x=>x.id===ev.patientId);
     return `<div class="row tap" data-open-event="${ev.id}">
-      <div class="grow"><div class="t">${esc(p?p.label:'Unknown')}</div>
+      <div class="grow"><div class="t">${esc(patientDisplay(p))}</div>
       <div class="s">${evDates(ev)} · ${esc(ev.facility)} · ${esc(ev.reason)}</div></div>
       ${ev.historical?'<span class="chip obs">Backfill</span>':ev.appointment?'<span class="chip done">Appt set</span>':'<span class="chip queue">No appt</span>'}
       <span class="chip ${ev.type}">${TYPE_LABEL[ev.type]}</span></div>`;
@@ -673,7 +702,7 @@ function renderHedis(){
   $('hedisList').innerHTML=MEASURES.map(m=>{
     let met=0,elig=0,gaps=[];
     for(const p of state.patients){ const s=p.hedis?.[m.k]||'na';
-      if(s!=='na'){elig++; if(s==='met')met++; else gaps.push(p.label);} }
+      if(s!=='na'){elig++; if(s==='met')met++; else gaps.push(patientDisplay(p));} }
     const pct=elig?Math.round(met/elig*100):null;
     const color=pct==null?'#AEB9C4':pct>=80?'var(--good)':pct>=60?'var(--warn)':'var(--bad)';
     return `<div class="measure">
@@ -692,7 +721,7 @@ function openSheet(id){
   const events=state.events.filter(e=>e.patientId===id).sort((a,b)=>b.date.localeCompare(a.date));
   $('sheetBody').innerHTML=`
     <div class="eyebrow">Patient</div>
-    <h2 style="font-size:19px">${esc(p.label)} ${programChip(p.program)}</h2>
+    <h2 style="font-size:19px">${esc(patientDisplay(p))} ${programChip(p.program)}</h2>
     <p class="muted">${esc(p.payer)}${p.enrollDate?' · enrolled '+p.enrollDate:''}</p>
 
     <div class="card" style="margin-top:14px">
@@ -769,7 +798,7 @@ function openEventSheet(id){
   const p=state.patients.find(x=>x.id===ev.patientId);
   $('sheetBody').innerHTML=`
     <div class="eyebrow">Utilization event</div>
-    <h2 style="font-size:19px">${esc(p?p.label:'Unknown')} <span class="chip ${ev.type}">${TYPE_LABEL[ev.type]}</span></h2>
+    <h2 style="font-size:19px">${esc(patientDisplay(p))} <span class="chip ${ev.type}">${TYPE_LABEL[ev.type]}</span></h2>
     <p class="muted">${evDates(ev)} · ${esc(ev.facility)}</p>
     <p class="muted" style="margin-top:2px">Reason: ${esc(ev.reason)}</p>
 
@@ -829,10 +858,18 @@ function openEventSheet(id){
   };
 }
 
-/* ============ Actions ============ */
-$('addPatient').onclick=e=>{
-  const label=$('pLabel').value.trim();
-  if(!label){ alert('Enter an MRN or initials'); return; }
+ /* ============ Actions ============ */
+ $('pRegistrySearch').addEventListener('input',()=>{
+   clearTimeout(registrySearchTimer);
+   const id=(($('pRegistrySearch').value.match(/\bBHW\d{4}\b/i)||[])[0]||'').toUpperCase();
+   if(registryPatientHits.some(patient=>patient.bhwPatientId===id)){applyRegistryChoice();return;}
+   registrySearchTimer=setTimeout(searchRegistryPatients,250);
+ });
+ $('pRegistrySearch').addEventListener('change',applyRegistryChoice);
+ $('addPatient').onclick=e=>{
+  const selectedRegistryId=(($('pRegistrySearch').value.match(/\bBHW\d{4}\b/i)||[])[0]||'').toUpperCase();
+  const registryPatient=registryPatientHits.find(p=>p.bhwPatientId===selectedRegistryId);
+  if(!registryPatient){ alert('Select a current patient from the protected Patient Registry'); return; }
   const addHospital=$('pHospital').checked;
   const first=$('pFirst').value.trim(),last=$('pLast').value.trim(),dob=$('pDob').value;
   const hospitalType=$('pHospType').value,eventDate=$('pDischarge').value,facility=$('pFacility').value.trim();
@@ -844,10 +881,10 @@ $('addPatient').onclick=e=>{
   if(!guardOnline())return;
   busy(e.target,async()=>{
     const program=$('pProgram').value;
-    const payload={label,payer:$('pPayer').value,program,
+    const payload={bhwPatientId:registryPatient.bhwPatientId,payer:$('pPayer').value,program,
       enrollDate:program==='none'?null:($('pEnroll').value||null)};
     const res=await api('addPatient',payload);
-    const patient={...payload,id:res.id,hedis:{}};state.patients.push(patient);
+    const patient={...payload,...res,id:res.id,hedis:{},rosterLinked:true};state.patients.push(patient);
     if(addHospital){
       const stillAdmitted=hospitalType==='Inpatient-admit';
       const type=hospitalType==='Emergency'?'ed':hospitalType==='Observation'?'obs':'admit';
@@ -863,7 +900,7 @@ $('addPatient').onclick=e=>{
       try{await CLOUD.importTcmEvents([row],{source:'CrewHQ Panel and Discharges',sourceFile:'manual add patient',manual:true});}
       catch(error){alert('The patient and Panel event were saved, but the shared Hospital Discharges row could not be retained: '+error.message);}
     }
-    $('pLabel').value=''; $('pEnroll').value='';
+    $('pRegistrySearch').value=''; $('pRegistryOptions').innerHTML=''; $('pEnroll').value=''; registryPatientHits=[];
     ['pFirst','pLast','pDob','pAdmit','pDischarge','pFacility','pDisposition','pComplaint','pDx','pDxDesc'].forEach(id=>$(id).value='');
     $('pHospital').checked=false;$('pHospitalFields').hidden=true;
     renderAll();

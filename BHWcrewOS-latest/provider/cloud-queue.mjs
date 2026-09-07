@@ -109,6 +109,10 @@ export async function createEncounterCloudClient(fetchImpl = fetch) {
       const body = await request("/v1/encounters");
       return Array.isArray(body.encounters) ? body.encounters : [];
     },
+    async get(id) {
+      const body = await request(`/v1/encounters/${encodeURIComponent(id)}`);
+      return body.encounter || null;
+    },
     async create(encounterDraft, creationKey) {
       const body = await request("/v1/encounters", {
         method: "POST",
@@ -117,10 +121,22 @@ export async function createEncounterCloudClient(fetchImpl = fetch) {
       return body.encounter;
     },
     async save(encounter) {
-      return request(`/v1/encounters/${encodeURIComponent(encounter.id)}`, {
+      const body = await request(`/v1/encounters/${encodeURIComponent(encounter.id)}`, {
         method: "PUT",
-        body: JSON.stringify(encounter),
+        body: JSON.stringify({ ...encounter, expectedUpdatedAt: encounter.updatedAt || "" }),
       });
+      return body.encounter;
+    },
+    async saveAndVerify(encounter) {
+      const saved = await this.save(encounter);
+      const current = await this.get(encounter.id);
+      if (!current || String(current.note || "").trim() !== String(encounter.note || "").trim()) {
+        throw new Error("The note write could not be verified in BHW Cloud. Your device copy is still available; refresh before trying again.");
+      }
+      if (saved?.updatedAt && current.updatedAt && saved.updatedAt !== current.updatedAt) {
+        throw new Error("The note changed in another session before verification. Reload the current Cloud note before saving again.");
+      }
+      return current;
     },
     async saveAll(encounters) {
       await Promise.all(encounters.map((encounter) => this.save(encounter)));

@@ -24,7 +24,7 @@ const HEDIS_VAL = { met: "Met", open: "Gap", na: "N/A" };
 const HEDIS_VAL_R = { "Met": "met", "Gap": "open", "N/A": "na" };
 const TYPE_VAL = { ed: "ED visit", uc: "Urgent care", admit: "Admission", readmit: "Readmission", obs: "Observation" };
 const TYPE_VAL_R = Object.fromEntries(Object.entries(TYPE_VAL).map(([k, v]) => [v, k]));
-const { listCloudPatients } = require('./lib/cloud-patients');
+const { findCloudPatient, listCloudPatients, searchCloudPatients } = require('./lib/cloud-patients');
 
 async function notion(path, method = "GET", body) {
   const res = await fetch(NOTION + path, {
@@ -128,6 +128,22 @@ function patientProps({ label, payer, program, enrollDate, hedis }) {
   return props;
 }
 
+const registryKey = (value) => String(value || "").trim().toLowerCase().replace(/^mrn\s*[:#-]?\s*/i, "");
+
+function registryPatientSummary(patient) {
+  return {
+    bhwPatientId: patient.bhwPatientId,
+    name: patient.name,
+    legalFirstName: patient.legalFirstName || "",
+    legalLastName: patient.legalLastName || "",
+    dob: patient.dob || patient.dateOfBirth || "",
+    mrn: patient.mrn || patient.chart || "",
+    payer: patient.payer || patient.primaryPayer || "Other",
+    status: patient.status || patient.patientStatus || "active",
+    selectable: patient.selectable !== false,
+  };
+}
+
 exports.handler = async (event) => {
   const cors = {
     "Access-Control-Allow-Origin": "*",
@@ -147,11 +163,12 @@ exports.handler = async (event) => {
       const patients = pp.map(mapPatient).filter(Boolean);
       const rosterByIdentifier = new Map();
       roster.forEach((patient) => [patient.bhwPatientId, patient.mrn].filter(Boolean)
-        .forEach((value) => rosterByIdentifier.set(String(value).toLowerCase(), patient)));
+        .forEach((value) => rosterByIdentifier.set(registryKey(value), patient)));
       patients.forEach((patient) => {
-        const match = rosterByIdentifier.get(String(patient.label || '').trim().toLowerCase());
+        const match = rosterByIdentifier.get(registryKey(patient.label));
         patient.bhwPatientId = match?.bhwPatientId || '';
         patient.rosterLinked = !!match;
+        patient.registryName = match?.name || '';
         if (match?.payer) patient.payer = match.payer;
         if (match?.program) patient.program = match.program;
       });
@@ -163,12 +180,40 @@ exports.handler = async (event) => {
     if (event.httpMethod === "POST") {
       const { action, payload } = JSON.parse(event.body || "{}");
 
+      if (action === "searchRegistry") {
+        const query = String(payload?.query || "").trim();
+        if (query.length < 2) return { statusCode: 200, headers: cors, body: JSON.stringify({ patients: [] }) };
+        const patients = searchCloudPatients(await listCloudPatients(), query, 20)
+          .map(registryPatientSummary);
+        return { statusCode: 200, headers: cors, body: JSON.stringify({ patients }) };
+      }
+
       if (action === "addPatient") {
+        const registryPatient = await findCloudPatient(payload?.bhwPatientId);
+        if (!registryPatient || registryPatient.selectable === false) {
+          return { statusCode: 400, headers: cors, body: JSON.stringify({ error: "Select a current patient from the protected Patient Registry" }) };
+        }
+        const label = registryPatient.mrn || registryPatient.bhwPatientId;
+        const existing = (await queryAll(PDB)).map(mapPatient).filter(Boolean)
+          .some((patient) => [registryPatient.bhwPatientId, registryPatient.mrn].filter(Boolean).map(registryKey).includes(registryKey(patient.label)));
+        if (existing) {
+          return { statusCode: 409, headers: cors, body: JSON.stringify({ error: "This Patient Registry record is already on the Panel list" }) };
+        }
         const pg = await notion("/pages", "POST", {
           parent: { database_id: PDB },
-          properties: patientProps(payload),
+          properties: patientProps({
+            ...payload,
+            label,
+            payer: registryPatient.payer || payload.payer || "Other",
+          }),
         });
-        return { statusCode: 200, headers: cors, body: JSON.stringify({ id: pg.id }) };
+        return { statusCode: 200, headers: cors, body: JSON.stringify({
+          id: pg.id,
+          label,
+          bhwPatientId: registryPatient.bhwPatientId,
+          registryName: registryPatient.name,
+          payer: registryPatient.payer || payload.payer || "Other",
+        }) };
       }
 
       if (action === "updatePatient") {

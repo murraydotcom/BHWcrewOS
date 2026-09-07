@@ -35,6 +35,7 @@ export function encounterMetadata(encounter = {}) {
     id: cleanText(encounter.id),
     encounterId: cleanText(encounter.encounterId || encounter.id),
     bhwPatientId: cleanText(encounter.bhwPatientId).toUpperCase(),
+    updatedAt: cleanText(encounter.updatedAt),
     completedAt: cleanText(encounter.completedAt),
     provider: cleanText(encounter.provider, "Amaris"),
     visitType: cleanText(encounter.visitType, "Office visit"),

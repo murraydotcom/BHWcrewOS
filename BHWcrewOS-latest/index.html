@@ -2702,7 +2702,9 @@ function enhancePatientPicker(){
     s.innerHTML=`<option value="">${matches.length?"Select patient…":"No matching Registry patients"}</option>${patientOptions(matches)}`;
     if(matches.some(p=>p.id===selected)) s.value=selected;
     s.size=query ? Math.min(Math.max(matches.length+1,2),7) : 1;
-    status.textContent=`${matches.length} of ${all.length} Patient Registry records${D.patientRegistryReady?" · Google Cloud synced":" · fallback list"}`;
+    status.textContent=D.patientRegistryReady
+      ? `${matches.length} of ${all.length} Patient Registry records · Google Cloud synced`
+      : "Patient Registry unavailable · no older patient list is being shown";
   };
   input.addEventListener("input",render);
   s.addEventListener("change",()=>{
