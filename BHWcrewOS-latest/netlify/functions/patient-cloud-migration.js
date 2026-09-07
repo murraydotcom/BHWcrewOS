@@ -5,7 +5,7 @@
 
 const { getSession, json } = require("./_lib");
 const { cloudRequest } = require("./lib/cloud-patients");
-const { operationsRequest, createFrontDeskIntake } = require("./lib/operations-cloud");
+const { operationsRequest, createFrontDeskIntake, createFrontDeskIntakeBulk } = require("./lib/operations-cloud");
 const { prepareMigration, publicPreview, signPreview, verifyPreview } = require("./lib/patient-cloud-migration");
 
 const CONFIRMATION = "APPLY APPROVED CLOUD MIGRATION";
@@ -46,12 +46,40 @@ async function writeRecord(record, session) {
   throw new Error("Unsupported migration target");
 }
 
+function chunks(items, size) {
+  const output = [];
+  for (let index = 0; index < items.length; index += size) output.push(items.slice(index, index + size));
+  return output;
+}
+
+async function writeDataset(records, session) {
+  const frontDesk = records.filter((record) => record.target.kind === "frontdesk");
+  const standard = records.filter((record) => record.target.kind !== "frontdesk");
+  const receipts = await mapLimit(standard, 4, (record) => writeRecord(record, session));
+  if (!frontDesk.length) return receipts;
+
+  const batches = await mapLimit(chunks(frontDesk, 250), 4, async (batch) => {
+    const result = await createFrontDeskIntakeBulk(batch.map((record) => record.target));
+    if (!result || result.verifiedCount !== batch.length) {
+      throw new Error(`BHW Cloud bulk read-back verified ${result?.verifiedCount || 0} of ${batch.length} Patient Requests.`);
+    }
+    return batch.map((record, index) => ({
+      record,
+      result: result.results[index],
+      requestId: result.results[index]?.patientRequestId || "",
+      verified: result.results[index]?.verified === true,
+    }));
+  });
+  return receipts.concat(batches.flat());
+}
+
 function ids(rows, field = "id") {
   return new Set((rows || []).map((row) => row?.[field] || row?.id).filter(Boolean));
 }
 
 async function verifyReadback(key, records, receipts, session) {
   if (!records.length) return 0;
+  if (key === "patientRequests") return receipts.filter((receipt) => receipt.verified).length;
   if (["referrals", "handoffs", "patientRequests"].includes(key)) {
     const checked = await mapLimit(receipts, 6, async (receipt) => {
       if (!receipt.requestId) return false;
@@ -119,7 +147,7 @@ exports.handler = async (event) => {
       if (dataset.sourceError) return json(409, { error: "The legacy source could not be read. Nothing was changed." });
       if (dataset.blocked.length) return json(409, { error: `${dataset.blocked.length} record(s) still need a verified patient match. Nothing was changed.` });
 
-      const receipts = await mapLimit(dataset.ready, 4, (record) => writeRecord(record, session));
+      const receipts = await writeDataset(dataset.ready, session);
       const verifiedCount = await verifyReadback(key, dataset.ready, receipts, session);
       if (verifiedCount !== dataset.ready.length) {
         return json(502, { ok: false, error: `Cloud read-back verified ${verifiedCount} of ${dataset.ready.length} records. Stop and review before retrying.`, writtenCount: receipts.length, verifiedCount });

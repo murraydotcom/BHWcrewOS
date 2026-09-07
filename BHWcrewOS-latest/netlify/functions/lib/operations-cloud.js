@@ -107,4 +107,32 @@ async function createFrontDeskIntake(input, { fetchImpl = fetch } = {}) {
   return { ...data, idempotencyKey };
 }
 
-module.exports = { apiBase, intakeConfigured, safeSubmissionId, createCloudIntake, createFrontDeskIntake, operationsRequest };
+async function createFrontDeskIntakeBulk(records, { fetchImpl = fetch } = {}) {
+  const base = apiBase();
+  if (!base || !process.env.FRONT_DESK_INTAKE_SECRET) return null;
+  const prepared = (Array.isArray(records) ? records : []).map((record) => {
+    const submissionId = String(record?.submissionId || "").trim();
+    if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/.test(submissionId)) {
+      throw new Error("protected bulk migration requires a stable submission ID for every record");
+    }
+    return { submissionId, body: record?.body || {} };
+  });
+  const response = await fetchImpl(`${base}/v1/intake/front-desk-patient-requests/bulk`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.FRONT_DESK_INTAKE_SECRET}`,
+      "Content-Type": "application/json",
+      "X-BHW-Client-Id": process.env.FRONT_DESK_CLIENT_ID || "front-desk-os",
+    },
+    body: JSON.stringify({ records: prepared }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(data.error || "front desk bulk migration failed");
+    error.status = response.status;
+    throw error;
+  }
+  return data;
+}
+
+module.exports = { apiBase, intakeConfigured, safeSubmissionId, createCloudIntake, createFrontDeskIntake, createFrontDeskIntakeBulk, operationsRequest };

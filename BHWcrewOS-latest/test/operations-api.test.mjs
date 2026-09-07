@@ -140,6 +140,18 @@ function frontDeskPatientRequest(body, key = "front-desk-request:synthetic-0001"
   });
 }
 
+function frontDeskBulkRequest(records, secret = "synthetic-front-desk-secret") {
+  return new Request("https://operations.example.test/v1/intake/front-desk-patient-requests/bulk", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${secret}`,
+      "Content-Type": "application/json",
+      "X-BHW-Client-Id": "front-desk-os",
+    },
+    body: JSON.stringify({ records }),
+  });
+}
+
 function intakeRequest(body, key = "cc:synthetic-0001", secret = "synthetic-intake-secret") {
   return new Request("https://operations.example.test/v1/intake/patient-requests", {
     method: "POST",
@@ -260,6 +272,67 @@ test("historical Front Desk intake preserves its received time and suppresses no
   assert.equal(body.patientRequest.createdAt, "2026-08-01T13:30:00.000Z");
   assert.equal(body.patientRequest.notificationMode, "none");
   assert.equal(repository.requests.size, 1);
+});
+
+test("bulk historical Front Desk migration saves, reads back, and replays without notifications", async () => {
+  const { app, repository } = fixture();
+  const records = [1, 2].map((index) => ({
+    submissionId: `legacy-request:synthetic-000${index}`,
+    body: {
+      bhwPatientId: "BHW0000",
+      patientMatchStatus: "matched",
+      requestType: "general",
+      summary: `Synthetic historical request ${index}`,
+      message: `Synthetic historical request ${index}`,
+      notificationMode: "none",
+      historicalReceivedAt: `2026-08-0${index}T13:30:00.000Z`,
+      source: "legacy-protected-migration",
+      sourceMetadata: { sourceRecordId: `legacy-synthetic-request-${index}` },
+    },
+  }));
+  let response = await app(frontDeskBulkRequest(records));
+  assert.equal(response.status, 200);
+  let body = await response.json();
+  assert.equal(body.writtenCount, 2);
+  assert.equal(body.verifiedCount, 2);
+  assert.equal(body.replayedCount, 0);
+  assert.equal(body.notification, null);
+  assert.equal(body.chat, null);
+  assert.equal(repository.requests.size, 2);
+  assert.deepEqual([...repository.requests.values()].map((request) => request.createdAt).sort(), [
+    "2026-08-01T13:30:00.000Z",
+    "2026-08-02T13:30:00.000Z",
+  ]);
+
+  response = await app(frontDeskBulkRequest(records));
+  assert.equal(response.status, 200);
+  body = await response.json();
+  assert.equal(body.verifiedCount, 2);
+  assert.equal(body.replayedCount, 2);
+  assert.equal(repository.requests.size, 2);
+});
+
+test("bulk historical Front Desk migration rejects any notification-enabled record", async () => {
+  const { app, repository } = fixture();
+  const response = await app(frontDeskBulkRequest([{
+    submissionId: "legacy-request:synthetic-notify",
+    body: { ...syntheticIntake, notificationMode: "automatic" },
+  }]));
+  assert.equal(response.status, 400);
+  assert.equal(repository.requests.size, 0);
+});
+
+test("bulk historical Front Desk migration validates every record before writing", async () => {
+  const { app, repository } = fixture();
+  const response = await app(frontDeskBulkRequest([{
+    submissionId: "legacy-request:synthetic-valid",
+    body: { ...syntheticIntake, notificationMode: "none" },
+  }, {
+    submissionId: "legacy-request:synthetic-invalid",
+    body: { ...syntheticIntake, notificationMode: "automatic" },
+  }]));
+  assert.equal(response.status, 400);
+  assert.equal(repository.requests.size, 0);
 });
 
 test("Front Desk referral intake rejects the wrong integration secret", async () => {

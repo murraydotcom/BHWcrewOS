@@ -42,10 +42,14 @@ test("migration approval is sealed to the administrator, dataset, and unchanged 
 
 test("migration UI is session-gated, starts with preview, and distinguishes verified Cloud save", async () => {
   const html = await readFile(new URL("../bhw-cloud-migration.html", import.meta.url), "utf8");
+  const handler = await readFile(new URL("../netlify/functions/patient-cloud-migration.js", import.meta.url), "utf8");
   assert.match(html, /crew-provider-gate\.js/);
   assert.match(html, /Run protected preview/);
   assert.match(html, /APPLY APPROVED CLOUD MIGRATION/);
   assert.match(html, /Saved to BHW Cloud/);
   assert.match(html, /read back/);
   assert.match(html, /Not saved/);
+  assert.match(handler, /createFrontDeskIntakeBulk/);
+  assert.match(handler, /result\.verifiedCount !== batch\.length/);
+  assert.match(handler, /key === "patientRequests"/);
 });
