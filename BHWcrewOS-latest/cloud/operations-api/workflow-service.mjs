@@ -4,6 +4,7 @@ import {
   applyPatientRequestAction,
   buildGoogleChatCard,
   canActOnRequest,
+  canViewRequest,
   defaultNotificationRules,
   deterministicId,
   isSmsOptIn,
@@ -11,6 +12,7 @@ import {
   normalizeStaffRole,
   quietHoursState,
   renderSmsTemplate,
+  REQUEST_ACTIONS,
   requiresSafetyHold,
   resolveNotificationRule,
   sanitizeManualSms,
@@ -749,6 +751,7 @@ export function createWorkflowService(repository, {
 
   return {
     automationEnabled,
+    requestActions: [...REQUEST_ACTIONS],
     createRequest,
     syncCreatedRequest,
     action,
@@ -761,13 +764,15 @@ export function createWorkflowService(repository, {
     saveNotificationRule,
     async listRequests(filters, user) {
       const rows = await repository.listPatientRequests(filters, user);
-      return rows.filter((request) => canActOnRequest(request, user));
+      return rows
+        .filter((request) => canViewRequest(request, user))
+        .map((request) => ({ ...request, canAct: canActOnRequest(request, user) }));
     },
     async getRequest(id, user) {
       const request = await repository.getPatientRequest(id);
       if (!request) throw Object.assign(new Error("request was not found"), { status: 404 });
-      if (!canActOnRequest(request, user)) throw Object.assign(new Error("role is not authorized for this service line"), { status: 403 });
-      return request;
+      if (!canViewRequest(request, user)) throw Object.assign(new Error("role is not authorized to view this request"), { status: 403 });
+      return { ...request, canAct: canActOnRequest(request, user) };
     },
     async listCommunications(id, user) {
       await this.getRequest(id, user);

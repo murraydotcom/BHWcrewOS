@@ -311,6 +311,14 @@ export function canActOnRequest(request, user = {}) {
   return false;
 }
 
+export function canViewRequest(_request, user = {}) {
+  // Patient Request endpoints already require a verified CrewOS staff token.
+  // Notification routing and action authorization are narrower concerns and
+  // must not make the shared operational queue disappear for providers.
+  return normalizeStaffRole(user.role) === "system"
+    || String(user.sub || user.id || user.staffId || "").trim().length > 0;
+}
+
 export function applyPatientRequestAction(request, input = {}, { user = {}, now = new Date() } = {}) {
   if (!request?.id || !request?.requestType) throw Object.assign(new Error("request was not found"), { status: 404 });
   if (!canActOnRequest(request, user)) throw Object.assign(new Error("role is not authorized for this service line"), { status: 403 });

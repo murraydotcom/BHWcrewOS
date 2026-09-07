@@ -182,6 +182,7 @@ export function createOperationsApp({
           communicationDirections: COMMUNICATION_DIRECTIONS,
           communicationChannels: COMMUNICATION_CHANNELS,
           communicationStatuses: COMMUNICATION_STATUSES,
+          patientRequestActions: workflow?.requestActions || [],
           notificationAutomationEnabled: workflow?.automationEnabled === true,
         }, cors);
       }

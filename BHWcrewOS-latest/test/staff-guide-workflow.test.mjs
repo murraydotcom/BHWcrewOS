@@ -25,6 +25,8 @@ test("staff guide teaches the current Patient Requests and alert workflow", asyn
   assert.match(html, /Notifications on\/off/);
   assert.match(html, /providers receive triage\/provider-question/i);
   assert.match(html, /Correct category/);
+  assert.match(html, /Visibility and alerts are separate/);
+  assert.match(html, /view-only for provider oversight/);
   assert.match(html, /does not send a patient text/);
   assert.doesNotMatch(html, /bhwcrewos\.netlify\.app/);
   assert.doesNotMatch(html, /duplicate the .*template/i);

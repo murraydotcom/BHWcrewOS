@@ -4,6 +4,7 @@ import {
   applyPatientRequestAction,
   buildGoogleChatCard,
   canActOnRequest,
+  canViewRequest,
   defaultNotificationRules,
   normalizeStaffRole,
   quietHoursState,
@@ -42,6 +43,8 @@ test("non-provider staff can work every request type while providers retain focu
   assert.equal(canActOnRequest(referral, { role: "CRNP", sub: "crew:provider" }), false);
   assert.equal(canActOnRequest({ ...referral, status: "escalated", statusCategory: "escalated" }, { role: "CRNP", sub: "crew:provider" }), true);
   assert.equal(canActOnRequest({ ...referral, escalationReason: "Synthetic escalation" }, { role: "CRNP", sub: "crew:provider" }), true);
+  assert.equal(canViewRequest(referral, { role: "CRNP", sub: "crew:provider" }), true);
+  assert.equal(canViewRequest(referral, {}), false);
 });
 
 function syntheticRequest(requestType, id = `synthetic-${requestType.replaceAll("_", "-")}`) {
@@ -349,6 +352,39 @@ function inMemoryRepository() {
     async saveNotificationRule(rule) { rules.set(rule.id, structuredClone(rule)); },
   };
 }
+
+test("providers can see the shared queue without receiving unrelated action access", async () => {
+  const repository = inMemoryRepository();
+  const service = createWorkflowService(repository, {
+    environment: { PATIENT_WORKFLOW_AUTOMATION_ENABLED: "false" },
+    clock: () => NOON,
+  });
+  const created = await service.createRequest({
+    id: "synthetic-provider-visibility",
+    bhwPatientId: "BHW0000",
+    requestType: "referral",
+    source: "synthetic-test",
+    summary: "De-identified referral coordination",
+  }, USER);
+  const provider = { sub: "crew:synthetic-provider", name: "Synthetic Provider", role: "CRNP" };
+
+  assert.ok(service.requestActions.includes("reclassify"));
+  const visible = await service.listRequests({}, provider);
+  assert.equal(visible.length, 1);
+  assert.equal(visible[0].canAct, false);
+  assert.equal((await service.getRequest(created.request.id, provider)).canAct, false);
+  await assert.rejects(() => service.action(created.request.id, {
+    action: "start",
+    idempotencyKey: "synthetic-provider-start",
+  }, provider), /not authorized/);
+
+  await service.action(created.request.id, {
+    action: "escalate",
+    reason: "Synthetic clinician review needed",
+    idempotencyKey: "synthetic-ops-escalate",
+  }, USER);
+  assert.equal((await service.getRequest(created.request.id, provider)).canAct, true);
+});
 
 test("type correction is audited, reroutes Chat, and never triggers a patient SMS", async () => {
   const repository = inMemoryRepository();

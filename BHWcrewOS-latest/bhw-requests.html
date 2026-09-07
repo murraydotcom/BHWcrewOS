@@ -278,6 +278,7 @@ let DETAIL_LOAD=0;
 let ROSTER=[]; // active staff names, pulled from the crewOS Staff & Roles roster
 let CLOUD_CLIENT_PROMISE=null;
 let CURRENT_ROLE='';
+let CURRENT_ACTIONS=new Set();
 
 async function cloudClient(){
   if(!CLOUD_CLIENT_PROMISE) CLOUD_CLIENT_PROMISE=import('/provider/operations-queue.mjs')
@@ -478,6 +479,7 @@ function actionButton(label,it,action,details={},klass=''){
 }
 function detailActions(it){
   if(stageOf(it.status,it.statusCategory)==='done')return '<span class="routechip">Workflow complete</span>';
+  if(it.canAct===false)return '<span class="routechip">View only — provider actions appear for triage or escalated work</span>';
   const ui=workflowUI(it), buttons=[];
   if(!it.assigned)buttons.push(actionButton('Assign to me',it,'assign'));
   if(!['in_progress','completed'].includes(it.statusCategory))buttons.push(actionButton('Start',it,'start',{},'p'));
@@ -487,7 +489,7 @@ function detailActions(it){
   for(const [label,outcome] of ui.outcomes)buttons.push(actionButton(label,it,'resolve',{outcome},'done'));
   buttons.push(`<button type="button" class="btn" onclick="escalateRequest(decodeURIComponent('${encodeURIComponent(String(it.id))}'))">Escalate</button>`);
   if(it.canSms)buttons.push(`<button type="button" class="btn" onclick="openReply(decodeURIComponent('${encodeURIComponent(String(it.id))}'),'sms','detailReply')">Notify patient</button>`);
-  if(['operations-manager','executive'].includes(CURRENT_ROLE)&&!['waiting','completed'].includes(it.statusCategory)){
+  if(['operations-manager','executive'].includes(CURRENT_ROLE)&&CURRENT_ACTIONS.has('reclassify')&&!['waiting','completed'].includes(it.statusCategory)){
     buttons.push(`<span class="type-correction"><label for="requestTypeCorrection">Correct category</label><select id="requestTypeCorrection">${requestTypeOptions(uiType(it))}</select><button type="button" class="btn" onclick="correctRequestType(decodeURIComponent('${encodeURIComponent(String(it.id))}'))">Save</button></span>`);
   }
   return buttons.join('');
@@ -600,8 +602,12 @@ async function load(){
   const banner=document.getElementById('banner');
   try{
     const client=await cloudClient();
-    const rows=await client.listPatientRequests({status:'',limit:500});
+    const [rows,actions]=await Promise.all([
+      client.listPatientRequests({status:'',limit:500}),
+      client.patientRequestCapabilities().catch(()=>[]),
+    ]);
     CURRENT_ROLE=client.currentRole||'';
+    CURRENT_ACTIONS=new Set(actions);
     ITEMS=rows.map(r=>({
       ...r,
       type:r.requestType,

@@ -82,8 +82,8 @@ collections. Do not put either secret or a service-account key in the repo.
 | `POST /v1/intake/front-desk-referrals/:id/actions` | Front Desk server bridge | Record referral sent/ready/scheduled milestones without exposing the server secret |
 | `POST /v1/patient-identity/resolve` | Care Connect server, after OTP verification | Unique active Google patient-registry match using direct contact + DOB |
 | `GET/PUT /v1/patient-portal-access/:BHW####` | CrewHQ | Review or update the adult Primary Care pilot gate; invitation copy is preview-only and never sent by this API |
-| `GET/POST /v1/patient-requests` | CrewOS | List or create operational requests |
-| `GET /v1/patient-requests/:id` | CrewOS | Read one request |
+| `GET/POST /v1/patient-requests` | CrewOS | List or create operational requests; verified staff can view the shared queue while each response's `canAct` flag preserves provider action boundaries |
+| `GET /v1/patient-requests/:id` | CrewOS | Read one request with its current role-specific `canAct` flag |
 | `POST /v1/patient-requests/:id/actions` | CrewOS / Chat | Assign, start, milestone, resolve, reopen, escalate, unassign, or perform an operations-only audited type correction |
 | `POST /v1/patient-requests/:id/notify` | CrewOS | Apply the current safe template through the approved channel |
 | `POST /v1/patient-requests/:id/messages` | CrewOS | Send an attested no-PHI manual SMS through Dialpad |

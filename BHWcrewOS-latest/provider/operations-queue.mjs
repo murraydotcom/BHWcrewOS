@@ -75,6 +75,10 @@ export async function createOperationsCloudClient(fetchImpl = fetch) {
   return {
     apiBase: config.apiBase,
     get currentRole() { return currentRole; },
+    async patientRequestCapabilities() {
+      const body = await request("/v1/contracts/communication-foundation");
+      return Array.isArray(body.patientRequestActions) ? body.patientRequestActions : [];
+    },
     async listPatientRequests({ status = "open", serviceLine = "", assignedTo = "", assignedTeam = "", bhwPatientId = "", limit = 100 } = {}) {
       const params = new URLSearchParams({ status, limit: String(Math.max(1, Math.min(500, Number(limit) || 100))) });
       if (serviceLine) params.set("serviceLine", serviceLine);
