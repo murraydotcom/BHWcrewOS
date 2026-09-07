@@ -218,7 +218,10 @@ function clinicalTimelineControls(events) {
 function clinicalEventWorkspacePanel(context) {
   const connection = context.clinicalEventConnection || { connected: false, workspace: null };
   if (!connection.connected) {
-    return `<section class="panel clinical-event-entry-panel"><div class="panel-head"><div><h3>Add clinical event</h3><span class="panel-subtitle">Manual entry is protected by Clinical mode and provider review.</span></div><span class="badge warning">Entry locked</span></div><div class="panel-body"><div class="clinical-event-unlock-copy"><b>The timeline itself remains available.</b><span>${esc(connection.error || "Verify your CrewOS PIN in Clinical mode to save or approve a clinical event.")}</span></div><form id="clinical-event-unlock-form"><label><span>CrewOS PIN</span><input id="clinical-event-pin" type="password" inputmode="numeric" autocomplete="current-password" minlength="4" maxlength="8" pattern="[0-9]{4,8}" required></label><button class="btn primary" id="clinical-event-unlock" type="submit">Unlock clinical entry</button><span id="clinical-event-unlock-status" role="status"></span></form></div></section>`;
+    const signIn = connection.needsSignIn
+      ? '<a class="btn primary" href="/crewos?next=%2Fprovider%2Fpatient-360-timeline.html">Sign in again</a>'
+      : "";
+    return `<section class="panel clinical-event-entry-panel"><div class="panel-head"><div><h3>Add clinical event</h3><span class="panel-subtitle">This workspace uses your active BHW Clinical Intelligence session and remains role protected.</span></div><span class="badge restricted">Unavailable</span></div><div class="panel-body"><div class="clinical-event-unlock-copy"><b>The timeline itself remains available.</b><span>${esc(connection.error || "Clinical-event entry is unavailable for this signed-in role.")}</span></div>${signIn}</div></section>`;
   }
   const draft = connection.workspace?.draft || null;
   const content = draft?.content || {};
@@ -269,25 +272,6 @@ function wireClinicalTimeline(context) {
       button.setAttribute("aria-pressed", String(active));
     }
     if (empty) empty.hidden = visible !== 0;
-  });
-
-  const unlockForm = $("clinical-event-unlock-form");
-  unlockForm?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    if (!unlockForm.reportValidity() || !cloudClient) return;
-    const button = $("clinical-event-unlock");
-    const status = $("clinical-event-unlock-status");
-    if (button) button.disabled = true;
-    if (status) status.textContent = "Verifying…";
-    try {
-      await cloudClient.unlockClinical($("clinical-event-pin")?.value || "");
-      const result = await cloudClient.patientClinicalEvents(PATIENT_ID);
-      activeClinicalEventConnection = { connected: true, workspace: result.workspace || null };
-      render(activeRecord, activeWorkflowConnection, activeAtlasConnection, activeClinicalEventConnection);
-    } catch (error) {
-      if (status) status.textContent = error.message || "Clinical entry could not be unlocked.";
-      if (button) button.disabled = false;
-    }
   });
 
   const form = $("clinical-event-editor");
@@ -1265,11 +1249,14 @@ async function load() {
       clinicalEventConnection = {
         connected: false,
         workspace: null,
-        error: [401, 403].includes(error.status)
-          ? "Verify your CrewOS PIN in Clinical mode to save or approve a clinical event."
-          : [404, 502, 503].includes(error.status)
-            ? "The protected clinical-event connection is awaiting its Health Core release."
-            : (error.message || "The protected clinical-event workspace could not be read."),
+        needsSignIn: error.status === 401,
+        error: error.status === 401
+          ? "Your BHW Clinical Intelligence session expired. Sign in again to continue."
+          : error.status === 403
+            ? (error.message || "Clinical-event entry is not authorized for this signed-in role.")
+            : [404, 502, 503].includes(error.status)
+              ? "The protected clinical-event connection is awaiting its Health Core release."
+              : (error.message || "The protected clinical-event workspace could not be read."),
       };
     }
     activeRecord = body.healthRecord;

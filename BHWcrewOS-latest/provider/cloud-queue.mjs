@@ -1,7 +1,5 @@
 const CONFIG_URL = "/.netlify/functions/rcm-cloud-config";
 const TOKEN_URL = "/.netlify/functions/rcm-cloud-token";
-const CLINICAL_TOKEN_URL = "/.netlify/functions/bhw-capture-clinical-token";
-const AUTH_URL = "/.netlify/functions/auth";
 export const CREW_SESSION_EXPIRED = "CREWHQ_SESSION_EXPIRED";
 const TCM_IMPORT_MAX_ROWS = 250;
 const TCM_IMPORT_TARGET_BYTES = 512 * 1024;
@@ -54,10 +52,6 @@ export async function createEncounterCloudClient(fetchImpl = fetch) {
 
   let token = "";
   let tokenExpiresAt = 0;
-  let clinicalToken = "";
-  let clinicalTokenExpiresAt = 0;
-  let clinicalSessionToken = "";
-  let clinicalSessionExpiresAt = 0;
 
   async function getToken(force = false) {
     if (!force && token && tokenExpiresAt > Date.now() + 30000) return token;
@@ -109,73 +103,8 @@ export async function createEncounterCloudClient(fetchImpl = fetch) {
     return response.json();
   }
 
-  async function getClinicalToken(force = false) {
-    if (!force && clinicalToken && clinicalTokenExpiresAt > Date.now() + 30000) return clinicalToken;
-    let crewToken = "";
-    try { crewToken = sessionStorage.getItem("crewos_token") || ""; } catch { /* storage unavailable */ }
-    const exchangeToken = clinicalSessionToken && clinicalSessionExpiresAt > Date.now() + 5000 ? clinicalSessionToken : crewToken;
-    if (!exchangeToken) throw sessionError("Clinical mode is locked. Verify your CrewOS PIN again.");
-    const response = await fetchImpl(CLINICAL_TOKEN_URL, {
-      method: "POST",
-      credentials: "same-origin",
-      cache: "no-store",
-      headers: { Authorization: `Bearer ${exchangeToken}` },
-    });
-    if (!response.ok) {
-      const body = await response.json().catch(() => ({}));
-      throw Object.assign(new Error(body.error || "Clinical mode is locked. Verify your CrewOS PIN again."), { status: response.status });
-    }
-    const body = await response.json();
-    clinicalToken = body.token;
-    clinicalTokenExpiresAt = Date.now() + Number(body.expiresIn || 300) * 1000;
-    return clinicalToken;
-  }
-
-  async function clinicalRequest(path, options = {}, retry = true) {
-    const bearer = await getClinicalToken();
-    const response = await fetchImpl(`${config.apiBase}${path}`, {
-      ...options,
-      headers: {
-        ...(options.body && !options.headers?.["Content-Type"] ? { "Content-Type": "application/json" } : {}),
-        ...options.headers,
-        Authorization: `Bearer ${bearer}`,
-      },
-      cache: "no-store",
-    });
-    if (response.status === 401 && retry) {
-      await getClinicalToken(true);
-      return clinicalRequest(path, options, false);
-    }
-    if (!response.ok) {
-      const body = await response.json().catch(() => ({}));
-      throw Object.assign(new Error(body.error || `Protected clinical request failed (${response.status})`), { status: response.status });
-    }
-    return response.json();
-  }
-
   return {
     apiBase: config.apiBase,
-    async unlockClinical(pin) {
-      let crewToken = "";
-      try { crewToken = sessionStorage.getItem("crewos_token") || ""; } catch { /* storage unavailable */ }
-      if (!crewToken) throw sessionError("Sign in to CrewOS again before opening Clinical mode.");
-      const response = await fetchImpl(AUTH_URL, {
-        method: "POST",
-        credentials: "same-origin",
-        cache: "no-store",
-        headers: { Authorization: `Bearer ${crewToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "clinical-login", pin: String(pin || "") }),
-      });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok || !body.token) {
-        throw Object.assign(new Error(body.error || "Clinical verification failed"), { status: response.status });
-      }
-      clinicalSessionToken = body.token;
-      clinicalSessionExpiresAt = Date.now() + Number(body.expiresIn || 900) * 1000;
-      clinicalToken = "";
-      clinicalTokenExpiresAt = 0;
-      return body.user || null;
-    },
     async list() {
       const body = await request("/v1/encounters");
       return Array.isArray(body.encounters) ? body.encounters : [];
@@ -267,10 +196,10 @@ export async function createEncounterCloudClient(fetchImpl = fetch) {
       });
     },
     async patientClinicalEvents(bhwPatientId = "BHW0000") {
-      return clinicalRequest(`/v1/patients/${encodeURIComponent(bhwPatientId)}/clinical-events`);
+      return request(`/v1/patients/${encodeURIComponent(bhwPatientId)}/clinical-events`);
     },
     async savePatientClinicalEvent(bhwPatientId = "BHW0000", input = {}) {
-      return clinicalRequest(`/v1/patients/${encodeURIComponent(bhwPatientId)}/clinical-events`, {
+      return request(`/v1/patients/${encodeURIComponent(bhwPatientId)}/clinical-events`, {
         method: "PUT",
         body: JSON.stringify(input),
       });
