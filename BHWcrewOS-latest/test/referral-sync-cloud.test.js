@@ -118,3 +118,9 @@ test("Patient Requests limits a request deep link to the selected record", () =>
   assert.match(page, /let SELECTED=new URLSearchParams\(location\.search\)\.get\('request'\)\|\|'';\s*let SEARCH=SELECTED\.trim\(\)\.toLowerCase\(\);/);
   assert.match(page, /document\.getElementById\('requestSearch'\)\.value=SEARCH;/);
 });
+
+test("Patient Requests exposes the protected reopen action for corrections", () => {
+  const page = fs.readFileSync(path.join(__dirname, "..", "bhw-requests.html"), "utf8");
+  assert.match(page, /actionButton\('Reopen for correction',it,'reopen',\{\},'p'\)/);
+  assert.match(page, /if\(it\.canAct===false\)return '<span class="routechip">Workflow complete<\/span>';/);
+});
