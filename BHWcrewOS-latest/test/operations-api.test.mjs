@@ -8,6 +8,18 @@ import {
   transitionPatientRequest,
   transitionTask,
 } from "../cloud/operations-api/domain.mjs";
+import {
+  activatePatientPortalAccess,
+  ageAt,
+  evaluatePatientPortalAccess,
+  normalizePatientEmail,
+  normalizePatientPhone,
+  patientIdentityReference,
+  patientPortalInvitationPreview,
+  sanitizePatientPortalAccess,
+  sanitizePatientIdentity,
+  selectUniqueActivePatient,
+} from "../cloud/operations-api/patient-identity.mjs";
 
 const FIXED_NOW = "2026-08-25T12:00:00.000Z";
 
@@ -41,6 +53,26 @@ class MemoryRepository {
     this.communications = new Map();
     this.receipts = new Map();
     this.auditCount = 0;
+    this.identityMatch = {
+      bhwPatientId: "BHW0000",
+      preferredName: "Synthetic",
+      portalAuthorization: {
+        schemaVersion: "bhw.patient-portal-access.v1",
+        accessType: "self",
+        proxyAccessAllowed: false,
+        pilotCohort: "primary-care-adult-v1",
+        programs: ["primary"],
+        portalAccessStatus: "active",
+        preferredChannel: "email",
+        verifiedChannel: "email",
+        contactVerifiedAt: FIXED_NOW,
+        consentedAt: FIXED_NOW,
+        portalInvitedAt: FIXED_NOW,
+        authorizationUpdatedAt: FIXED_NOW,
+      },
+    };
+    this.identityCalls = [];
+    this.portalAccess = null;
   }
 
   async createPatientRequest(bundle, receipt) {
@@ -69,6 +101,29 @@ class MemoryRepository {
   async listPatientRequests() { return [...this.requests.values()]; }
   async listTasks() { return [...this.tasks.values()]; }
   async listCommunications() { return [...this.communications.values()]; }
+
+  async resolvePatientIdentity(identity, options) {
+    this.identityCalls.push({ identity, options });
+    return this.identityMatch;
+  }
+
+  async getPatientPortalAccess(bhwPatientId) {
+    return {
+      patient: { bhwPatientId, patientStatus: "active", dateOfBirth: "1980-01-02" },
+      access: this.portalAccess,
+    };
+  }
+
+  async savePatientPortalAccess(bhwPatientId, input, actor, options) {
+    this.portalAccess = sanitizePatientPortalAccess(input, {
+      patient: { bhwPatientId, patientStatus: "active", dateOfBirth: "1980-01-02" },
+      existing: this.portalAccess || {},
+      actor,
+      verifiedContactReference: "synthetic-exact-contact-reference",
+      now: options.now,
+    });
+    return this.portalAccess;
+  }
 
   async updatePatientRequestStatus(id, input, actor, options) {
     const result = transitionPatientRequest(await this.getPatientRequest(id), input, actor, options);
@@ -100,7 +155,9 @@ function fixture() {
   const environment = {
     CREWOS_OPERATIONS_TOKEN_SECRET: "synthetic-crew-secret",
     CARE_CONNECT_INTAKE_SECRET: "synthetic-intake-secret",
+    CARE_CONNECT_PATIENT_IDENTITY_SECRET: "synthetic-patient-identity-secret",
     CARE_CONNECT_CLIENT_ID: "care-connect",
+    PATIENT_PORTAL_PILOT_ENABLED: "true",
     FRONT_DESK_INTAKE_SECRET: "synthetic-front-desk-secret",
     FRONT_DESK_CLIENT_ID: "front-desk-os",
     ALLOWED_ORIGINS: "https://crew.example.test",
@@ -152,6 +209,18 @@ function frontDeskBulkRequest(records, secret = "synthetic-front-desk-secret") {
   });
 }
 
+function identityRequest(body, secret = "synthetic-patient-identity-secret") {
+  return new Request("https://operations.example.test/v1/patient-identity/resolve", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${secret}`,
+      "Content-Type": "application/json",
+      "X-BHW-Client-Id": "care-connect",
+    },
+    body: JSON.stringify(body),
+  });
+}
+
 function intakeRequest(body, key = "cc:synthetic-0001", secret = "synthetic-intake-secret") {
   return new Request("https://operations.example.test/v1/intake/patient-requests", {
     method: "POST",
@@ -175,6 +244,170 @@ const syntheticIntake = {
   routing: { targetSystem: "crewos", assignedTeam: "front-desk" },
   sourceMetadata: { sourceRecordId: "synthetic-submission-0001" },
 };
+
+test("patient identity contract normalizes one verified direct contact and DOB", () => {
+  assert.equal(normalizePatientEmail(" Synthetic.Patient@Example.Test "), "synthetic.patient@example.test");
+  assert.equal(normalizePatientPhone("(443) 555-0100"), "+14435550100");
+  assert.deepEqual(sanitizePatientIdentity({
+    verifiedEmail: "Synthetic.Patient@Example.Test",
+    dateOfBirth: "1980-01-02",
+  }), {
+    email: "synthetic.patient@example.test",
+    phone: "",
+    dateOfBirth: "1980-01-02",
+  });
+  assert.throws(() => sanitizePatientIdentity({
+    verifiedEmail: "synthetic.patient@example.test",
+    verifiedPhone: "+14435550100",
+    dateOfBirth: "1980-01-02",
+  }), /exactly one verified/);
+  assert.throws(() => sanitizePatientIdentity({ verifiedEmail: "bad", dateOfBirth: "1980-01-02" }), /exactly one verified/);
+  assert.throws(() => sanitizePatientIdentity({ verifiedPhone: "+14435550100", dateOfBirth: "1980-02-31" }), /valid date of birth/);
+  const reference = patientIdentityReference({ email: "synthetic.patient@example.test" }, "synthetic-secret");
+  assert.equal(reference.length, 64);
+  assert.doesNotMatch(reference, /synthetic|example/);
+  const candidate = { bhwPatientId: "BHW0000", patientStatus: "active", dateOfBirth: "1980-01-02" };
+  assert.equal(selectUniqueActivePatient([candidate], "1980-01-02"), candidate);
+  assert.equal(selectUniqueActivePatient([candidate, { ...candidate }], "1980-01-02"), null);
+  assert.equal(selectUniqueActivePatient([{ ...candidate, patientStatus: "inactive" }], "1980-01-02"), null);
+});
+
+test("adult Primary Care portal access is explicit, self-only, consented, and invite-gated", () => {
+  const patient = { bhwPatientId: "BHW0000", patientStatus: "active", dateOfBirth: "1980-01-02" };
+  const actor = { id: "synthetic-provider", role: "provider" };
+  const approved = sanitizePatientPortalAccess({
+    portalAccessStatus: "approved",
+    allowlisted: true,
+    preferredChannel: "email",
+    contactVerificationConfirmed: true,
+    consentStatus: "current",
+    consentedAt: FIXED_NOW,
+    consentEvidenceReference: "synthetic-consent-reference",
+  }, { patient, actor, verifiedContactReference: "synthetic-exact-contact-reference", now: new Date(FIXED_NOW) });
+  assert.equal(approved.accessType, "self");
+  assert.equal(approved.proxyAccessAllowed, false);
+  assert.deepEqual(approved.programs, ["primary"]);
+  assert.equal(evaluatePatientPortalAccess(approved, patient, "email", new Date(FIXED_NOW), "synthetic-exact-contact-reference").eligible, false);
+  assert.throws(() => sanitizePatientPortalAccess({ ...approved, portalAccessStatus: "invited" }, {
+    patient, existing: approved, actor, now: new Date(FIXED_NOW),
+  }), /confirm the invitation/);
+  const invited = sanitizePatientPortalAccess({
+    ...approved,
+    portalAccessStatus: "invited",
+    invitationDeliveryConfirmed: true,
+  }, { patient, existing: approved, actor, now: new Date(FIXED_NOW) });
+  assert.equal(evaluatePatientPortalAccess(invited, patient, "email", new Date(FIXED_NOW), "synthetic-exact-contact-reference").eligible, true);
+  assert.equal(evaluatePatientPortalAccess(invited, patient, "email", new Date(FIXED_NOW), "different-contact-reference").reason, "contact-not-verified");
+  assert.equal(evaluatePatientPortalAccess(invited, patient, "sms", new Date(FIXED_NOW), "synthetic-exact-contact-reference").reason, "verified-channel-mismatch");
+  assert.equal(activatePatientPortalAccess(invited, new Date(FIXED_NOW)).portalAccessStatus, "active");
+  assert.equal(evaluatePatientPortalAccess({ ...invited, portalInvitedAt: "2999-01-01T00:00:00.000Z" }, patient, "email", new Date(FIXED_NOW), "synthetic-exact-contact-reference").reason, "invitation-not-recorded");
+  assert.throws(() => sanitizePatientPortalAccess({
+    ...approved,
+    consentedAt: "2999-01-01T00:00:00.000Z",
+  }, { patient, existing: approved, actor, verifiedContactReference: "synthetic-exact-contact-reference", now: new Date(FIXED_NOW) }), /not in the future/);
+  assert.equal(ageAt("2009-01-02", new Date(FIXED_NOW)), 17);
+  assert.throws(() => sanitizePatientPortalAccess({
+    portalAccessStatus: "approved",
+    allowlisted: true,
+    preferredChannel: "email",
+    contactVerificationConfirmed: true,
+    consentStatus: "current",
+    consentedAt: FIXED_NOW,
+    consentEvidenceReference: "synthetic-consent-reference",
+  }, { patient: { ...patient, dateOfBirth: "2009-01-02" }, actor, verifiedContactReference: "synthetic-exact-contact-reference", now: new Date(FIXED_NOW) }), /adult patients/);
+});
+
+test("portal invitation preview is generic, unsent, and contains no clinical details", () => {
+  const invitation = patientPortalInvitationPreview();
+  assert.equal(invitation.deliveryStatus, "not-sent");
+  assert.match(invitation.message, /secure patient portal/i);
+  assert.doesNotMatch(JSON.stringify(invitation), /diagnosis|medication|primary care|program|symptom|treatment|BHW\d{4}/i);
+});
+
+test("Care Connect resolves one Google patient only after verified-contact authentication", async () => {
+  const { app, repository } = fixture();
+  const response = await app(identityRequest({
+    verifiedEmail: "synthetic.patient@example.test",
+    dateOfBirth: "1980-01-02",
+  }));
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    ok: true,
+    patient: repository.identityMatch,
+  });
+  assert.equal(repository.identityCalls.length, 1);
+  assert.deepEqual(repository.identityCalls[0].identity, {
+    email: "synthetic.patient@example.test",
+    phone: "",
+    dateOfBirth: "1980-01-02",
+  });
+  assert.equal(repository.identityCalls[0].options.identityReference.length, 64);
+
+  const denied = await app(identityRequest({
+    verifiedEmail: "synthetic.patient@example.test",
+    dateOfBirth: "1980-01-02",
+  }, "synthetic-intake-secret"));
+  assert.equal(denied.status, 401);
+  assert.equal(repository.identityCalls.length, 1);
+});
+
+test("the organization pilot switch stops identity resolution before registry matching", async () => {
+  const { app, repository, environment } = fixture();
+  environment.PATIENT_PORTAL_PILOT_ENABLED = "false";
+  const response = await app(identityRequest({
+    verifiedEmail: "synthetic.patient@example.test",
+    dateOfBirth: "1980-01-02",
+  }));
+  assert.equal(response.status, 503);
+  assert.equal(repository.identityCalls.length, 0);
+});
+
+test("approved CrewHQ roles manage one patient portal record without sending an invitation", async () => {
+  const { app, environment } = fixture();
+  const auth = `Bearer ${crewToken(environment.CREWOS_OPERATIONS_TOKEN_SECRET, { role: "provider" })}`;
+  let response = await app(new Request("https://operations.example.test/v1/patient-portal-access/BHW0000", {
+    headers: { Authorization: auth },
+  }));
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).invitationPreview.deliveryStatus, "not-sent");
+
+  response = await app(new Request("https://operations.example.test/v1/patient-portal-access/BHW0000", {
+    method: "PUT",
+    headers: { Authorization: auth, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      portalAccessStatus: "approved",
+      allowlisted: true,
+      preferredChannel: "email",
+      contactVerificationConfirmed: true,
+      consentStatus: "current",
+      consentedAt: FIXED_NOW,
+      consentEvidenceReference: "synthetic-consent-reference",
+    }),
+  }));
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).access.portalAccessStatus, "approved");
+
+  const frontDeskAuth = `Bearer ${crewToken(environment.CREWOS_OPERATIONS_TOKEN_SECRET)}`;
+  response = await app(new Request("https://operations.example.test/v1/patient-portal-access/BHW0000", {
+    method: "PUT",
+    headers: { Authorization: frontDeskAuth, "Content-Type": "application/json" },
+    body: JSON.stringify({ portalAccessStatus: "revoked" }),
+  }));
+  assert.equal(response.status, 403);
+});
+
+test("ambiguous or missing Google patient matches fail closed without identity details", async () => {
+  const { app, repository } = fixture();
+  repository.identityMatch = null;
+  const response = await app(identityRequest({
+    verifiedPhone: "+14435550100",
+    dateOfBirth: "1980-01-02",
+  }));
+  assert.equal(response.status, 403);
+  const body = await response.json();
+  assert.equal(body.code, "identity_not_matched");
+  assert.doesNotMatch(JSON.stringify(body), /443|1980|BHW\d{4}/);
+});
 
 test("audit events remain metadata-only", () => {
   const bundle = buildPatientRequestBundle(syntheticIntake, { type: "integration", id: "care-connect", role: "intake" }, {

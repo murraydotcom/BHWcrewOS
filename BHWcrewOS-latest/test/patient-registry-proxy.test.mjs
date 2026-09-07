@@ -33,6 +33,8 @@ test("Patient Registry browser client stays on the signed-in CrewOS origin", asy
   await client.savePatient({ bhwPatientId: "BHW9999", legalFirstName: "Synthetic" });
   await client.recordingConsent("BHW9999");
   await client.saveRecordingConsent("BHW9999", { status: "current" });
+  await client.portalAccess("BHW9999");
+  await client.savePortalAccess("BHW9999", { portalAccessStatus: "paused" });
   assert.equal(patients[0].bhwPatientId, "BHW9999");
   assert.ok(calls.every((call) => call.url === "/.netlify/functions/patient-registry"));
   assert.ok(calls.every((call) => call.options.headers.Authorization === "Bearer synthetic-crew-token"));
@@ -40,6 +42,8 @@ test("Patient Registry browser client stays on the signed-in CrewOS origin", asy
   assert.equal(calls[1].body.action, "save-patient");
   assert.deepEqual(calls[2].body, { action: "recording-consent", bhwPatientId: "BHW9999" });
   assert.deepEqual(calls[3].body, { action: "save-recording-consent", bhwPatientId: "BHW9999", consent: { status: "current" } });
+  assert.deepEqual(calls[4].body, { action: "portal-access", bhwPatientId: "BHW9999" });
+  assert.deepEqual(calls[5].body, { action: "save-portal-access", bhwPatientId: "BHW9999", access: { portalAccessStatus: "paused" } });
 });
 
 test("Patient Registry proxy verifies CrewOS and calls Google Cloud server-side", async () => {
@@ -47,6 +51,8 @@ test("Patient Registry proxy verifies CrewOS and calls Google Cloud server-side"
     ["SESSION_SECRET", "synthetic-session-secret"],
     ["CREWHQ_CLOUD_TOKEN_SECRET", "synthetic-cloud-secret"],
     ["RCM_CLOUD_API_URL", "https://rcm.example.test"],
+    ["OPERATIONS_CLOUD_API_URL", "https://operations.example.test"],
+    ["CREWOS_OPERATIONS_TOKEN_SECRET", "synthetic-operations-secret"],
   ]);
   const priorNetlify = globalThis.Netlify;
   const priorFetch = globalThis.fetch;
@@ -54,6 +60,13 @@ test("Patient Registry proxy verifies CrewOS and calls Google Cloud server-side"
   globalThis.Netlify = { env: { get: (key) => environment.get(key) || "" } };
   globalThis.fetch = async (url, options) => {
     outbound.push({ url, options });
+    if (url.includes("/v1/patient-portal-access/")) {
+      return Response.json({
+        ok: true,
+        access: options.method === "PUT" ? JSON.parse(options.body) : null,
+        invitationPreview: { deliveryStatus: "not-sent", message: "BHW Medical secure patient portal invitation." },
+      });
+    }
     if (url.endsWith("/recording-consent")) return Response.json({ consent: { status: "current" }, eligible: true });
     if (options.method === "PUT") return Response.json({ patient: JSON.parse(options.body) });
     return Response.json({ patients: [{ bhwPatientId: "BHW9999" }] });
@@ -100,6 +113,26 @@ test("Patient Registry proxy verifies CrewOS and calls Google Cloud server-side"
     }));
     assert.equal(consentResponse.status, 200);
     assert.equal(outbound[2].url, "https://rcm.example.test/v1/patients/BHW9999/recording-consent");
+
+    const accessResponse = await registryHandler(new Request("https://bhwcrewos.example/.netlify/functions/patient-registry", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${signedCrewToken()}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "portal-access", bhwPatientId: "BHW9999" }),
+    }));
+    assert.equal(accessResponse.status, 200);
+    assert.equal(outbound[3].url, "https://operations.example.test/v1/patient-portal-access/BHW9999");
+    const accessClaims = JSON.parse(Buffer.from(outbound[3].options.headers.Authorization.replace("Bearer ", "").split(".")[0], "base64url").toString("utf8"));
+    assert.equal(accessClaims.aud, "bhw-operations-cloud");
+    assert.equal(accessClaims.role, "admin");
+
+    const updateResponse = await registryHandler(new Request("https://bhwcrewos.example/.netlify/functions/patient-registry", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${signedCrewToken()}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "save-portal-access", bhwPatientId: "BHW9999", access: { portalAccessStatus: "paused", ignored: "server-validates" } }),
+    }));
+    assert.equal(updateResponse.status, 200);
+    assert.equal(outbound[4].options.method, "PUT");
+    assert.deepEqual(JSON.parse(outbound[4].options.body), { portalAccessStatus: "paused", ignored: "server-validates" });
   } finally {
     globalThis.Netlify = priorNetlify;
     globalThis.fetch = priorFetch;

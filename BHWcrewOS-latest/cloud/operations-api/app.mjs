@@ -7,11 +7,19 @@ import {
   COMMUNICATION_DIRECTIONS,
   COMMUNICATION_STATUSES,
   SCHEMA_VERSION,
+  assertBhwPatientId,
   apiError,
   requireIdempotencyKey,
 } from "./schema.mjs";
 import { buildPatientRequestBundle } from "./domain.mjs";
-import { verifyCrewToken, verifyIntakeClient } from "./auth.mjs";
+import { verifyCrewToken, verifyIntakeClient, verifyPatientIdentityClient } from "./auth.mjs";
+import {
+  patientIdentityReference,
+  patientPortalAccessForStaff,
+  patientPortalInvitationPreview,
+  requirePatientPortalApprover,
+  sanitizePatientIdentity,
+} from "./patient-identity.mjs";
 
 const MAX_BODY_BYTES = 64 * 1024;
 const MAX_BULK_BODY_BYTES = 2 * 1024 * 1024;
@@ -105,6 +113,15 @@ function workflowActor(actor = {}) {
     name: actor.name || actor.id || "CrewOS",
     role: actor.role || "staff",
   };
+}
+
+function patientIdentityActor(request, environment) {
+  return verifyPatientIdentityClient(
+    request.headers.get("authorization"),
+    environment.CARE_CONNECT_PATIENT_IDENTITY_SECRET,
+    request.headers.get("x-bhw-client-id"),
+    environment.CARE_CONNECT_CLIENT_ID || "care-connect",
+  );
 }
 
 export function createOperationsApp({
@@ -332,7 +349,46 @@ export function createOperationsApp({
         )) }, cors);
       }
 
+      if (url.pathname === "/v1/patient-identity/resolve" && request.method === "POST") {
+        patientIdentityActor(request, environment);
+        if (String(environment.PATIENT_PORTAL_PILOT_ENABLED || "false").trim().toLowerCase() !== "true") {
+          throw apiError(503, "patient_portal_pilot_disabled", "patient portal access is not available right now");
+        }
+        const identity = sanitizePatientIdentity(await readJson(request));
+        const match = await repository.resolvePatientIdentity(identity, {
+          identityReference: patientIdentityReference(identity, environment.CARE_CONNECT_PATIENT_IDENTITY_SECRET),
+          now: now().toISOString(),
+        });
+        if (!match) {
+          throw apiError(403, "identity_not_matched", "we could not securely match this sign-in to one patient record; please contact BHW");
+        }
+        return json(200, { ok: true, patient: match }, cors);
+      }
+
       const actor = staffActor(request, environment, now);
+      const portalAccessMatch = url.pathname.match(/^\/v1\/patient-portal-access\/([^/]+)$/);
+      if (portalAccessMatch && ["GET", "PUT"].includes(request.method)) {
+        const bhwPatientId = assertBhwPatientId(decodeURIComponent(portalAccessMatch[1]));
+        if (request.method === "GET") {
+          const record = await repository.getPatientPortalAccess(bhwPatientId);
+          if (!record?.patient) throw apiError(404, "patient_not_found", "patient was not found in the protected registry");
+          return json(200, {
+            ok: true,
+            bhwPatientId,
+            access: patientPortalAccessForStaff(record.access),
+            invitationPreview: patientPortalInvitationPreview(),
+            organizationPilotEnabled: String(environment.PATIENT_PORTAL_PILOT_ENABLED || "false").trim().toLowerCase() === "true",
+          }, cors);
+        }
+        requirePatientPortalApprover(actor);
+        const access = await repository.savePatientPortalAccess(
+          bhwPatientId,
+          await readJson(request),
+          actor,
+          { now: now() },
+        );
+        return json(200, { ok: true, bhwPatientId, access: patientPortalAccessForStaff(access), invitationPreview: patientPortalInvitationPreview() }, cors);
+      }
       if (url.pathname === "/v1/patient-requests" && request.method === "GET") {
         const rows = workflow
           ? await workflow.listRequests(queryFilters(url), workflowActor(actor))

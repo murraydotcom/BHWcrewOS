@@ -9,6 +9,7 @@ const STATUS_OPTIONS = ["active", "prospective", "inactive", "transferred", "dec
 const COVERAGE_OPTIONS = ["verified", "pending", "needs-review", "inactive", "self-pay", "unknown"];
 const CONSENT_SOURCES = ["previsit-form", "new-patient-packet"];
 const CARE_API = "https://bhw-medication-api-343692256275.us-east4.run.app";
+const PORTAL_ACCESS_STATUSES = ["not-invited", "approved", "invited", "active", "paused", "revoked"];
 
 let client = null;
 let patients = [];
@@ -197,6 +198,49 @@ async function renderRecordingConsent(bhwPatientId) {
   }
 }
 
+function checked(id, value) {
+  return `<label class="attestation"><input type="checkbox" id="${id}" ${value ? "checked" : ""}><span>`;
+}
+
+async function renderPortalAccess(bhwPatientId) {
+  const panel = $("portalAccessPanel");
+  if (!panel) return;
+  try {
+    const result = await client.portalAccess(bhwPatientId);
+    if (selectedId !== bhwPatientId || !$("portalAccessPanel")) return;
+    const access = result.access || {};
+    const status = PORTAL_ACCESS_STATUSES.includes(access.portalAccessStatus) ? access.portalAccessStatus : "not-invited";
+    const pilotClass = result.organizationPilotEnabled ? "complete" : "warning";
+    panel.innerHTML = `<div class="card-head" style="padding:0 0 12px;border:0"><div><h3>Care Connect pilot access</h3><div class="privacy">Adult Primary Care pilot · patient self-access only · proxy and guardian access disabled.</div></div><span class="badge ${pilotClass}">${result.organizationPilotEnabled ? "Organization access on" : "Organization access off"}</span></div><div class="formgrid">${field("dPortalStatus", "Portal access status", status, "select", PORTAL_ACCESS_STATUSES)}${field("dPortalChannel", "Verified invitation channel", access.preferredChannel || "email", "select", ["email", "sms"])}${field("dPortalConsentStatus", "Portal consent", access.consentStatus || "", "select", ["", "current", "revoked"])}${field("dPortalConsentedAt", "Patient consented at", localDateTimeValue(access.consentedAt), "datetime-local")}${field("dPortalConsentEvidence", "Protected consent reference", access.consentEvidenceReference || "")}${field("dPortalDisableReason", "Pause / revoke reason", access.disableReason || "")}</div>${checked("dPortalAllowlisted", access.allowlisted === true)}Personally selected for the adult Primary Care pilot.</span></label>${checked("dPortalContactVerified", false)}I verified the selected email or phone against the current Patient Registry record.</span></label>${checked("dPortalInvitationConfirmed", false)}I confirm the patient invitation was delivered through the verified channel. This records the invitation; it does not send one.</span></label><div class="notice"><b>Invitation preview · not sent</b><br>${esc(result.invitationPreview?.message || "BHW Medical secure patient portal invitation.")}</div><div class="actions"><button class="btn primary" id="savePortalAccess">Save pilot access</button></div><div class="privacy">Current status: ${esc(status)} · ${access.exactContactBound ? "exact contact verified" : "exact contact not verified"}${access.portalInvitedAt ? ` · invited ${esc(new Date(access.portalInvitedAt).toLocaleString())}` : ""}${access.lastAuthenticatedAt ? ` · last authenticated ${esc(new Date(access.lastAuthenticatedAt).toLocaleString())}` : ""}. Clinical details are never included in the invitation.</div>`;
+    $("dPortalStatus").value = status;
+    $("dPortalChannel").value = access.preferredChannel || "email";
+    $("dPortalConsentStatus").value = access.consentStatus || "";
+    $("savePortalAccess").onclick = async () => {
+      const selectedStatus = $("dPortalStatus").value;
+      if (selectedStatus === "active" && status !== "active") { showToast("Active status is created only after the patient's first verified sign-in."); return; }
+      try {
+        const saved = await client.savePortalAccess(bhwPatientId, {
+          portalAccessStatus: selectedStatus,
+          preferredChannel: $("dPortalChannel").value,
+          allowlisted: $("dPortalAllowlisted").checked,
+          contactVerificationConfirmed: $("dPortalContactVerified").checked,
+          consentStatus: $("dPortalConsentStatus").value,
+          consentedAt: $("dPortalConsentedAt").value ? new Date($("dPortalConsentedAt").value).toISOString() : "",
+          consentEvidenceReference: $("dPortalConsentEvidence").value.trim(),
+          invitationDeliveryConfirmed: $("dPortalInvitationConfirmed").checked,
+          disableReason: $("dPortalDisableReason").value.trim(),
+        });
+        await renderPortalAccess(bhwPatientId);
+        showToast(`Care Connect access saved as ${saved.access.portalAccessStatus}. No invitation was sent.`);
+      } catch (error) { showToast(error.message || "Care Connect pilot access could not be saved."); }
+    };
+  } catch (error) {
+    if (selectedId === bhwPatientId && $("portalAccessPanel")) {
+      $("portalAccessPanel").innerHTML = `<div class="notice"><b>Care Connect pilot controls are unavailable.</b><br>${esc(error.message || "Try again after the protected services reconnect.")}</div>`;
+    }
+  }
+}
+
 function visiblePatients() {
   const query = $("search").value.trim().toLowerCase();
   const filter = $("statusFilter").value;
@@ -229,7 +273,7 @@ function renderDetail() {
   const patient = patients.find((item) => item.bhwPatientId === selectedId);
   if (!patient) { $("detail").innerHTML = '<div class="empty">Select a patient to review the master record.</div>'; return; }
   const displayedLastName = `${patient.legalLastName}${patient.nameSuffix ? ` ${patient.nameSuffix}` : ""}`;
-  $("detail").innerHTML = `<div class="card-head"><div><h3>${esc(patient.bhwPatientId)} · ${esc(displayedLastName)}, ${esc(patient.preferredName || patient.legalFirstName)}</h3><div class="privacy">Last verified ${patient.lastVerifiedAt ? new Date(patient.lastVerifiedAt).toLocaleString() : "not recorded"}</div></div><span class="badge ${patient.coverageStatus === "verified" ? "complete" : "warning"}">${esc(patient.coverageStatus)}</span></div><div class="detail"><div class="formgrid" id="patientMasterFields">${patientFields(patient)}</div><div class="actions"><button class="btn primary" id="savePatient">Save verified changes</button><button class="btn" id="startEncounter">Create encounter</button></div><div class="privacy">Patient-reported changes must be verified before they replace this authoritative record. This registry supports operations; CharmHealth remains the legal medical record.</div><div class="consent-panel" id="recordingConsentPanel"><div class="privacy">Loading signed consent status…</div></div><div class="communication-panel" id="educationCommunicationPanel"><div class="privacy">Loading education and interactive communication history…</div></div></div>`;
+  $("detail").innerHTML = `<div class="card-head"><div><h3>${esc(patient.bhwPatientId)} · ${esc(displayedLastName)}, ${esc(patient.preferredName || patient.legalFirstName)}</h3><div class="privacy">Last verified ${patient.lastVerifiedAt ? new Date(patient.lastVerifiedAt).toLocaleString() : "not recorded"}</div></div><span class="badge ${patient.coverageStatus === "verified" ? "complete" : "warning"}">${esc(patient.coverageStatus)}</span></div><div class="detail"><div class="formgrid" id="patientMasterFields">${patientFields(patient)}</div><div class="actions"><button class="btn primary" id="savePatient">Save verified changes</button><button class="btn" id="startEncounter">Create encounter</button></div><div class="privacy">Patient-reported changes must be verified before they replace this authoritative record. This registry supports operations; CharmHealth remains the legal medical record.</div><div class="consent-panel" id="portalAccessPanel"><div class="privacy">Loading Care Connect pilot access…</div></div><div class="consent-panel" id="recordingConsentPanel"><div class="privacy">Loading signed consent status…</div></div><div class="communication-panel" id="educationCommunicationPanel"><div class="privacy">Loading education and interactive communication history…</div></div></div>`;
   registryFormDirty = false;
   document.querySelectorAll("#patientMasterFields input, #patientMasterFields select").forEach((control) => {
     control.addEventListener("input", () => { registryFormDirty = true; });
@@ -264,6 +308,7 @@ function renderDetail() {
   };
   void renderRecordingConsent(patient.bhwPatientId);
   void renderEducationCommunication(patient.bhwPatientId);
+  void renderPortalAccess(patient.bhwPatientId);
 }
 
 function render() { renderKpis(); renderRows(); renderDetail(); }

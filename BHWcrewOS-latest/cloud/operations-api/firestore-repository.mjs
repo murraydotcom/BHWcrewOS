@@ -16,6 +16,16 @@ import {
   transitionPatientRequest,
   transitionTask,
 } from "./domain.mjs";
+import {
+  activatePatientPortalAccess,
+  evaluatePatientPortalAccess,
+  normalizePatientEmail,
+  normalizePatientPhone,
+  patientIdentityReference,
+  patientPortalAuthorization,
+  sanitizePatientPortalAccess,
+  selectUniqueActivePatient,
+} from "./patient-identity.mjs";
 
 function receiptId(scope, key) {
   return crypto.createHash("sha256").update(`${scope}:${key}`).digest("hex");
@@ -32,7 +42,7 @@ function toLimit(value, fallback = 50, maximum = 100) {
 }
 
 export class FirestoreOperationsRepository {
-  constructor({ firestore, projectId, databaseId } = {}) {
+  constructor({ firestore, projectId, databaseId, patientIdentitySecret } = {}) {
     this.db = firestore || new Firestore({
       projectId: projectId || process.env.GOOGLE_CLOUD_PROJECT,
       databaseId: databaseId || process.env.FIRESTORE_DATABASE || "bhw-rcm-prod",
@@ -42,7 +52,160 @@ export class FirestoreOperationsRepository {
     this.communications = this.db.collection(COLLECTIONS.communications);
     this.auditEvents = this.db.collection(COLLECTIONS.auditEvents);
     this.patients = this.db.collection(COLLECTIONS.patients);
+    this.patientContacts = this.db.collection(COLLECTIONS.patientContacts);
+    this.patientPortalAccess = this.db.collection(COLLECTIONS.patientPortalAccess);
+    this.verificationEvents = this.db.collection(COLLECTIONS.verificationEvents);
     this.intakeReceipts = this.db.collection(COLLECTIONS.intakeReceipts);
+    this.patientIdentitySecret = patientIdentitySecret || process.env.CARE_CONNECT_PATIENT_IDENTITY_SECRET || "";
+  }
+
+  async resolvePatientIdentity(identity, { identityReference, now = new Date().toISOString() } = {}) {
+    const attemptRef = this.verificationEvents.doc(identityReference);
+    const attemptDoc = await attemptRef.get();
+    const attemptState = attemptDoc.exists ? attemptDoc.data() : {};
+    const nowMs = new Date(now).getTime();
+    if (attemptState.lockedUntil && new Date(attemptState.lockedUntil).getTime() > nowMs) {
+      throw apiError(429, "identity_locked", "identity matching is temporarily locked; please contact BHW or try again later");
+    }
+
+    const contacts = new Map();
+    const addSnapshot = (snapshot) => snapshot.docs.forEach((doc) => {
+      const value = doc.data();
+      if (value.active !== false && value.bhwPatientId) contacts.set(doc.id, value);
+    });
+    if (identity.email) {
+      addSnapshot(await this.patientContacts.where("emailNormalized", "==", identity.email).limit(5).get());
+      if (!contacts.size) addSnapshot(await this.patientContacts.where("email", "==", identity.email).limit(5).get());
+    }
+    if (identity.phone) addSnapshot(await this.patientContacts.where("phoneE164", "==", identity.phone).limit(5).get());
+
+    const candidateIds = [...new Set([...contacts.values()].map((contact) => contact.bhwPatientId))];
+    const candidateDocs = candidateIds.length
+      ? await this.db.getAll(...candidateIds.map((id) => this.patients.doc(id)))
+      : [];
+    const patient = selectUniqueActivePatient(
+      candidateDocs.map((doc) => doc.data()?.patient || doc.data()),
+      identity.dateOfBirth,
+    );
+
+    const verifiedChannel = identity.email ? "email" : "sms";
+    const accessDoc = patient ? await this.patientPortalAccess.doc(patient.bhwPatientId).get() : null;
+    const access = accessDoc?.exists ? accessDoc.data() : null;
+    const accessState = patient && access
+      ? evaluatePatientPortalAccess(access, patient, verifiedChannel, new Date(now), identityReference)
+      : { eligible: false, reason: patient ? "access-record-missing" : "identity-not-matched" };
+
+    if (!patient || !accessState.eligible) {
+      const attempts = Math.max(0, Number(attemptState.attempts) || 0) + 1;
+      const locked = attempts >= 5;
+      const batch = this.db.batch();
+      const auditEventId = `AUD-${crypto.randomUUID()}`;
+      batch.set(attemptRef, {
+        identityReference,
+        attempts: locked ? 0 : attempts,
+        lockedUntil: locked ? new Date(nowMs + 30 * 60 * 1000).toISOString() : "",
+        lastFailedAt: now,
+        source: "care-connect",
+      }, { merge: true });
+      batch.create(this.auditEvents.doc(auditEventId), {
+        auditEventId,
+        schemaVersion: 1,
+        eventType: "patient-identity.match-failed",
+        actorType: "integration",
+        actorId: "care-connect",
+        identityReference,
+        denialReason: accessState.reason,
+        occurredAt: now,
+      });
+      await batch.commit();
+      return null;
+    }
+
+    const activatedAccess = activatePatientPortalAccess(access, new Date(now));
+    const batch = this.db.batch();
+    const auditEventId = `AUD-${crypto.randomUUID()}`;
+    batch.set(attemptRef, { attempts: 0, lockedUntil: "", lastSucceededAt: now, source: "care-connect" }, { merge: true });
+    batch.create(this.auditEvents.doc(auditEventId), {
+      auditEventId,
+      schemaVersion: 1,
+      eventType: "patient-identity.matched",
+      actorType: "integration",
+      actorId: "care-connect",
+      bhwPatientId: patient.bhwPatientId,
+      identityReference,
+      occurredAt: now,
+    });
+    batch.set(this.patientPortalAccess.doc(patient.bhwPatientId), activatedAccess);
+    await batch.commit();
+    return {
+      bhwPatientId: patient.bhwPatientId,
+      preferredName: cleanText(patient.preferredName || patient.legalFirstName || "Patient", 100),
+      portalAuthorization: patientPortalAuthorization(activatedAccess, verifiedChannel),
+    };
+  }
+
+  async getPatientPortalAccess(bhwPatientId) {
+    const [patientDoc, accessDoc] = await Promise.all([
+      this.patients.doc(bhwPatientId).get(),
+      this.patientPortalAccess.doc(bhwPatientId).get(),
+    ]);
+    return {
+      patient: patientDoc.exists ? patientDoc.data()?.patient || patientDoc.data() : null,
+      access: accessDoc.exists ? accessDoc.data() : null,
+    };
+  }
+
+  async savePatientPortalAccess(bhwPatientId, input, actor, { now = new Date() } = {}) {
+    const accessRef = this.patientPortalAccess.doc(bhwPatientId);
+    const patientRef = this.patients.doc(bhwPatientId);
+    return this.db.runTransaction(async (transaction) => {
+      const contactQuery = this.patientContacts.where("bhwPatientId", "==", bhwPatientId).limit(10);
+      const [patientDoc, accessDoc, contactSnapshot] = await Promise.all([
+        transaction.get(patientRef),
+        transaction.get(accessRef),
+        input.contactVerificationConfirmed === true ? transaction.get(contactQuery) : Promise.resolve(null),
+      ]);
+      const patient = patientDoc.exists ? patientDoc.data()?.patient || patientDoc.data() : null;
+      let verifiedContactReference = "";
+      if (input.contactVerificationConfirmed === true) {
+        if (!this.patientIdentitySecret) {
+          throw apiError(503, "patient_identity_not_configured", "exact patient contact verification is not configured");
+        }
+        const channel = cleanText(input.preferredChannel, 20).toLowerCase();
+        const values = new Set((contactSnapshot?.docs || []).map((doc) => doc.data()).filter((contact) => contact.active !== false).map((contact) => (
+          channel === "email"
+            ? normalizePatientEmail(contact.emailNormalized || contact.email)
+            : channel === "sms"
+              ? normalizePatientPhone(contact.phoneE164 || contact.phone)
+              : ""
+        )).filter(Boolean));
+        if (values.size !== 1) {
+          throw apiError(409, "exact_contact_required", "the selected channel must resolve to exactly one current Patient Registry contact");
+        }
+        const [value] = values;
+        verifiedContactReference = patientIdentityReference(channel === "email" ? { email: value } : { phone: value }, this.patientIdentitySecret);
+      }
+      const access = sanitizePatientPortalAccess(input, {
+        patient,
+        existing: accessDoc.exists ? accessDoc.data() : {},
+        actor,
+        verifiedContactReference,
+        now,
+      });
+      const auditEventId = `AUD-${crypto.randomUUID()}`;
+      transaction.set(accessRef, access);
+      transaction.create(this.auditEvents.doc(auditEventId), {
+        auditEventId,
+        schemaVersion: 1,
+        eventType: "patient-portal-access.updated",
+        actorType: "staff",
+        actorId: cleanText(actor.id || actor.staffId || actor.sub, 180),
+        bhwPatientId,
+        portalAccessStatus: access.portalAccessStatus,
+        occurredAt: access.updatedAt,
+      });
+      return access;
+    });
   }
 
   async createPatientRequest(bundle, { scope, key, payloadHash }) {
