@@ -113,6 +113,16 @@ test("the authoritative Cloud name and DOB repair a conflicting legacy BHW ID", 
   assert.equal(verified.bhwPatientId, "BHW0001");
 });
 
+test("temporary Registry IDs stay blocked until CharmHealth assigns BHW####", () => {
+  const resolver = createResolver([
+    { bhwPatientId: "TEMP-0001", name: "Synthetic Temporary", dob: "2000-01-01", sourceRecordId: "legacy-temp" },
+    { bhwPatientId: "BHW0001", name: "Synthetic Canonical", dob: "2001-01-01", sourceRecordId: "legacy-canonical" },
+  ]);
+  assert.equal(resolver.direct({ name: "Synthetic Temporary", dob: "2000-01-01" }).bhwPatientId, "");
+  assert.equal(resolver.direct({ sourceId: "legacy-temp" }).bhwPatientId, "");
+  assert.equal(resolver.direct({ name: "Synthetic Canonical", dob: "2001-01-01" }).bhwPatientId, "BHW0001");
+});
+
 test("migration UI is session-gated, starts with preview, and distinguishes verified Cloud save", async () => {
   const html = await readFile(new URL("../bhw-cloud-migration.html", import.meta.url), "utf8");
   const handler = await readFile(new URL("../netlify/functions/patient-cloud-migration.js", import.meta.url), "utf8");

@@ -59,11 +59,19 @@ function sourceLabel(page, propertyNames = []) {
 }
 
 function createResolver(roster, indexPages = [], indexEntries = []) {
-  const byId = new Map(roster.map((patient) => [patient.bhwPatientId, patient]));
-  const bySource = uniqueMap(roster, (patient) => patient.source?.recordId || patient.sourceRecordId);
-  const byNameDob = uniqueMap(roster, (patient) => `${nameKey(patient.name)}|${dateOnly(patient.dob)}`);
-  const byMember = uniqueMap(roster, (patient) => patient.memberId);
-  const byMrn = uniqueMap(roster, (patient) => patient.mrn);
+  // Temporary Registry identities remain valid roster records, but historical
+  // operational records cannot be attached to them until CharmHealth assigns
+  // a canonical BHW#### ID. Keep them out of every migration match instead of
+  // allowing a downstream API to reject an otherwise approved bulk batch.
+  const canonicalRoster = roster.map((patient) => ({
+    ...patient,
+    bhwPatientId: canonicalBhw(patient.bhwPatientId),
+  })).filter((patient) => patient.bhwPatientId);
+  const byId = new Map(canonicalRoster.map((patient) => [patient.bhwPatientId, patient]));
+  const bySource = uniqueMap(canonicalRoster, (patient) => patient.source?.recordId || patient.sourceRecordId);
+  const byNameDob = uniqueMap(canonicalRoster, (patient) => `${nameKey(patient.name)}|${dateOnly(patient.dob)}`);
+  const byMember = uniqueMap(canonicalRoster, (patient) => patient.memberId);
+  const byMrn = uniqueMap(canonicalRoster, (patient) => patient.mrn);
   const index = new Map(indexEntries);
 
   const direct = ({ bhwPatientId, name, dob, memberId, mrn, sourceId } = {}) => {
