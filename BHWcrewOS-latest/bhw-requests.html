@@ -401,7 +401,7 @@ function passFilter(it){
 // ---- render ----
 const UI_WORKFLOWS={
   refill:{label:'Medication request',shortLabel:'medication request',milestones:[['Waiting on clinician','waiting_on_clinician'],['Waiting on pharmacy','waiting_on_pharmacy']],outcomes:[['Complete','refill_completed'],['Needs visit','needs_visit']]},
-  referral:{label:'Referral request',shortLabel:'referral',milestones:[['Referral sent','referral_sent'],['Ready to schedule','ready_to_schedule']],outcomes:[['Scheduled','scheduled'],['Close','closed_without_scheduling']]},
+  referral:{label:'Referral request',shortLabel:'referral',milestones:[['Referral sent','referral_sent'],['Ready to schedule','ready_to_schedule'],['Scheduled','scheduled']],outcomes:[['Complete','referral_completed'],['Close','closed_without_scheduling']]},
   prior_auth:{label:'Prior authorization',shortLabel:'prior authorization',milestones:[['PA submitted','pa_submitted']],outcomes:[['Approved','pa_approved'],['Denied','pa_denied']]},
   billing_rcm:{label:'Billing request',shortLabel:'billing request',milestones:[['With RCM','rcm_referred'],['Waiting on payer','waiting_on_payer']],outcomes:[['Resolve','billing_resolved']]},
   clinical_review:{label:'Clinical review',shortLabel:'clinical review',milestones:[],outcomes:[['Reviewed','review_completed']]},

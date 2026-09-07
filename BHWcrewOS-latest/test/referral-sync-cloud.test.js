@@ -1,6 +1,8 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 const crypto = require("node:crypto");
+const fs = require("node:fs");
+const path = require("node:path");
 const { handler } = require("../netlify/functions/referral-sync");
 
 const SESSION_SECRET = "synthetic-referral-session-secret";
@@ -102,4 +104,11 @@ test("Front Desk keeps scheduled as a milestone before referral completion", asy
     delete process.env.FRONT_DESK_INTAKE_SECRET;
     delete process.env.FRONT_DESK_CLIENT_ID;
   }
+});
+
+test("Patient Requests presents scheduled before referral completion", () => {
+  const page = fs.readFileSync(path.join(__dirname, "..", "bhw-requests.html"), "utf8");
+  assert.match(page, /milestones:\[\['Referral sent','referral_sent'\],\['Ready to schedule','ready_to_schedule'\],\['Scheduled','scheduled'\]\]/);
+  assert.match(page, /outcomes:\[\['Complete','referral_completed'\],\['Close','closed_without_scheduling'\]\]/);
+  assert.doesNotMatch(page, /outcomes:\[\['Scheduled','scheduled'\]/);
 });
