@@ -42,6 +42,8 @@ HR data.
 | `CREWOS_OPERATIONS_TOKEN_SECRET` | Shared only with the CrewOS token exchange |
 | `CARE_CONNECT_INTAKE_SECRET` | Shared only with the Care Connect server/bridge |
 | `CARE_CONNECT_CLIENT_ID` | Optional; defaults to `care-connect` |
+| `FRONT_DESK_INTAKE_SECRET` | Server-only secret used by the Front Desk referral bridge |
+| `FRONT_DESK_CLIENT_ID` | Optional; defaults to `front-desk-os` |
 | `ALLOWED_ORIGINS` | Comma-separated exact CrewOS origins for staff browser calls |
 | `PATIENT_WORKFLOW_AUTOMATION_ENABLED` | Master SMS dispatch gate; anything except `true` suppresses sends |
 | `PATIENT_PORTAL_URL` | HTTPS secure patient-page link used by no-PHI templates |
@@ -73,6 +75,8 @@ collections. Do not put either secret or a service-account key in the repo.
 | `GET /health` | Health check | Service readiness, no patient data |
 | `GET /v1/contracts/communication-foundation` | CrewOS | Current enums/schema version |
 | `POST /v1/intake/patient-requests` | Care Connect server | Atomic request + triage task + inbound communication + audit |
+| `POST /v1/intake/front-desk-referrals` | Front Desk server bridge | Create one matched referral workflow record after document generation |
+| `POST /v1/intake/front-desk-referrals/:id/actions` | Front Desk server bridge | Record referral sent/ready/scheduled milestones without exposing the server secret |
 | `GET/POST /v1/patient-requests` | CrewOS | List or create operational requests |
 | `GET /v1/patient-requests/:id` | CrewOS | Read one request |
 | `POST /v1/patient-requests/:id/actions` | CrewOS / Chat | Assign, start, milestone, resolve, reopen, escalate, or unassign |

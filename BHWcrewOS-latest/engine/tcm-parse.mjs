@@ -100,6 +100,28 @@ export function normalizeRecord(raw) {
   return out;
 }
 
+// A CRISP workbook may include patient-only rows with no hospital encounter.
+// Keep those rows out of the retained TCM feed while allowing every complete
+// event in the same export to continue through the import.
+export function partitionTcmImportRows(rawRecords) {
+  const valid = [];
+  const skipped = [];
+  (Array.isArray(rawRecords) ? rawRecords : []).forEach((raw, index) => {
+    const record = normalizeRecord(raw);
+    const missing = [];
+    if (!(record.firstName && record.lastName && record.dob)) {
+      missing.push("First Name, Last Name, and Date of Birth");
+    }
+    if (!record.encounterType) missing.push("Encounter Type");
+    if (!(record.admitAt || record.dischargeAt)) {
+      missing.push("Admit Date / Time or Discharge Date / Time");
+    }
+    if (missing.length) skipped.push({ rowNumber: index + 2, missing });
+    else valid.push(raw);
+  });
+  return { valid, skipped };
+}
+
 // Accept a Date, an Excel-ish ISO string, or "" and return "YYYY-MM-DD[THH:MM]".
 function toISO(v) {
   if (v == null || v === "") return "";

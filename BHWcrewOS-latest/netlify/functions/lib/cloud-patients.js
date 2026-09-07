@@ -40,13 +40,36 @@ async function cloudRequest(path, { actor, method = "GET", body } = {}) {
   return data;
 }
 
-const fullName = (p) => [p.legalFirstName, p.middleName, p.legalLastName].filter(Boolean).join(" ").trim();
+const SUFFIXES = new Map([
+  ["jr", "Jr"], ["junior", "Jr"], ["sr", "Sr"], ["senior", "Sr"],
+  ["ii", "II"], ["2nd", "II"], ["iii", "III"], ["3rd", "III"],
+  ["iv", "IV"], ["4th", "IV"], ["v", "V"], ["5th", "V"],
+]);
+
+const cleanSuffix = (value) => SUFFIXES.get(String(value || "").trim().toLowerCase().replace(/[.,]/g, "")) || "";
+
+function parsePatientName(value, explicitSuffix = "") {
+  const parts = String(value || "").trim().split(/\s+/).filter(Boolean);
+  const typedSuffix = cleanSuffix(explicitSuffix);
+  const trailingSuffix = parts.length > 1 ? cleanSuffix(parts.at(-1)) : "";
+  const nameSuffix = typedSuffix || trailingSuffix;
+  if (trailingSuffix) parts.pop();
+  return {
+    legalFirstName: parts.slice(0, -1).join(" ") || parts[0] || "",
+    legalLastName: parts.length > 1 ? parts.at(-1) : "Unknown",
+    nameSuffix,
+    name: [...parts, nameSuffix].filter(Boolean).join(" ").trim(),
+  };
+}
+
+const fullName = (p) => [p.legalFirstName, p.middleName, p.legalLastName, p.nameSuffix].filter(Boolean).join(" ").trim();
 const sourceRecordId = (p) => p.source?.recordId || p.sourceRecordId || "";
 const sourceUrl = (p) => p.source?.recordUrl || p.sourceUrl || "";
 
 function legacyPatient(p) {
   const programs = Array.isArray(p.programEnrollment) ? p.programEnrollment : [];
   const snapshot = p.clinicalSnapshot || {};
+  const status = p.patientStatus || "";
   return {
     ...p,
     id: p.bhwPatientId,
@@ -67,7 +90,8 @@ function legacyPatient(p) {
     notionPageId: sourceRecordId(p),
     program: programs.join(" · "),
     programs,
-    status: p.patientStatus || "",
+    status,
+    selectable: !["deceased", "transferred"].includes(String(status).toLowerCase()),
     snapshot: snapshot.updatedAt || "",
     allergies: snapshot.allergies || p.allergies || "",
     meds: snapshot.medications || p.medications || "",
@@ -98,4 +122,4 @@ function searchCloudPatients(patients, query, limit = 25) {
   }).slice(0, limit);
 }
 
-module.exports = { cloudRequest, legacyPatient, listCloudPatients, findCloudPatient, searchCloudPatients };
+module.exports = { cloudRequest, legacyPatient, listCloudPatients, findCloudPatient, parsePatientName, searchCloudPatients };

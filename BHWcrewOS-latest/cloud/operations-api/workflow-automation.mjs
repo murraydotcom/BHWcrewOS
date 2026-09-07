@@ -6,7 +6,7 @@ const slug = (value) => cleanText(value, 100).toLowerCase().replace(/[\s_]+/g, "
 const unique = (values) => [...new Set((Array.isArray(values) ? values : []).filter(Boolean))];
 const nowIso = (now = new Date()) => (now instanceof Date ? now : new Date(now)).toISOString();
 
-export const REQUEST_TYPES = Object.freeze(["refill", "referral", "prior_auth", "billing_rcm", "general"]);
+export const REQUEST_TYPES = Object.freeze(["refill", "referral", "prior_auth", "billing_rcm", "clinical_review", "general"]);
 export const REQUEST_PRIORITIES = Object.freeze(["routine", "time-sensitive", "urgent", "emergency"]);
 export const REQUEST_ACTIONS = Object.freeze(["assign", "start", "milestone", "resolve", "reopen", "escalate", "unassign"]);
 
@@ -54,17 +54,18 @@ export const WORKFLOW_DEFINITIONS = Object.freeze({
       referral_in_progress: { category: "in_progress", label: "In progress", notify: false, message: COMMON_IN_PROGRESS },
       referral_sent: { category: "waiting", label: "Referral sent", notify: true, message: "BHW Medical Group: The requested information was sent to the next organization. This does not mean an appointment is scheduled. See your secure BHW page." },
       ready_to_schedule: { category: "waiting", label: "Ready to schedule", notify: true, message: "BHW Medical Group: A scheduling update is available. Open your secure BHW page for contact details." },
-      scheduled: { category: "completed", label: "Scheduled", notify: true, message: "BHW Medical Group: A scheduling status update is available. Appointment details remain in your secure BHW page." },
+      scheduled: { category: "waiting", label: "Scheduled", notify: true, message: "BHW Medical Group: A scheduling status update is available. Appointment details remain in your secure BHW page." },
       referral_completed: { category: "completed", label: "Completed", notify: true, message: "BHW Medical Group: Your care team completed the requested workflow. See your secure BHW page for details." },
       closed_without_scheduling: { category: "completed", label: "Closed without scheduling", notify: true, message: "BHW Medical Group: Your care team posted an update that needs your attention. Open your secure BHW page or call the office." },
     },
     cardOutcomes: [
-      { label: "Scheduled", status: "scheduled" },
+      { label: "Complete", status: "referral_completed" },
       { label: "Close", status: "closed_without_scheduling" },
     ],
     cardMilestones: [
       { label: "Referral sent", status: "referral_sent" },
       { label: "Ready to schedule", status: "ready_to_schedule" },
+      { label: "Scheduled", status: "scheduled" },
     ],
   },
   prior_auth: {
@@ -110,6 +111,22 @@ export const WORKFLOW_DEFINITIONS = Object.freeze({
       { label: "With RCM", status: "rcm_referred" },
       { label: "Waiting on payer", status: "waiting_on_payer" },
     ],
+  },
+  clinical_review: {
+    label: "Clinical review",
+    serviceLine: "clinical",
+    assignedTeam: "clinical",
+    allowedRoles: ["ma-bha", "care-manager", "provider", "pmhnp", "operations-manager", "executive"],
+    received: "review_received",
+    inProgress: "review_in_progress",
+    defaultResolution: "review_completed",
+    statuses: {
+      review_received: { category: "received", label: "Awaiting review", notify: false, message: "" },
+      review_in_progress: { category: "in_progress", label: "In review", notify: false, message: "" },
+      review_completed: { category: "completed", label: "Reviewed", notify: false, message: "" },
+    },
+    cardOutcomes: [{ label: "Reviewed", status: "review_completed" }],
+    cardMilestones: [],
   },
   general: {
     label: "Patient request",
@@ -211,10 +228,20 @@ export function normalizeStaffRole(value) {
   const aliases = {
     staff: "front-desk",
     frontdesk: "front-desk",
+    "porter-house-admin": "front-desk",
     ma: "ma-bha",
     bha: "ma-bha",
+    "bh-assistant": "ma-bha",
+    "behavioral-health-assistant": "ma-bha",
+    "medical-assistant": "ma-bha",
+    "bh-coordinator": "care-manager",
+    "behavioral-health-coordinator": "care-manager",
+    "chronic-care-manager": "care-manager",
     clinician: "provider",
     crnp: "provider",
+    "crnp-fnp": "provider",
+    "crnp/fnp": "provider",
+    fnp: "provider",
     np: "provider",
     md: "provider",
     do: "provider",
@@ -224,16 +251,45 @@ export function normalizeStaffRole(value) {
     biller: "rcm",
     operations: "operations-manager",
     admin: "operations-manager",
+    "office-manager": "operations-manager",
     ceo: "executive",
     owner: "executive",
   };
   return aliases[normalized] || normalized;
 }
 
+const NON_PROVIDER_QUEUE_ROLES = new Set([
+  "front-desk", "ma-bha", "care-manager", "rcm", "operations-manager", "executive",
+]);
+
+export function isProviderRole(value) {
+  return ["provider", "pmhnp"].includes(normalizeStaffRole(value));
+}
+
+export function requiresProviderAttention(request = {}, user = {}) {
+  const status = slug(request.status || request.statusCategory);
+  const category = slug(request.statusCategory);
+  const priority = slug(request.priority);
+  const assignedTo = cleanText(request.assignedTo || request.assignedToId, 200);
+  const actorSub = cleanText(user.sub || user.id || (user.staffId ? `crew:${user.staffId}` : ""), 200);
+  return ["urgent", "emergency"].includes(priority)
+    || (Array.isArray(request.safetyFlags) && request.safetyFlags.length > 0)
+    || status === "escalated"
+    || category === "escalated"
+    || Boolean(request.escalatedAt || request.escalationReason)
+    || status === "waiting-on-clinician"
+    || /(?:triage|provider|clinician).*(?:question|review)|(?:question|review).*(?:provider|clinician)/.test(status)
+    || Boolean(assignedTo && actorSub && assignedTo === actorSub);
+}
+
 export function canActOnRequest(request, user = {}) {
   const role = normalizeStaffRole(user.role);
-  return ["system", "executive", "operations-manager"].includes(role)
-    || (Array.isArray(request.allowedRoles) && request.allowedRoles.includes(role));
+  if (role === "system" || NON_PROVIDER_QUEUE_ROLES.has(role)) return true;
+  if (isProviderRole(role)) {
+    return requiresProviderAttention(request, user)
+      || (Array.isArray(request.allowedRoles) && request.allowedRoles.includes(role));
+  }
+  return false;
 }
 
 export function applyPatientRequestAction(request, input = {}, { user = {}, now = new Date() } = {}) {

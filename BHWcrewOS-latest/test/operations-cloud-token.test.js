@@ -5,12 +5,13 @@ const { sign } = require("../netlify/functions/_lib");
 const tokenHandler = require("../netlify/functions/operations-cloud-token").handler;
 const configHandler = require("../netlify/functions/operations-cloud-config").handler;
 
-function sessionToken() {
+function sessionToken(overrides = {}) {
   return sign({
     staffId: "synthetic-staff-id",
     name: "Synthetic Front Desk",
     role: "front-desk",
     exp: Date.now() + 60_000,
+    ...overrides,
   });
 }
 
@@ -30,7 +31,27 @@ test("CrewOS exchanges a signed session for a five-minute operations token", asy
   assert.equal(claims.iss, "bhw-crewhq");
   assert.equal(claims.aud, "bhw-operations-cloud");
   assert.equal(claims.sub, "crew:synthetic-staff-id");
+  assert.equal(claims.role, "front-desk");
   assert.ok(claims.exp - claims.iat <= 300);
+});
+
+test("CrewOS Admin access receives operations-manager queue visibility", async () => {
+  process.env.SESSION_SECRET = "synthetic-session-secret";
+  process.env.CREWOS_OPERATIONS_TOKEN_SECRET = "synthetic-operations-secret";
+  const response = await tokenHandler({
+    httpMethod: "POST",
+    headers: {
+      authorization: `Bearer ${sessionToken({
+        name: "Synthetic Clinical Admin",
+        role: "CRNP/FNP",
+        access: "Admin",
+      })}`,
+    },
+  });
+  assert.equal(response.statusCode, 200);
+  const [payload] = JSON.parse(response.body).token.split(".");
+  const claims = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+  assert.equal(claims.role, "operations-manager");
 });
 
 test("operations token exchange fails closed", async () => {

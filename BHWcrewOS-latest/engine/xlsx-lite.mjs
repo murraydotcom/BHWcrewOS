@@ -2,9 +2,12 @@
 // Minimal, dependency-free spreadsheet reader for the browser (and Node): reads
 // a CRISP .xlsx export (ZIP + DEFLATE via the built-in DecompressionStream, then
 // plain-string XML parsing) or a .csv, returning rows as objects keyed by the
-// header row. No third-party library, nothing uploaded.
+// header row. No third-party library is required.
 
-const DATE_HEADERS = new Set(["Discharge Date / Time", "Admit Date / Time", "Date of Birth"]);
+const DATE_HEADERS = new Set([
+  "Discharge Date / Time", "Admit Date / Time", "Date of Birth", "DOB",
+  "Document Evidence Date", "Event Date",
+]);
 const DELIMITERS = ["\t", ",", ";", "|"];
 const CRISP_HEADER_KEYS = new Set([
   "First Name", "Last Name", "Gender", "Primary Care Provider", "Address", "Location",
@@ -12,6 +15,9 @@ const CRISP_HEADER_KEYS = new Set([
   "Encounter Type", "Facility", "Patient Complaint", "Primary Diagnosis Description",
   "Primary Diagnosis Codes", "Middle Name", "Date of Birth", "Death Indicator",
   "Discharge Date / Time", "Date of Death", "Discharge Disposition",
+  "BHW Patient ID", "Patient First Name", "Patient Last Name", "Patient Name", "DOB",
+  "Category", "Notification Type", "Code", "Description", "Results", "Test Name", "Data Source",
+  "Document Evidence Date", "Event Date", "Facility Name",
 ].map(headerKey));
 
 // ---- public entry -----------------------------------------------------------
@@ -250,6 +256,10 @@ function decodeXml(s) {
 
 // ---- ZIP (store + deflate) --------------------------------------------------
 
+const MAX_XLSX_ENTRIES = 256;
+const MAX_XLSX_ENTRY_BYTES = 16 * 1024 * 1024;
+const MAX_XLSX_TOTAL_BYTES = 32 * 1024 * 1024;
+
 // Parse the ZIP central directory and inflate each entry. Returns { path: Uint8Array }.
 async function unzip(bytes) {
   const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -258,12 +268,19 @@ async function unzip(bytes) {
   for (let i = bytes.length - 22; i >= 0; i--) { if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; } }
   if (eocd < 0) throw new Error("not a valid .xlsx (no ZIP end record)");
   const count = dv.getUint16(eocd + 10, true);
+  if (count > MAX_XLSX_ENTRIES) throw new Error("workbook contains too many files");
   let p = dv.getUint32(eocd + 16, true);
+  let totalUncompressedBytes = 0;
   const out = {};
   for (let n = 0; n < count; n++) {
     if (dv.getUint32(p, true) !== 0x02014b50) break;
     const method = dv.getUint16(p + 10, true);
+    if (method !== 0 && method !== 8) throw new Error("workbook uses an unsupported compression method");
     const compSize = dv.getUint32(p + 20, true);
+    const uncompressedSize = dv.getUint32(p + 24, true);
+    if (uncompressedSize > MAX_XLSX_ENTRY_BYTES) throw new Error("workbook entry is too large");
+    totalUncompressedBytes += uncompressedSize;
+    if (totalUncompressedBytes > MAX_XLSX_TOTAL_BYTES) throw new Error("workbook expands beyond the protected import limit");
     const fnLen = dv.getUint16(p + 28, true);
     const extraLen = dv.getUint16(p + 30, true);
     const commentLen = dv.getUint16(p + 32, true);
@@ -275,6 +292,7 @@ async function unzip(bytes) {
     const dataStart = localOff + 30 + lFnLen + lExtraLen;
     const comp = bytes.subarray(dataStart, dataStart + compSize);
     out[name] = method === 0 ? comp.slice() : await inflateRaw(comp);
+    if (out[name].byteLength > MAX_XLSX_ENTRY_BYTES) throw new Error("workbook entry is too large");
     p += 46 + fnLen + extraLen + commentLen;
   }
   return out;

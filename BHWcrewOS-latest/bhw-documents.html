@@ -1550,7 +1550,7 @@ function initAiDraft(){
       if(d.patient){ setChosen(d.patient); return; }
       const matches=d.matches||[];
       if(!matches.length){ st.textContent='No match.'; return; }
-      $('aidraftResults').innerHTML = matches.slice(0,8).map(m=>`<div class="aidraft-hit" data-id="${esc(m.id)}">${esc(m.name)}${m.dob?' · '+esc(m.dob):''}</div>`).join('');
+      $('aidraftResults').innerHTML = matches.slice(0,8).map(m=>`<div class="aidraft-hit" data-id="${esc(m.id)}">${esc(m.name)}${m.ctl?' · '+esc(m.ctl):''}${m.dob?' · DOB '+esc(m.dob):''}${m.status&&m.status!=='active'?' · '+esc(m.status):''}</div>`).join('');
     }catch(e){ st.className='aidraft-status err'; st.textContent='Search failed.'; }
   }
   async function pickById(id,name){

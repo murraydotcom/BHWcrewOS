@@ -104,6 +104,12 @@ a{color:inherit;text-decoration:none}
 .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:14px 0 8px}
 .chip{font-size:11.5px;font-weight:600;padding:6px 12px;border-radius:20px;border:1px solid var(--line);background:var(--card);color:var(--ink-soft);cursor:pointer}
 .chip.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.cend-roster{margin-top:10px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--base)}
+.cend-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.cend-title{font-size:12px;font-weight:800;color:var(--ink);margin-bottom:2px}
+.cend-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cend-controls input{width:185px;max-width:100%;font:inherit;font-size:12px;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:7px 10px;outline:none}
+.cend-controls input:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(128,171,189,.18)}
 .tb-left{display:flex;align-items:center;gap:12px;min-width:0}
 .hamburger{display:none;background:transparent;border:1px solid var(--line);border-radius:9px;color:var(--ink);font-size:17px;line-height:1;padding:6px 11px;cursor:pointer;flex:0 0 auto}
 .scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40;opacity:0;visibility:hidden;transition:opacity .2s}
@@ -124,6 +130,7 @@ a{color:inherit;text-decoration:none}
       <a class="nav-item" href="index.html"><span class="ic">◈</span> Encounter Scrub</a>
       <a class="nav-item" href="risk.html"><span class="ic">◑</span> Risk &amp; Quality</a>
       <a class="nav-item" href="prior-auth.html"><span class="ic">✋</span> Prior Authorization</a>
+      <a class="nav-item" href="preventive.html"><span class="ic">✓</span> Preventive Services</a>
       <div class="nav-item active"><span class="ic">⏱</span> TCM / Discharges</div>
       <a class="nav-item" href="claims.html"><span class="ic">▦</span> Claims Tracker</a>
       <a class="nav-item" href="../index.html"><span class="ic">▤</span> RCM Command Center</a>
@@ -177,8 +184,22 @@ a{color:inherit;text-decoration:none}
         </div>
         <div class="mini" id="cloudStatus" style="margin-top:8px">Checking secure retention…</div>
         <div class="mini" id="parseNote" style="margin-top:5px"></div>
+        <section class="cend-roster" aria-labelledby="cendRosterTitle">
+          <div class="cend-row">
+            <div>
+              <div class="cend-title" id="cendRosterTitle">Current active CEND roster</div>
+              <div class="mini">Built directly from current active permanent patients in the protected Patient Registry.</div>
+            </div>
+            <div class="cend-controls">
+              <input id="crispSubscriberCode" placeholder="CRISP subscriber code" aria-label="CRISP subscriber code" autocomplete="off">
+              <button class="btn btn-ghost btn-sm" id="cendRosterBtn" disabled>Build current active CEND roster</button>
+            </div>
+          </div>
+          <div class="mini" id="cendRosterStatus" style="margin-top:7px">Checking the active Patient Registry…</div>
+          <div class="mini" style="margin-top:3px">The downloaded CSV contains PHI. Upload it only through CRISP CEND and resubmit at least every 90 days; do not send it by ordinary email or text.</div>
+        </section>
         <div class="mini" id="rosterBar" style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:10px">
-          <b>Panel roster:</b>
+          <b>Optional discharge match roster:</b>
           <span id="rosterStatus">not loaded — showing all discharges</span>
           <button class="btn btn-ghost btn-sm" id="rosterBtn">Upload roster…</button>
           <input type="file" id="rosterInput" accept=".xlsx,.csv" hidden>
@@ -206,8 +227,9 @@ a{color:inherit;text-decoration:none}
 </div>
 
 <script type="module">
-import { buildWorklist, normalizeRoster, inspectCrispColumns } from "../engine/tcm-parse.mjs";
+import { buildWorklist, normalizeRoster, inspectCrispColumns, partitionTcmImportRows } from "../engine/tcm-parse.mjs";
 import { readSpreadsheet } from "../engine/xlsx-lite.mjs";
+import { activeCendPatients, buildCendRosterFile } from "../engine/cend-roster.mjs";
 import { createEncounterCloudClient } from "./cloud-queue.mjs";
 
 const $ = (id) => document.getElementById(id);
@@ -215,6 +237,7 @@ const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": 
 let RESULT = { items: [], stats: {}, meta: {} }, FILTER = "tcm";
 let RAW_ROWS = [], ROSTER = [], PANEL_ONLY = false;
 let CLOUD = null;
+let ACTIVE_PATIENT_REGISTRY = [];
 const ROSTER_KEY = "bhw-tcm-roster";
 const ALERT_KEY_PREFIX = "bhw-tcm-alert";
 
@@ -246,24 +269,44 @@ async function loadFile(file) {
     if (columns.missing.length) {
       throw new Error(`Columns were not separated correctly. Missing required headers: ${columns.missing.join(", ")}`);
     }
-    RAW_ROWS = rows; LAST_FILE = { name: file.name, sheet };
+    const partition = partitionTcmImportRows(rows);
+    if (!partition.valid.length) {
+      throw new Error(`No complete hospital event rows were found. ${partition.skipped.length} rows were missing patient identity, encounter type, or an admission/discharge date`);
+    }
+    const skippedText = partition.skipped.length
+      ? ` · <b>${partition.skipped.length}</b> incomplete row${partition.skipped.length === 1 ? "" : "s"} skipped`
+      : "";
+    RAW_ROWS = partition.valid; LAST_FILE = { name: file.name, sheet };
     if (CLOUD) {
-      $("parseNote").textContent = `Retaining ${rows.length} CRISP event rows…`;
-      const saved = await CLOUD.importTcmEvents(rows, { source: "CrewHQ Panel and Discharges", sourceFile: file.name, manual: false });
+      $("parseNote").textContent = `Retaining ${partition.valid.length} complete CRISP event rows in secure batches${partition.skipped.length ? `; ${partition.skipped.length} incomplete rows will be skipped` : ""}…`;
+      const saved = await CLOUD.importTcmEvents(partition.valid, {
+        source: "CrewHQ Panel and Discharges",
+        sourceFile: file.name,
+        // This file was selected by a signed-in CrewHQ user. The cloud uses
+        // this provenance flag to distinguish it from an automated feed.
+        manual: true,
+        onProgress: ({ processed, total, batch, batches }) => {
+          $("parseNote").textContent = `Retaining CRISP events… ${processed} of ${total} saved (batch ${batch} of ${batches}).`;
+        },
+      });
       RAW_ROWS = await CLOUD.listTcmEvents();
       LAST_FILE = { name: "retained hospital history", sheet: "BHW Cloud" };
       rebuild();
       $("parseNote").innerHTML = `Retained <b>${saved.retained}</b> events from “${esc(file.name)}” · ` +
-        `<b>${saved.created}</b> new · <b>${saved.updated}</b> updated · ${RAW_ROWS.length} retained events loaded.`;
+        `<b>${saved.created}</b> new · <b>${saved.updated}</b> updated${skippedText} · ${RAW_ROWS.length} retained events loaded.`;
       notifyNewEvents(saved.created);
     } else {
       rebuild();
-      $("parseNote").innerHTML = `<b>Not retained:</b> secure cloud storage is unavailable. This file is visible only for the current browser session.`;
+      $("parseNote").innerHTML = `<b>Not retained:</b> secure cloud storage is unavailable. This file is visible only for the current browser session.${skippedText}`;
     }
     $("clearBtn").disabled = false; $("csvBtn").disabled = false;
   } catch (e) {
+    const progress = e.importProgress;
+    const partial = progress?.processed
+      ? ` <b>${progress.processed} of ${progress.total}</b> rows were retained before the interruption. Retrying the same file is safe; saved events will be updated rather than duplicated.`
+      : "";
     $("parseNote").innerHTML = `Couldn't import that file: ${esc(e.message)}. ` +
-      `Confirm that it is the CRISP Panel Details export with the required columns.`;
+      `Confirm that it is the CRISP Panel Details export with the required columns.${partial}`;
   }
 }
 
@@ -281,22 +324,72 @@ async function initCloud() {
     CLOUD = await createEncounterCloudClient();
     if (!CLOUD) {
       $("cloudStatus").innerHTML = `<b>Retention unavailable:</b> the BHW cloud API is not configured.`;
+      $("cendRosterStatus").textContent = "CEND roster unavailable: the protected Patient Registry is not connected.";
       return;
     }
     $("cloudStatus").innerHTML = `<b>Secure retention connected.</b> Loading retained hospital events…`;
-    await loadRetainedEvents();
+    await Promise.all([loadRetainedEvents(), loadActiveCendRoster()]);
     window.setInterval(() => loadRetainedEvents(true), 5 * 60 * 1000);
   } catch (error) {
     CLOUD = null;
     $("cloudStatus").innerHTML = `<b>Retention unavailable:</b> ${esc(error.message)}`;
+    $("cendRosterStatus").textContent = `CEND roster unavailable: ${error.message}`;
   }
+}
+
+async function loadActiveCendRoster() {
+  $("cendRosterBtn").disabled = true;
+  $("cendRosterStatus").textContent = "Loading current active patients from the protected Patient Registry…";
+  try {
+    ACTIVE_PATIENT_REGISTRY = await CLOUD.listPatients();
+    const count = activeCendPatients(ACTIVE_PATIENT_REGISTRY).length;
+    $("cendRosterStatus").textContent = count
+      ? `${count} current active permanent patient${count === 1 ? "" : "s"} available for the CEND roster.`
+      : "No current active permanent patients are available for a CEND roster.";
+    $("cendRosterBtn").disabled = count === 0;
+  } catch (error) {
+    ACTIVE_PATIENT_REGISTRY = [];
+    $("cendRosterStatus").textContent = `CEND roster unavailable: ${error.message}`;
+  }
+}
+
+function exportActiveCendRoster() {
+  const result = buildCendRosterFile(ACTIVE_PATIENT_REGISTRY, {
+    subscriberCode: $("crispSubscriberCode").value,
+  });
+  if (!result.ok) {
+    if (result.reason === "subscriber-required") {
+      $("cendRosterStatus").textContent = "Enter the CRISP subscriber code supplied during CEND enrollment.";
+      $("crispSubscriberCode").focus();
+      return;
+    }
+    if (result.reason === "incomplete-demographics") {
+      $("cendRosterStatus").textContent = `${result.incompleteCount} active record${result.incompleteCount === 1 ? " needs" : "s need"} complete name, DOB, gender, and address demographics before export.`;
+      alert(`${result.incompleteCount} active patient record${result.incompleteCount === 1 ? " is" : "s are"} missing a name, DOB, gender, or full address. Complete those protected Patient Registry fields before exporting so CRISP does not reject the roster.`);
+      return;
+    }
+    $("cendRosterStatus").textContent = "No current active permanent patients are available for a CEND roster.";
+    return;
+  }
+
+  const blob = new Blob([result.csv], { type: "text/csv;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = result.filename;
+  document.body.appendChild(link);
+  link.click();
+  setTimeout(() => { URL.revokeObjectURL(link.href); link.remove(); }, 0);
+  $("cendRosterStatus").textContent = `${result.activeCount} active patients exported ${new Date().toLocaleString()} — upload through CRISP CEND.`;
 }
 
 async function loadRetainedEvents(silent = false) {
   if (!CLOUD) return;
   try {
     const rows = await CLOUD.listTcmEvents();
-    $("cloudStatus").innerHTML = `<b>Secure retention connected.</b> ${rows.length} hospital events retained.`;
+    const loadedLabel = rows.length === 1000
+      ? "The newest 1,000 retained hospital events are loaded."
+      : `${rows.length} retained hospital event${rows.length === 1 ? " is" : "s are"} loaded.`;
+    $("cloudStatus").innerHTML = `<b>Secure retention connected.</b> ${loadedLabel}`;
     if (!rows.length) {
       if (!silent) $("parseNote").textContent = "No retained hospital events yet. Upload the first CRISP Panel Details file.";
       return;
@@ -447,12 +540,14 @@ function renderTable() {
     <tbody>${rows.map((it) => {
       const dl = it.dl;
       const rowCls = it.category === "tcm" && dl ? (dl.callState === "passed" || dl.callState === "due-today" ? "action" : dl.windowState === "7" ? "soon" : "") : "";
-      const when = it.category === "admitted" ? (fmtDate(it.admitAt) + ' <span class="mini">adm</span>') : fmtDate(it.dischargeAt || it.admitAt);
+      const whenHtml = it.category === "admitted"
+        ? `${esc(fmtDate(it.admitAt))} <span class="mini">adm</span>`
+        : esc(fmtDate(it.dischargeAt || it.admitAt));
       return `<tr class="${rowCls}">
         <td><span class="nm">${esc(it.name)}</span><br><span class="dob">${esc(fmtDate(it.dob))}${it.gender ? " · " + esc(it.gender) : ""}</span></td>
         ${showP ? `<td>${panelCell(it)}</td>` : ""}
         <td><span class="badge b-${it.category}">${esc(CAT_LABEL[it.category] || it.category)}</span>${it.encounterType ? `<br><span class="mini">${esc(it.encounterType)}</span>` : ""}</td>
-        <td>${esc(when)}</td>
+        <td>${whenHtml}</td>
         <td>${dl ? dl.daysSince : "—"}</td>
         <td>${callCell(dl)}</td>
         <td>${visitCell(dl)}</td>
@@ -494,6 +589,7 @@ $("drop").onclick = () => $("fileInput").click();
 $("fileInput").addEventListener("change", (e) => loadFile(e.target.files[0]));
 $("alertsBtn").onclick = enableAlerts;
 $("csvBtn").onclick = toCSV;
+$("cendRosterBtn").onclick = exportActiveCendRoster;
 $("rosterBtn").onclick = () => $("rosterInput").click();
 $("rosterInput").addEventListener("change", (e) => loadRoster(e.target.files[0]));
 $("rosterForget").onclick = forgetRoster;

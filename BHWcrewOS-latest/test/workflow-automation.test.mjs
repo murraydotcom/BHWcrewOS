@@ -3,7 +3,9 @@ import test from "node:test";
 import {
   applyPatientRequestAction,
   buildGoogleChatCard,
+  canActOnRequest,
   defaultNotificationRules,
+  normalizeStaffRole,
   quietHoursState,
   resolveNotificationRule,
   sanitizeManualSms,
@@ -13,6 +15,34 @@ import { createWorkflowService } from "../cloud/operations-api/workflow-service.
 
 const USER = { sub: "crew:synthetic-ops", name: "Synthetic Operator", role: "operations-manager" };
 const NOON = new Date("2026-08-26T16:00:00.000Z");
+
+test("active CrewOS roster titles normalize to least-privilege workflow roles", () => {
+  const expected = new Map([
+    ["BH Assistant", "ma-bha"],
+    ["BH Coordinator", "care-manager"],
+    ["Medical Assistant", "ma-bha"],
+    ["CRNP/FNP", "provider"],
+    ["Porter House Admin", "front-desk"],
+    ["Office Manager", "operations-manager"],
+    ["CRNP", "provider"],
+    ["Chronic Care Manager", "care-manager"],
+  ]);
+
+  for (const [rosterTitle, workflowRole] of expected) {
+    assert.equal(normalizeStaffRole(rosterTitle), workflowRole, rosterTitle);
+  }
+});
+
+test("non-provider staff can work every request type while providers retain focused access", () => {
+  const billing = syntheticRequest("billing_rcm");
+  const referral = syntheticRequest("referral");
+  assert.equal(canActOnRequest(billing, { role: "Medical Assistant" }), true);
+  assert.equal(canActOnRequest(billing, { role: "BH Coordinator" }), true);
+  assert.equal(canActOnRequest(referral, { role: "RCM" }), true);
+  assert.equal(canActOnRequest(referral, { role: "CRNP", sub: "crew:provider" }), false);
+  assert.equal(canActOnRequest({ ...referral, status: "escalated", statusCategory: "escalated" }, { role: "CRNP", sub: "crew:provider" }), true);
+  assert.equal(canActOnRequest({ ...referral, escalationReason: "Synthetic escalation" }, { role: "CRNP", sub: "crew:provider" }), true);
+});
 
 function syntheticRequest(requestType, id = `synthetic-${requestType.replaceAll("_", "-")}`) {
   return sanitizePatientRequest({
@@ -32,7 +62,7 @@ function act(request, action, details = {}, minute = 1) {
   }, { user: USER, now: new Date(NOON.getTime() + minute * 60_000) }).request;
 }
 
-test("workflow milestones distinguish submitted/sent states from approved/scheduled outcomes", () => {
+test("workflow milestones distinguish sent/scheduled states from completed outcomes", () => {
   let refill = act(syntheticRequest("refill"), "start");
   refill = act(refill, "milestone", { status: "waiting_on_pharmacy" }, 2);
   refill = act(refill, "resolve", {}, 3);
@@ -43,8 +73,12 @@ test("workflow milestones distinguish submitted/sent states from approved/schedu
   referral = act(referral, "milestone", { status: "referral_sent" }, 2);
   assert.equal(referral.statusCategory, "waiting");
   assert.throws(() => act(referral, "resolve", {}, 3), /specific outcome/);
-  referral = act(referral, "resolve", { outcome: "scheduled" }, 4);
+  referral = act(referral, "milestone", { status: "scheduled" }, 4);
   assert.equal(referral.status, "scheduled");
+  assert.equal(referral.statusCategory, "waiting");
+  referral = act(referral, "resolve", { outcome: "referral_completed" }, 5);
+  assert.equal(referral.status, "referral_completed");
+  assert.equal(referral.statusCategory, "completed");
 
   let priorAuth = act(syntheticRequest("prior_auth"), "start");
   priorAuth = act(priorAuth, "milestone", { status: "pa_submitted" }, 2);
@@ -65,6 +99,29 @@ test("workflow milestones distinguish submitted/sent states from approved/schedu
   general = act(general, "milestone", { status: "waiting" }, 2);
   general = act(general, "resolve", {}, 3);
   assert.equal(general.status, "completed");
+});
+
+test("Care Connect check-ins create a clinician-only review workflow without patient notification", () => {
+  let review = sanitizePatientRequest({
+    id: "synthetic-checkin-review",
+    bhwPatientId: "BHW0000",
+    requestType: "clinical-review",
+    source: "care-connect",
+    sourceReference: "2026-08-30-primary",
+    summary: "Daily check-in ready for clinician review",
+    manualNotifyOnly: true,
+    notificationMode: "none",
+  }, { user: USER, now: NOON });
+  assert.equal(review.requestType, "clinical_review");
+  assert.equal(review.serviceLine, "clinical");
+  assert.equal(review.assignedTeam, "clinical");
+  assert.equal(review.status, "review_received");
+  assert.equal(review.notificationMode, "none");
+  assert.doesNotMatch(JSON.stringify(review), /symptom|vital|medication|nutrition value/i);
+  review = act(review, "start");
+  assert.equal(review.status, "review_in_progress");
+  review = act(review, "resolve", {}, 2);
+  assert.equal(review.status, "review_completed");
 });
 
 test("notification rules cover receipt, progress, waiting and terminal states without patient details", () => {
@@ -304,7 +361,7 @@ test("synthetic end-to-end transitions send through one idempotent Dialpad path 
 
   const scenarios = [
     ["refill", [{ action: "start" }, { action: "milestone", status: "waiting_on_pharmacy" }, { action: "resolve" }]],
-    ["referral", [{ action: "start" }, { action: "milestone", status: "referral_sent" }, { action: "resolve", outcome: "scheduled" }]],
+    ["referral", [{ action: "start" }, { action: "milestone", status: "referral_sent" }, { action: "milestone", status: "scheduled" }, { action: "resolve", outcome: "referral_completed" }]],
     ["prior_auth", [{ action: "start" }, { action: "milestone", status: "pa_submitted" }, { action: "resolve", outcome: "pa_approved" }]],
     ["billing_rcm", [{ action: "start" }, { action: "milestone", status: "waiting_on_payer" }, { action: "resolve" }]],
     ["general", [{ action: "start" }, { action: "milestone", status: "waiting" }, { action: "resolve" }]],

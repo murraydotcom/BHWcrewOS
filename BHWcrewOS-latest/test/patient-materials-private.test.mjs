@@ -45,8 +45,9 @@ test("patient materials inline scripts compile", () => {
 test("staff page selects a verified Patient 360 record", () => {
   assert.match(staffPage, /id="patientSearch"/);
   assert.match(staffPage, /id="patientId" required/);
-  assert.match(staffPage, /rcm-cloud-config/);
-  assert.match(staffPage, /\/v1\/patients/);
+  assert.match(staffPage, /\/\.netlify\/functions\/patient-registry/);
+  assert.match(staffPage, /JSON\.stringify\(\{action:'list'\}\)/);
+  assert.doesNotMatch(staffPage, /rcm-cloud-config/);
   assert.doesNotMatch(staffPage, /value="BHW0000"/);
 });
 

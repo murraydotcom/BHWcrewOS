@@ -3,6 +3,12 @@ const { getSession, json } = require("./_lib");
 
 const AUDIENCE = "bhw-operations-cloud";
 
+function operationsRole(session) {
+  return String(session?.access || "").trim().toLowerCase() === "admin"
+    ? "operations-manager"
+    : session?.role || "staff";
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return json(405, { ok: false, error: "POST only" });
   const session = getSession(event);
@@ -15,7 +21,7 @@ exports.handler = async (event) => {
     sub: `crew:${session.staffId}`,
     staffId: session.staffId,
     name: session.name || "CrewOS staff",
-    role: session.role || "staff",
+    role: operationsRole(session),
     iss: "bhw-crewhq",
     aud: AUDIENCE,
     iat: now,
@@ -25,3 +31,5 @@ exports.handler = async (event) => {
   const signature = crypto.createHmac("sha256", secret).update(payload).digest("base64url");
   return json(200, { ok: true, token: `${payload}.${signature}`, expiresIn: 300 });
 };
+
+exports._test = { operationsRole };

@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { readSpreadsheet, parseDelimited, detectDelimiter, sheetToObjects } from "../engine/xlsx-lite.mjs";
-import { buildWorklist, inspectCrispColumns, normalizeRecord } from "../engine/tcm-parse.mjs";
+import { buildWorklist, inspectCrispColumns, normalizeRecord, partitionTcmImportRows } from "../engine/tcm-parse.mjs";
 
 const HEADERS = [
   "First Name", "Last Name", "Gender", "Primary Care Provider", "Address", "Location",
@@ -64,4 +65,30 @@ test("upload validation rejects an unseparated header and aliases remain support
   assert.equal(record.complaint, "Chest pain");
   assert.equal(record.dxCodes, "R07.9");
   assert.equal(record.dxDesc, "Chest pain");
+});
+
+test("incomplete patient-only rows are skipped without blocking complete CRISP events", () => {
+  const valid = Object.fromEntries(HEADERS.map((header, index) => [header, ROW[index]]));
+  const incomplete = {
+    ...valid,
+    "Encounter Type": "",
+    "Admit Date / Time": "",
+    "Discharge Date / Time": "",
+  };
+  const partition = partitionTcmImportRows([valid, incomplete]);
+
+  assert.deepEqual(partition.valid, [valid]);
+  assert.deepEqual(partition.skipped, [{
+    rowNumber: 3,
+    missing: ["Encounter Type", "Admit Date / Time or Discharge Date / Time"],
+  }]);
+});
+
+test("admitted dates render the adm label instead of escaped HTML", async () => {
+  const html = await readFile(new URL("../provider/tcm.html", import.meta.url), "utf8");
+
+  assert.match(html, /const whenHtml = it\.category === "admitted"[\s\S]{0,180}<span class="mini">adm<\/span>/);
+  assert.match(html, /<td>\$\{whenHtml\}<\/td>/);
+  assert.doesNotMatch(html, /<td>\$\{esc\(when(?:Html)?\)\}<\/td>/);
+  assert.match(html, /The newest 1,000 retained hospital events are loaded\./);
 });

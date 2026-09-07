@@ -1,8 +1,30 @@
 import { createEncounterCloudClient } from "./cloud-queue.mjs";
 import { BODY_PROFILES, patientBodyProfile } from "./patient-360-body-profile.mjs";
+import { CLINICAL_TIMELINE_CATEGORIES, clinicalTimelineCounts, clinicalTimelineEvents } from "./patient-360-timeline.mjs";
 
-const PATIENT_ID = "BHW0000";
+const requestedPatientId = new URLSearchParams(location.search).get("patient") || "";
+const PATIENT_ID = /^BHW\d{4}$/.test(requestedPatientId) ? requestedPatientId : "BHW0000";
 const THEME_KEY = "bhw_provider_theme_v1";
+const ATLAS_EVIDENCE_CODES = ["D", "S", "H", "A", "I", "R", "U"];
+const ATLAS_SYSTEMS = [
+  { id: "brain-neurologic-cognition", label: "Brain / neurologic / cognition", aliases: ["brain", "neuro", "nervous system", "cognition", "stress regulation"] },
+  { id: "eyes-ears-ent", label: "Eyes / ears / ENT", aliases: ["eyes", "ears", "ent", "upper airway"] },
+  { id: "heart-vascular-lungs", label: "Heart / vascular / lungs", aliases: ["heart", "vascular", "blood vessels", "circulation", "lungs", "cardiopulmonary"] },
+  { id: "gi-liver-pancreas", label: "GI / liver / pancreas", aliases: ["gi", "gastro", "liver", "pancreas", "microbiome"] },
+  { id: "endocrine-metabolic", label: "Endocrine / metabolic", aliases: ["endocrine", "energy & metabolism", "metabolic", "hormone regulation"] },
+  { id: "renal-gu", label: "Renal / GU", aliases: ["renal", "kidney", "genitourinary", "urinary"] },
+  { id: "immune-inflammatory-infectious", label: "Immune / inflammatory / infectious", aliases: ["immune", "inflamm", "infectious", "infection"] },
+  { id: "musculoskeletal-pain-spine", label: "Musculoskeletal / pain / spine", aliases: ["musculoskeletal", "pain", "spine", "joint", "muscle"] },
+  { id: "skin-barrier", label: "Skin / barrier", aliases: ["skin", "hair", "barrier", "dermat"] },
+  { id: "reproductive-hormonal", label: "Reproductive / hormonal", aliases: ["reproductive", "sexual health", "gynec", "menstrual"] },
+  { id: "behavioral-health-sud", label: "Behavioral health / SUD", aliases: ["behavioral", "substance", "sud", "mental health"] },
+  { id: "whole-body-other", label: "Whole-body / other", aliases: ["whole-body", "whole body", "other", "function"] },
+];
+let cloudClient = null;
+let activeRecord = null;
+let activeWorkflowConnection = { connected: false, encounters: [] };
+let activeAtlasConnection = { connected: false, workspace: null };
+let healthCoreClient = null;
 const $ = (id) => document.getElementById(id);
 const esc = (value) => String(value ?? "").replace(/[&<>\"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[character]));
 const compact = (values) => values.filter((value) => value !== null && value !== undefined && String(value).trim() !== "");
@@ -74,7 +96,7 @@ function ageText(birthDate) {
 }
 
 function normalizePatientName(name = {}) {
-  const raw = compact([...(name.given || []), name.family]).join(" ") || "Synthetic Patient";
+  const raw = compact([...(name.given || []), name.family, ...(name.suffix || [])]).join(" ") || "Synthetic Patient";
   return raw.replace(/\b(\w+)\s+\1\b/gi, "$1");
 }
 
@@ -133,6 +155,58 @@ function systemCards(systems) {
 
 function timelineItems(timeline) {
   return list(timeline, (event) => `<article class="timeline-item"><b>${esc(event.label || event.type || "Timeline event")}</b><div class="meta">${esc(event.type || "Event")} - ${esc(dateText(event.date))}</div>${event.physiologicDomains?.length ? `<div class="timeline-tags">${event.physiologicDomains.map((domain) => `<span>${esc(statusText(domain))}</span>`).join("")}</div>` : ""}</article>`, "No high-value turning points are available yet.");
+}
+
+function timelineCategoryLabel(category) {
+  return CLINICAL_TIMELINE_CATEGORIES.find((item) => item.id === category)?.label || "Clinical milestone";
+}
+
+function clinicalTimelineDetail(event, resources) {
+  const resource = resources.find((item) => item.resourceType === event.type && item.id === event.resourceId);
+  if (!resource) return event.summary || event.detail || "Further clinical detail is not connected to this timeline entry.";
+  if (resource.resourceType === "Condition") {
+    return compact([
+      resource.clinicalStatus?.coding?.[0]?.code ? `Status: ${statusText(resource.clinicalStatus.coding[0].code)}` : "",
+      resource.onsetDateTime ? `Onset: ${dateText(resource.onsetDateTime)}` : "",
+      resource.note?.[0]?.text,
+    ]).join(" · ") || "Diagnosis details are not connected.";
+  }
+  if (resource.resourceType === "Observation") return observationDetail(resource);
+  if (resource.resourceType === "MedicationRequest") return compact([statusText(resource.status), resource.dosageInstruction?.[0]?.text]).join(" · ");
+  if (resource.resourceType === "Encounter") return compact([statusText(resource.status), resource.type?.[0] ? conceptText(resource.type[0]) : ""]).join(" · ");
+  return event.summary || event.detail || compact([resource.status, resource.interpretation?.[0]?.text]).map(statusText).join(" · ") || "Clinical detail is not connected.";
+}
+
+function clinicalTimelineItems(events, resources) {
+  if (!events.length) return `<div class="empty-note" data-timeline-empty>No diagnosis, flare-up, life/function, imaging/result, treatment, hospital or procedure event is connected yet. Blank means undocumented or not connected - not clinically absent.</div>`;
+  return events.map((event) => `<article class="timeline-item category-${esc(event.clinicalCategory)}" data-timeline-event="${esc(event.clinicalCategory)}"><div class="timeline-item-head"><span class="timeline-category">${esc(timelineCategoryLabel(event.clinicalCategory))}</span><time>${esc(dateText(event.date))}</time></div><b>${esc(event.label || event.title || event.type || "Clinical milestone")}</b><p>${esc(clinicalTimelineDetail(event, resources))}</p>${event.physiologicDomains?.length ? `<div class="timeline-tags">${event.physiologicDomains.map((domain) => `<span>${esc(statusText(domain))}</span>`).join("")}</div>` : ""}</article>`).join("");
+}
+
+function clinicalTimelineControls(events) {
+  const counts = clinicalTimelineCounts(events);
+  const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
+  return `<div class="timeline-controls" role="group" aria-label="Filter clinical timeline"><button class="timeline-filter active" type="button" data-timeline-filter="all" aria-pressed="true">All clinical <span>${total}</span></button>${CLINICAL_TIMELINE_CATEGORIES.map(({ id, label }) => `<button class="timeline-filter" type="button" data-timeline-filter="${esc(id)}" aria-pressed="false">${esc(label)} <span>${counts[id]}</span></button>`).join("")}</div>`;
+}
+
+function wireClinicalTimeline() {
+  const filters = [...document.querySelectorAll("[data-timeline-filter]")];
+  const events = [...document.querySelectorAll("[data-timeline-event]")];
+  const empty = $("timeline-filter-empty");
+  for (const filter of filters) filter.addEventListener("click", () => {
+    const selected = filter.dataset.timelineFilter;
+    let visible = 0;
+    for (const event of events) {
+      const show = selected === "all" || event.dataset.timelineEvent === selected;
+      event.hidden = !show;
+      if (show) visible += 1;
+    }
+    for (const button of filters) {
+      const active = button === filter;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
+    }
+    if (empty) empty.hidden = visible !== 0;
+  });
 }
 
 function mechanismMap(clinicalImpressions) {
@@ -214,9 +288,9 @@ function renderLegacy(record) {
 
   $("content").innerHTML = `
     <section class="navigator-hero" id="overview">
-      <div class="hero-grid"><div><div class="eyebrow">PSCM Complex Patient Navigator - longitudinal Health Core record</div><h1>${esc(displayName)}</h1><p class="subtitle">A source-traceable physiologic systems view of what happened, what remains active, what has not been assessed, and what the care team needs to decide next.</p>
+      <div class="hero-grid"><div><h1>${esc(displayName)}</h1><p class="subtitle">A source-traceable physiologic systems view of what happened, what remains active, what has not been assessed, and what the care team needs to decide next.</p>
         <div class="patient-meta"><div><span>BHW Patient ID</span><b>${esc(record.bhwPatientId)}</b></div><div><span>DOB / Age</span><b>${esc(patient.birthDate || "not recorded")} / ${esc(ageText(patient.birthDate))}</b></div><div><span>Record generated</span><b>${esc(dateText(record.generatedAt, true))}</b></div><div><span>Primary source</span><b>BHW Health Core</b></div></div>
-      </div><aside class="hero-aside"><h2>Working synthesis</h2><p>Every displayed fact should remain linked to its source. Hypotheses, missing information and patient priorities stay visibly separate from verified clinical facts.</p><div class="badge-row">${badge("FHIR R4-shaped")}${badge("synthetic only")}</div><div class="confidence"><b>${urgentItems.length ? `${urgentItems.length} structured urgent item(s)` : "No structured escalation flag returned"}</b><br>This is not a clinical clearance. Confirm safety and urgency against the source record.</div></aside></div>
+      </div><aside class="hero-aside"><h2>Working synthesis</h2><p>Every displayed fact should remain linked to its source. Hypotheses, missing information and patient priorities stay visibly separate from verified clinical facts.</p><div class="confidence"><b>${urgentItems.length ? `${urgentItems.length} structured urgent item(s)` : "No structured escalation flag returned"}</b><br>This is not a clinical clearance. Confirm safety and urgency against the source record.</div></aside></div>
     </section>
     <nav class="jump-nav" aria-label="Patient 360 sections"><a href="#overview">Overview</a><a href="#atlas">Body-system atlas</a><a href="#timeline">Timeline</a><a href="#mechanism">Mechanism map</a><a href="#context">Context</a><a href="#snapshot">Snapshot & plan</a><a href="#data">Clinical data</a><a href="#sources">Sources</a></nav>
     <div class="safe-notice"><b>Safe pilot record:</b> this page is locked to BHW0000 and does not query a real patient or production Firestore. ${sourceOmitted} restricted synthetic source record(s) and ${frontendOmitted} additional presentation item(s) were withheld. Blank sections mean not documented or not connected - never "normal" or "absent."</div>
@@ -285,12 +359,13 @@ const PAGE_LINKS = [
 ];
 
 function pageNavigation(view) {
-  return `<nav class="page-nav" aria-label="Patient 360 pages">${PAGE_LINKS.map(([key, label, href]) => `<a class="${key === view ? "active" : ""}" ${key === view ? 'aria-current="page"' : ""} href="${href}">${esc(label)}</a>`).join("")}</nav>`;
+  const patientQuery = `?patient=${encodeURIComponent(PATIENT_ID)}`;
+  return `<nav class="page-nav" aria-label="Patient 360 pages">${PAGE_LINKS.map(([key, label, href]) => `<a class="${key === view ? "active" : ""}" ${key === view ? 'aria-current="page"' : ""} href="${href}${patientQuery}">${esc(label)}</a>`).join("")}</nav>`;
 }
 
 function fullHero(context) {
   const { record, patient, displayName, urgentItems } = context;
-  return `<section class="navigator-hero"><div class="hero-grid"><div><div class="eyebrow">PSCM Complex Patient Navigator - Health 360 overview</div><h1>${esc(displayName)}</h1><p class="subtitle">A concise, source-aware summary of the whole person with direct paths into the detailed longitudinal record.</p><div class="patient-meta"><div><span>BHW Patient ID</span><b>${esc(record.bhwPatientId || PATIENT_ID)}</b></div><div><span>DOB / age</span><b>${esc(patient.birthDate || "not recorded")} / ${esc(ageText(patient.birthDate))}</b></div><div><span>Record generated</span><b>${esc(dateText(record.generatedAt, true))}</b></div><div><span>Primary source</span><b>BHW Health Core</b></div></div></div><aside class="hero-aside"><h2>Working synthesis</h2><p>Verified facts, hypotheses, missing information and patient priorities remain visibly separate.</p><div class="badge-row">${badge("FHIR R4-shaped")}${badge("synthetic only")}</div><div class="confidence"><b>${urgentItems.length ? `${urgentItems.length} structured escalation flag(s)` : "No structured escalation flag returned"}</b><br>This is not clinical clearance. Confirm safety and urgency against the source record.</div></aside></div></section>`;
+  return `<section class="navigator-hero"><div class="hero-grid"><div><h1>${esc(displayName)}</h1><p class="subtitle">A concise, source-aware summary of the whole person with direct paths into the detailed longitudinal record.</p><div class="patient-meta"><div><span>BHW Patient ID</span><b>${esc(record.bhwPatientId || PATIENT_ID)}</b></div><div><span>DOB / age</span><b>${esc(patient.birthDate || "not recorded")} / ${esc(ageText(patient.birthDate))}</b></div><div><span>Record generated</span><b>${esc(dateText(record.generatedAt, true))}</b></div><div><span>Primary source</span><b>BHW Health Core</b></div></div></div><aside class="hero-aside"><h2>Working synthesis</h2><p>Verified facts, hypotheses, missing information and patient priorities remain visibly separate.</p><div class="confidence"><b>${urgentItems.length ? `${urgentItems.length} structured escalation flag(s)` : "No structured escalation flag returned"}</b><br>This is not clinical clearance. Confirm safety and urgency against the source record.</div></aside></div></section>`;
 }
 
 function compactHeader(context) {
@@ -300,7 +375,18 @@ function compactHeader(context) {
 
 function safeNotice(context) {
   const { sourceOmitted, frontendOmitted } = context;
-  return `<div class="safe-notice"><b>Safe pilot record:</b> locked to BHW0000 with no real-patient or production Firestore query. ${sourceOmitted} restricted source record(s) and ${frontendOmitted} additional presentation item(s) were withheld. Blank sections mean not documented or not connected - never "normal" or "absent."</div>`;
+  const scopeMessage = PATIENT_ID === "BHW0000"
+    ? "<b>Safe pilot record:</b> locked to BHW0000 with no real-patient record query. Protected synthetic workflow evidence may be loaded from Health Core."
+    : "<b>Patient-scoped clinical view:</b> Health Core released only the selected BHW Patient ID to this authorized CrewHQ session.";
+  return `<div class="safe-notice">${scopeMessage} ${sourceOmitted} restricted source record(s) and ${frontendOmitted} additional presentation item(s) were withheld. Blank sections mean not documented or not connected - never "normal" or "absent."</div>`;
+}
+
+function preservePatientLinks(root = document) {
+  root.querySelectorAll('a[href^="patient-360"]').forEach((anchor) => {
+    const url = new URL(anchor.getAttribute("href"), location.href);
+    url.searchParams.set("patient", PATIENT_ID);
+    anchor.setAttribute("href", `${url.pathname.split("/").pop()}${url.search}${url.hash}`);
+  });
 }
 
 function overviewPageLegacy(context) {
@@ -354,7 +440,7 @@ function bodyFigure(context) {
   const bodyDisplay = bodyProfile
     ? `<input class="outline-radio" type="radio" name="body-view" id="body-view-front" checked><input class="outline-radio" type="radio" name="body-view" id="body-view-back"><div class="outline-picker" aria-label="Body view"><label for="body-view-front">Front</label><label for="body-view-back">Back</label></div><div class="body-image-stage ${bodyProfile.sex}" role="img" aria-label="${bodyProfile.label} body outline"><div class="body-image body-view-front"><img src="${bodyProfile.asset}" alt=""></div><div class="body-image body-view-back"><img src="${bodyProfile.asset}" alt=""></div><div class="body-focus-marker" aria-hidden="true"></div></div>`
     : `<input class="outline-radio" type="radio" name="body-view" id="body-view-front" checked><input class="outline-radio" type="radio" name="body-view" id="body-view-back"><div class="outline-picker" aria-label="Body view"><label for="body-view-front">Front</label><label for="body-view-back">Back</label></div><div class="body-outline-pair" role="group" aria-label="Male and female body outlines">${BODY_PROFILES.map((profile) => `<div class="body-outline-option"><span>${profile.label} outline</span><div class="body-mini-stage ${profile.sex}" role="img" aria-label="${profile.label} body outline"><div class="body-image body-view-front"><img src="${profile.asset}" alt=""></div><div class="body-image body-view-back"><img src="${profile.asset}" alt=""></div></div></div>`).join("")}</div>`;
-  return `<div class="body-center"><div class="body-caption"><span>Whole-person atlas · ${esc(bodyProfile ? `${bodyProfile.label} outline` : "both outlines available")}</span><b>${activeSystems.length ? `${activeSystems.length} active system focus` : "No active system focus returned"}</b></div>${bodyDisplay}${bodyProfile ? "" : '<p class="body-outline-note">Gender is not specified or they/them pronouns are selected, so both outline sets remain available.</p>'}<div class="body-focus-copy"><b>${esc(focus?.label || "Body-system focus not documented")}</b><span>${esc(focus?.summary || "Open the atlas to review documented and unassessed systems.")}</span><a href="patient-360-atlas.html">Open full body-system atlas</a></div></div>`;
+  return `<div class="body-center"><div class="body-caption"><span>Whole-person atlas · ${esc(bodyProfile ? `${bodyProfile.label} outline` : "both outlines available")}</span><b>${activeSystems.length ? `${activeSystems.length} active system focus` : "No active system focus returned"}</b></div>${bodyDisplay}<div class="body-focus-copy"><b>${esc(focus?.label || "Body-system focus not documented")}</b><span>${esc(focus?.summary || "Open the atlas to review documented and unassessed systems.")}</span><a href="patient-360-atlas.html">Open full body-system atlas</a></div></div>`;
 }
 
 function evidenceCodes(value) {
@@ -422,28 +508,20 @@ function sweepCell(entries, emptyText) {
 }
 
 function bodySystemSweepRows(context) {
-  const definitions = [
-    ["Brain / neurologic / cognition", ["brain", "neuro", "nervous system", "cognition", "stress regulation"]],
-    ["Eyes / ears / ENT", ["eyes", "ears", "ent", "upper airway"]],
-    ["Heart / vascular / lungs", ["heart", "vascular", "blood vessels", "circulation", "lungs", "cardiopulmonary"]],
-    ["GI / liver / pancreas", ["gi", "gastro", "liver", "pancreas", "microbiome"]],
-    ["Endocrine / metabolic", ["endocrine", "energy & metabolism", "metabolic", "hormone regulation"]],
-    ["Renal / GU", ["renal", "kidney", "genitourinary", "urinary"]],
-    ["Immune / inflammatory / infectious", ["immune", "inflamm", "infectious", "infection"]],
-    ["Musculoskeletal / pain / spine", ["musculoskeletal", "pain", "spine", "joint", "muscle"]],
-    ["Skin / barrier", ["skin", "hair", "barrier", "dermat"]],
-    ["Reproductive / hormonal", ["reproductive", "sexual health", "gynec", "menstrual"]],
-    ["Behavioral health / SUD", ["behavioral", "substance", "sud", "mental health"]],
-    ["Whole-body / other", ["whole-body", "whole body", "other", "function"]],
-  ];
-  return definitions.map(([label, aliases]) => {
+  const approvedSweep = new Map((context.atlasConnection?.workspace?.approved?.content?.systemSweep || []).map((item) => [item.id, item]));
+  return ATLAS_SYSTEMS.map(({ id, label, aliases }) => {
     const systems = context.systems.filter((system) => aliases.some((alias) => String(system.label || "").toLowerCase().includes(alias)));
     const relatedConditions = context.conditions.filter((condition) => matchesSystem(condition, aliases));
-    const past = relatedConditions.filter((condition) => /resolved|inactive|remission|history/.test(itemState(condition).toLowerCase())).map((condition) => ({
+    const approved = approvedSweep.get(id);
+    const past = [
+      ...(approved?.past ? [{ text: approved.past, codes: approved.pastEvidenceCodes || ["D"] }] : []),
+      ...relatedConditions.filter((condition) => /resolved|inactive|remission|history/.test(itemState(condition).toLowerCase())).map((condition) => ({
       text: compact([conceptText(condition.code), condition.onsetDateTime ? `onset ${dateText(condition.onsetDateTime)}` : ""]).join(" · "),
       codes: evidenceCodes(itemState(condition) || "historical"),
-    }));
+      })),
+    ];
     const now = [
+      ...(approved?.now ? [{ text: approved.now, codes: approved.nowEvidenceCodes || ["D"] }] : []),
       ...systems.filter((system) => String(system.status || "").toLowerCase() !== "not-assessed").map((system) => ({
         text: compact([system.summary, system.focus?.length ? `Focus: ${system.focus.join("; ")}` : ""]).join(" · ") || "Structured system entry returned without a summary.",
         codes: evidenceCodes(system.status || "documented"),
@@ -463,14 +541,26 @@ function bodySiteTexts(item) {
 }
 
 function locationEvents(context) {
-  const events = [...context.conditions, ...context.observations, ...context.procedures].flatMap((item) => bodySiteTexts(item).map((location) => ({
+  const approvedEvents = (context.atlasConnection?.workspace?.approved?.content?.locationEvents || []).map((item) => ({
+    date: item.date || "",
+    location: item.location,
+    finding: item.finding,
+    state: item.status || "documented",
+    evidenceCodes: item.evidenceCodes || [],
+    view: item.view,
+    x: item.x,
+    y: item.y,
+    source: "Provider-approved Atlas",
+  }));
+  const pulledEvents = [...context.conditions, ...context.observations, ...context.procedures].flatMap((item) => bodySiteTexts(item).map((location) => ({
     date: item.onsetDateTime || item.recordedDate || item.effectiveDateTime || item.performedDateTime || item.issued || item.authoredOn || "",
     location,
     finding: item.resourceType === "Condition" ? conceptText(item.code) : titleText(item),
     state: itemState(item) || "documented",
+    source: item.resourceType,
   })));
   const seen = new Set();
-  return events.filter((event) => {
+  return [...approvedEvents, ...pulledEvents].filter((event) => {
     const key = `${event.date}|${event.location}|${event.finding}`;
     if (seen.has(key)) return false;
     seen.add(key);
@@ -495,7 +585,12 @@ function bodyMarkerPosition(location) {
 }
 
 function bodyMarkers(events, view) {
-  return events.map((event) => ({ event, position: bodyMarkerPosition(event.location) })).filter(({ position }) => position.view === view).map(({ event, position }) => `<span class="atlas-map-marker" style="left:${position.x}px;top:${position.y}px" title="${esc(`${event.number}. ${event.location}: ${event.finding}`)}">${event.number}</span>`).join("");
+  return events.map((event) => ({
+    event,
+    position: Number.isFinite(Number(event.x)) && Number.isFinite(Number(event.y))
+      ? { view: event.view || "anterior", x: Number(event.x), y: Number(event.y), normalized: true }
+      : bodyMarkerPosition(event.location),
+  })).filter(({ position }) => position.view === view).map(({ event, position }) => `<span class="atlas-map-marker" style="left:${position.normalized ? `${position.x / 10}%` : `${position.x}px`};top:${position.normalized ? `${position.y / 10}%` : `${position.y}px`}" title="${esc(`${event.number}. ${event.location}: ${event.finding}`)}">${event.number}</span>`).join("");
 }
 
 function ctlsRegion(location) {
@@ -520,7 +615,7 @@ function anatomicalLocationMap(context) {
     `<article class="atlas-map-card"><h4>${profile ? "Anterior" : `${item.label} · Anterior`}</h4><div class="atlas-anatomy-stage ${item.sex}"><div class="body-image atlas-anterior"><img src="${item.asset}" alt=""></div>${bodyMarkers(events, "anterior")}</div></article>`,
     `<article class="atlas-map-card"><h4>${profile ? "Posterior" : `${item.label} · Posterior`}</h4><div class="atlas-anatomy-stage ${item.sex}"><div class="body-image atlas-posterior"><img src="${item.asset}" alt=""></div>${bodyMarkers(events, "posterior")}</div></article>`,
   ]).join("");
-  const rows = events.length ? events.map((event) => `<tr><td><span class="atlas-number-key">${event.number}</span></td><td>${esc(dateText(event.date))}</td><td>${esc(event.location)}</td><td>${esc(event.finding)}</td><td>${evidencePills(evidenceCodes(event.state))}<span>${esc(statusText(event.state))}</span></td></tr>`).join("") : `<tr><td colspan="5" class="atlas-table-empty">No structured anatomical body-site events are connected. Add only source-documented locations.</td></tr>`;
+  const rows = events.length ? events.map((event) => `<tr><td><span class="atlas-number-key">${event.number}</span></td><td>${esc(dateText(event.date))}</td><td>${esc(event.location)}</td><td>${esc(event.finding)}${event.source ? `<small class="atlas-source-label">${esc(event.source)}</small>` : ""}</td><td>${evidencePills(event.evidenceCodes?.length ? event.evidenceCodes : evidenceCodes(event.state))}<span>${esc(statusText(event.state))}</span></td></tr>`).join("") : `<tr><td colspan="5" class="atlas-table-empty">No structured anatomical body-site events are connected. Add only source-documented locations.</td></tr>`;
   return `<div class="atlas-map-grid">${bodyCards}<article class="atlas-map-card"><h4>CTLS <small>number each mark to the key</small></h4>${ctlsSchematic(events)}</article></div><div class="atlas-location-key"><h4>Location event key</h4><div class="table-wrap"><table class="atlas-location-table"><thead><tr><th>#</th><th>Date</th><th>Location</th><th>Event / finding</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
 }
 
@@ -553,20 +648,168 @@ function visitDocumentationPanel(context, { full = false } = {}) {
   return `<section class="panel visit-documentation"><div class="panel-head"><div><h3>Visit documentation</h3><span class="panel-subtitle">Automatically matched from the 24-Hour Work Queue by BHW Patient ID</span></div><a class="btn" href="workflow.html">Open 24-Hour Documentation</a></div><div class="panel-body">${content}<div class="record-boundary"><b>Record boundary</b><span>This is a read-only attachment for longitudinal review. CharmHealth remains the legal medical record; a saved Charm draft is not the same as a signed note.</span></div></div></section>`;
 }
 
+function preventiveMeasures(preventiveCare = {}) {
+  return Array.isArray(preventiveCare.measures) ? preventiveCare.measures : [];
+}
+
+function preventiveCarePanel(preventiveCare = {}) {
+  const measures = preventiveMeasures(preventiveCare);
+  const crisp = preventiveCare.crisp || {};
+  const rows = measures.map((measure) => `<tr><td><b>${esc(measure.label || measure.measureId)}</b><br><small>${esc(measure.eligibilityBasis || "Eligibility requires review")}</small></td><td>${esc(statusText(measure.status || "needs-review"))}</td><td>${esc(dateText(measure.lastCompletedAt))}</td><td>${esc(dateText(measure.nextDueAt))}</td><td>${esc(measure.sourceSystem || "Health Core rules")}</td><td><b>${esc(measure.visitAction?.label || "Review at visit")}</b><br><small>Provider approval required · no automatic order</small></td></tr>`).join("");
+  return `<section class="panel" style="margin-top:15px"><div class="panel-head"><div><h3>Preventive care &amp; health screenings</h3><span class="panel-subtitle">Age, documented anatomy/history, condition, and source evidence remain separate and reviewable</span></div><span class="badge warning">Provider review only</span></div><div class="panel-body"><div class="source-strip"><div class="source-cell"><span>CRISP state</span><b>${esc(crisp.connectionState || "not connected")}</b></div><div class="source-cell"><span>CRISP evidence</span><b>${esc(crisp.evidenceCount || 0)}</b></div><div class="source-cell"><span>Last source update</span><b>${esc(dateText(crisp.lastUpdatedAt))}</b></div><div class="source-cell"><span>Automation</span><b>Orders disabled</b></div></div><div class="table-wrap" style="margin-top:14px"><table><thead><tr><th>Measure / eligibility</th><th>Status</th><th>Last completed</th><th>Next due</th><th>Source</th><th>Visit action</th></tr></thead><tbody>${rows || `<tr><td colspan="6">No preventive measure status is connected.</td></tr>`}</tbody></table></div><div class="record-boundary"><b>Evidence boundary</b><span>CRISP can confirm or supplement a completion. A missing CRISP row does not prove the service was not done, and a suggested visit action is not an order or referral.</span></div></div></section>`;
+}
+
+const checkinLabels = Object.freeze({
+  feeling: "Feeling", motivation: "Motivation", sleep: "Sleep", movement: "Movement",
+  outside: "Time outside", people: "Social connection", nutrition: "Nutrition plan",
+  bp: "Blood pressure", hr: "Heart rate", wt: "Weight", glu: "Glucose",
+  temp: "Temperature", o2: "Oxygen saturation", steps: "Steps",
+  p: "Protein", c: "Carbohydrate", f: "Fat", fiber: "Fiber", sugar: "Sugar",
+  sodium: "Sodium", vitd: "Vitamin D", vitc: "Vitamin C", iron: "Iron",
+  calcium: "Calcium", potassium: "Potassium", magnesium: "Magnesium",
+});
+
+const checkinUnits = Object.freeze({
+  hr: "bpm", wt: "lb", glu: "mg/dL", temp: "°F", o2: "%",
+  p: "g", c: "g", f: "g", fiber: "g", sugar: "g", sodium: "mg",
+  vitd: "µg", vitc: "mg", iron: "mg", calcium: "mg", potassium: "mg", magnesium: "mg",
+});
+
+function checkinPairs(value = {}, units = {}) {
+  return Object.entries(value || {}).filter(([, item]) => item !== "" && item !== null && item !== undefined).map(([key, item]) =>
+    `<li><span>${esc(checkinLabels[key] || statusText(key))}</span><b>${esc(item)}${units[key] ? ` ${esc(units[key])}` : ""}</b></li>`).join("");
+}
+
+function checkinList(title, values = [], empty = "Nothing reported in this section.") {
+  const items = Array.isArray(values) ? values.filter(Boolean) : [];
+  return `<div class="checkin-clinical-block"><span>${esc(title)}</span>${items.length ? `<ul>${items.map((item) => `<li>${esc(item)}</li>`).join("")}</ul>` : `<p>${esc(empty)}</p>`}</div>`;
+}
+
+function monitoringAnswerBlocks(checkin, catalog = []) {
+  const definitions = new Map(catalog.map((module) => [module.id, module]));
+  const responses = Array.isArray(checkin.moduleResponses) ? checkin.moduleResponses : [];
+  return responses.map((response) => {
+    const module = definitions.get(response.moduleId) || {};
+    const questions = new Map((module.questions || []).map((question) => [question.id, question.prompt]));
+    const rows = Object.entries(response.answers || {}).map(([questionId, answer]) => {
+      const value = Array.isArray(answer) ? answer.join(", ") : answer;
+      return `<li><span>${esc(questions.get(questionId) || statusText(questionId))}</span><b>${esc(value)}</b></li>`;
+    }).join("");
+    return rows ? `<div class="checkin-clinical-block monitoring-response-block"><span>${esc(module.title || "Program focus")}</span><ul class="checkin-pairs">${rows}</ul></div>` : "";
+  }).join("");
+}
+
+function patientCheckinCard(checkin, monitoringCatalog = []) {
+  const reviewState = checkin.review?.state || "pending-clinician-review";
+  const reviewSignals = Array.isArray(checkin.reviewSignals) ? checkin.reviewSignals : [];
+  const well = checkinPairs(checkin.well);
+  const vitals = checkinPairs(checkin.vitals);
+  const nutrition = checkinPairs(checkin.nutrition, checkinUnits);
+  return `<article class="patient-checkin-card">
+    <div class="patient-checkin-head"><div><span>${esc(statusText(checkin.program || "program"))}</span><b>${esc(dateText(checkin.submittedAt || checkin.date, true))}</b></div><div class="patient-checkin-statuses">${reviewSignals.some((signal) => signal.priority === "same-day") ? badge("high", "same-day review") : ""}${badge(reviewState)}</div></div>
+    <div class="patient-checkin-facts"><span><b>${esc(checkin.waterCups ?? 0)}</b> water cup(s)</span><span><b>${esc((checkin.foods || []).length)}</b> food item(s)</span><span><b>${esc((checkin.medicationsTaken || []).length)}</b> medication response(s)</span></div>
+    <div class="patient-checkin-grid">
+      <div class="checkin-clinical-block"><span>Daily pattern</span>${well ? `<ul class="checkin-pairs">${well}</ul>` : "<p>Nothing reported in this section.</p>"}</div>
+      ${checkinList("Symptoms reported", checkin.symptoms)}
+      <div class="checkin-clinical-block"><span>Patient-entered readings</span>${vitals ? `<ul class="checkin-pairs">${vitals}</ul>` : "<p>No readings entered.</p>"}</div>
+      ${checkinList("Medications marked taken", checkin.medicationsTaken)}
+      ${checkinList("Food log", checkin.foods)}
+      <div class="checkin-clinical-block"><span>Nutrition totals</span>${nutrition ? `<ul class="checkin-pairs">${nutrition}</ul>` : "<p>No nutrition totals recorded.</p>"}</div>
+      ${monitoringAnswerBlocks(checkin, monitoringCatalog)}
+    </div>
+    ${reviewSignals.length ? `<div class="checkin-review-signals"><b>Review focus</b>${reviewSignals.map((signal) => `<span>${esc(signal.note || statusText(signal.questionId))}</span>`).join("")}</div>` : ""}
+    <div class="record-boundary"><b>Source</b><span>Patient-entered in BHW Care Connect. Values are displayed from Health Core and have not been interpreted here.</span></div>
+  </article>`;
+}
+
+function patientCheckinPanel(context, { full = false } = {}) {
+  const checkins = context.patientCheckins;
+  const pending = checkins.filter((item) => (item.review?.state || "pending-clinician-review") === "pending-clinician-review").length;
+  const displayed = checkins.slice(0, full ? 30 : 1);
+  return `<section class="panel patient-checkins"><div class="panel-head"><div><h3>Patient check-ins</h3><span class="panel-subtitle">Patient-entered details from Care Connect, stored in Health Core</span></div><div class="panel-actions">${badge(pending ? "pending" : "reviewed", pending ? `${pending} awaiting review` : "No pending review")}<a class="btn" href="/bhw-patient-monitor-list.html">Patient monitoring</a></div></div><div class="panel-body">${displayed.length ? displayed.map((checkin) => patientCheckinCard(checkin, context.monitoringModuleCatalog)).join("") : `<div class="empty-note">No Care Connect check-in is connected for this patient.</div>`}${!full && checkins.length > 1 ? `<a class="more-note" href="patient-360-data.html?patient=${encodeURIComponent(PATIENT_ID)}">Open all ${checkins.length} check-ins in Clinical Data</a>` : ""}</div></section>`;
+}
+
+const monitoringProgramLabels = Object.freeze({
+  mind: "Mind & Mood Recovery",
+  charmed: "CharmEd Minds · Brain Health & Neurodivergence",
+});
+
+function monitoringPlanEditor(program, context) {
+  const plan = context.monitoringPlans.find((item) => item.program === program) || {};
+  const selectedModules = new Map((plan.modules || []).map((module) => [module.moduleId, module]));
+  const catalog = context.monitoringModuleCatalog.filter((module) => module.program === program);
+  const status = plan.status || "draft";
+  const statusOptions = [["draft","Draft"],["active","Active · clinician approved"],["paused","Paused"]]
+    .map(([value,label]) => `<option value="${value}"${status === value ? " selected" : ""}>${label}</option>`).join("");
+  const modules = catalog.map((module) => {
+    const selected = selectedModules.get(module.id);
+    const enabled = selected?.enabled !== false && Boolean(selected);
+    const selectedQuestions = new Set(selected?.questionIds || module.questions.map((question) => question.id));
+    const questions = module.questions.map((question) => `<label class="monitoring-question-choice"><input type="checkbox" data-monitoring-question="${esc(question.id)}"${selectedQuestions.has(question.id) ? " checked" : ""}><span>${esc(question.prompt)}</span></label>`).join("");
+    const weeklyDay = Number.isInteger(selected?.dayOfWeek) ? selected.dayOfWeek : 4;
+    const dayOptions = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"].map((label,index) => `<option value="${index}"${weeklyDay === index ? " selected" : ""}>${label}</option>`).join("");
+    return `<article class="monitoring-module-control" data-monitoring-module="${esc(module.id)}"><label class="monitoring-module-toggle"><input type="checkbox" data-monitoring-module-enabled${enabled ? " checked" : ""}><span><b>${esc(module.title)}</b><small>${esc(module.description)}</small></span></label>${module.cadence === "weekly" ? `<label class="monitoring-day">Weekly day<select data-monitoring-day>${dayOptions}</select></label>` : `<span class="monitoring-cadence">Daily</span>`}<details${enabled ? " open" : ""}><summary>Choose questions</summary><div class="monitoring-question-choices">${questions}</div></details></article>`;
+  }).join("");
+  return `<form class="monitoring-plan-editor" data-monitoring-program="${program}"><div class="monitoring-plan-title"><div><span>${esc(monitoringProgramLabels[program])}</span><b>${plan.version ? `Plan version ${esc(plan.version)}` : "No plan saved"}</b></div>${badge(status)}</div><div class="monitoring-plan-settings"><label>Status<select data-monitoring-status>${statusOptions}</select></label><label>Questions per check-in<input data-monitoring-limit type="number" min="3" max="8" value="${esc(plan.dailyQuestionLimit || (program === "charmed" ? 6 : 5))}"></label></div><div class="monitoring-module-controls">${modules}</div><div class="monitoring-plan-actions"><button class="btn primary" type="submit">Save monitoring plan</button><span data-monitoring-save-state>Not changed.</span></div></form>`;
+}
+
+function monitoringPlanPanel(context) {
+  return `<section class="panel monitoring-plan-panel"><div class="panel-head"><div><h3>Individualized check-in plan</h3><span class="panel-subtitle">Choose a brief daily focus and rotating deeper questions for Care Connect</span></div>${badge("clinician approval", "Clinician approval required")}</div><div class="panel-body"><div class="monitoring-plan-boundary">Only active, clinician-approved plans are shown to the patient. Care Connect sends the full answers to Health Core; the Patient Requests queue receives only the review reference, priority, and signal count.</div><div class="monitoring-plan-grid">${Object.keys(monitoringProgramLabels).map((program) => monitoringPlanEditor(program, context)).join("")}</div></div></section>`;
+}
+
+function wireMonitoringPlanControls(context) {
+  document.querySelectorAll("[data-monitoring-program]").forEach((form) => {
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const program = form.dataset.monitoringProgram;
+      const state = form.querySelector("[data-monitoring-save-state]");
+      const button = form.querySelector("button[type='submit']");
+      if (!healthCoreClient?.savePatientMonitoringPlan) { state.textContent = "Not saved. Health Core is not connected."; return; }
+      const current = context.monitoringPlans.find((item) => item.program === program) || {};
+      const modules = [...form.querySelectorAll("[data-monitoring-module]")].filter((row) => row.querySelector("[data-monitoring-module-enabled]").checked).map((row) => ({
+        moduleId: row.dataset.monitoringModule,
+        enabled: true,
+        ...(row.querySelector("[data-monitoring-day]") ? { dayOfWeek: Number(row.querySelector("[data-monitoring-day]").value) } : {}),
+        questionIds: [...row.querySelectorAll("[data-monitoring-question]:checked")].map((input) => input.dataset.monitoringQuestion),
+      })).filter((module) => module.questionIds.length);
+      const payload = {
+        status: form.querySelector("[data-monitoring-status]").value,
+        dailyQuestionLimit: Number(form.querySelector("[data-monitoring-limit]").value),
+        briefMode: true,
+        modules,
+        interventions: current.interventions || [],
+        reviewRules: current.reviewRules || [],
+        patientPreferences: current.patientPreferences || { plainLanguage: true, oneQuestionAtATime: false },
+      };
+      state.textContent = "Saving…"; button.disabled = true;
+      try {
+        const result = await healthCoreClient.savePatientMonitoringPlan(PATIENT_ID, program, payload);
+        const saved = result?.monitoringPlan;
+        state.textContent = saved ? `Saved to BHW Cloud · version ${saved.version} · ${statusText(saved.status)}` : "Not saved. Health Core did not confirm the plan.";
+      } catch (error) {
+        state.textContent = `Not saved. ${error.message || "Review the plan and try again."}`;
+      } finally {
+        button.disabled = false;
+      }
+    });
+  });
+}
+
 function overviewPage(context) {
-  const { patient, conditions, observations, medications, encounters, tasks, carePlans, allergies, reports, goals, serviceRequests, clinicalImpressions, timeline, careTeams } = context;
+  const { patient, conditions, observations, medications, encounters, tasks, carePlans, allergies, reports, goals, serviceRequests, clinicalImpressions, timeline, careTeams, preventiveCare } = context;
   const activeMedications = medications.filter((item) => !["stopped","cancelled","completed","entered-in-error"].includes(String(item.status).toLowerCase()));
   const specialists = compact([
     ...careTeams.flatMap((team) => team.participant || []).map((participant) => participant.member?.display || participant.role?.[0]?.text),
     ...encounters.flatMap((encounter) => encounter.participant || []).map((participant) => participant.individual?.display),
   ]).filter((value,index,array) => array.indexOf(value) === index);
-  const screenings = [...observations, ...reports, ...serviceRequests].filter((item) => itemContains(item,["screen","mammogram","colonoscopy","cervical","depression","preventive"]));
+  const screeningMeasures = preventiveMeasures(preventiveCare);
+  const screenings = screeningMeasures.length ? screeningMeasures : [...observations, ...reports, ...serviceRequests].filter((item) => itemContains(item,["screen","mammogram","colonoscopy","cervical","depression","preventive"]));
   const labDue = [...serviceRequests, ...tasks].filter((item) => itemContains(item,["laboratory","lab order","blood draw","recheck","repeat test","repeat panel"]));
   const nutrition = [...carePlans, ...goals, ...tasks].filter((item) => itemContains(item,["nutrition","diet","food plan","meal plan","weight management"]));
   const sdoh = [...observations, ...serviceRequests, ...tasks].filter((item) => itemContains(item,["housing","food insecurity","transportation","financial","caregiver","social determinant","utility"]));
   const triggers = [...clinicalImpressions, ...timeline].filter((item) => itemContains(item,["trigger","infection","stress","sleep loss","exposure","trauma","hormonal"]));
   const priorities = goals.length ? goals : conditions;
-  const latestTimeline = timeline.slice(0,4);
+  const latestTimeline = clinicalTimelineEvents(timeline).slice(0,4);
   return `<section class="worksheet health-overview"><div class="worksheet-heading"><span class="section-number overview">360</span><h2>Whole-Person Health Snapshot</h2><p>What is active, important, due, and shaping this patient's health now</p></div>
     <div class="health360-map"><div class="health-column">
       <article class="health-callout coral"><div class="callout-head"><span>Active symptoms & diagnoses</span><a href="patient-360-data.html">Problem list</a></div>${compactItems(conditions,(item)=>`<b>${esc(conceptText(item.code))}</b><small>${esc(statusText(item.clinicalStatus?.coding?.[0]?.code || item.status || "recorded"))}</small>`,"No active condition or symptom record is connected.")}</article>
@@ -575,37 +818,82 @@ function overviewPage(context) {
       <article class="health-callout purple"><div class="callout-head"><span>Individual priorities</span><a href="patient-360-plan.html">Care plan</a></div>${compactItems(priorities,(item)=>`<b>${esc(titleText(item))}</b><small>${esc(item.description || "Patient-defined priority not separately documented")}</small>`,"Patient-defined priorities and functional goals are not documented.")}</article>
     </div>${bodyFigure(context)}<div class="health-column">
       <article class="health-callout teal"><div class="callout-head"><span>Specialists & care team</span><a href="patient-360-sources.html">Sources</a></div>${specialists.length ? `<ul class="clinical-list">${specialists.slice(0,4).map((name)=>`<li><b>${esc(name)}</b></li>`).join("")}</ul>` : `<p class="overview-empty">No specialist or CareTeam roster is connected.</p>`}</article>
-      <article class="health-callout green"><div class="callout-head"><span>Screening & prevention</span><a href="patient-360-data.html">Results</a></div>${compactItems(screenings,(item)=>`<b>${esc(titleText(item))}</b><small>${esc(dateText(item.effectiveDateTime || item.authoredOn || item.issued))}</small>`,"No structured health-screening status or due list is connected.")}</article>
+      <article class="health-callout green"><div class="callout-head"><span>Screening & prevention</span><a href="patient-360-data.html">Review list</a></div>${compactItems(screenings,(item)=>`<b>${esc(item.label || titleText(item))}</b><small>${esc(statusText(item.status || "recorded"))}${item.nextDueAt ? ` · due ${esc(dateText(item.nextDueAt))}` : ""}</small>`,"No structured health-screening status or due list is connected.")}</article>
       <article class="health-callout coral"><div class="callout-head"><span>SDOH needs</span><a href="patient-360-context.html">Context</a></div>${compactItems(sdoh,(item)=>`<b>${esc(titleText(item))}</b><small>${esc(item.status || "recorded")}</small>`,"No structured SDOH need or protective resource is connected.")}</article>
       <article class="health-callout purple"><div class="callout-head"><span>Triggers & patterns</span><a href="patient-360-mechanism.html">Mechanism</a></div>${compactItems(triggers,(item)=>`<b>${esc(titleText(item))}</b><small>Requires clinician validation</small>`,"No clinician-validated triggers or amplifying patterns are documented.")}</article>
     </div></div>
-    <div class="overview-clinical-grid"><section class="panel lab-panel"><div class="panel-head"><h3>Important labs & trends</h3><a class="btn" href="patient-360-data.html">All results</a></div><div class="panel-body">${trendGraphic(observations)}</div></section><section class="panel"><div class="panel-head"><h3>What is due next</h3><span class="badge warning">Verify orders</span></div><div class="panel-body due-grid"><div><span>Next laboratory work</span>${compactItems(labDue,(item)=>`<b>${esc(titleText(item))}</b><small>${esc(dateText(item.occurrenceDateTime || item.authoredOn))}</small>`,"No next-lab order or due date is connected.",2)}</div><div><span>Screening or prevention</span>${compactItems(screenings,(item)=>`<b>${esc(titleText(item))}</b><small>${esc(item.status || "recorded")}</small>`,"No screening due status is connected.",2)}</div></div></section></div>
+    <div class="overview-clinical-grid"><section class="panel lab-panel"><div class="panel-head"><h3>Important labs & trends</h3><a class="btn" href="patient-360-data.html">All results</a></div><div class="panel-body">${trendGraphic(observations)}</div></section><section class="panel"><div class="panel-head"><h3>What is due next</h3><span class="badge warning">Verify orders</span></div><div class="panel-body due-grid"><div><span>Next laboratory work</span>${compactItems(labDue,(item)=>`<b>${esc(titleText(item))}</b><small>${esc(dateText(item.occurrenceDateTime || item.authoredOn))}</small>`,"No next-lab order or due date is connected.",2)}</div><div><span>Screening or prevention</span>${compactItems(screenings,(item)=>`<b>${esc(item.label || titleText(item))}</b><small>${esc(statusText(item.status || "recorded"))}${item.visitAction?.providerApprovalRequired ? " · provider review" : ""}</small>`,"No screening due status is connected.",2)}</div></div></section></div>
     <div class="overview-clinical-grid"><section class="panel"><div class="panel-head"><h3>Nutrition & individualized plan</h3><a class="btn" href="patient-360-plan.html">Full care plan</a></div><div class="panel-body personalized-grid"><div><span>Nutrition plan</span>${compactItems(nutrition,(item)=>`<b>${esc(titleText(item))}</b><small>${esc(item.description || item.status || "recorded")}</small>`,"No structured individualized nutrition plan is connected.",2)}</div><div><span>Patient-specific details</span><ul class="clinical-list"><li><b>${esc(patient.gender && patient.gender !== "unknown" ? patient.gender : "Administrative gender not recorded")}</b><small>Identity details should remain patient-confirmed</small></li><li><b>${esc(carePlans[0] ? titleText(carePlans[0]) : "Health Blueprint not connected")}</b><small>Current individualized care framework</small></li></ul></div></div></section><section class="panel"><div class="panel-head"><h3>Prominent timeline</h3><a class="btn" href="patient-360-timeline.html">Full timeline</a></div><div class="panel-body prominent-timeline">${latestTimeline.length ? latestTimeline.map((event)=>`<div><time>${esc(dateText(event.date))}</time><span><b>${esc(event.label || event.type)}</b><small>${esc(event.type || "Clinical event")}</small></span></div>`).join("") : `<p class="overview-empty">No high-value timeline events are connected.</p>`}</div></section></div>
+    ${patientCheckinPanel(context)}
+    ${monitoringPlanPanel(context)}
     ${visitDocumentationPanel(context)}
   </section>`;
 }
 
+function atlasEvidencePicker(selected = [], kind = "all") {
+  const selectedCodes = new Set(selected || []);
+  return `<details class="atlas-evidence-editor"><summary>Evidence / status</summary><div>${ATLAS_EVIDENCE_CODES.map((code) => `<label><input type="checkbox" data-atlas-evidence="${kind}" value="${code}" ${selectedCodes.has(code) ? "checked" : ""}><span>${code}</span></label>`).join("")}</div></details>`;
+}
+
+function atlasLocationEditorRow(event = {}, index = 0) {
+  const statusOptions = ["documented", "suspected", "historical", "active", "improving", "resolved", "urgent"];
+  const viewOptions = [["anterior", "Anterior"], ["posterior", "Posterior"], ["ctls", "CTLS spine"]];
+  return `<article class="atlas-location-editor-row" data-atlas-location-row><input type="hidden" data-atlas-field="id" value="${esc(event.id || `location-${index + 1}`)}"><div class="atlas-location-editor-number">${index + 1}</div><label><span>Date</span><input type="date" data-atlas-field="date" value="${esc(event.date || "")}"></label><label><span>Map view</span><select data-atlas-field="view">${viewOptions.map(([value, label]) => `<option value="${value}" ${event.view === value ? "selected" : ""}>${label}</option>`).join("")}</select></label><label><span>Location</span><input data-atlas-field="location" value="${esc(event.location || "")}" placeholder="e.g., left shoulder, lumbar spine"></label><label class="atlas-location-finding"><span>Event / finding</span><textarea rows="2" data-atlas-field="finding" placeholder="Documented event or finding">${esc(event.finding || "")}</textarea></label><label><span>Status</span><select data-atlas-field="status">${statusOptions.map((value) => `<option value="${value}" ${event.status === value ? "selected" : ""}>${esc(statusText(value))}</option>`).join("")}</select></label>${atlasEvidencePicker(event.evidenceCodes, "location")}<input type="hidden" data-atlas-field="x" value="${esc(event.x ?? "")}"><input type="hidden" data-atlas-field="y" value="${esc(event.y ?? "")}"><button class="btn atlas-location-remove" type="button">Remove</button></article>`;
+}
+
+function atlasSystemEditorRows(content = {}) {
+  const byId = new Map((content.systemSweep || []).map((item) => [item.id, item]));
+  return ATLAS_SYSTEMS.map(({ id, label }) => {
+    const item = byId.get(id) || {};
+    return `<tr data-atlas-system-row data-atlas-system-id="${id}"><th scope="row">${esc(label)}</th><td><textarea rows="3" data-atlas-field="past" placeholder="Historical findings, symptoms or events">${esc(item.past || "")}</textarea>${atlasEvidencePicker(item.pastEvidenceCodes, "past")}</td><td><textarea rows="3" data-atlas-field="now" placeholder="Current findings, symptoms or status">${esc(item.now || "")}</textarea>${atlasEvidencePicker(item.nowEvidenceCodes, "now")}</td></tr>`;
+  }).join("");
+}
+
+function atlasWorkspacePanel(context) {
+  const connection = context.atlasConnection || {};
+  if (!connection.connected) {
+    return `<section class="panel atlas-entry-panel"><div class="panel-head"><div><h3>Add or update Atlas information</h3><span class="panel-subtitle">Structured clinical entry with provider review</span></div><span class="badge restricted">Not saved</span></div><div class="panel-body"><div class="empty-note"><b>The protected Atlas workspace is not connected yet.</b><br>${esc(connection.error || "This page will remain read-only until the Health Core Atlas connection is available.")}</div><div class="atlas-source-actions"><a class="btn" href="workflow.html">Open 24-Hour Documentation</a><span>Use the visit workflow when these findings came from the current encounter.</span></div></div></section>`;
+  }
+  const workspace = connection.workspace || {};
+  const draft = workspace.draft || null;
+  const approved = workspace.approved || null;
+  const content = draft?.content || approved?.content || {};
+  const draftCurrent = draft && Number(draft.revision) !== Number(approved?.sourceDraftRevision || 0);
+  const saveText = draft
+    ? `Saved to BHW Cloud ${dateText(draft.savedAt, true)} · draft revision ${draft.revision}`
+    : "Not saved";
+  const currentText = approved
+    ? `Patient 360 current: provider-approved v${approved.version} · ${dateText(approved.approvedAt, true)}`
+    : "No provider-approved Atlas version yet";
+  return `<section class="panel atlas-entry-panel"><div class="panel-head"><div><h3>Add or update Atlas information</h3><span class="panel-subtitle">Enter information here when it does not already come from a connected source.</span></div>${draftCurrent ? '<span class="badge warning">Review required</span>' : approved ? '<span class="badge complete">Current</span>' : '<span class="badge neutral">No draft</span>'}</div><div class="panel-body"><details class="atlas-entry-workspace" ${draftCurrent ? "open" : ""}><summary><span>Open structured Atlas entry</span><small>${esc(currentText)}</small></summary><form id="atlas-editor"><div class="atlas-entry-guidance"><b>One longitudinal record</b><span>Save creates a protected draft. Only provider approval makes it part of the current Patient 360 view. CharmHealth remains the legal medical record.</span><a href="workflow.html">Use 24-Hour Documentation for encounter findings</a></div><div class="atlas-editor-prompts"><label><span>Primary concern / reason for mapping</span><textarea rows="4" id="atlas-primary-concern" placeholder="Patient's words and the problem requiring longitudinal review">${esc(content.primaryConcern || "")}</textarea></label><label><span>Patient-defined goals</span><textarea rows="4" id="atlas-patient-goals" placeholder="Function, participation, symptoms or quality-of-life priorities">${esc(content.patientGoals || "")}</textarea></label><label><span>Current functional change</span><textarea rows="4" id="atlas-functional-change" placeholder="Newly limited, declining, fluctuating or improved">${esc(content.functionalChange || "")}</textarea></label><label class="urgent"><span>Safety / urgent concerns</span><textarea rows="4" id="atlas-safety-concerns" placeholder="Red flags, rapid change, instability or escalation">${esc(content.safetyConcerns || "")}</textarea></label></div><section class="atlas-editor-section"><div class="atlas-editor-section-head"><div><h4>Anatomical location events</h4><p>Choose the matching view; approved entries will be numbered on the body map.</p></div><button type="button" class="btn" id="atlas-add-location">Add location</button></div><div id="atlas-location-editor">${(content.locationEvents || []).map(atlasLocationEditorRow).join("") || '<div class="atlas-editor-empty">No manually entered location events.</div>'}</div></section><section class="atlas-editor-section"><div class="atlas-editor-section-head"><div><h4>Body-system sweep</h4><p>Keep historical information separate from what is happening now.</p></div></div><div class="table-wrap"><table class="atlas-sweep-editor"><thead><tr><th>Body system</th><th>Past</th><th>Now</th></tr></thead><tbody>${atlasSystemEditorRows(content)}</tbody></table></div></section><div class="atlas-review-bar"><div><b id="atlas-save-state" data-state="${draft ? "saved" : "not-saved"}">${esc(saveText)}</b><span>${draftCurrent ? "This saved draft is not in the current summary until a provider approves it." : currentText}</span></div><div class="atlas-review-actions"><button type="button" class="btn primary" id="atlas-save-draft">Save clinical draft</button><label class="atlas-approval-check"><input type="checkbox" id="atlas-approval-attestation" ${draftCurrent ? "" : "disabled"}> I reviewed this saved draft against the patient record.</label><button type="button" class="btn" id="atlas-approve-draft" disabled>Approve for Patient 360</button></div></div></form></details></div></section>`;
+}
+
 function atlasPage(context) {
+  const approvedContent = context.atlasConnection?.workspace?.approved?.content || null;
   const patientGoals = context.goals.filter((goal) => String(goal.expressedBy?.reference || "").startsWith("Patient/"));
-  const primaryConcern = patientGoals.length
+  const primaryConcern = approvedContent?.primaryConcern || (patientGoals.length
     ? patientGoals.map(titleText).join(" · ")
     : context.conditions.length
       ? `Patient's own words are not connected. Active coded concern(s): ${context.conditions.slice(0, 3).map((item) => conceptText(item.code)).join(" · ")}`
-      : "No patient-authored concern or active coded problem is connected.";
-  const goalSummary = patientGoals.length
+      : "No patient-authored concern or active coded problem is connected.");
+  const goalSummary = approvedContent?.patientGoals || (patientGoals.length
     ? patientGoals.map(titleText).join(" · ")
     : context.goals.length
       ? `Structured goal(s) exist, but patient authorship is not identified: ${context.goals.slice(0, 3).map(titleText).join(" · ")}`
-      : "No patient-defined function, participation, symptom or quality-of-life goal is connected.";
+      : "No patient-defined function, participation, symptom or quality-of-life goal is connected.");
   const functionItems = context.observations.filter((item) => /function|mobility|activity|participation|adl|promis|ability/.test(titleText(item).toLowerCase()));
-  const functionSummary = functionItems.length ? functionItems.slice(0, 3).map((item) => `${titleText(item)} · ${observationDetail(item)}`).join(" · ") : "No structured functional change measure is connected.";
-  const safetySummary = context.urgentItems.length ? context.urgentItems.slice(0, 4).map((item) => `${titleText(item)} · ${statusText(item.priority || item.status)}`).join(" · ") : "No structured urgent or destabilizing flag was returned. This is not clinical clearance; verify red flags and rapid change directly.";
+  const functionSummary = approvedContent?.functionalChange || (functionItems.length ? functionItems.slice(0, 3).map((item) => `${titleText(item)} · ${observationDetail(item)}`).join(" · ") : "No structured functional change measure is connected.");
+  const safetySummary = approvedContent?.safetyConcerns || (context.urgentItems.length ? context.urgentItems.slice(0, 4).map((item) => `${titleText(item)} · ${statusText(item.priority || item.status)}`).join(" · ") : "No structured urgent or destabilizing flag was returned. This is not clinical clearance; verify red flags and rapid change directly.");
   const evidenceKey = [["D","documented"],["S","suspected"],["H","historical"],["A","active"],["I","improving"],["R","resolved"],["U","urgent / destabilizing"]];
-  return `<section class="worksheet atlas-worksheet"><div class="worksheet-heading"><span class="section-number">1</span><h2>Patient History & Body-System Atlas</h2><p>Map the patient's story from concern and function to location, time and system involvement</p></div><div class="atlas-intake-grid"><article class="atlas-prompt-card"><span>Primary concern / reason for mapping</span><b>${esc(primaryConcern)}</b><small>Patient's words; problem requiring longitudinal review</small></article><article class="atlas-prompt-card"><span>Patient-defined goals</span><b>${esc(goalSummary)}</b><small>Function, participation, symptoms or quality-of-life priorities</small></article><article class="atlas-prompt-card"><span>Current functional change</span><b>${esc(functionSummary)}</b><small>What is newly limited, declining, fluctuating or improved?</small></article><article class="atlas-prompt-card urgent"><span>Safety / urgent concerns</span><b>${esc(safetySummary)}</b><small>Red flags, rapid change, instability or required escalation</small></article></div><section class="panel atlas-map-panel"><div class="panel-head"><h3>Anatomical location map</h3><span class="badge neutral">Number documented marks to the key</span></div><div class="panel-body">${anatomicalLocationMap(context)}</div></section><section class="panel atlas-sweep-panel"><div class="panel-head"><h3>Body-system sweep</h3><span class="badge neutral">Past and now</span></div><div class="panel-body"><div class="table-wrap"><table class="atlas-sweep-table"><thead><tr><th>Body system</th><th>Past</th><th>Now</th></tr></thead><tbody>${bodySystemSweepRows(context)}</tbody></table></div></div></section><div class="atlas-evidence-key"><b>Evidence key</b>${evidenceKey.map(([code, label]) => `<span><strong>${code}</strong>${esc(label)}</span>`).join("")}</div></section>`;
+  const provenance = context.atlasConnection?.workspace?.approved
+    ? `Provider-approved Atlas v${context.atlasConnection.workspace.approved.version}`
+    : "Connected records only";
+  return `<section class="worksheet atlas-worksheet"><div class="worksheet-heading"><span class="section-number">1</span><h2>Patient History & Body-System Atlas</h2><p>Map the patient's story from concern and function to location, time and system involvement</p></div>${atlasWorkspacePanel(context)}<div class="atlas-view-status"><span>${esc(provenance)}</span><small>Draft information stays separate until provider approval.</small></div><div class="atlas-intake-grid"><article class="atlas-prompt-card"><span>Primary concern / reason for mapping</span><b>${esc(primaryConcern)}</b><small>Patient's words; problem requiring longitudinal review</small></article><article class="atlas-prompt-card"><span>Patient-defined goals</span><b>${esc(goalSummary)}</b><small>Function, participation, symptoms or quality-of-life priorities</small></article><article class="atlas-prompt-card"><span>Current functional change</span><b>${esc(functionSummary)}</b><small>What is newly limited, declining, fluctuating or improved?</small></article><article class="atlas-prompt-card urgent"><span>Safety / urgent concerns</span><b>${esc(safetySummary)}</b><small>Red flags, rapid change, instability or required escalation</small></article></div><section class="panel atlas-map-panel"><div class="panel-head"><h3>Anatomical location map</h3><span class="badge neutral">Number documented marks to the key</span></div><div class="panel-body">${anatomicalLocationMap(context)}</div></section><section class="panel atlas-sweep-panel"><div class="panel-head"><h3>Body-system sweep</h3><span class="badge neutral">Past and now</span></div><div class="panel-body"><div class="table-wrap"><table class="atlas-sweep-table"><thead><tr><th>Body system</th><th>Past</th><th>Now</th></tr></thead><tbody>${bodySystemSweepRows(context)}</tbody></table></div></div></section><div class="atlas-evidence-key"><b>Evidence key</b>${evidenceKey.map(([code, label]) => `<span><strong>${code}</strong>${esc(label)}</span>`).join("")}</div></section>`;
 }
 
 function timelinePage(context) {
-  return `<section class="worksheet"><div class="worksheet-heading"><span class="section-number">2</span><h2>Layered Longitudinal Timeline</h2><p>High-value turning points with source-aware clinical context</p></div><div class="two-col"><div class="panel"><div class="panel-head"><h3>Function trajectory</h3><span class="badge warning">Awaiting measures</span></div><div class="panel-body"><div class="trajectory"></div><div class="trajectory-labels"><span>Improved</span><span>Baseline</span><span>Declined</span></div><div class="empty-note" style="margin-top:12px">Future digital layer: graph patient-reported function, symptom burden, objective measures and major interventions without turning association into causation.</div></div></div><div class="panel"><div class="panel-head"><h3>Clinical timeline</h3><span class="meta">Newest first</span></div><div class="panel-body timeline">${timelineItems(context.timeline)}</div></div></div></section>`;
+  const events = clinicalTimelineEvents(context.timeline);
+  return `<section class="worksheet clinical-timeline-page"><div class="worksheet-heading"><span class="section-number">2</span><h2>Longitudinal Clinical Timeline</h2><p>Diagnoses, symptom flare-ups, major life and functional changes, imaging and important results, treatment changes, hospital care and procedures</p></div><div class="panel clinical-timeline-panel"><div class="panel-head"><div><h3>Clinical turning points</h3><span class="panel-subtitle">Newest first · routine referral and coordination updates are kept out of this view</span></div><span class="badge neutral">Source-linked</span></div><div class="panel-body">${clinicalTimelineControls(context.timeline)}<div class="timeline clinical-event-list">${clinicalTimelineItems(events, context.resources)}<div class="empty-note" id="timeline-filter-empty" hidden>No events are connected in this category. Blank means undocumented or not connected - not clinically absent.</div></div></div></div><div class="two-col timeline-secondary"><div class="panel"><div class="panel-head"><h3>Function & symptom trajectory</h3><span class="badge warning">Awaiting measures</span></div><div class="panel-body"><div class="trajectory"></div><div class="trajectory-labels"><span>Improved</span><span>Baseline</span><span>Declined</span></div><div class="empty-note" style="margin-top:12px">This graph will compare patient-reported function, symptom burden, objective measures and major interventions without treating association as causation.</div></div></div><div class="panel"><div class="panel-head"><h3>What belongs here</h3><span class="badge neutral">Clinical history</span></div><div class="panel-body timeline-scope-list"><div><b>Primary history</b><span>New diagnoses, onset or resolution, symptom flare-ups and remissions</span></div><div><b>Meaningful change</b><span>Life events, functional decline or recovery, treatment response and adverse effects</span></div><div><b>Major evidence</b><span>Imaging findings, important results, emergency or hospital care, surgery and procedures</span></div><div><b>Kept elsewhere</b><span>Referral sent, scheduling and routine coordination remain in Patient Operations and the care plan</span></div></div></div></div></section>`;
 }
 
 function mechanismPage(context) {
@@ -618,12 +906,12 @@ function contextPage(context) {
 
 function planPage(context) {
   const { conditions, urgentItems, medications, unresolvedTasks, carePlans, gaps, serviceRequests, goals, tasks } = context;
-  return `<section class="worksheet"><div class="worksheet-heading"><span class="section-number coral">5</span><h2>Current Snapshot & Feasible Care Plan</h2><p>The five-minute team huddle view</p></div><div class="two-col"><div class="panel"><div class="panel-head"><h3>Current patient snapshot</h3><span class="badge neutral">Documented facts only</span></div><div class="panel-body snapshot-grid"><div class="snapshot"><h4>What matters most now</h4><p>${conditions.length ? esc(conditions.map((item) => conceptText(item.code)).join(" - ")) : "No condition priority has been returned."}</p></div><div class="snapshot coral"><h4>Active destabilizers / escalation</h4><p>${urgentItems.length ? esc(urgentItems.map(titleText).join(" - ")) : "No structured escalation flag returned. Verify clinically."}</p></div><div class="snapshot green"><h4>Protective compensations / resources</h4><p>No structured protective resource has been returned.</p></div><div class="snapshot"><h4>Current treatment and care work</h4><p>${compact([medications.length ? `${medications.length} medication(s)` : "", unresolvedTasks.length ? `${unresolvedTasks.length} open task(s)` : "", carePlans.length ? `${carePlans.length} care plan(s)` : ""]).join(" - ") || "No active treatment item has been returned."}</p></div><div class="snapshot"><h4>Unanswered questions / data gaps</h4><p>${gaps.length ? esc(`Missing structured ${gaps.join(", ")}.`) : "Core digital categories are represented."}</p></div><div class="snapshot blue"><h4>Required coordination</h4><p>${serviceRequests.length ? esc(serviceRequests.map(titleText).join(" - ")) : "No structured referral or coordination request has been returned."}</p></div></div></div><div class="panel"><div class="panel-head"><h3>Care plan and goals</h3><span class="badge complete">Source-linked</span></div><div class="panel-body">${list([...goals, ...carePlans, ...tasks], (item) => renderResourceItem(item, compact([item.resourceType, item.status, item.intent]).join(" - ")), "No structured goals, care plans or tasks are available.")}</div></div></div><div class="panel" style="margin-top:15px"><div class="panel-head"><h3>Ideal plan vs. feasible next step</h3><span class="badge warning">Do not infer missing ownership</span></div><div class="panel-body"><div class="table-wrap"><table><thead><tr><th>PSCM target</th><th>Documented clinical plan</th><th>Feasible next step / resource</th><th>Owner / timing</th></tr></thead><tbody>${careRows(carePlans, tasks, goals)}</tbody></table></div></div></div></section>`;
+  return `<section class="worksheet"><div class="worksheet-heading"><span class="section-number coral">5</span><h2>Current Snapshot & Feasible Care Plan</h2><p>The five-minute team huddle view</p></div><div class="two-col"><div class="panel"><div class="panel-head"><h3>Current patient snapshot</h3><span class="badge neutral">Documented facts only</span></div><div class="panel-body snapshot-grid"><div class="snapshot"><h4>What matters most now</h4><p>${conditions.length ? esc(conditions.map((item) => conceptText(item.code)).join(" - ")) : "No condition priority has been returned."}</p></div><div class="snapshot coral"><h4>Active destabilizers / escalation</h4><p>${urgentItems.length ? esc(urgentItems.map(titleText).join(" - ")) : "No structured escalation flag returned. Verify clinically."}</p></div><div class="snapshot green"><h4>Protective compensations / resources</h4><p>No structured protective resource has been returned.</p></div><div class="snapshot"><h4>Current treatment and care work</h4><p>${compact([medications.length ? `${medications.length} medication(s)` : "", unresolvedTasks.length ? `${unresolvedTasks.length} open task(s)` : "", carePlans.length ? `${carePlans.length} care plan(s)` : ""]).join(" - ") || "No active treatment item has been returned."}</p></div><div class="snapshot"><h4>Unanswered questions / data gaps</h4><p>${gaps.length ? esc(`Missing structured ${gaps.join(", ")}.`) : "Core digital categories are represented."}</p></div><div class="snapshot blue"><h4>Required coordination</h4><p>${serviceRequests.length ? esc(serviceRequests.map(titleText).join(" - ")) : "No structured referral or coordination request has been returned."}</p></div></div></div><div class="panel"><div class="panel-head"><h3>Care plan and goals</h3><span class="badge complete">Source-linked</span></div><div class="panel-body">${list([...goals, ...carePlans, ...tasks], (item) => renderResourceItem(item, compact([item.resourceType, item.status, item.intent]).join(" - ")), "No structured goals, care plans or tasks are available.")}</div></div></div><div class="panel" style="margin-top:15px"><div class="panel-head"><h3>Ideal plan vs. feasible next step</h3><span class="badge warning">Do not infer missing ownership</span></div><div class="panel-body"><div class="table-wrap"><table><thead><tr><th>PSCM target</th><th>Documented clinical plan</th><th>Feasible next step / resource</th><th>Owner / timing</th></tr></thead><tbody>${careRows(carePlans, tasks, goals)}</tbody></table></div></div></div></section>${monitoringPlanPanel(context)}`;
 }
 
 function dataPage(context) {
-  const { conditions, medications, allergies, observations, reports, procedures, immunizations, documents, encounters, serviceRequests, tasks, carePlans, goals } = context;
-  return `<section class="worksheet"><div class="worksheet-heading"><span class="section-number gold">6</span><h2>Digital Clinical Data Spine</h2><p>The complete structured record behind the overview</p></div>${visitDocumentationPanel(context, { full: true })}<div class="data-grid">${dataCard("Conditions & problem list", conditions, (item) => renderResourceItem(item, compact([item.clinicalStatus?.coding?.[0]?.code, item.verificationStatus?.coding?.[0]?.code, item.onsetDateTime ? `onset ${dateText(item.onsetDateTime)}` : ""]).join(" - ")), "No condition resource is connected.")}${dataCard("Medications", medications, (item) => renderResourceItem(item, medicationDetail(item)), "No medication requests are available.")}${dataCard("Allergies & intolerances", allergies, (item) => renderResourceItem(item, compact([item.clinicalStatus?.coding?.[0]?.code, item.criticality]).join(" - ")), "No allergy resource is connected.")}${dataCard("Results & trends", [...observations, ...reports], (item) => renderResourceItem(item, item.resourceType === "Observation" ? observationDetail(item) : compact([item.status, dateText(item.effectiveDateTime)]).join(" - ")), "No result or diagnostic report is connected.")}${dataCard("Procedures & imaging", procedures, (item) => renderResourceItem(item, compact([item.status, dateText(item.performedDateTime)]).join(" - ")), "No procedure or imaging resource is connected.")}${dataCard("Immunizations", immunizations, (item) => renderResourceItem(item, compact([item.status, dateText(item.occurrenceDateTime)]).join(" - ")), "No immunization resource is connected.")}${dataCard("Documents & provenance", documents, (item) => renderResourceItem(item, compact([item.status, dateText(item.date)]).join(" - ")), "No source document reference is connected.")}${dataCard("Encounters", encounters, (item) => renderResourceItem(item, compact([item.status, dateText(item.period?.start)]).join(" - ")), "No encounter resource is connected.")}${dataCard("Orders, referrals & tasks", [...serviceRequests, ...tasks], (item) => renderResourceItem(item, compact([item.resourceType, item.status, item.intent]).join(" - ")), "No structured order, referral or task is connected.")}${dataCard("Care plans & goals", [...carePlans, ...goals], (item) => renderResourceItem(item, compact([item.resourceType, item.status, item.intent]).join(" - ")), "No care-plan or goal resource is connected.")}</div></section>`;
+  const { conditions, medications, allergies, observations, reports, procedures, immunizations, documents, encounters, serviceRequests, tasks, carePlans, goals, preventiveCare } = context;
+  return `<section class="worksheet"><div class="worksheet-heading"><span class="section-number gold">6</span><h2>Digital Clinical Data Spine</h2><p>The complete structured record behind the overview</p></div>${patientCheckinPanel(context, { full: true })}${visitDocumentationPanel(context, { full: true })}${preventiveCarePanel(preventiveCare)}<div class="data-grid">${dataCard("Conditions & problem list", conditions, (item) => renderResourceItem(item, compact([item.clinicalStatus?.coding?.[0]?.code, item.verificationStatus?.coding?.[0]?.code, item.onsetDateTime ? `onset ${dateText(item.onsetDateTime)}` : ""]).join(" - ")), "No condition resource is connected.")}${dataCard("Medications", medications, (item) => renderResourceItem(item, medicationDetail(item)), "No medication requests are available.")}${dataCard("Allergies & intolerances", allergies, (item) => renderResourceItem(item, compact([item.clinicalStatus?.coding?.[0]?.code, item.criticality]).join(" - ")), "No allergy resource is connected.")}${dataCard("Results & trends", [...observations, ...reports], (item) => renderResourceItem(item, item.resourceType === "Observation" ? observationDetail(item) : compact([item.status, dateText(item.effectiveDateTime)]).join(" - ")), "No result or diagnostic report is connected.")}${dataCard("Procedures & imaging", procedures, (item) => renderResourceItem(item, compact([item.status, dateText(item.performedDateTime)]).join(" - ")), "No procedure or imaging resource is connected.")}${dataCard("Immunizations", immunizations, (item) => renderResourceItem(item, compact([item.status, dateText(item.occurrenceDateTime)]).join(" - ")), "No immunization resource is connected.")}${dataCard("Documents & provenance", documents, (item) => renderResourceItem(item, compact([item.status, dateText(item.date)]).join(" - ")), "No source document reference is connected.")}${dataCard("Encounters", encounters, (item) => renderResourceItem(item, compact([item.status, dateText(item.period?.start)]).join(" - ")), "No encounter resource is connected.")}${dataCard("Orders, referrals & tasks", [...serviceRequests, ...tasks], (item) => renderResourceItem(item, compact([item.resourceType, item.status, item.intent]).join(" - ")), "No structured order, referral or task is connected.")}${dataCard("Care plans & goals", [...carePlans, ...goals], (item) => renderResourceItem(item, compact([item.resourceType, item.status, item.intent]).join(" - ")), "No care-plan or goal resource is connected.")}</div></section>`;
 }
 
 function sourcesPage(context) {
@@ -631,7 +919,133 @@ function sourcesPage(context) {
   return `<section class="worksheet"><div class="worksheet-heading"><span class="section-number">7</span><h2>Source Integrity & Record Boundaries</h2><p>What is connected, withheld, validated and still missing</p></div><div class="panel"><div class="panel-head"><h3>FHIR bundle and provenance</h3>${badge("source traceability")}</div><div class="panel-body"><div class="source-strip"><div class="source-cell"><span>Bundle type</span><b>${esc(record.fhir?.type || "not supplied")}</b></div><div class="source-cell"><span>Schema version</span><b>${esc(record.schemaVersion || "not supplied")}</b></div><div class="source-cell"><span>Displayed resources</span><b>${resources.length}</b></div><div class="source-cell"><span>Restricted / withheld</span><b>${sourceOmitted + frontendOmitted}</b></div></div><div class="empty-note" style="margin-top:14px"><b>Future longitudinal connections:</b> verified EHR encounters, CRISP events, medications and fill history, payer data, laboratory and imaging feeds, vital trends, immunizations, referrals, documents, patient-reported outcomes, SDOH, care-team validation, source timestamps, corrections and consent boundaries.</div></div></div></section>`;
 }
 
-function render(record, workflowConnection = { connected: false, encounters: [] }) {
+function selectedAtlasEvidence(container, kind = "all") {
+  return [...container.querySelectorAll(`[data-atlas-evidence="${kind}"]:checked`)].map((input) => input.value);
+}
+
+function collectAtlasEditor() {
+  const value = (id) => $(id)?.value || "";
+  const locationEvents = [...document.querySelectorAll("[data-atlas-location-row]")].map((row) => {
+    const field = (name) => row.querySelector(`[data-atlas-field="${name}"]`)?.value || "";
+    const x = field("x");
+    const y = field("y");
+    return {
+      id: field("id"),
+      date: field("date"),
+      view: field("view"),
+      location: field("location"),
+      finding: field("finding"),
+      status: field("status"),
+      evidenceCodes: selectedAtlasEvidence(row, "location"),
+      ...(x === "" ? {} : { x: Number(x) }),
+      ...(y === "" ? {} : { y: Number(y) }),
+    };
+  }).filter((item) => item.location || item.finding);
+  const systemSweep = [...document.querySelectorAll("[data-atlas-system-row]")].map((row) => ({
+    id: row.dataset.atlasSystemId,
+    label: row.querySelector("th")?.textContent?.trim() || "",
+    past: row.querySelector('[data-atlas-field="past"]')?.value || "",
+    now: row.querySelector('[data-atlas-field="now"]')?.value || "",
+    pastEvidenceCodes: selectedAtlasEvidence(row, "past"),
+    nowEvidenceCodes: selectedAtlasEvidence(row, "now"),
+  }));
+  return {
+    primaryConcern: value("atlas-primary-concern"),
+    patientGoals: value("atlas-patient-goals"),
+    functionalChange: value("atlas-functional-change"),
+    safetyConcerns: value("atlas-safety-concerns"),
+    locationEvents,
+    systemSweep,
+  };
+}
+
+function setAtlasSaveState(text, state = "not-saved") {
+  const indicator = $("atlas-save-state");
+  if (!indicator) return;
+  indicator.textContent = text;
+  indicator.dataset.state = state;
+}
+
+function wireAtlasEntry(context) {
+  const form = $("atlas-editor");
+  if (!form || !cloudClient) return;
+  const attestation = $("atlas-approval-attestation");
+  const approveButton = $("atlas-approve-draft");
+  const saveButton = $("atlas-save-draft");
+  const draft = context.atlasConnection?.workspace?.draft || null;
+  const approved = context.atlasConnection?.workspace?.approved || null;
+  const draftCurrent = draft && Number(draft.revision) !== Number(approved?.sourceDraftRevision || 0);
+
+  const markDirty = () => {
+    setAtlasSaveState("Not saved", "not-saved");
+    if (attestation) {
+      attestation.checked = false;
+      attestation.disabled = true;
+    }
+    if (approveButton) approveButton.disabled = true;
+  };
+  form.addEventListener("input", (event) => {
+    if (event.target === attestation) return;
+    markDirty();
+  });
+
+  $("atlas-add-location")?.addEventListener("click", () => {
+    const container = $("atlas-location-editor");
+    const empty = container?.querySelector(".atlas-editor-empty");
+    if (empty) empty.remove();
+    const index = container?.querySelectorAll("[data-atlas-location-row]").length || 0;
+    container?.insertAdjacentHTML("beforeend", atlasLocationEditorRow({ id: `location-${Date.now()}` }, index));
+    container?.lastElementChild?.querySelector('[data-atlas-field="location"]')?.focus();
+    markDirty();
+  });
+
+  $("atlas-location-editor")?.addEventListener("click", (event) => {
+    const remove = event.target.closest(".atlas-location-remove");
+    if (!remove) return;
+    const container = $("atlas-location-editor");
+    remove.closest("[data-atlas-location-row]")?.remove();
+    if (container && !container.querySelector("[data-atlas-location-row]")) {
+      container.innerHTML = '<div class="atlas-editor-empty">No manually entered location events.</div>';
+    }
+    markDirty();
+  });
+
+  attestation?.addEventListener("change", () => {
+    if (approveButton) approveButton.disabled = !draftCurrent || !attestation.checked;
+  });
+
+  saveButton?.addEventListener("click", async () => {
+    saveButton.disabled = true;
+    if (approveButton) approveButton.disabled = true;
+    setAtlasSaveState("Saving…", "saving");
+    try {
+      const result = await cloudClient.savePatientAtlas(PATIENT_ID, { action: "save-draft", content: collectAtlasEditor() });
+      activeAtlasConnection = { connected: true, workspace: result.workspace || null };
+      render(activeRecord, activeWorkflowConnection, activeAtlasConnection);
+    } catch (error) {
+      setAtlasSaveState(`Not saved · ${error.message || "try again"}`, "not-saved");
+      saveButton.disabled = false;
+    }
+  });
+
+  approveButton?.addEventListener("click", async () => {
+    if (!draftCurrent || !attestation?.checked) return;
+    approveButton.disabled = true;
+    saveButton.disabled = true;
+    setAtlasSaveState("Saving provider approval…", "saving");
+    try {
+      const result = await cloudClient.savePatientAtlas(PATIENT_ID, { action: "approve", expectedRevision: draft.revision });
+      activeAtlasConnection = { connected: true, workspace: result.workspace || null };
+      render(activeRecord, activeWorkflowConnection, activeAtlasConnection);
+    } catch (error) {
+      setAtlasSaveState(`Draft saved; approval not saved · ${error.message || "try again"}`, "not-saved");
+      approveButton.disabled = false;
+      saveButton.disabled = false;
+    }
+  });
+}
+
+function render(record, workflowConnection = { connected: false, encounters: [] }, atlasConnection = { connected: false, workspace: null }) {
   const view = document.body.dataset.p360View || "overview";
   const originalResources = allResources(record);
   const resources = originalResources.filter(isDisplayable);
@@ -655,15 +1069,23 @@ function render(record, workflowConnection = { connected: false, encounters: [] 
   const clinicalImpressions = resourcesOf(resources, "ClinicalImpression");
   const careTeams = resourcesOf(resources, "CareTeam");
   const systems = Array.isArray(record.systems) ? record.systems.filter(isDisplayable) : [];
+  const patientCheckins = Array.isArray(record.patientCheckins) ? record.patientCheckins.filter(isDisplayable) : [];
+  const monitoringPlans = Array.isArray(record.monitoringPlans) ? record.monitoringPlans.filter(isDisplayable) : [];
+  const monitoringModuleCatalog = Array.isArray(record.monitoringModuleCatalog) ? record.monitoringModuleCatalog.filter(isDisplayable) : [];
   const unresolvedTasks = tasks.filter((item) => !["completed", "cancelled", "failed", "rejected"].includes(String(item.status).toLowerCase()));
   const urgentItems = resources.filter((item) => ["stat", "asap", "urgent", "critical"].includes(String(item.priority || item.status).toLowerCase()));
   const gaps = [[allergies.length,"allergies"],[immunizations.length,"immunizations"],[procedures.length,"procedures"],[documents.length,"source documents"],[clinicalImpressions.length,"clinician mechanism synthesis"]].filter(([count]) => !count).map(([, label]) => label);
   const sourceOmitted = Number(record.restrictedRecordsOmitted || 0);
   const displayName = normalizePatientName(patient.name?.[0] || {});
-  const context = { record, resources, patient, displayName, conditions, observations, medications, encounters, tasks, carePlans, systems, allergies, reports, procedures, immunizations, documents, goals, serviceRequests, clinicalImpressions, careTeams, unresolvedTasks, urgentItems, timeline, frontendOmitted, sourceOmitted, gaps, workflowConnection, workflowEncounters: workflowConnection.encounters || [] };
+  const preventiveCare = record.preventiveCare || { measures: [], crisp: {} };
+  const context = { record, resources, patient, displayName, conditions, observations, medications, encounters, tasks, carePlans, systems, allergies, reports, procedures, immunizations, documents, goals, serviceRequests, clinicalImpressions, careTeams, patientCheckins, monitoringPlans, monitoringModuleCatalog, preventiveCare, unresolvedTasks, urgentItems, timeline, frontendOmitted, sourceOmitted, gaps, workflowConnection, workflowEncounters: workflowConnection.encounters || [], atlasConnection };
   const pageRenderers = { overview: overviewPage, atlas: atlasPage, timeline: timelinePage, mechanism: mechanismPage, context: contextPage, plan: planPage, data: dataPage, sources: sourcesPage };
   const header = view === "overview" ? fullHero(context) : compactHeader(context);
   $("content").innerHTML = `${header}${pageNavigation(view)}${safeNotice(context)}${(pageRenderers[view] || overviewPage)(context)}`;
+  if (view === "atlas") wireAtlasEntry(context);
+  if (view === "timeline") wireClinicalTimeline();
+  preservePatientLinks(document);
+  wireMonitoringPlanControls(context);
 }
 
 async function load() {
@@ -672,6 +1094,8 @@ async function load() {
   try {
     const client = await createEncounterCloudClient();
     if (!client) throw new Error("Google Cloud is not configured for this site.");
+    cloudClient = client;
+    healthCoreClient = client;
     const body = await client.healthRecord(PATIENT_ID);
     if (!body?.healthRecord) throw new Error("The synthetic Health Core record was not returned.");
     let workflowConnection = { connected: true, encounters: [] };
@@ -688,7 +1112,23 @@ async function load() {
           : (error.message || "The encounter queue could not be read."),
       };
     }
-    render(body.healthRecord, workflowConnection);
+    let atlasConnection = { connected: true, workspace: null };
+    try {
+      const result = await client.patientAtlas(PATIENT_ID);
+      atlasConnection.workspace = result.workspace || null;
+    } catch (error) {
+      atlasConnection = {
+        connected: false,
+        workspace: null,
+        error: [404, 502, 503].includes(error.status)
+          ? "The protected Atlas entry connection is awaiting its Health Core release."
+          : (error.message || "The protected Atlas workspace could not be read."),
+      };
+    }
+    activeRecord = body.healthRecord;
+    activeWorkflowConnection = workflowConnection;
+    activeAtlasConnection = atlasConnection;
+    render(activeRecord, activeWorkflowConnection, activeAtlasConnection);
     $("status").className = "badge complete";
     $("status").textContent = "Health Core connected";
   } catch (error) {
@@ -706,5 +1146,7 @@ $("theme").onclick = () => {
 $("refresh").onclick = load;
 $("print").onclick = () => window.print();
 if (localStorage.getItem(THEME_KEY) === "dark") document.documentElement.dataset.theme = "dark";
+const sideNote = document.querySelector(".side-note");
+if (sideNote) sideNote.innerHTML = "Longitudinal Health Core view.<br><br>Patient-scoped and role protected.";
 load();
 

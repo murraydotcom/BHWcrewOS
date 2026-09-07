@@ -22,7 +22,7 @@
   header .logo{width:42px;height:42px;border-radius:11px;background:var(--white);border:1px solid var(--line);display:grid;place-items:center;flex-shrink:0}
   header h1{font-size:1.28rem;font-weight:800;letter-spacing:-.01em}
   header .sub{font-size:.72rem;color:var(--ink-soft);font-weight:600;margin-top:1px}
-  header .right{margin-left:auto;display:flex;align-items:center;gap:10px}
+  header .right{margin-left:auto;display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:10px}
   .opencount{display:flex;align-items:center;gap:9px;background:var(--white);border:1px solid var(--line);border-radius:12px;padding:7px 14px}
   .opencount .n{font-size:1.15rem;font-weight:800;line-height:1}.opencount .n.warn{color:var(--clay)}
   .opencount .l{font-size:.6rem;font-weight:700;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.04em;line-height:1.2}
@@ -41,6 +41,7 @@
   .banner{display:none;margin:0 0 14px;padding:10px 14px;border-radius:10px;font-size:.76rem;font-weight:700}
   .banner.demo{display:block;background:#fbf1dd;border:1px solid #e6d6ad;color:#8a6a26}
   .banner.err{display:block;background:#f6e2e2;border:1px solid #e6bcbc;color:var(--urgent)}
+  .banner .reconnect{display:inline-block;margin-left:6px;color:inherit;text-decoration:underline;text-underline-offset:2px}
 
   /* unified request command center */
   .layout{display:grid;grid-template-columns:minmax(330px,420px) minmax(0,1fr);gap:16px;align-items:start}
@@ -185,7 +186,7 @@
   .srow.allrow{border-top:1px solid var(--line-2);border-radius:0;margin-bottom:6px;padding-top:12px;font-weight:800}
   @media(max-width:960px){.layout{grid-template-columns:1fr}.detailpanel{position:static}.detailgrid{grid-template-columns:1fr}.detailsection+ .detailsection{border-left:0;border-top:1px solid var(--line)}}
   @media(max-width:640px){
-    .wrap{padding:12px 10px 50px}.right .opencount{display:none}.backlink{padding:8px 10px}
+    .wrap{padding:12px 10px 50px}header{flex-wrap:wrap}.right{width:100%;margin-left:0}.right .opencount{display:none}.backlink{padding:8px 10px}
     .filters{overflow-x:auto}.filters .flabel,.filters .live{display:none}.filters button{flex:0 0 auto;padding:7px 12px}.filters input{min-width:150px;margin-left:8px}.filters select{min-width:135px}
     .dategroup{grid-template-columns:44px 1fr;gap:8px}.datenode .d{font-size:1.35rem}.datenode .w{padding:3px 6px}
     .rc-head{padding:12px 10px;gap:8px}.av.lg{width:38px;height:38px}.stagepill{padding:5px 8px;font-size:.55rem}
@@ -207,6 +208,7 @@
     <div class="right">
       <div class="opencount"><span class="n" id="ocN">–</span><span class="l" id="ocL">open<br>requests</span></div>
       <span class="mirror-note">Chat mirror connected</span>
+      <a class="backlink" href="/bhw-staff-guide.html#patient-requests-training" target="_blank" rel="noopener">Training guide</a>
       <a class="backlink" href="/bhw-front-desk.html">← Front Desk</a>
     </div>
   </header>
@@ -300,6 +302,22 @@ function fmtTime(iso){ if(!iso) return ''; const d=new Date(iso); let h=d.getHou
 function dayKey(iso){ const d=iso?new Date(iso):new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); } // local date, not UTC
 function isHot(it){ return /overdue|urgent|breach|!/i.test(it.sla||'') || /urgent|stat|emergen/i.test(it.priority||''); }
 function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function crewosSigninUrl(){
+  const next=`${location.pathname}${location.search}${location.hash}`;
+  return `/crewos?next=${encodeURIComponent(next)}`;
+}
+function isSessionExpired(error){
+  return Number(error?.status)===401||error?.code==='CREWHQ_SESSION_EXPIRED';
+}
+function showSignInRequired(expired=false){
+  TOKEN='';
+  try{sessionStorage.removeItem('crewos_token');}catch(_){ }
+  document.getElementById('me').textContent=expired?'session expired':'not signed in';
+  const banner=document.getElementById('banner');
+  banner.className='banner err';
+  const message=expired?'Your CrewOS session expired.':'Sign in to CrewOS to open the Google patient-request queue.';
+  banner.innerHTML=`${message} <a class="reconnect" href="${esc(crewosSigninUrl())}">Sign in again</a> and return to this request.`;
+}
 function safeHttpsUrl(raw){
   try{const u=new URL(String(raw||''),location.origin);return u.protocol==='https:'?u.href:'';}catch(_){return '';}
 }
@@ -556,12 +574,15 @@ async function load(){
         who:'',
       })),
     }));
+    document.getElementById('me').textContent='signed in';
     banner.className='banner'; render();
     window.dispatchEvent(new CustomEvent('bhw:requests-updated',{detail:{requests:ITEMS}}));
     return;
   }catch(e){
-    ITEMS=[]; banner.className='banner err';
-    banner.textContent='Couldn’t reach the Google patient-request queue. Sign in to crewOS again, then reload.';
+    ITEMS=[];
+    if(isSessionExpired(e)){showSignInRequired(true);render();return;}
+    banner.className='banner err';
+    banner.textContent='Couldn’t reach the Google patient-request queue. The queue service may be temporarily unavailable. Try again in a moment.';
     render();
   }
 }
@@ -576,7 +597,7 @@ async function runRequestAction(id,action,details={}){
   if(!result.ok){showActionError(result.d.error);return;}
   await load();
 }
-function needAuth(){ const b=document.getElementById('banner'); b.className='banner err'; b.textContent='Sign in to crewOS first (open Front Desk and connect), then reload — claiming or completing a request records who did it.'; }
+function needAuth(){showSignInRequired(false);}
 async function claim(id){return runRequestAction(id,'assign');}
 async function advance(id,statusName){return runRequestAction(id,'milestone',{status:statusName});}
 // One-click complete box: check to resolve (stamps you as owner); uncheck to reopen.
@@ -600,13 +621,13 @@ async function loadRoster(){
   }catch(_){ /* best-effort — the rail still shows anyone already assigned */ }
 }
 
-if(TOKEN){ document.getElementById('me').textContent='signed in'; }
+if(TOKEN){document.getElementById('me').textContent='signed in';}
 document.getElementById('requestSearch').addEventListener('input',event=>{SEARCH=event.target.value.trim().toLowerCase();render();});
 document.getElementById('teamFilter').addEventListener('change',event=>setTeam(event.target.value));
 loadRoster();
-load();
-setInterval(load,45000);
-document.addEventListener('visibilitychange',()=>{ if(!document.hidden) load(); });
+if(TOKEN)load();else{showSignInRequired(false);render();}
+setInterval(()=>{if(TOKEN)load();},45000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&TOKEN)load();});
 document.addEventListener('click',e=>{
   const btn=e.target.closest('.view-fax');
   if(btn)openFaxPdf(btn.dataset.faxUrl,btn.dataset.faxName);

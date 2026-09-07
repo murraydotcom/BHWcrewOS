@@ -1,0 +1,95 @@
+{
+  "schemaVersion": "bhw.lab-crewos-work-queues.v1",
+  "generatedAt": "2026-09-01T04:20:00.000Z",
+  "boundary": {
+    "bhwPatientId": "BHW0000",
+    "syntheticOnly": true,
+    "readOnly": true,
+    "runtimeConnected": false,
+    "source": "synthetic-operational-queue-fixture",
+    "notice": "CrewOS contains operational laboratory work only. The clinical laboratory record, results, trends, interpretations, and orders belong to the Health Core EHR. No production Firestore, Labcorp, Care Connect, or real-patient access is enabled."
+  },
+  "directory": {
+    "authoritativePhysicalEntries": 21,
+    "specialtyCandidates": 49,
+    "escalationBranches": 8,
+    "totalRecords": 70,
+    "vendorValidationStatus": "pending-live-labcorp-validation"
+  },
+  "dashboard": {
+    "queues": {
+      "criticalOpen": 1,
+      "missingOrPartial": 2,
+      "outsideVerification": 1,
+      "providerReview": 2
+    },
+    "orderIntegrity": {
+      "templatePreserved": true,
+      "authoritativeTemplateItemCount": 21,
+      "programAdditionCount": 2,
+      "patientSpecificAdditionCount": 1
+    },
+    "workItems": [
+      {
+        "workItemId": "SYN-WORK-CRITICAL-1",
+        "queue": "critical",
+        "priority": "critical",
+        "bhwPatientId": "BHW0000",
+        "patientName": "Synthetic Patient",
+        "title": "Critical-result closure remains open",
+        "detail": "Provider assessment is documented. Patient action or disposition and closure are still required in Health Core.",
+        "status": "clinician-acknowledged",
+        "healthCoreRecordReference": "health-core://patients/BHW0000/labs/critical/SYN-CRITICAL-1",
+        "updatedAt": "2026-08-31T15:12:00.000Z"
+      },
+      {
+        "workItemId": "SYN-WORK-MISSING-1",
+        "queue": "missing",
+        "priority": "high",
+        "bhwPatientId": "BHW0000",
+        "patientName": "Synthetic Patient",
+        "title": "Partial report requires reconciliation",
+        "detail": "One ordered component has not resulted. Review the clinical order and report in Health Core.",
+        "status": "partial",
+        "healthCoreRecordReference": "health-core://patients/BHW0000/labs/reports/SYN-REPORT-PARTIAL-1",
+        "updatedAt": "2026-08-31T14:20:00.000Z"
+      },
+      {
+        "workItemId": "SYN-WORK-OUTSIDE-1",
+        "queue": "outside",
+        "priority": "routine",
+        "bhwPatientId": "BHW0000",
+        "patientName": "Synthetic Patient",
+        "title": "Outside PDF identity verification incomplete",
+        "detail": "One matching evidence type is present; two are required before Health Core linkage.",
+        "status": "candidate-match",
+        "healthCoreRecordReference": "health-core://outside-intake/SYN-OUTSIDE-INTAKE-1",
+        "updatedAt": "2026-08-30T18:15:00.000Z"
+      },
+      {
+        "workItemId": "SYN-WORK-REVIEW-1",
+        "queue": "review",
+        "priority": "high",
+        "bhwPatientId": "BHW0000",
+        "patientName": "Synthetic Patient",
+        "title": "Interpretation review blocked by open critical event",
+        "detail": "The draft in Health Core cannot be approved until the critical-result workflow is closed.",
+        "status": "blocked",
+        "healthCoreRecordReference": "health-core://patients/BHW0000/labs/interpretations/SYN-INTERPRETATION-1",
+        "updatedAt": "2026-08-31T15:20:00.000Z"
+      },
+      {
+        "workItemId": "SYN-WORK-REVIEW-2",
+        "queue": "review",
+        "priority": "routine",
+        "bhwPatientId": "BHW0000",
+        "patientName": "Synthetic Patient",
+        "title": "Lab Justification requires provider dispositions",
+        "detail": "Every recommendation in Health Core requires a separate approve, modify, defer, or decline decision.",
+        "status": "provider-review-required",
+        "healthCoreRecordReference": "health-core://patients/BHW0000/labs/justifications/SYN-JUSTIFICATION-1",
+        "updatedAt": "2026-08-31T15:22:00.000Z"
+      }
+    ]
+  }
+}

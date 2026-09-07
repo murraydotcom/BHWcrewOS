@@ -154,7 +154,7 @@ export class FirestoreWorkflowRepository extends FirestoreOperationsRepository {
       const contact = contactById.get(row.bhwPatientId);
       return {
         ...row,
-        patientName: row.bhwPatientId === "BHW0000" ? "Synthetic Patient" : [patient?.preferredName || patient?.legalFirstName, patient?.legalLastName].filter(Boolean).join(" "),
+        patientName: row.bhwPatientId === "BHW0000" ? "Synthetic Patient" : [patient?.preferredName || patient?.legalFirstName, patient?.legalLastName, patient?.nameSuffix].filter(Boolean).join(" "),
         canSms: Boolean(contact?.active !== false && (contact?.phoneE164 || contact?.phone)),
       };
     });

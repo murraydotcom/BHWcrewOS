@@ -15,4 +15,6 @@ The Google Cloud Run registry (`GET /v1/patients`) is the authoritative patient 
 
 Provider registry, workflow, transcription, and Health Blueprint already use the same Cloud endpoint through `provider/cloud-queue.mjs`.
 
+All shared CrewOS and Front Desk list labels are composed from the Cloud legal first, middle, legal last, and suffix fields. The BHW Patient ID stays with the display label wherever a staff member chooses a patient. Patient status remains separate from coverage and consent: non-active records stay visible for historical work, while deceased and transferred records are disabled only where staff would otherwise start new care work.
+
 The CRISP/ADT discharge feed remains separate by design. Notion queue, care-log, patient-page, and quality-event records may retain imported source IDs for relationship compatibility, but they are not alternate patient rosters.

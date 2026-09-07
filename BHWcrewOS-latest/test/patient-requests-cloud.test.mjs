@@ -9,6 +9,7 @@ test("Patient Requests is the command center and Google Chat is only a mirror", 
 
   assert.match(html, /One Google-backed queue/);
   assert.match(html, /Google Chat mirrors alerts and quick actions/);
+  assert.match(html, /bhw-staff-guide\.html#patient-requests-training/);
   assert.match(html, /Patient request work queue/);
   assert.match(script, /listPatientRequests/);
   assert.match(script, /listPatientRequestCommunications/);
@@ -17,6 +18,11 @@ test("Patient Requests is the command center and Google Chat is only a mirror", 
   assert.match(script, /referral_sent/);
   assert.match(script, /closed_without_scheduling/);
   assert.match(script, /noPhiAttestation:true/);
+  assert.match(script, /CREWHQ_SESSION_EXPIRED/);
+  assert.match(script, /crewosSigninUrl/);
+  assert.match(script, /encodeURIComponent\(next\)/);
+  assert.match(script, /Sign in again/);
+  assert.doesNotMatch(script, /Sign in to crewOS again, then reload/);
   assert.doesNotMatch(script, /chat\.googleapis\.com|GOOGLE_CHAT_DEFAULT_SPACE/);
   assert.doesNotThrow(() => new Function(script));
 });
@@ -58,8 +64,12 @@ test("Patient Requests uses the dedicated Operations token exchange and one Goog
 
   try {
     const client = await createOperationsCloudClient(fetchImpl);
-    const requests = await client.listPatientRequests({ status: "open" });
+    const requests = await client.listPatientRequests({ status: "open", serviceLine: "clinical", assignedTeam: "clinical", bhwPatientId: "BHW0000" });
     assert.equal(requests[0].id, "synthetic-request-1");
+    const listUrl = String(calls.find((call) => call.url.includes("/v1/patient-requests?")).url);
+    assert.match(listUrl, /serviceLine=clinical/);
+    assert.match(listUrl, /assignedTeam=clinical/);
+    assert.match(listUrl, /bhwPatientId=BHW0000/);
     const started = await client.patientRequestAction("synthetic-request-1", "start", { idempotencyKey: "synthetic-start" });
     assert.equal(started.request.status, "in_progress");
     const sent = await client.sendPatientRequestSms("synthetic-request-1", "Please open your secure BHW page.", {

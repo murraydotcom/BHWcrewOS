@@ -81,6 +81,7 @@ export function buildEncounterPacket(input = {}) {
   const packet = {
     id: String(input.id || "").trim(),
     encounterId: String(input.encounterId || input.id || "").trim(),
+    updatedAt: String(input.updatedAt || ""),
     bhwPatientId: String(input.bhwPatientId || "").trim().toUpperCase(),
     completedAt: input.completedAt || new Date().toISOString(),
     provider: String(input.provider || "Unassigned"),

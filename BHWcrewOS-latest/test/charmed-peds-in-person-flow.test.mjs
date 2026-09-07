@@ -58,6 +58,9 @@ test("screening need queues are created before the send step and remain staff ap
   assert.match(html, /Why this review was triggered/);
   assert.match(html, /Approve & send selected links/);
   assert.match(html, /Verify your CrewOS PIN to send/);
+  assert.match(html, /const CM_REMOTE_SCREENERS = new Set\(\["AQ-10", "RAADS-14", "ASRS", "PHQ-9", "GAD-7"\]\)/);
+  assert.match(html, /Not available for remote send/);
+  assert.match(html, /Licensed, provider-administered, or unavailable tools stay blocked/);
   assert.doesNotMatch(html, /auto(?:matically)?[^\n]{0,40}send/i);
 });
 
