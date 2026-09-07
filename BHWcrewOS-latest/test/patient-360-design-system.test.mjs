@@ -67,6 +67,16 @@ test("Patient 360 overview omits internal labels and uses lighter headings", () 
   assert.match(css, /\.hero-aside h2\{font-weight:500\}/);
 });
 
+test("Patient 360 keeps CrewOS referral identity and workflow status visible", () => {
+  const app = fs.readFileSync(path.join(provider, "patient-360-app.mjs"), "utf8");
+  assert.match(app, /function serviceRequestDetail\(item\)/);
+  assert.match(app, /endsWith\("\/patient-request"\)/);
+  assert.match(app, /endsWith\("\/bhw-referral-workflow-status"\)/);
+  assert.match(app, /Request \$\{requestId\}/);
+  assert.match(app, /CrewOS \$\{statusText\(workflowStatus\)\}/);
+  assert.match(app, /item\.resourceType === "ServiceRequest" \? serviceRequestDetail\(item\)/);
+});
+
 test("Patient 360 Atlas supports protected draft entry with a separate provider approval gate", () => {
   const app = fs.readFileSync(path.join(provider, "patient-360-app.mjs"), "utf8");
   const queue = fs.readFileSync(path.join(provider, "cloud-queue.mjs"), "utf8");
