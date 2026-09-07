@@ -13,6 +13,8 @@ let client = null;
 let patients = [];
 let selectedId = "";
 let toastTimer;
+let registryFormDirty = false;
+let registryRefreshPromise = null;
 
 function showToast(message) {
   $("toast").textContent = message;
@@ -164,17 +166,34 @@ function renderDetail() {
   const patient = patients.find((item) => item.bhwPatientId === selectedId);
   if (!patient) { $("detail").innerHTML = '<div class="empty">Select a patient to review the master record.</div>'; return; }
   const displayedLastName = `${patient.legalLastName}${patient.nameSuffix ? ` ${patient.nameSuffix}` : ""}`;
-  $("detail").innerHTML = `<div class="card-head"><div><h3>${esc(patient.bhwPatientId)} · ${esc(displayedLastName)}, ${esc(patient.preferredName || patient.legalFirstName)}</h3><div class="privacy">Last verified ${patient.lastVerifiedAt ? new Date(patient.lastVerifiedAt).toLocaleString() : "not recorded"}</div></div><span class="badge ${patient.coverageStatus === "verified" ? "complete" : "warning"}">${esc(patient.coverageStatus)}</span></div><div class="detail"><div class="formgrid">${patientFields(patient)}</div><div class="actions"><button class="btn primary" id="savePatient">Save verified changes</button><button class="btn" id="startEncounter">Create encounter</button></div><div class="privacy">Patient-reported changes must be verified before they replace this authoritative record. This registry supports operations; CharmHealth remains the legal medical record.</div><div class="consent-panel" id="recordingConsentPanel"><div class="privacy">Loading signed consent status…</div></div></div>`;
+  $("detail").innerHTML = `<div class="card-head"><div><h3>${esc(patient.bhwPatientId)} · ${esc(displayedLastName)}, ${esc(patient.preferredName || patient.legalFirstName)}</h3><div class="privacy">Last verified ${patient.lastVerifiedAt ? new Date(patient.lastVerifiedAt).toLocaleString() : "not recorded"}</div></div><span class="badge ${patient.coverageStatus === "verified" ? "complete" : "warning"}">${esc(patient.coverageStatus)}</span></div><div class="detail"><div class="formgrid" id="patientMasterFields">${patientFields(patient)}</div><div class="actions"><button class="btn primary" id="savePatient">Save verified changes</button><button class="btn" id="startEncounter">Create encounter</button></div><div class="privacy">Patient-reported changes must be verified before they replace this authoritative record. This registry supports operations; CharmHealth remains the legal medical record.</div><div class="consent-panel" id="recordingConsentPanel"><div class="privacy">Loading signed consent status…</div></div></div>`;
+  registryFormDirty = false;
+  document.querySelectorAll("#patientMasterFields input, #patientMasterFields select").forEach((control) => {
+    control.addEventListener("input", () => { registryFormDirty = true; });
+    control.addEventListener("change", () => { registryFormDirty = true; });
+  });
   $("savePatient").onclick = async () => {
     const next = readPatient("d", patient.bhwPatientId);
     const error = validationMessage(next);
     if (error) { showToast(error); return; }
+    const button = $("savePatient");
+    button.disabled = true;
+    button.textContent = "Saving…";
     try {
-      const response = await client.savePatient(next);
-      Object.assign(patient, response.patient);
-      render();
-      showToast(`${patient.bhwPatientId} saved to the protected Patient Registry.`);
-    } catch (error) { showToast(error.message || "The patient record could not be saved."); }
+      await client.savePatient(next);
+      await refreshPatients({ force: true, selectId: patient.bhwPatientId });
+      const current = patients.find((item) => item.bhwPatientId === patient.bhwPatientId);
+      const fields = ["legalFirstName", "legalLastName", "nameSuffix", "preferredName", "dateOfBirth", "phone", "email", "patientStatus", "primaryPayer", "memberId", "coverageStatus", "referralSource", "responsibleStaff"];
+      if (!current || fields.some((key) => String(current[key] || "") !== String(next[key] || ""))) {
+        throw new Error("The patient update could not be verified in the current Cloud registry.");
+      }
+      registryFormDirty = false;
+      showToast(`Saved to BHW Cloud at ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}.`);
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = "Save verified changes";
+      showToast(error.message || "The patient record could not be saved.");
+    }
   };
   $("startEncounter").onclick = () => {
     sessionStorage.setItem(PENDING_PATIENT_KEY, patient.bhwPatientId);
@@ -185,8 +204,47 @@ function renderDetail() {
 
 function render() { renderKpis(); renderRows(); renderDetail(); }
 
+async function refreshPatients({ force = false, selectId = selectedId, announce = false } = {}) {
+  if (!client) return false;
+  if (registryFormDirty && !force) {
+    if (announce) showToast("Save or discard the patient changes before refreshing the registry list.");
+    return false;
+  }
+  if (registryRefreshPromise) {
+    await registryRefreshPromise;
+    if (force) return refreshPatients({ force, selectId, announce });
+    return true;
+  }
+  registryRefreshPromise = (async () => {
+    const button = $("refreshPatients");
+    if (button) { button.disabled = true; button.textContent = "Refreshing…"; }
+    try {
+      const current = await client.listPatients();
+      patients = current;
+      selectedId = current.some((patient) => patient.bhwPatientId === selectId) ? selectId : (current[0]?.bhwPatientId || "");
+      registryFormDirty = false;
+      $("cloudStatus").className = "badge complete";
+      $("cloudStatus").textContent = "Google Cloud synced";
+      $("lastRegistrySync").textContent = `Current as of ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+      render();
+      if (announce) showToast(`Patient Registry refreshed from BHW Cloud · ${current.length} current records.`);
+      return true;
+    } catch (error) {
+      $("cloudStatus").className = "badge warning";
+      $("cloudStatus").textContent = "Refresh interrupted";
+      if (announce) showToast(error.message || "The Patient Registry could not refresh.");
+      return false;
+    } finally {
+      if (button) { button.disabled = false; button.textContent = "Refresh current list"; }
+      registryRefreshPromise = null;
+    }
+  })();
+  return registryRefreshPromise;
+}
+
 $("search").oninput = renderRows;
 $("statusFilter").onchange = renderRows;
+$("refreshPatients").onclick = () => { void refreshPatients({ announce: true }); };
 $("theme").onclick = () => {
   const dark = document.documentElement.dataset.theme === "dark";
   document.documentElement.dataset.theme = dark ? "light" : "dark";
@@ -203,24 +261,19 @@ $("create").onclick = async () => {
   if (patients.some((item) => item.bhwPatientId === patient.bhwPatientId)) { showToast("That BHW Patient ID already exists. Open the existing record instead."); return; }
   try {
     const response = await client.savePatient(patient);
-    patients.push(response.patient);
-    patients.sort((left, right) => `${left.legalLastName}|${left.nameSuffix || ""}|${left.legalFirstName}`.localeCompare(`${right.legalLastName}|${right.nameSuffix || ""}|${right.legalFirstName}`));
     selectedId = response.patient.bhwPatientId;
     $("modal").classList.remove("on");
-    render();
-    showToast(`${selectedId} added to the protected Patient Registry.`);
+    await refreshPatients({ force: true, selectId: selectedId });
+    showToast(`${selectedId} created. Saved to BHW Cloud at ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}.`);
   } catch (error) { showToast(error.message || "The patient record could not be created."); }
 };
 
 async function initialize() {
   try {
     client = await createPatientRegistryClient();
-    patients = await client.listPatients();
-    selectedId = patients[0]?.bhwPatientId || "";
-    $("cloudStatus").className = "badge complete";
-    $("cloudStatus").textContent = "Google Cloud synced";
+    const refreshed = await refreshPatients({ force: true });
+    if (!refreshed) throw new Error("The protected Patient Registry could not be refreshed.");
     $("newPatient").disabled = false;
-    render();
   } catch (error) {
     $("cloudStatus").className = "badge warning";
     $("cloudStatus").textContent = "Cloud unavailable";
@@ -230,5 +283,11 @@ async function initialize() {
 }
 
 initialize();
+
+window.addEventListener("focus", () => { void refreshPatients(); });
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") void refreshPatients();
+});
+setInterval(() => { void refreshPatients(); }, 60000);
 
 

@@ -515,7 +515,7 @@ async function lookup(){
   if(!q){$('lkstatus').textContent='Enter a phone number or name to search.';return;}
   $('profile').classList.remove('show');
   if(!API){
-    $('lkstatus').innerHTML='Live lookup isn\u2019t connected yet — open the patient in <a href="https://app.notion.com/p/2cf580758d3080f0825de4bbfb6c7528" target="_rel"><b>Patients Master List</b></a> for now.';
+  $('lkstatus').textContent='The protected Patient Registry is unavailable. No older patient list is being shown; reconnect and retry.';
     return;
   }
   $('lkstatus').textContent='Searching…';

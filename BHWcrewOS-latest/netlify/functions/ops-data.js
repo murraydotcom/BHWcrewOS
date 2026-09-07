@@ -3,7 +3,7 @@
  
 const { DB, queryDb, P, getSession, visibleDivisions, json } = require("./_lib");
 const { listCloudPatients } = require("./lib/cloud-patients");
-const { buildPatientDirectory, fallbackIndexDirectory } = require("./lib/crew-patient-directory");
+const { buildPatientDirectory } = require("./lib/crew-patient-directory");
 const zlib = require("zlib");
 
 function parseStoredAnswer(raw) {
@@ -118,7 +118,7 @@ exports.handler = async (event) => {
     }));
     const directory = patientRegistry.ready
       ? buildPatientDirectory(indexPatients, patientRegistry.patients)
-      : fallbackIndexDirectory(indexPatients);
+      : { patients: [], patientLabel: {} };
     const { patients, patientLabel } = directory;
     const patientBhwIdByKey = {};
     for (const patient of patients) {

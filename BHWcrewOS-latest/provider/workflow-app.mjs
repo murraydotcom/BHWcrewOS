@@ -113,10 +113,100 @@ let structuringId = "";
 let patients = [];
 let encounterCreationKey = "";
 let registryReady = false;
+const cloudBaselines = new Map();
+const cloudSavedAt = new Map();
+const cloudPendingIds = new Set();
+const cloudSaveChains = new Map();
+const noteEditingIds = new Set();
+const noteAutosaveTimers = new Map();
 
 const lineValues = (value) => String(value || "").split("\n").map((item) => item.trim()).filter(Boolean);
 
-function persist() {
+function cloudFingerprint(row = {}) {
+  const fields = [
+    "id", "encounterId", "bhwPatientId", "completedAt", "provider", "visitType", "sourceTranscript",
+    "notePlan", "encounterSnapshot", "noteBuilderInput", "noteDraftMeta", "coverage", "medicationEpaCases",
+    "payer", "note", "codes", "diagnoses", "medications", "orders", "referrals", "followUp",
+    "patientInstructions", "pendingResults", "returnPrecautions", "status", "owner", "providerApproved",
+    "charmDraftSaved", "auditTrail", "tasks", "documents", "codingRecommendations", "clinicalAudit",
+  ];
+  return JSON.stringify(Object.fromEntries(fields.map((field) => [field, row[field]])));
+}
+
+function rememberCloudVersion(row = {}) {
+  if (!row.id) return;
+  cloudBaselines.set(row.id, cloudFingerprint(row));
+  if (row.updatedAt) cloudSavedAt.set(row.id, row.updatedAt);
+}
+
+function setNoteSaveState(row, override = "") {
+  const badge = $("noteSaveState");
+  if (!badge || !row) return;
+  const baselineMatches = cloudBaselines.get(row.id) === cloudFingerprint(row);
+  let state = override;
+  if (!state) {
+    if (noteEditingIds.has(row.id)) state = "not-saved";
+    else if (cloudPendingIds.has(row.id)) state = "saving";
+    else if (cloudClient && baselineMatches) state = "cloud";
+    else if (row.note || row.sourceTranscript) state = "device";
+    else state = "not-saved";
+  }
+  const savedAt = cloudSavedAt.get(row.id) || row.updatedAt;
+  const labels = {
+    "not-saved": "Not saved",
+    saving: "Saving…",
+    device: "Saved on this device only",
+    cloud: `Saved to BHW Cloud${savedAt ? ` at ${new Date(savedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : ""}`,
+  };
+  badge.className = `badge ${state === "cloud" ? "complete" : "warning"}`;
+  badge.textContent = labels[state] || labels["not-saved"];
+}
+
+function queueEncounterSave(row) {
+  if (!cloudClient) return Promise.reject(new Error("The protected Google Cloud connection is not available."));
+  const prior = cloudSaveChains.get(row.id) || Promise.resolve();
+  const task = prior.catch(() => {}).then(async () => {
+    const current = rows.find((candidate) => candidate.id === row.id);
+    if (!current || cloudBaselines.get(current.id) === cloudFingerprint(current)) {
+      if (current) {
+        cloudPendingIds.delete(current.id);
+        setNoteSaveState(current);
+      }
+      return current;
+    }
+    const snapshot = JSON.parse(JSON.stringify(current));
+    cloudPendingIds.add(current.id);
+    setNoteSaveState(current);
+    try {
+      const saved = await cloudClient.saveAndVerify(snapshot);
+      const latest = rows.find((candidate) => candidate.id === current.id);
+      if (latest && saved?.updatedAt) latest.updatedAt = saved.updatedAt;
+      rememberCloudVersion(buildEncounterPacket(saved || snapshot));
+      setCloudState("connected");
+      return saved;
+    } catch (error) {
+      setCloudState("error");
+      throw error;
+    } finally {
+      cloudPendingIds.delete(current.id);
+      const latest = rows.find((candidate) => candidate.id === current.id);
+      setNoteSaveState(latest);
+    }
+  });
+  cloudSaveChains.set(row.id, task);
+  void task.finally(() => {
+    if (cloudSaveChains.get(row.id) === task) cloudSaveChains.delete(row.id);
+  }).catch(() => {});
+  return task;
+}
+
+async function flushDirtyEncounters() {
+  if (!cloudClient) return;
+  const dirty = rows.filter((row) => cloudBaselines.get(row.id) !== cloudFingerprint(row));
+  await Promise.all(dirty.map((row) => queueEncounterSave(row)));
+}
+
+function persist({ cloud = true } = {}) {
   storageSet(localStorage, QUEUE_KEY, serializeQueue(rows));
   const clinical = Object.fromEntries(rows
     .filter((row) => row.note || row.codes.length || row.diagnoses.length || row.tasks.length || row.documents.length || row.codingRecommendations.length || row.clinicalAudit?.status !== "not_run")
@@ -144,11 +234,13 @@ function persist() {
       clinicalAudit: row.clinicalAudit,
     }]));
   storageSet(sessionStorage, NOTES_KEY, JSON.stringify(clinical));
-  if (cloudClient) {
+  if (cloudClient && cloud) {
     clearTimeout(cloudSaveTimer);
+    rows.filter((row) => cloudBaselines.get(row.id) !== cloudFingerprint(row)).forEach((row) => cloudPendingIds.add(row.id));
+    setNoteSaveState(rows.find((row) => row.id === selected));
     cloudSaveTimer = setTimeout(async () => {
       try {
-        await cloudClient.saveAll(rows);
+        await flushDirtyEncounters();
         setCloudState("connected");
       } catch (error) {
         setCloudState("error");
@@ -429,7 +521,7 @@ function renderDetail() {
     <div class="field"><label>Approved ICD-10-CM diagnoses — after note audit</label><input id="dDiagnoses" value="${esc(row.diagnoses.join(", "))}" placeholder="Review and apply the post-note recommendations"></div>
     <div style="margin-top:12px">${renderNoteBuilder(row)}</div>
     <div class="field" style="margin-top:12px"><label>Source transcription or imported clinical draft</label><textarea id="dTranscript" rows="7">${esc(row.sourceTranscript || "")}</textarea><div class="privacy">Source material remains separate from the structured note. Provider review is required before generation.</div></div>
-    <div class="field" style="margin-top:12px"><label>Structured clinical note — editable provider draft</label><textarea id="dNote" rows="15">${esc(row.note)}</textarea><div class="privacy">${cloudState === "connected" ? "Protected cloud synchronization is active. Do not treat this queue as the legal medical record." : "Note text and clinical codes stay in this browser tab session only."}</div></div>
+    <div class="field" style="margin-top:12px"><label>Structured clinical note — editable provider draft</label><textarea id="dNote" rows="15">${esc(row.note)}</textarea><div class="actions" style="margin-top:7px"><span id="noteSaveState" class="badge warning">Not saved</span><span class="privacy" style="margin:0">Autosaves after you pause. Cloud saves are read back and verified.</span></div></div>
     <details class="audit-raw"><summary>Structured encounter packet — auto-extracted, reviewable</summary><div class="formgrid" style="margin-top:12px"><div class="field"><label>Medications — one per line</label><textarea id="dMedications" rows="5">${esc(structuredLines(row.medications.map((item) => item.sourceText || [item.name, item.doseFrequency].filter(Boolean).join(" — "))))}</textarea></div><div class="field"><label>Orders — one per line</label><textarea id="dOrders" rows="5">${esc(structuredLines(row.orders))}</textarea></div><div class="field"><label>Referrals — one per line</label><textarea id="dReferrals" rows="5">${esc(structuredLines(row.referrals))}</textarea></div><div class="field"><label>Follow-up</label><textarea id="dFollowUp" rows="5">${esc(structuredLines(row.followUp))}</textarea></div><div class="field"><label>Patient instructions</label><textarea id="dInstructions" rows="5">${esc(structuredLines(row.patientInstructions))}</textarea></div><div class="field"><label>Pending results</label><textarea id="dPendingResults" rows="5">${esc(structuredLines(row.pendingResults))}</textarea></div><div class="field"><label>Return precautions</label><textarea id="dReturnPrecautions" rows="5">${esc(structuredLines(row.returnPrecautions))}</textarea></div></div></details>
     <div class="actions"><button class="btn" id="pasteFreed">Paste source transcript / draft</button><button class="btn primary" id="analyze" ${analyzingId === row.id ? "disabled" : ""}>${analyzingId === row.id ? "Running full clinical audit…" : "Run documentation + coding + clinical audit"}</button><button class="btn" id="savePacket">Update packet</button><button class="btn danger" id="deleteEncounter">Remove encounter</button></div>
     <div class="tabs"><button class="tab ${activeTab === "clinical" ? "on" : ""}" data-tab="clinical">Required Changes${auditSummary.pending ? ` (${auditSummary.pending})` : ""}</button><button class="tab ${activeTab === "audit" ? "on" : ""}" data-tab="audit">Documentation</button><button class="tab ${activeTab === "coding" ? "on" : ""}" data-tab="coding">Coding clarification & opportunities${pendingCoding ? ` (${pendingCoding})` : ""}</button><button class="tab ${activeTab === "actions" ? "on" : ""}" data-tab="actions">Tasks, AVS & drafts${openTasks ? ` (${openTasks})` : ""}</button><button class="tab ${activeTab === "charm" ? "on" : ""}" data-tab="charm">Charm entry</button><button class="tab ${activeTab === "history" ? "on" : ""}" data-tab="history">Audit trail</button></div>
@@ -440,6 +532,7 @@ function renderDetail() {
     <div class="panel ${activeTab === "charm" ? "on" : ""}" id="p-charm">${renderCharm(row)}</div>
     <div class="panel ${activeTab === "history" ? "on" : ""}" id="p-history">${renderHistory(row)}</div></div>`;
   wireDetail(row);
+  setNoteSaveState(row);
 }
 
 function renderClinicalAudit(row) {
@@ -643,6 +736,11 @@ async function runEncounterAnalysis(row) {
 
   try {
     if (!cloudClient) throw new Error("The protected Google Cloud audit connection is not available yet. Wait for Google Cloud synced, then run the analysis again.");
+    clearTimeout(noteAutosaveTimers.get(row.id));
+    noteAutosaveTimers.delete(row.id);
+    noteEditingIds.delete(row.id);
+    persist({ cloud: false });
+    await queueEncounterSave(row);
     const result = await cloudClient.analyze(row);
     const audit = parseClinicalAuditReport(result.rawReport, row);
     audit.source = result.source || "BHW on-demand documentation analysis";
@@ -720,6 +818,42 @@ function wireDetail(row) {
   };
 
   if ($("reanalyzeAudit")) $("reanalyzeAudit").onclick = () => runEncounterAnalysis(row);
+
+  const autosaveNote = () => {
+    clearTimeout(noteAutosaveTimers.get(row.id));
+    noteAutosaveTimers.delete(row.id);
+    noteEditingIds.delete(row.id);
+    if (selected === row.id) sync(row);
+    else refreshEncounterIntelligence(row);
+    persist({ cloud: false });
+    if (!cloudClient) {
+      setNoteSaveState(row, row.note || row.sourceTranscript ? "device" : "not-saved");
+      return;
+    }
+    void queueEncounterSave(row).then(() => {
+      persist({ cloud: false });
+      setNoteSaveState(row);
+    }).catch((error) => {
+      setNoteSaveState(row, "device");
+      showToast(error.message || "The note could not be verified in BHW Cloud. Your device copy remains available.", 9000);
+    });
+  };
+  $("dNote").oninput = () => {
+    const nextNote = $("dNote").value;
+    if (row.note !== nextNote && row.providerApproved) {
+      row.providerApproved = false;
+      row.charmDraftSaved = false;
+      row.status = WORKFLOW_STATUS.DRAFT_RECEIVED;
+    }
+    row.note = nextNote;
+    noteEditingIds.add(row.id);
+    setNoteSaveState(row);
+    clearTimeout(noteAutosaveTimers.get(row.id));
+    noteAutosaveTimers.set(row.id, setTimeout(autosaveNote, 900));
+  };
+  $("dNote").onblur = () => {
+    if (noteEditingIds.has(row.id)) autosaveNote();
+  };
 
   $("structureSource").onclick = async () => {
     row.notePlan = notePlanFromDetail(row);
@@ -843,12 +977,34 @@ function wireDetail(row) {
 
   $("analyze").onclick = () => runEncounterAnalysis(row);
 
-  $("savePacket").onclick = () => {
+  $("savePacket").onclick = async () => {
+    const button = $("savePacket");
+    clearTimeout(noteAutosaveTimers.get(row.id));
+    noteAutosaveTimers.delete(row.id);
+    noteEditingIds.delete(row.id);
     const changed = sync(row);
     log(row, changed ? "Encounter packet updated; approval rechecked" : "Encounter packet updated");
-    persist();
-    render();
-    showToast("Encounter packet updated.");
+    persist({ cloud: false });
+    if (!cloudClient) {
+      render();
+      setNoteSaveState(row, "device");
+      showToast("Saved on this device only. BHW Cloud is not connected.");
+      return;
+    }
+    button.disabled = true;
+    button.textContent = "Saving…";
+    cloudPendingIds.add(row.id);
+    setNoteSaveState(row);
+    try {
+      const saved = await queueEncounterSave(row);
+      persist({ cloud: false });
+      render();
+      showToast(`Saved to BHW Cloud and verified at ${new Date(saved.updatedAt || Date.now()).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}.`);
+    } catch (error) {
+      render();
+      setNoteSaveState(row, "device");
+      showToast(error.message || "The note could not be verified in BHW Cloud. Your device copy remains available.", 9000);
+    }
   };
 
   $("dStatus").onchange = (event) => {
@@ -1240,7 +1396,16 @@ function tick() {
   checkAlerts();
 }
 
-function openEncounterModal() {
+async function openEncounterModal() {
+  if (cloudClient) {
+    try {
+      patients = await cloudClient.listPatients();
+      registryReady = true;
+      renderPatientOptions();
+    } catch {
+      registryReady = false;
+    }
+  }
   $("modal").classList.add("on");
   const automaticIdsReady = Boolean(cloudClient);
   encounterCreationKey = globalThis.crypto?.randomUUID?.() || `encounter-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -1383,6 +1548,7 @@ $("create").onclick = async () => {
     button.disabled = false;
   }
   rows.unshift(packet);
+  if (assignedAutomatically) rememberCloudVersion(packet);
   selected = packet.id;
   $("mPatient").value = "";
   $("mId").value = "";
@@ -1427,9 +1593,10 @@ async function initializeCloudQueue() {
         }).filter(([, value]) => String(value || "").trim())) : {};
         return buildEncounterPacket({ ...row, coverage: { ...(row.coverage || {}), ...registryCoverage } });
       });
+      rows.forEach(rememberCloudVersion);
       selected = rows.some((row) => row.id === selected) ? selected : (rows[0]?.id || null);
     } else if (rows.length) {
-      await client.saveAll(rows);
+      await flushDirtyEncounters();
     }
     setCloudState("connected");
     persist();
