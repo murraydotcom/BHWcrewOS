@@ -9,11 +9,12 @@ import handler from "../netlify/functions/crisp-preventive-import.mjs";
 const SESSION_SECRET = "synthetic-session-secret";
 const CLOUD_SECRET = "synthetic-cloud-secret";
 const HEADERS = [
-  "BHW Patient ID", "First Name", "Last Name", "Date of Birth", "Category", "Code", "Description",
-  "Results", "Test Name", "Data Source", "Document Evidence Date", "Event Date", "Facility Name",
+  "First Name", "Last Name", "Gender", "Date of Birth", "Preventive Services Category", "Preventive Services Code",
+  "Preventive Services Description", "Preventive Services Results", "Preventive Services Test Name", "Preventive Services Data Source",
+  "Preventive Services Document Evidence Date", "Preventive Services Event Date", "Preventive Services Facility Name",
 ];
 const VALUES = [
-  "BHW0000", "Synthetic", "Patient", "1986-01-01", "Breast cancer screening", "SYNTHETIC-BREAST-SCREEN",
+  "Synthetic", "Patient", "Female", "1986-01-01", "Breast cancer screening", "SYNTHETIC-BREAST-SCREEN",
   "SYNTHETIC completed screening", "", "", "CCD", "2026-09-01", "2026-08-15", "Synthetic Maryland Facility",
 ];
 
@@ -50,7 +51,8 @@ test("preventive upload accepts only published evidence and patient identity col
   const columns = inspectCrispPreventiveColumns([row]);
   assert.deepEqual(columns.missing, []);
   const sanitized = sanitizeCrispPreventiveRows([row]);
-  assert.equal(sanitized[0].row["BHW Patient ID"], "BHW0000");
+  assert.equal(sanitized[0].row["First Name"], "Synthetic");
+  assert.equal(sanitized[0].row.Category, "Breast cancer screening");
   assert.equal(sanitized[0].row["Event Date"], "2026-08-15");
   assert.equal(Object.hasOwn(sanitized[0].row, "Unexpected Clinical Note"), false);
 });
@@ -62,8 +64,8 @@ test("xlsx-lite recognizes a Preventive Services header below a report title", (
   const xml = `<row r="1"><c r="A1" t="s"><v>0</v></c></row><row r="2">${headerCells}</row><row r="3">${valueCells}</row>`;
   const rows = sheetToObjects(xml, strings);
   assert.equal(rows.length, 1);
-  assert.equal(rows[0].Category, "Breast cancer screening");
-  assert.equal(rows[0]["Event Date"], "2026-08-15");
+  assert.equal(rows[0]["Preventive Services Category"], "Breast cancer screening");
+  assert.equal(rows[0]["Preventive Services Event Date"], "2026-08-15");
 });
 
 test("Netlify intake requires a recent provider clinical session", async () => {
@@ -107,7 +109,8 @@ test("Netlify intake parses server-side, drops unexpected columns, and uses the 
     assert.equal(result.status, 200);
     assert.equal(body.rawFileRetained, false);
     assert.equal(outbound[0].url, "https://rcm-cloud.example/v1/crisp/preventive-services/preview");
-    assert.equal(outbound[0].body.rows[0].row["BHW Patient ID"], "BHW0000");
+    assert.equal(outbound[0].body.rows[0].row["First Name"], "Synthetic");
+    assert.equal(outbound[0].body.rows[0].row.Category, "Breast cancer screening");
     const claims = JSON.parse(Buffer.from(outbound[0].options.headers.Authorization.replace("Bearer ", "").split(".")[0], "base64url").toString("utf8"));
     assert.equal(claims.aud, "bhw-rcm-cloud");
     assert.equal(claims.scope, "clinical");
@@ -128,6 +131,9 @@ test("Preventive UI exposes preview, explicit save state, review gate, and Patie
   assert.match(html, /rawFileRetained/);
   assert.match(html, /clinical-login/);
   assert.match(html, /do not create orders or referrals/i);
+  assert.match(html, /Baltimore Healthcare and Wellness - Panel \(MD_BMOREHW\)/);
+  assert.match(html, /Preventive Services Category/);
+  assert.match(html, /Preventive Services Event Date/);
   assert.match(patient360, /record\.preventiveCare/);
   assert.match(patient360, /Preventive care &amp; health screenings/);
   assert.match(patient360, /no automatic order/i);
