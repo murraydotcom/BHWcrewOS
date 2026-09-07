@@ -58,6 +58,9 @@ test("Patient Requests uses the dedicated Operations token exchange and one Goog
     if (String(url).includes("/v1/patient-requests?") && options.method !== "POST") {
       return new Response(JSON.stringify({ requests: [{ id: "synthetic-request-1", status: "received" }] }), { status: 200 });
     }
+    if (String(url).endsWith("/v1/patient-requests/synthetic-request-completed")) {
+      return new Response(JSON.stringify({ request: { id: "synthetic-request-completed", status: "completed" } }), { status: 200 });
+    }
     if (String(url).endsWith("/actions")) {
       const body = JSON.parse(options.body);
       assert.equal(body.action, "start");
@@ -77,6 +80,8 @@ test("Patient Requests uses the dedicated Operations token exchange and one Goog
     const client = await createOperationsCloudClient(fetchImpl);
     const requests = await client.listPatientRequests({ status: "open", serviceLine: "clinical", assignedTeam: "clinical", bhwPatientId: "BHW0000" });
     assert.equal(requests[0].id, "synthetic-request-1");
+    const completedRequest = await client.getPatientRequest("synthetic-request-completed");
+    assert.equal(completedRequest.status, "completed");
     assert.equal(client.currentRole, "operations-manager");
     assert.deepEqual(await client.patientRequestCapabilities(), ["assign", "start", "reclassify"]);
     const listUrl = String(calls.find((call) => call.url.includes("/v1/patient-requests?")).url);

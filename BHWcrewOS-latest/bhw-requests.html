@@ -601,6 +601,23 @@ async function correctRequestType(id){
 }
 
 // ---- data ----
+function normalizeRequestRow(r){
+  return {
+    ...r,
+    type:r.requestType,
+    name:r.patientName||'Patient',
+    assigned:r.assignedToName||'',
+    received:r.createdAt,
+    canSms:r.canSms===true,
+    journey:(r.statusHistory||[]).map((step,index)=>({
+      dot:step.category==='completed'?'done':step.category==='in_progress'||step.category==='waiting'?'prog':step.category==='escalated'?'urgent':index?'update':'recv',
+      time:fmtTime(step.at),
+      text:esc(String(step.status||'').replaceAll('_',' ')),
+      who:'',
+    })),
+  };
+}
+
 async function load(){
   const banner=document.getElementById('banner');
   try{
@@ -611,20 +628,11 @@ async function load(){
     ]);
     CURRENT_ROLE=client.currentRole||'';
     CURRENT_ACTIONS=new Set(actions);
-    ITEMS=rows.map(r=>({
-      ...r,
-      type:r.requestType,
-      name:r.patientName||'Patient',
-      assigned:r.assignedToName||'',
-      received:r.createdAt,
-      canSms:r.canSms===true,
-      journey:(r.statusHistory||[]).map((step,index)=>({
-        dot:step.category==='completed'?'done':step.category==='in_progress'||step.category==='waiting'?'prog':step.category==='escalated'?'urgent':index?'update':'recv',
-        time:fmtTime(step.at),
-        text:esc(String(step.status||'').replaceAll('_',' ')),
-        who:'',
-      })),
-    }));
+    ITEMS=rows.map(normalizeRequestRow);
+    if(SELECTED&&!ITEMS.some(item=>item.id===SELECTED)){
+      const selectedRequest=await client.getPatientRequest(SELECTED).catch(()=>null);
+      if(selectedRequest)ITEMS.unshift(normalizeRequestRow(selectedRequest));
+    }
     document.getElementById('me').textContent='signed in';
     banner.className='banner'; render();
     window.dispatchEvent(new CustomEvent('bhw:requests-updated',{detail:{requests:ITEMS}}));
