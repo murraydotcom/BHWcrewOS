@@ -18,6 +18,11 @@ test("Patient Requests is the command center and Google Chat is only a mirror", 
   assert.match(script, /referral_sent/);
   assert.match(script, /closed_without_scheduling/);
   assert.match(script, /noPhiAttestation:true/);
+  assert.match(script, /CREWHQ_SESSION_EXPIRED/);
+  assert.match(script, /crewosSigninUrl/);
+  assert.match(script, /encodeURIComponent\(next\)/);
+  assert.match(script, /Sign in again/);
+  assert.doesNotMatch(script, /Sign in to crewOS again, then reload/);
   assert.doesNotMatch(script, /chat\.googleapis\.com|GOOGLE_CHAT_DEFAULT_SPACE/);
   assert.doesNotThrow(() => new Function(script));
 });

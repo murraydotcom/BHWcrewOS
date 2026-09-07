@@ -41,6 +41,7 @@
   .banner{display:none;margin:0 0 14px;padding:10px 14px;border-radius:10px;font-size:.76rem;font-weight:700}
   .banner.demo{display:block;background:#fbf1dd;border:1px solid #e6d6ad;color:#8a6a26}
   .banner.err{display:block;background:#f6e2e2;border:1px solid #e6bcbc;color:var(--urgent)}
+  .banner .reconnect{display:inline-block;margin-left:6px;color:inherit;text-decoration:underline;text-underline-offset:2px}
 
   /* unified request command center */
   .layout{display:grid;grid-template-columns:minmax(330px,420px) minmax(0,1fr);gap:16px;align-items:start}
@@ -301,6 +302,22 @@ function fmtTime(iso){ if(!iso) return ''; const d=new Date(iso); let h=d.getHou
 function dayKey(iso){ const d=iso?new Date(iso):new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); } // local date, not UTC
 function isHot(it){ return /overdue|urgent|breach|!/i.test(it.sla||'') || /urgent|stat|emergen/i.test(it.priority||''); }
 function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function crewosSigninUrl(){
+  const next=`${location.pathname}${location.search}${location.hash}`;
+  return `/crewos?next=${encodeURIComponent(next)}`;
+}
+function isSessionExpired(error){
+  return Number(error?.status)===401||error?.code==='CREWHQ_SESSION_EXPIRED';
+}
+function showSignInRequired(expired=false){
+  TOKEN='';
+  try{sessionStorage.removeItem('crewos_token');}catch(_){ }
+  document.getElementById('me').textContent=expired?'session expired':'not signed in';
+  const banner=document.getElementById('banner');
+  banner.className='banner err';
+  const message=expired?'Your CrewOS session expired.':'Sign in to CrewOS to open the Google patient-request queue.';
+  banner.innerHTML=`${message} <a class="reconnect" href="${esc(crewosSigninUrl())}">Sign in again</a> and return to this request.`;
+}
 function safeHttpsUrl(raw){
   try{const u=new URL(String(raw||''),location.origin);return u.protocol==='https:'?u.href:'';}catch(_){return '';}
 }
@@ -557,12 +574,15 @@ async function load(){
         who:'',
       })),
     }));
+    document.getElementById('me').textContent='signed in';
     banner.className='banner'; render();
     window.dispatchEvent(new CustomEvent('bhw:requests-updated',{detail:{requests:ITEMS}}));
     return;
   }catch(e){
-    ITEMS=[]; banner.className='banner err';
-    banner.textContent='Couldn’t reach the Google patient-request queue. Sign in to crewOS again, then reload.';
+    ITEMS=[];
+    if(isSessionExpired(e)){showSignInRequired(true);render();return;}
+    banner.className='banner err';
+    banner.textContent='Couldn’t reach the Google patient-request queue. The queue service may be temporarily unavailable. Try again in a moment.';
     render();
   }
 }
@@ -577,7 +597,7 @@ async function runRequestAction(id,action,details={}){
   if(!result.ok){showActionError(result.d.error);return;}
   await load();
 }
-function needAuth(){ const b=document.getElementById('banner'); b.className='banner err'; b.textContent='Sign in to crewOS first (open Front Desk and connect), then reload — claiming or completing a request records who did it.'; }
+function needAuth(){showSignInRequired(false);}
 async function claim(id){return runRequestAction(id,'assign');}
 async function advance(id,statusName){return runRequestAction(id,'milestone',{status:statusName});}
 // One-click complete box: check to resolve (stamps you as owner); uncheck to reopen.
@@ -601,13 +621,13 @@ async function loadRoster(){
   }catch(_){ /* best-effort — the rail still shows anyone already assigned */ }
 }
 
-if(TOKEN){ document.getElementById('me').textContent='signed in'; }
+if(TOKEN){document.getElementById('me').textContent='signed in';}
 document.getElementById('requestSearch').addEventListener('input',event=>{SEARCH=event.target.value.trim().toLowerCase();render();});
 document.getElementById('teamFilter').addEventListener('change',event=>setTeam(event.target.value));
 loadRoster();
-load();
-setInterval(load,45000);
-document.addEventListener('visibilitychange',()=>{ if(!document.hidden) load(); });
+if(TOKEN)load();else{showSignInRequired(false);render();}
+setInterval(()=>{if(TOKEN)load();},45000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&TOKEN)load();});
 document.addEventListener('click',e=>{
   const btn=e.target.closest('.view-fax');
   if(btn)openFaxPdf(btn.dataset.faxUrl,btn.dataset.faxName);
