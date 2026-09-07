@@ -114,5 +114,26 @@ export async function createOperationsCloudClient(fetchImpl = fetch) {
       const body = await request(`/v1/patient-requests/${encodeURIComponent(id)}/communications`);
       return Array.isArray(body.communications) ? body.communications : [];
     },
+    async listWebsiteContent({ siteId = "care-connect", status = "", limit = 100 } = {}) {
+      const params = new URLSearchParams({ siteId, limit: String(Math.max(1, Math.min(250, Number(limit) || 100))) });
+      if (status) params.set("status", status);
+      const body = await request(`/v1/site-content?${params}`);
+      return Array.isArray(body.websiteContent) ? body.websiteContent : [];
+    },
+    async createWebsiteContent(input) {
+      const body = await request("/v1/site-content", { method: "POST", body: JSON.stringify(input) });
+      return body.websiteContent;
+    },
+    async updateWebsiteContent(id, input) {
+      const body = await request(`/v1/site-content/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(input) });
+      return body.websiteContent;
+    },
+    async websiteContentAction(id, action, expectedVersion, details = {}) {
+      const body = await request(`/v1/site-content/${encodeURIComponent(id)}/actions`, {
+        method: "POST",
+        body: JSON.stringify({ action, expectedVersion, ...details }),
+      });
+      return body.websiteContent;
+    },
   };
 }

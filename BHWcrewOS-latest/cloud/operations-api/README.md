@@ -1,7 +1,8 @@
 # BHW Operations API
 
 This Cloud Run service is the Google-native system of record for operational
-patient requests, their work tasks, and their communication history. It uses the
+patient requests, their work tasks, communication history, and approved public
+website content. It uses the
 same protected Firestore database as the migrated patient registry, but it does
 not own patient demographics, medications, clinical documentation, claims, or
 HR data.
@@ -22,6 +23,9 @@ HR data.
   submission with approval or referral transmission with scheduling.
 - Automation fails closed when disabled or unconfigured, and applies consent,
   suppression, quiet-hours, safety-hold, cooldown, and idempotency controls.
+- `websiteContent` is public-site material only. Signed-in staff may draft it;
+  only operations managers and executives may publish or archive it. Public
+  reads expose only published, currently effective records and never patient data.
 
 ## Authentication
 
@@ -75,6 +79,10 @@ collections. Do not put either secret or a service-account key in the repo.
 | Route | Caller | Purpose |
 | --- | --- | --- |
 | `GET /health` | Health check | Service readiness, no patient data |
+| `GET /v1/public/site-content?siteId=care-connect` | Public Care Connect server | Published, currently effective announcements, resources, and allowlisted practice details only |
+| `GET/POST /v1/site-content` | CrewOS | List Google-backed website content or create a no-PHI draft |
+| `GET/PATCH /v1/site-content/:id` | CrewOS | Read or version-save one draft with expected-version conflict protection |
+| `POST /v1/site-content/:id/actions` | CrewOS | Submit for review, return to draft, publish, or archive; publishing is restricted to operations managers/executives |
 | `GET /v1/contracts/communication-foundation` | CrewOS | Current enums/schema version |
 | `POST /v1/intake/patient-requests` | Care Connect server | Atomic request + triage task + inbound communication + audit |
 | `POST /v1/intake/front-desk-referrals` | Front Desk server bridge | Create one matched referral workflow record only after validated referral-document generation |
@@ -111,7 +119,9 @@ Chat mirror, and never triggers a patient SMS.
 
 ## Firestore documents
 
-All operational records are flat, versioned documents. `auditEvents` are
+All operational records are flat, versioned documents. `websiteContent` stores
+plain-text public content, schedules, lifecycle state, and staff ownership.
+`auditEvents` are
 metadata-only: they include actor, resource, BHW ID, transition, and timestamp,
 but never message bodies, names, phone numbers, or email addresses.
 

@@ -28,6 +28,11 @@ test("staff guide teaches the current Patient Requests and alert workflow", asyn
   assert.match(html, /Visibility and alerts are separate/);
   assert.match(html, /view-only for provider oversight/);
   assert.match(html, /does not send a patient text/);
+  assert.match(html, /id="website-content-training"/);
+  assert.match(html, /CrewHQ → Website Content/);
+  assert.match(html, /approved staff ChatGPT may help with wording/);
+  assert.match(html, /operations manager or executive.*Publish/s);
+  assert.match(html, /Saved to BHW Cloud/);
   assert.doesNotMatch(html, /bhwcrewos\.netlify\.app/);
   assert.doesNotMatch(html, /duplicate the .*template/i);
 });
