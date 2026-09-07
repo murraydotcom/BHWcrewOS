@@ -88,6 +88,10 @@ export async function createOperationsCloudClient(fetchImpl = fetch) {
       const body = await request(`/v1/patient-requests?${params}`);
       return Array.isArray(body.requests) ? body.requests : Array.isArray(body.patientRequests) ? body.patientRequests : [];
     },
+    async getPatientRequest(id) {
+      const body = await request(`/v1/patient-requests/${encodeURIComponent(id)}`);
+      return body.request || body.patientRequest || null;
+    },
     async patientRequestAction(id, action, details = {}) {
       return request(`/v1/patient-requests/${encodeURIComponent(id)}/actions`, {
         method: "POST",
