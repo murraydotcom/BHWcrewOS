@@ -251,14 +251,16 @@ async function prepareMigration(session, requestedDatasetKeys = null, identity =
       requests.blocked.push(block(page, label, resolved.reason || "The historical request is not linked to one canonical Registry patient."));
       continue;
     }
-    const summary = P.text(p.Summary) || "Legacy Patient Request"; const source = P.sel(p.Source) || "front-desk";
+    const message = clean(P.text(p.Summary) || "Legacy Patient Request", 4000);
+    const summary = clean(message, 500);
+    const source = P.sel(p.Source) || "front-desk";
     requests.ready.push(targetRecord(page, resolved.bhwPatientId, { kind: "frontdesk", body: {
       bhwPatientId: resolved.bhwPatientId, patientMatchStatus: resolved.bhwPatientId ? "matched" : "unmatched",
       requestType: "general", priority: /urgent/i.test(P.sel(p.Priority)) ? "urgent" : "routine",
-      summary, message: summary, source: clean(source, 40).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "front-desk",
-      notificationMode: "none", requester: { displayName: P.text(p["Patient Name"]), callbackPhone: phone(p["Callback Number"]), preferredChannel: /fax/i.test(source) ? "fax" : "phone" },
+      summary, message, source: clean(source, 40).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "front-desk",
+      notificationMode: "none", requester: { displayName: clean(P.text(p["Patient Name"]), 120), callbackPhone: clean(phone(p["Callback Number"]), 40), preferredChannel: /fax/i.test(source) ? "fax" : "phone" },
       routing: { targetSystem: "crewos", assignedTeam: "front-desk" },
-      sourceMetadata: { sourceRecordId: page.id, sourcePage: "legacy-patient-requests", legacyNotionPageId: page.id, sourceUrl: urlValue(p["Source Link"]) },
+      sourceMetadata: { sourceRecordId: page.id, sourcePage: "legacy-patient-requests", legacyNotionPageId: page.id, sourceUrl: clean(urlValue(p["Source Link"]), 1000) },
       historicalReceivedAt: P.date(p.Received) || page.created_time,
     }, submissionId: `legacy-request:${page.id}` }, label));
   }

@@ -119,4 +119,6 @@ test("migration UI is session-gated, starts with preview, and distinguishes veri
   assert.doesNotMatch(migration, /patientIndex:\s*DB\.patients/);
   assert.match(migration, /Every crosswalk entry was resolved against the authoritative Cloud roster/);
   assert.match(migration, /requests\.blocked\.push/);
+  assert.match(migration, /const message = clean\(P\.text\(p\.Summary\) \|\| "Legacy Patient Request", 4000\)/);
+  assert.match(migration, /const summary = clean\(message, 500\)/);
 });
