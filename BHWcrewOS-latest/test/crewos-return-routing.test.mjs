@@ -18,6 +18,11 @@ test("CrewOS returns signed-in staff to approved internal tools", async () => {
     getRequestedNext(encoded("/bhw-patient-monitor.html?patient=BHW0000")),
     "/bhw-patient-monitor.html?patient=BHW0000",
   );
+  assert.equal(getRequestedNext(encoded("/bhw-requests.html")), "/bhw-requests.html");
+  assert.equal(
+    getRequestedNext(encoded("/bhw-requests.html?request=REQ-synthetic-0001")),
+    "/bhw-requests.html?request=REQ-synthetic-0001",
+  );
   assert.equal(getRequestedNext(encoded("/provider/patient-registry.html")), "/provider/patient-registry.html");
   assert.equal(getRequestedNext(encoded("https://example.com/collect")), "");
   assert.equal(getRequestedNext(encoded("//example.com/collect")), "");

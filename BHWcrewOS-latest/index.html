@@ -275,7 +275,7 @@ function statusPill(s){
 const patLabel = id => (D && D.patientLabel[id]) || "—";
 const staffLabel = id => (D && D.staffName[id]) || "—";
 
-const SAFE_STANDALONE_NEXT = /^\/bhw-(?:capture|patient-monitor(?:-list)?|patient-materials)(?:\.html)?(?:\?[a-z0-9%&=._-]*)?$/i;
+const SAFE_STANDALONE_NEXT = /^\/bhw-(?:capture|requests|patient-monitor(?:-list)?|patient-materials)(?:\.html)?(?:\?[a-z0-9%&=._-]*)?$/i;
 function requestedNext(search = location.search){
   const next = new URLSearchParams(search).get("next") || "";
   return /^\/provider\/[a-z0-9._/-]+(?:\?[a-z0-9%&=._-]*)?$/i.test(next) || SAFE_STANDALONE_NEXT.test(next) ? next : "";
