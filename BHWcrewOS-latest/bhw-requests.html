@@ -478,7 +478,10 @@ function actionButton(label,it,action,details={},klass=''){
   return `<button type="button" class="btn ${klass}" onclick="runRequestAction(decodeURIComponent('${id}'),'${action}',JSON.parse(decodeURIComponent('${encoded}')))">${esc(label)}</button>`;
 }
 function detailActions(it){
-  if(stageOf(it.status,it.statusCategory)==='done')return '<span class="routechip">Workflow complete</span>';
+  if(stageOf(it.status,it.statusCategory)==='done'){
+    if(it.canAct===false)return '<span class="routechip">Workflow complete</span>';
+    return `<span class="routechip">Workflow complete</span>${actionButton('Reopen for correction',it,'reopen',{},'p')}`;
+  }
   if(it.canAct===false)return '<span class="routechip">View only — provider actions appear for triage or escalated work</span>';
   const ui=workflowUI(it), buttons=[];
   if(!it.assigned)buttons.push(actionButton('Assign to me',it,'assign'));
