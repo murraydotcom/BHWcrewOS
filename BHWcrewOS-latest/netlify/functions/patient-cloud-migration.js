@@ -6,7 +6,7 @@
 const { getSession, json } = require("./_lib");
 const { cloudRequest } = require("./lib/cloud-patients");
 const { operationsRequest, createFrontDeskIntake, createFrontDeskIntakeBulk } = require("./lib/operations-cloud");
-const { prepareIdentity, prepareMigration, publicPreview, sealIdentity, verifyIdentity, signPreview, verifyPreview } = require("./lib/patient-cloud-migration");
+const { prepareIdentity, prepareMigration, publicPreview, sealIdentity, verifyIdentity, sealPreparedPreview, verifyPreparedPreview } = require("./lib/patient-cloud-migration");
 
 const CONFIRMATION = "APPLY APPROVED CLOUD MIGRATION";
 
@@ -147,7 +147,10 @@ exports.handler = async (event) => {
         ok: true,
         previewOnly: true,
         preview: publicPreview(prepared),
-        previewToken: signPreview(prepared, session, process.env.SESSION_SECRET),
+        // The exact approved write payload stays encrypted, authenticated,
+        // session-bound, and short-lived. Apply consumes this immutable seal
+        // instead of rereading a large legacy source after approval.
+        previewToken: sealPreparedPreview(prepared, session, process.env.SESSION_SECRET),
         expiresInMinutes: 30,
         confirmation: CONFIRMATION,
       });
@@ -155,13 +158,13 @@ exports.handler = async (event) => {
 
     if (body.action === "apply") {
       const key = datasetKey;
-      // Applying one approved section rereads only that legacy source and its
-      // required dependency, then verifies it against the section preview.
-      const prepared = await prepareMigration(session, [key], identity);
+      // Applying consumes the exact encrypted dataset shown during preview.
+      // This prevents a slow legacy reread from timing out and also prevents
+      // source changes from altering the administrator-approved write set.
+      const prepared = verifyPreparedPreview(body.previewToken, session, process.env.SESSION_SECRET, key);
       const dataset = prepared.datasets[key];
       if (!dataset) return json(400, { error: "Choose a migration section." });
       if (body.confirmation !== CONFIRMATION) return json(400, { error: `Type ${CONFIRMATION} exactly.` });
-      verifyPreview(body.previewToken, prepared, session, process.env.SESSION_SECRET, key);
       if (dataset.sourceError) return json(409, { error: "The legacy source could not be read. Nothing was changed." });
       if (!dataset.ready.length) return json(409, { error: "This section has no Cloud-verified records to save. Nothing was changed." });
 

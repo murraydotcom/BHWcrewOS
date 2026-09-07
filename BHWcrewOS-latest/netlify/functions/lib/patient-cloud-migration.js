@@ -419,6 +419,11 @@ function identityCipherKey(secret) {
   return crypto.createHash("sha256").update(`patient-cloud-migration-identity:${secret}`).digest();
 }
 
+function previewCipherKey(secret) {
+  if (!secret) throw new Error("SESSION_SECRET is required to protect the migration preview");
+  return crypto.createHash("sha256").update(`patient-cloud-migration-preview:${secret}`).digest();
+}
+
 function sealIdentity(identity, session, secret, now = Date.now()) {
   const iv = crypto.randomBytes(12);
   const key = identityCipherKey(secret);
@@ -449,6 +454,39 @@ function verifyIdentity(token, session, secret, now = Date.now()) {
     return claims.identity;
   } catch {
     throw Object.assign(new Error("The protected identity crosswalk expired or is not valid. Run the preview again."), { status: 409 });
+  }
+}
+
+function sealPreparedPreview(prepared, session, secret, now = Date.now()) {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv("aes-256-gcm", previewCipherKey(secret), iv);
+  const plaintext = zlib.gzipSync(Buffer.from(JSON.stringify({
+    sub: session.staffId || session.sub,
+    exp: now + 30 * 60 * 1000,
+    prepared,
+  }), "utf8"));
+  const ciphertext = Buffer.concat([cipher.update(plaintext), cipher.final()]);
+  return ["v1", iv.toString("base64url"), cipher.getAuthTag().toString("base64url"), ciphertext.toString("base64url")].join(".");
+}
+
+function verifyPreparedPreview(token, session, secret, datasetKey, now = Date.now()) {
+  const value = String(token || "");
+  if (!value || Buffer.byteLength(value, "utf8") > 4 * 1024 * 1024) {
+    throw Object.assign(new Error("Run a new protected preview first."), { status: 409 });
+  }
+  try {
+    const [version, ivValue, tagValue, ciphertextValue] = value.split(".");
+    if (version !== "v1" || !ivValue || !tagValue || !ciphertextValue) throw new Error("invalid token");
+    const decipher = crypto.createDecipheriv("aes-256-gcm", previewCipherKey(secret), Buffer.from(ivValue, "base64url"));
+    decipher.setAuthTag(Buffer.from(tagValue, "base64url"));
+    const compressed = Buffer.concat([decipher.update(Buffer.from(ciphertextValue, "base64url")), decipher.final()]);
+    const claims = JSON.parse(zlib.gunzipSync(compressed).toString("utf8"));
+    if (claims.exp < now || claims.sub !== (session.staffId || session.sub)) throw new Error("expired token");
+    const dataset = claims.prepared?.datasets?.[datasetKey];
+    if (!dataset || !Array.isArray(dataset.ready) || !Array.isArray(dataset.blocked)) throw new Error("invalid dataset");
+    return { rosterCount: claims.prepared.rosterCount, datasets: { [datasetKey]: dataset } };
+  } catch {
+    throw Object.assign(new Error("The protected migration preview expired or is not valid. Run the preview again."), { status: 409 });
   }
 }
 
@@ -490,4 +528,15 @@ function publicPreview(prepared) {
   };
 }
 
-module.exports = { createResolver, prepareIdentity, prepareMigration, publicPreview, sealIdentity, verifyIdentity, signPreview, verifyPreview };
+module.exports = {
+  createResolver,
+  prepareIdentity,
+  prepareMigration,
+  publicPreview,
+  sealIdentity,
+  verifyIdentity,
+  sealPreparedPreview,
+  verifyPreparedPreview,
+  signPreview,
+  verifyPreview,
+};

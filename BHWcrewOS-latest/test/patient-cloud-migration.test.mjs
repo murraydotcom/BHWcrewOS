@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 import { readFile } from "node:fs/promises";
 
 const require = createRequire(import.meta.url);
-const { createResolver, publicPreview, sealIdentity, verifyIdentity, signPreview, verifyPreview } = require("../netlify/functions/lib/patient-cloud-migration.js");
+const { createResolver, publicPreview, sealIdentity, verifyIdentity, sealPreparedPreview, verifyPreparedPreview, signPreview, verifyPreview } = require("../netlify/functions/lib/patient-cloud-migration.js");
 
 const session = { staffId: "synthetic-admin", access: "Admin" };
 const secret = "synthetic-preview-secret";
@@ -52,6 +52,15 @@ test("legacy relationship crosswalk is encrypted, session-bound, and expires", (
   assert.throws(() => verifyIdentity(token, session, secret, 31 * 60 * 1_000), /expired or is not valid/i);
 });
 
+test("approved migration payload is encrypted, immutable, session-bound, and expires", () => {
+  const token = sealPreparedPreview(prepared, session, secret, 1_000);
+  assert.doesNotMatch(token, /BHW0000|synthetic-source|synthetic-log/);
+  assert.deepEqual(verifyPreparedPreview(token, session, secret, "careLogs", 2_000), prepared);
+  assert.throws(() => verifyPreparedPreview(token, { staffId: "different-admin" }, secret, "careLogs", 2_000), /expired or is not valid/i);
+  assert.throws(() => verifyPreparedPreview(token, session, secret, "careLogs", 31 * 60 * 1_000), /expired or is not valid/i);
+  assert.throws(() => verifyPreparedPreview(`${token.slice(0, -1)}x`, session, secret, "careLogs", 2_000), /expired or is not valid/i);
+});
+
 test("the authoritative Cloud name and DOB repair a conflicting legacy BHW ID", () => {
   const resolver = createResolver([
     { bhwPatientId: "BHW0001", name: "First Synthetic", dob: "2000-01-01" },
@@ -79,7 +88,7 @@ test("migration UI is session-gated, starts with preview, and distinguishes veri
   assert.match(handler, /key === "patientRequests"/);
   assert.match(handler, /body\.action === "identity"/);
   assert.match(handler, /prepareMigration\(session, datasetKeys, identity\)/);
-  assert.match(handler, /prepareMigration\(session, \[key\], identity\)/);
+  assert.match(handler, /verifyPreparedPreview\(body\.previewToken, session, process\.env\.SESSION_SECRET, key\)/);
   assert.match(handler, /blockedRemaining: dataset\.blocked\.length/);
   assert.doesNotMatch(handler, /dataset\.blocked\.length\) return json\(409/);
   assert.match(html, /PREVIEW_GROUPS/);
