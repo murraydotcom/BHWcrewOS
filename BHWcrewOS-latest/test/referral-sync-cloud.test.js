@@ -1,6 +1,21 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
+const crypto = require("node:crypto");
 const { handler } = require("../netlify/functions/referral-sync");
+
+const SESSION_SECRET = "synthetic-referral-session-secret";
+function signedHeaders() {
+  process.env.SESSION_SECRET = SESSION_SECRET;
+  const payload = Buffer.from(JSON.stringify({
+    staffId: "staff-synthetic",
+    name: "Synthetic Staff",
+    access: "Admin",
+    divisions: ["Front Desk"],
+    exp: Date.now() + 60_000,
+  })).toString("base64url");
+  const signature = crypto.createHmac("sha256", SESSION_SECRET).update(payload).digest("base64url");
+  return { authorization: `Bearer ${payload}.${signature}` };
+}
 
 test("Front Desk referral bridge sends only patient-linked coordination metadata", async () => {
   const originalFetch = global.fetch;
@@ -18,6 +33,7 @@ test("Front Desk referral bridge sends only patient-linked coordination metadata
   try {
     const result = await handler({
       httpMethod: "POST",
+      headers: signedHeaders(),
       queryStringParameters: { key: "synthetic-dashboard-key" },
       body: JSON.stringify({
         action: "create",
@@ -46,7 +62,7 @@ test("Front Desk referral bridge sends only patient-linked coordination metadata
 test("Front Desk referral bridge fails closed without its server secret", async () => {
   delete process.env.OPERATIONS_CLOUD_API_URL;
   delete process.env.FRONT_DESK_INTAKE_SECRET;
-  const result = await handler({ httpMethod: "POST", queryStringParameters: {}, body: JSON.stringify({ action: "create" }) });
+  const result = await handler({ httpMethod: "POST", headers: signedHeaders(), queryStringParameters: {}, body: JSON.stringify({ action: "create" }) });
   assert.equal(result.statusCode, 503);
 });
 
@@ -70,6 +86,7 @@ test("Front Desk keeps scheduled as a milestone before referral completion", asy
     ]) {
       const result = await handler({
         httpMethod: "POST",
+        headers: signedHeaders(),
         queryStringParameters: {},
         body: JSON.stringify({ action: "milestone", requestId: "REQ-synthetic-referral-0002", status, idempotencyKey }),
       });

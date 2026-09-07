@@ -78,6 +78,25 @@ function normalizeSourceMetadata(input = {}) {
   };
 }
 
+function normalizeWorkflowContext(input = {}) {
+  const value = input && typeof input === "object" && !Array.isArray(input) ? input : {};
+  const kind = cleanText(value.kind || "patient-request", 40).toLowerCase().replace(/[\s_]+/g, "-");
+  const scheduledDate = cleanText(value.scheduledDate, 10);
+  return {
+    kind: ["referral", "handoff", "patient-request"].includes(kind) ? kind : "patient-request",
+    fromDivision: cleanText(value.fromDivision, 80),
+    toDivision: cleanText(value.toDivision, 80),
+    referralType: cleanText(value.referralType, 120),
+    device: cleanText(value.device, 120),
+    details: cleanText(value.details, 4000),
+    needs: [...new Set((Array.isArray(value.needs) ? value.needs : []).slice(0, 30).map((item) => cleanText(item, 160)).filter(Boolean))],
+    scheduledDate: /^\d{4}-\d{2}-\d{2}$/.test(scheduledDate) ? scheduledDate : "",
+    completionNote: cleanText(value.completionNote, 2000),
+    historicalReceivedAt: cleanText(value.historicalReceivedAt, 40),
+    legacyStatus: cleanText(value.legacyStatus, 120),
+  };
+}
+
 export function normalizePatientRequestInput(input, { intake = false } = {}) {
   const bhwPatientId = optionalBhwPatientId(input?.bhwPatientId);
   const patientMatchStatus = enumValue(
@@ -116,6 +135,10 @@ export function normalizePatientRequestInput(input, { intake = false } = {}) {
     },
     dueAt: optionalIsoDate(input?.dueAt, "dueAt"),
     sourceMetadata: normalizeSourceMetadata(input?.sourceMetadata),
+    manualNotifyOnly: input?.manualNotifyOnly === true,
+    notificationMode: ["automatic", "manual", "none"].includes(cleanText(input?.notificationMode, 20).toLowerCase())
+      ? cleanText(input.notificationMode, 20).toLowerCase() : "automatic",
+    workflowContext: normalizeWorkflowContext(input?.workflowContext),
   };
 }
 
@@ -184,6 +207,9 @@ export function buildPatientRequestBundle(input, actor, {
     communicationCount: 1,
     lastCommunicationAt: now,
     notificationMetadata: notificationMetadata("received", now),
+    manualNotifyOnly: normalized.manualNotifyOnly,
+    notificationMode: normalized.notificationMode,
+    workflowContext: normalized.workflowContext,
     sourceMetadata: normalized.sourceMetadata,
     createdAt: now,
     createdBy: actor.id,

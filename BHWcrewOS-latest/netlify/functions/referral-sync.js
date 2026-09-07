@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const { configured, createReferral, updateReferral } = require("./lib/referral-cloud");
+const { getSession } = require("./_lib");
 
 const clean = (value, max = 200) => String(value ?? "").trim().slice(0, max);
 const response = (statusCode, body) => ({
@@ -10,9 +11,7 @@ const response = (statusCode, body) => ({
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return response(405, { ok: false, error: "POST only" });
-  if (process.env.DASH_KEY && event.queryStringParameters?.key !== process.env.DASH_KEY) {
-    return response(401, { ok: false, error: "unauthorized" });
-  }
+  if (!getSession(event)) return response(401, { ok: false, error: "Sign in to CrewOS again" });
   if (!configured()) return response(503, { ok: false, error: "Front Desk referral tracking is not configured" });
   let body;
   try { body = JSON.parse(event.body || "{}"); } catch { return response(400, { ok: false, error: "Bad JSON" }); }

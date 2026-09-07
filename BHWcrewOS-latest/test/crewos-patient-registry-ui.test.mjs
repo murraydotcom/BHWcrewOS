@@ -52,5 +52,6 @@ test("CrewOS and Front Desk patient lists keep Cloud identity, suffix, and statu
   assert.match(source["bhw-paperwork.html"], /p\.selectable===false/);
   assert.match(source["bhw-careplan.html"], /patientChoice\(p\).*p\.bhwId/s);
   assert.match(source["bhw-careplan.html"], /p\.selectable===false/);
-  assert.match(source["bhw-crewcare-portal.html"], /o\.disabled=p\.selectable===false/);
+  assert.match(source["bhw-crewcare-portal.html"], /patient\.selectable===false/);
+  assert.match(source["bhw-crewcare-portal.html"], /patient\.bhwId/);
 });

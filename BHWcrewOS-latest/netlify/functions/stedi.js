@@ -8,9 +8,8 @@
 //   { action:"set-mbi", patientId, mbi }  → save an MBI onto the patient record
 
 const https = require("https");
-const { DB, queryDb, createPage, updatePage, P, W, getSession, json } = require("./_lib");
-
-const TRACKER_DB = "14204ec7428d4813b158966356cbec51";
+const { getSession, json } = require("./_lib");
+const { cloudRequest, listCloudPatients } = require("./lib/cloud-patients");
 const BHW_NPI = "1306511597";
 const AWV_CODES = ["G0402", "G0438", "G0439"];
 
@@ -61,19 +60,17 @@ const dashDate = (d) => {
 };
 const today = () => new Date().toISOString().slice(0, 10);
 
-function shapePatient(pg) {
-  const p = pg.properties;
-  const name = P.title(p["Patient Name"]);
-  const parts = name.trim().split(/\s+/);
+function shapePatient(patient) {
   return {
-    id: pg.id,
-    name,
-    first: parts[0] || "",
-    last: parts.slice(1).join(" ") || parts[0] || "",
-    dob: P.date(p["DOB"]),
-    mbi: (P.text(p["Medicare MBI"]) || "").replace(/[^A-Za-z0-9]/g, ""),
-    insurance: P.sel(p["Insurance"]),
-    status: P.sel(p["Status"]),
+    id: patient.bhwPatientId,
+    name: patient.name,
+    first: patient.legalFirstName || "",
+    last: patient.legalLastName || "",
+    dob: patient.dob || patient.dateOfBirth || "",
+    mbi: String(patient.medicareMbi || "").replace(/[^A-Za-z0-9]/g, ""),
+    insurance: patient.primaryPayer || patient.insurance || "",
+    status: patient.patientStatus || patient.status || "",
+    source: patient,
   };
 }
 
@@ -138,31 +135,30 @@ function awvStatus(parsed) {
   return "Unknown";
 }
 
-async function upsertTracker(patient, parsed, errNote) {
-  const rows = await queryDb(TRACKER_DB);
-  const existing = rows.find((pg) => (P.rel(pg.properties["Patient"])[0] || null) === patient.id);
-  const props = {
-    "Last Checked": W.date(today()),
-    "Coverage": W.sel(errNote ? "Error — see notes" : (parsed.active ? "Active" : "Inactive")),
-    "Plan Type": W.sel(parsed.planType),
-    "MA Plan Name": W.text(parsed.maName),
-    "AWV Status": W.sel(errNote ? "Unknown" : awvStatus(parsed)),
-    "Preventive Services": W.text(JSON.stringify(parsed.services).slice(0, 1900)),
-    "Deductible Remaining": W.text(parsed.deductible),
-    "Raw Notes": W.text((errNote || parsed.note || "").slice(0, 1900)),
-  };
-  if (parsed.awvLast) props["AWV Last Date"] = W.date(parsed.awvLast);
-  if (parsed.awvNext) props["AWV Next Eligible"] = W.date(parsed.awvNext);
-  if (existing) { await updatePage(existing.id, props); return existing.id; }
-  const page = await createPage(TRACKER_DB, {
-    "Check": W.title(`Eligibility · ${patient.name}`),
-    "Patient": W.rel([patient.id]),
-    ...props,
+async function upsertTracker(patient, parsed, errNote, session) {
+  const result = await cloudRequest("/v1/panel/profiles", {
+    actor: session,
+    method: "POST",
+    body: {
+      bhwPatientId: patient.id,
+      payer: patient.insurance,
+      coverage: errNote ? "Error — see notes" : (parsed.active ? "Active" : "Inactive"),
+      planType: parsed.planType,
+      medicareAdvantagePlanName: parsed.maName,
+      awvStatus: errNote ? "Unknown" : awvStatus(parsed),
+      awvLastDate: parsed.awvLast || "",
+      awvNextEligibleDate: parsed.awvNext || "",
+      coverageCheckedAt: new Date().toISOString(),
+      preventiveServices: parsed.services,
+      deductibleRemaining: parsed.deductible,
+      coverageNotes: (errNote || parsed.note || "").slice(0, 4000),
+      sourceSystem: "Stedi HETS",
+    },
   });
-  return page.id;
+  return result.profile?.id || patient.id;
 }
 
-async function runCheck(patient, clientIp) {
+async function runCheck(patient, clientIp, session) {
   if (!patient.mbi) return { skipped: "no-mbi" };
   if (!patient.dob) return { skipped: "no-dob" };
   const payload = {
@@ -180,11 +176,11 @@ async function runCheck(patient, clientIp) {
   const res = await stediRequest("/2024-04-01/change/medicalnetwork/eligibility/v3", payload, clientIp);
   if (!res.ok) {
     const msg = (res.data && (res.data.message || JSON.stringify(res.data))) || `HTTP ${res.status}`;
-    await upsertTracker(patient, parse271({}), `Stedi ${res.status}: ${String(msg).slice(0, 700)}`);
+    await upsertTracker(patient, parse271({}), `Stedi ${res.status}: ${String(msg).slice(0, 700)}`, session);
     return { error: `Stedi ${res.status}` };
   }
   const parsed = parse271(res.data);
-  await upsertTracker(patient, parsed, "");
+  await upsertTracker(patient, parsed, "", session);
   return { ok: true, active: parsed.active, awvStatus: awvStatus(parsed), awvNext: parsed.awvNext, awvLast: parsed.awvLast };
 }
 
@@ -202,29 +198,33 @@ exports.handler = async (event) => {
       if (!b.patientId || !b.mbi) return json(400, { error: "Patient and MBI required" });
       const clean = String(b.mbi).replace(/[^A-Za-z0-9]/g, "").toUpperCase();
       if (clean.length !== 11) return json(400, { error: "An MBI is 11 characters (letters and numbers, no dashes needed)" });
-      await updatePage(b.patientId, { "Medicare MBI": W.text(clean) });
-      return json(200, { ok: true });
+      const patients = await listCloudPatients(session);
+      const patient = patients.find((item) => item.bhwPatientId === String(b.patientId).toUpperCase());
+      if (!patient) return json(404, { error: "Patient not found in the Patient Registry" });
+      const result = await cloudRequest(`/v1/patients/${encodeURIComponent(patient.bhwPatientId)}`, {
+        actor: session, method: "PUT", body: { ...patient, medicareMbi: clean },
+      });
+      return json(200, { ok: true, savedAt: result.patient?.updatedAt || new Date().toISOString(), storage: "BHW Cloud" });
     }
 
     if (b.action === "check") {
-      const pages = await queryDb(DB.patients);
-      const pg = pages.find((x) => x.id === b.patientId);
-      if (!pg) return json(404, { error: "Patient not found" });
-      const patient = shapePatient(pg);
+      const patients = await listCloudPatients(session);
+      const raw = patients.find((item) => item.bhwPatientId === String(b.patientId || "").toUpperCase());
+      if (!raw) return json(404, { error: "Patient not found" });
+      const patient = shapePatient(raw);
       if (!patient.mbi) return json(400, { error: "No MBI on file for this patient — add it first" });
-      const result = await runCheck(patient, clientIp);
+      const result = await runCheck(patient, clientIp, session);
       return json(200, result);
     }
 
     if (b.action === "batch") {
       const offset = b.offset || 0;
-      const pages = await queryDb(DB.patients);
-      const targets = pages.map(shapePatient).filter((p) =>
+      const targets = (await listCloudPatients(session)).map(shapePatient).filter((p) =>
         ["Medicare", "Medicare + Medicaid"].includes(p.insurance) && p.mbi && p.status !== "Deceased");
       const slice = targets.slice(offset, offset + 4);
       const results = [];
       for (const patient of slice) {
-        try { results.push({ name: patient.name, ...(await runCheck(patient, clientIp)) }); }
+        try { results.push({ name: patient.name, ...(await runCheck(patient, clientIp, session)) }); }
         catch (e) { results.push({ name: patient.name, error: e.message }); }
       }
       const next = offset + slice.length;
