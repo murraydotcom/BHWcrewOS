@@ -52,4 +52,9 @@ test("migration UI is session-gated, starts with preview, and distinguishes veri
   assert.match(handler, /createFrontDeskIntakeBulk/);
   assert.match(handler, /result\.verifiedCount !== batch\.length/);
   assert.match(handler, /key === "patientRequests"/);
+  assert.match(handler, /prepareMigration\(session, body\.action === "apply" \? \[datasetKey\] : null\)/);
+  const migration = await readFile(new URL("../netlify/functions/lib/patient-cloud-migration.js", import.meta.url), "utf8");
+  assert.doesNotMatch(migration, /patientIndex:\s*DB\.patients/);
+  assert.match(migration, /retired Patient\s*\n\s*\/\/ Index is never used as a second identity authority/);
+  assert.match(migration, /requests\.blocked\.push/);
 });

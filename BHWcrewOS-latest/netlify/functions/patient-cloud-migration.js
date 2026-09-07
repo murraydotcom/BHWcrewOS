@@ -126,7 +126,11 @@ exports.handler = async (event) => {
   try { body = JSON.parse(event.body || "{}"); } catch { return json(400, { error: "Bad JSON" }); }
 
   try {
-    const prepared = await prepareMigration(session);
+    const datasetKey = String(body.dataset || "");
+    // Applying one approved section must not reread every unrelated legacy
+    // database. This keeps the protected request within the synchronous limit
+    // and verifies the selected source against its own preview seal.
+    const prepared = await prepareMigration(session, body.action === "apply" ? [datasetKey] : null);
     if (body.action === "preview") {
       return json(200, {
         ok: true,
@@ -139,7 +143,7 @@ exports.handler = async (event) => {
     }
 
     if (body.action === "apply") {
-      const key = String(body.dataset || "");
+      const key = datasetKey;
       const dataset = prepared.datasets[key];
       if (!dataset) return json(400, { error: "Choose a migration section." });
       if (body.confirmation !== CONFIRMATION) return json(400, { error: `Type ${CONFIRMATION} exactly.` });

@@ -58,7 +58,7 @@ function sourceLabel(page, propertyNames = []) {
   return page.id;
 }
 
-function createResolver(roster, indexPages) {
+function createResolver(roster, indexPages = []) {
   const byId = new Map(roster.map((patient) => [patient.bhwPatientId, patient]));
   const bySource = uniqueMap(roster, (patient) => patient.source?.recordId || patient.sourceRecordId);
   const byNameDob = uniqueMap(roster, (patient) => `${nameKey(patient.name)}|${dateOnly(patient.dob)}`);
@@ -146,9 +146,8 @@ function requestStatus(type, legacy) {
   return "received";
 }
 
-async function prepareMigration(session) {
+async function prepareMigration(session, requestedDatasetKeys = null) {
   const sourceIds = {
-    patientIndex: DB.patients,
     patientRequests: LEGACY_QUEUE_DB,
     referrals: DB.referrals,
     handoffs: DB.handoffs,
@@ -169,17 +168,23 @@ async function prepareMigration(session) {
     crispArchive: process.env.NOTION_DB_ADT,
   };
   const names = Object.keys(sourceIds);
+  const requested = Array.isArray(requestedDatasetKeys) ? new Set(requestedDatasetKeys) : null;
+  const loadNames = requested ? names.filter((name) => requested.has(name)) : names;
   const [registryResult, ...loaded] = await Promise.all([
     cloudRequest("/v1/patients", { actor: session }),
-    ...names.map((name) => safeQuery(sourceIds[name])),
+    ...loadNames.map((name) => safeQuery(sourceIds[name])),
   ]);
   const roster = (Array.isArray(registryResult.patients) ? registryResult.patients : []).map((patient) => ({
     ...patient,
     name: [patient.legalFirstName, patient.middleName, patient.legalLastName, patient.nameSuffix].filter(Boolean).join(" ").trim(),
     dob: patient.dateOfBirth || "",
   }));
-  const sources = Object.fromEntries(names.map((name, index) => [name, loaded[index]]));
-  const resolver = createResolver(roster, sources.patientIndex.rows);
+  const loadedByName = Object.fromEntries(loadNames.map((name, index) => [name, loaded[index]]));
+  const sources = Object.fromEntries(names.map((name) => [name, loadedByName[name] || { rows: [], error: "" }]));
+  // Historical relationships are accepted only when the authoritative Cloud
+  // Registry itself retains the legacy source record. The retired Patient
+  // Index is never used as a second identity authority.
+  const resolver = createResolver(roster);
   const datasets = {};
   const group = (key, label) => (datasets[key] = collection(key, label, sources[key]));
 
@@ -208,6 +213,10 @@ async function prepareMigration(session) {
   for (const page of sources.patientRequests.rows) {
     const p = page.properties || {}; const label = sourceLabel(page, ["Request ID", "Patient Name"]);
     const ref = P.rel(p.Patient)[0]; const resolved = ref ? resolver.relation(ref) : { bhwPatientId: "" };
+    if (!resolved.bhwPatientId) {
+      requests.blocked.push(block(page, label, resolved.reason || "The historical request is not linked to one canonical Registry patient."));
+      continue;
+    }
     const summary = P.text(p.Summary) || "Legacy Patient Request"; const source = P.sel(p.Source) || "front-desk";
     requests.ready.push(targetRecord(page, resolved.bhwPatientId, { kind: "frontdesk", body: {
       bhwPatientId: resolved.bhwPatientId, patientMatchStatus: resolved.bhwPatientId ? "matched" : "unmatched",
