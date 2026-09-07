@@ -70,7 +70,7 @@ $("preview").addEventListener("click",async()=>{
 });
 $("results").addEventListener("click",async event=>{
   const button=event.target.closest(".apply");if(!button)return;const key=button.dataset.key;button.disabled=true;button.textContent="Saving…";setState("saving","Saving to BHW Cloud…");
-  try{const data=await call({action:"apply",dataset:key,confirmation:$("confirmation").value,previewToken:previewTokens[key],identityToken});button.dataset.saved="1";button.textContent=`Saved ${data.verifiedCount}`;const stamp=new Date(data.savedAt).toLocaleString();const blocked=data.blockedRemaining?` · ${data.blockedRemaining} blocked remain not saved`:"";setState("saved",`Saved to BHW Cloud · ${stamp} · ${data.verifiedCount} read back${blocked}`)}catch(error){const row=previewData?.datasets.find(item=>item.key===key);button.textContent=row?.blockedCount?`Apply ${row.readyCount} verified only`:"Apply section";setState("error",`Not saved · ${error.message}`);syncButtons()}
+  try{const data=await call({action:"apply",dataset:key,confirmation:$("confirmation").value,previewToken:previewTokens[key]});button.dataset.saved="1";button.textContent=`Saved ${data.verifiedCount}`;const stamp=new Date(data.savedAt).toLocaleString();const blocked=data.blockedRemaining?` · ${data.blockedRemaining} blocked remain not saved`:"";setState("saved",`Saved to BHW Cloud · ${stamp} · ${data.verifiedCount} read back${blocked}`)}catch(error){const row=previewData?.datasets.find(item=>item.key===key);button.textContent=row?.blockedCount?`Apply ${row.readyCount} verified only`:"Apply section";setState("error",`Not saved · ${error.message}`);syncButtons()}
 });
 </script>
 </body>

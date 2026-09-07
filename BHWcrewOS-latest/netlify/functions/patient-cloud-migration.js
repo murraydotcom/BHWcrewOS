@@ -46,9 +46,37 @@ async function writeRecord(record, session) {
   throw new Error("Unsupported migration target");
 }
 
-function chunks(items, size) {
+const FRONT_DESK_BULK_TARGET_BYTES = 1536 * 1024;
+const FRONT_DESK_BULK_MAX_RECORDS = 100;
+
+function frontDeskBulkBody(records) {
+  return {
+    records: records.map((record) => ({
+      submissionId: record.target.submissionId,
+      body: record.target.body,
+    })),
+  };
+}
+
+function chunkFrontDeskRecords(records, { maxBytes = FRONT_DESK_BULK_TARGET_BYTES, maxRecords = FRONT_DESK_BULK_MAX_RECORDS } = {}) {
   const output = [];
-  for (let index = 0; index < items.length; index += size) output.push(items.slice(index, index + size));
+  let batch = [];
+  for (const record of records) {
+    const candidate = [...batch, record];
+    const tooMany = candidate.length > maxRecords;
+    const tooLarge = Buffer.byteLength(JSON.stringify(frontDeskBulkBody(candidate)), "utf8") > maxBytes;
+    if (!tooMany && !tooLarge) {
+      batch = candidate;
+      continue;
+    }
+    if (!batch.length) throw new Error("One approved Patient Request exceeds the protected Cloud migration size limit.");
+    output.push(batch);
+    batch = [record];
+    if (Buffer.byteLength(JSON.stringify(frontDeskBulkBody(batch)), "utf8") > maxBytes) {
+      throw new Error("One approved Patient Request exceeds the protected Cloud migration size limit.");
+    }
+  }
+  if (batch.length) output.push(batch);
   return output;
 }
 
@@ -58,7 +86,10 @@ async function writeDataset(records, session) {
   const receipts = await mapLimit(standard, 4, (record) => writeRecord(record, session));
   if (!frontDesk.length) return receipts;
 
-  const batches = await mapLimit(chunks(frontDesk, 300), 6, async (batch) => {
+  // The Operations API accepts at most 2 MiB per protected bulk request.
+  // Build every batch below that ceiling before the first write, with a count
+  // limit as a second guard for unusually small records.
+  const batches = await mapLimit(chunkFrontDeskRecords(frontDesk), 6, async (batch) => {
     const result = await createFrontDeskIntakeBulk(batch.map((record) => record.target));
     if (!result || result.verifiedCount !== batch.length) {
       throw new Error(`BHW Cloud bulk read-back verified ${result?.verifiedCount || 0} of ${batch.length} Patient Requests.`);
@@ -137,8 +168,8 @@ exports.handler = async (event) => {
     }
 
     const datasetKey = String(body.dataset || "");
-    const identity = verifyIdentity(body.identityToken, session, process.env.SESSION_SECRET);
     if (body.action === "preview") {
+      const identity = verifyIdentity(body.identityToken, session, process.env.SESSION_SECRET);
       const datasetKeys = [...new Set((Array.isArray(body.datasets) ? body.datasets : []).map((value) => String(value || "")).filter(Boolean))];
       if (!datasetKeys.length) return json(400, { error: "Choose at least one migration section to preview." });
       const prepared = await prepareMigration(session, datasetKeys, identity);
@@ -188,3 +219,5 @@ exports.handler = async (event) => {
     return json(Number(error.status) || 500, { ok: false, error: String(error.message || error) });
   }
 };
+
+exports.chunkFrontDeskRecords = chunkFrontDeskRecords;
