@@ -5,6 +5,7 @@ import { readFile } from "node:fs/promises";
 
 const require = createRequire(import.meta.url);
 const { createResolver, publicPreview, sealIdentity, verifyIdentity, sealPreparedPreview, verifyPreparedPreview, signPreview, verifyPreview } = require("../netlify/functions/lib/patient-cloud-migration.js");
+const { chunkFrontDeskRecords } = require("../netlify/functions/patient-cloud-migration.js");
 
 const session = { staffId: "synthetic-admin", access: "Admin" };
 const secret = "synthetic-preview-secret";
@@ -61,6 +62,24 @@ test("approved migration payload is encrypted, immutable, session-bound, and exp
   assert.throws(() => verifyPreparedPreview(`${token.slice(0, -1)}x`, session, secret, "careLogs", 2_000), /expired or is not valid/i);
 });
 
+test("approved Patient Requests are split below the protected bulk body ceiling", () => {
+  const records = Array.from({ length: 240 }, (_, index) => ({
+    target: {
+      kind: "frontdesk",
+      submissionId: `legacy-request:synthetic-${String(index).padStart(4, "0")}`,
+      body: { bhwPatientId: "BHW0000", notificationMode: "none", message: "x".repeat(12_000) },
+    },
+  }));
+  const batches = chunkFrontDeskRecords(records);
+  assert.ok(batches.length > 2);
+  assert.equal(batches.flat().length, records.length);
+  for (const batch of batches) {
+    assert.ok(batch.length <= 100);
+    const bulkBody = { records: batch.map((record) => ({ submissionId: record.target.submissionId, body: record.target.body })) };
+    assert.ok(Buffer.byteLength(JSON.stringify(bulkBody), "utf8") <= 1536 * 1024);
+  }
+});
+
 test("the authoritative Cloud name and DOB repair a conflicting legacy BHW ID", () => {
   const resolver = createResolver([
     { bhwPatientId: "BHW0001", name: "First Synthetic", dob: "2000-01-01" },
@@ -90,9 +109,12 @@ test("migration UI is session-gated, starts with preview, and distinguishes veri
   assert.match(handler, /prepareMigration\(session, datasetKeys, identity\)/);
   assert.match(handler, /verifyPreparedPreview\(body\.previewToken, session, process\.env\.SESSION_SECRET, key\)/);
   assert.match(handler, /blockedRemaining: dataset\.blocked\.length/);
+  assert.match(handler, /chunkFrontDeskRecords\(frontDesk\)/);
+  assert.match(handler, /body\.action === "preview"\) \{\s*const identity = verifyIdentity/);
   assert.doesNotMatch(handler, /dataset\.blocked\.length\) return json\(409/);
   assert.match(html, /PREVIEW_GROUPS/);
   assert.match(html, /identityToken/);
+  assert.doesNotMatch(html, /action:"apply"[^\n]+identityToken/);
   const migration = await readFile(new URL("../netlify/functions/lib/patient-cloud-migration.js", import.meta.url), "utf8");
   assert.doesNotMatch(migration, /patientIndex:\s*DB\.patients/);
   assert.match(migration, /Every crosswalk entry was resolved against the authoritative Cloud roster/);
