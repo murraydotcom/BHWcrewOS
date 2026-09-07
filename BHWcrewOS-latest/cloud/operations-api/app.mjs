@@ -158,6 +158,17 @@ export function createOperationsApp({
         }, cors);
       }
 
+      if (url.pathname === "/v1/public/site-content" && request.method === "GET") {
+        if (typeof repository.publicWebsiteContent !== "function") {
+          throw apiError(503, "site_content_not_configured", "public website content is not configured");
+        }
+        const content = await repository.publicWebsiteContent(url.searchParams.get("siteId") || "care-connect", { now: now() });
+        return json(200, { ok: true, ...content }, {
+          ...cors,
+          "Cache-Control": "public, max-age=0, s-maxage=60, stale-while-revalidate=300",
+        });
+      }
+
       if (url.pathname === "/v1/chat/events" && request.method === "POST") {
         if (!workflow) throw apiError(503, "workflow_not_configured", "Google Chat workflow is not configured");
         return json(200, await workflow.handleChatEvent(request), cors);
@@ -379,6 +390,35 @@ export function createOperationsApp({
       }
 
       const actor = staffActor(request, environment, now);
+      if (url.pathname === "/v1/site-content" && request.method === "GET") {
+        if (typeof repository.listWebsiteContent !== "function") throw apiError(503, "site_content_not_configured", "website content is not configured");
+        return json(200, { ok: true, websiteContent: await repository.listWebsiteContent(queryFilters(url)) }, cors);
+      }
+      if (url.pathname === "/v1/site-content" && request.method === "POST") {
+        if (typeof repository.createWebsiteContent !== "function") throw apiError(503, "site_content_not_configured", "website content is not configured");
+        const websiteContent = await repository.createWebsiteContent(await readJson(request), actor, { now: now(), idFactory });
+        return json(201, { ok: true, websiteContent }, cors);
+      }
+      const siteContentActionMatch = url.pathname.match(/^\/v1\/site-content\/([^/]+)\/actions$/);
+      if (siteContentActionMatch && request.method === "POST") {
+        if (typeof repository.transitionWebsiteContent !== "function") throw apiError(503, "site_content_not_configured", "website content is not configured");
+        const websiteContent = await repository.transitionWebsiteContent(
+          decodeURIComponent(siteContentActionMatch[1]), await readJson(request), actor, { now: now() },
+        );
+        return json(200, { ok: true, websiteContent }, cors);
+      }
+      const siteContentMatch = url.pathname.match(/^\/v1\/site-content\/([^/]+)$/);
+      if (siteContentMatch && request.method === "GET") {
+        if (typeof repository.getWebsiteContent !== "function") throw apiError(503, "site_content_not_configured", "website content is not configured");
+        return json(200, { ok: true, websiteContent: await repository.getWebsiteContent(decodeURIComponent(siteContentMatch[1])) }, cors);
+      }
+      if (siteContentMatch && request.method === "PATCH") {
+        if (typeof repository.updateWebsiteContent !== "function") throw apiError(503, "site_content_not_configured", "website content is not configured");
+        const websiteContent = await repository.updateWebsiteContent(
+          decodeURIComponent(siteContentMatch[1]), await readJson(request), actor, { now: now() },
+        );
+        return json(200, { ok: true, websiteContent }, cors);
+      }
       const portalAccessMatch = url.pathname.match(/^\/v1\/patient-portal-access\/([^/]+)$/);
       if (portalAccessMatch && ["GET", "PUT"].includes(request.method)) {
         const bhwPatientId = assertBhwPatientId(decodeURIComponent(portalAccessMatch[1]));

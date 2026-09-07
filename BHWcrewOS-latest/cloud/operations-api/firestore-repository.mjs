@@ -26,6 +26,15 @@ import {
   sanitizePatientPortalAccess,
   selectUniqueActivePatient,
 } from "./patient-identity.mjs";
+import {
+  createWebsiteContent,
+  normalizeWebsiteSiteId,
+  projectPublishedWebsiteContent,
+  requireWebsiteContentId,
+  transitionWebsiteContent,
+  updateWebsiteContentDraft,
+  websiteContentAudit,
+} from "./site-content.mjs";
 
 function receiptId(scope, key) {
   return crypto.createHash("sha256").update(`${scope}:${key}`).digest("hex");
@@ -50,6 +59,7 @@ export class FirestoreOperationsRepository {
     this.patientRequests = this.db.collection(COLLECTIONS.patientRequests);
     this.tasks = this.db.collection(COLLECTIONS.tasks);
     this.communications = this.db.collection(COLLECTIONS.communications);
+    this.websiteContent = this.db.collection(COLLECTIONS.websiteContent);
     this.auditEvents = this.db.collection(COLLECTIONS.auditEvents);
     this.patients = this.db.collection(COLLECTIONS.patients);
     this.patientContacts = this.db.collection(COLLECTIONS.patientContacts);
@@ -57,6 +67,66 @@ export class FirestoreOperationsRepository {
     this.verificationEvents = this.db.collection(COLLECTIONS.verificationEvents);
     this.intakeReceipts = this.db.collection(COLLECTIONS.intakeReceipts);
     this.patientIdentitySecret = patientIdentitySecret || process.env.CARE_CONNECT_PATIENT_IDENTITY_SECRET || "";
+  }
+
+  async createWebsiteContent(input, actor, options = {}) {
+    const record = createWebsiteContent(input, actor, options);
+    const audit = websiteContentAudit(record, "website-content.created", actor, record.createdAt);
+    const batch = this.db.batch();
+    batch.create(this.websiteContent.doc(record.contentId), record);
+    batch.create(this.auditEvents.doc(audit.auditEventId), audit);
+    await batch.commit();
+    return record;
+  }
+
+  async getWebsiteContent(id) {
+    const contentId = requireWebsiteContentId(id);
+    const record = dataOf(await this.websiteContent.doc(contentId).get());
+    if (!record) throw apiError(404, "not_found", "website content was not found");
+    return record;
+  }
+
+  async listWebsiteContent(filters = {}) {
+    const siteId = normalizeWebsiteSiteId(filters.siteId || "care-connect");
+    const snapshot = await this.websiteContent.where("siteId", "==", siteId).limit(250).get();
+    const status = cleanText(filters.status, 40).toLowerCase();
+    return snapshot.docs.map((doc) => doc.data())
+      .filter((record) => !status || record.status === status)
+      .sort((left, right) => String(right.updatedAt).localeCompare(String(left.updatedAt)))
+      .slice(0, toLimit(filters.limit, 100, 250));
+  }
+
+  async updateWebsiteContent(id, input, actor, options = {}) {
+    const contentId = requireWebsiteContentId(id);
+    const ref = this.websiteContent.doc(contentId);
+    return this.db.runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(ref);
+      if (!snapshot.exists) throw apiError(404, "not_found", "website content was not found");
+      const record = updateWebsiteContentDraft(snapshot.data(), input, actor, options);
+      const audit = websiteContentAudit(record, "website-content.updated", actor, record.updatedAt);
+      transaction.set(ref, record);
+      transaction.create(this.auditEvents.doc(audit.auditEventId), audit);
+      return record;
+    });
+  }
+
+  async transitionWebsiteContent(id, input, actor, options = {}) {
+    const contentId = requireWebsiteContentId(id);
+    const ref = this.websiteContent.doc(contentId);
+    return this.db.runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(ref);
+      if (!snapshot.exists) throw apiError(404, "not_found", "website content was not found");
+      const record = transitionWebsiteContent(snapshot.data(), input, actor, options);
+      const audit = websiteContentAudit(record, `website-content.${String(input.action || "updated")}`, actor, record.updatedAt);
+      transaction.set(ref, record);
+      transaction.create(this.auditEvents.doc(audit.auditEventId), audit);
+      return record;
+    });
+  }
+
+  async publicWebsiteContent(siteId, options = {}) {
+    const records = await this.listWebsiteContent({ siteId, limit: 250 });
+    return projectPublishedWebsiteContent(records, siteId, options);
   }
 
   async resolvePatientIdentity(identity, { identityReference, now = new Date().toISOString() } = {}) {

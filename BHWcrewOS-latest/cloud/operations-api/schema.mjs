@@ -8,6 +8,7 @@ export const COLLECTIONS = Object.freeze({
   patientRequests: "patientRequests",
   tasks: "tasks",
   communications: "communications",
+  websiteContent: "websiteContent",
   auditEvents: "auditEvents",
   intakeReceipts: "intakeReceipts",
 });
