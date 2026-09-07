@@ -19,6 +19,8 @@ test("CrewHQ exposes the dedicated medication request link workflow", () => {
   assert.match(hq, /Medication Request Links/);
   assert.match(hq, /href:'\/bhw-medication-request-links\.html'/);
   assert.match(staff, /\.netlify\/functions\/patient-registry/);
+  assert.match(staff, /bhwPatientId:'BHW0000'/);
+  assert.match(staff, /TEST ONLY/);
   assert.match(staff, /contentPath:'\/bhw-medication-request\.html'/);
   assert.match(staff, /workflowType:'medication_request'/);
 });
