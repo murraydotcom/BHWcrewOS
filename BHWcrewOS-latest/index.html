@@ -1993,7 +1993,7 @@ async function npUseMaster(i,button){
   const bhwId = p.bhwPatientId||p.bhwId||p.id;
   const existing = (D.patients||[]).find(item=>item.bhwId===bhwId);
   if(!existing){ err.textContent = "That Patient Registry record is not in the current CrewOS directory. Refresh and try again."; return; }
-  npSelectInPicker(existing.id, `${existing.name} — ${existing.bhwId}`);
+  npSelectInPicker(patientPickerValue(existing), `${existing.name} — ${existing.bhwId}`);
   npClose();
   toast("Selected from the Patient Registry");
 }
@@ -2040,8 +2040,8 @@ async function npSubmit(force){
   }
 }
 function npUseExisting(id){
-  const d = (D.patients||[]).find(p=>p.id===id);
-  npSelectInPicker(id, d ? `${d.name} — ${d.bhwId}` : "Selected patient");
+  const d = (D.patients||[]).find(p=>p.id===id||p.bhwId===id);
+  npSelectInPicker(d ? patientPickerValue(d) : id, d ? `${d.name} — ${d.bhwId}` : "Selected patient");
   npClose();
   toast("Using the existing record — no duplicate created");
 }
@@ -2669,10 +2669,13 @@ function openModal(html){
 function closeModal(){ document.getElementById("modal").classList.remove("open"); }
 document.getElementById("modal").addEventListener("click",e=>{ if(e.target.id==="modal") closeModal(); });
 
+function patientPickerValue(p){
+  return String(p?.bhwId||p?.id||"").trim();
+}
 function patientOptions(list){
   return (list||D.patients||[]).map(p=>{
     const status = p.status && p.status!=="active" ? ` · ${p.status}` : "";
-    return `<option value="${esc(p.id)}" ${p.selectable===false?"disabled":""}>${esc(p.name)} — ${esc(p.bhwId)}${esc(status)}</option>`;
+    return `<option value="${esc(patientPickerValue(p))}" ${p.selectable===false?"disabled":""}>${esc(p.name)} — ${esc(p.bhwId)}${esc(status)}</option>`;
   }).join("");
 }
 function patientSearchText(p){
@@ -2700,7 +2703,7 @@ function enhancePatientPicker(){
     const all=D.patients||[];
     const matches=query ? all.filter(p=>patientSearchText(p).includes(query)) : all;
     s.innerHTML=`<option value="">${matches.length?"Select patient…":"No matching Registry patients"}</option>${patientOptions(matches)}`;
-    if(matches.some(p=>p.id===selected)) s.value=selected;
+    if(matches.some(p=>patientPickerValue(p)===selected)) s.value=selected;
     s.size=query ? Math.min(Math.max(matches.length+1,2),7) : 1;
     status.textContent=D.patientRegistryReady
       ? `${matches.length} of ${all.length} Patient Registry records · Google Cloud synced`
@@ -2708,7 +2711,7 @@ function enhancePatientPicker(){
   };
   input.addEventListener("input",render);
   s.addEventListener("change",()=>{
-    const p=(D.patients||[]).find(item=>item.id===s.value);
+    const p=(D.patients||[]).find(item=>patientPickerValue(item)===s.value);
     if(p) input.value=`${p.name} — ${p.bhwId}`;
     s.size=1;
   });

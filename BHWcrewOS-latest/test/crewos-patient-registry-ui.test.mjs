@@ -11,6 +11,19 @@ test("CrewOS inline scripts compile with the shared Patient Registry picker", as
   assert.match(html, /function enhancePatientPicker\(\)/);
 });
 
+test("every CrewOS workflow picker submits the canonical BHW Registry ID", async () => {
+  const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
+  const helperSource = html.match(/function patientPickerValue\(p\)\{\s*return String\(p\?\.bhwId\|\|p\?\.id\|\|""\)\.trim\(\);\s*\}/)?.[0];
+  assert.ok(helperSource);
+  const patientPickerValue = new Function(`${helperSource}; return patientPickerValue;`)();
+  assert.equal(patientPickerValue({ id: "legacy-index-id", bhwId: "BHW0000" }), "BHW0000");
+  assert.equal(patientPickerValue({ id: "legacy-index-id" }), "legacy-index-id");
+  assert.match(html, /<option value="\$\{esc\(patientPickerValue\(p\)\)\}"/);
+  assert.match(html, /matches\.some\(p=>patientPickerValue\(p\)===selected\)/);
+  assert.match(html, /find\(item=>patientPickerValue\(item\)===s\.value\)/);
+  assert.match(html, /npSelectInPicker\(patientPickerValue\(existing\),/);
+});
+
 test("CrewHQ keeps patient maintenance tools inside the protected Patient Registry", async () => {
   const hq = await readFile(new URL("../hq.html", import.meta.url), "utf8");
   const registry = await readFile(new URL("../provider/patient-registry.html", import.meta.url), "utf8");
