@@ -71,7 +71,7 @@ async function saveCloudCharmedAssessment(body, kind, session) {
 }
 
 const today = () => new Date().toISOString().slice(0, 10);
-const actionKey = (prefix) => `${prefix}:${crypto.randomUUID()}`;
+const actionKey = (prefix) => `${prefix}-${crypto.randomUUID()}`;
 
 async function requireCloudPatient(patientId, session) {
   const bhwPatientId = String(patientId || "").trim().toUpperCase();
