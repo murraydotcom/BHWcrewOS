@@ -19,12 +19,15 @@ integration in Notion → open /setup.html → set PINs → sign in at /.
 
 `cloud/operations-api/` is the Cloud Run/Firestore foundation for shared patient
 requests, tasks, communication records, and metadata-only audit events. It does
-not send notifications. See `docs/google-native-communication-foundation.md` for
+Google Chat mirroring and fail-closed, gated Dialpad messaging through the same
+authoritative queue. See `docs/google-native-communication-foundation.md` for
 the data model, Care Connect intake contract, CrewOS integration points, system
 boundaries, and deployment dependencies.
 
 Netlify uses `OPERATIONS_CLOUD_API_URL` and
-`CREWOS_OPERATIONS_TOKEN_SECRET` for signed staff access. The optional
-Care Connect bridge additionally requires `CARE_CONNECT_INTAKE_SECRET`; until
-those values are configured, the existing Notion triage path remains
-transitional.
+`CREWOS_OPERATIONS_TOKEN_SECRET` for signed staff access. The Dialpad event
+bridge verifies `DIALPAD_WEBHOOK_SECRET` and forwards only to
+`OPERATIONS_CLOUD_API_URL`; RCM is not the Patient Requests webhook backend.
+The Care Connect bridge additionally requires `CARE_CONNECT_INTAKE_SECRET`.
+Missing Cloud configuration fails closed instead of writing to a legacy Notion
+queue.

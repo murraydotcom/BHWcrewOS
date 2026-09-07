@@ -4,7 +4,7 @@
 // owns event filtering, idempotency, patient matching, communications, and
 // Patient Requests. This remains a direct webhook path with no middleware.
 //
-// Required env: DIALPAD_WEBHOOK_SECRET, RCM_CLOUD_API_URL
+// Required env: DIALPAD_WEBHOOK_SECRET, OPERATIONS_CLOUD_API_URL
 
 const { parseDialpadBody } = require("./lib/triage");
 
@@ -36,7 +36,7 @@ exports.handler = async (event) => {
     // Google Cloud is the workflow source of truth. Preserve the already-signed
     // JWT body so Cloud Run independently verifies it and performs idempotent
     // patient matching, suppression handling, communication logging and queueing.
-    const cloudBase = safeCloudBase(process.env.RCM_CLOUD_API_URL);
+    const cloudBase = safeCloudBase(process.env.OPERATIONS_CLOUD_API_URL);
     if (!cloudBase) return { statusCode: 503, body: "Google workflow API is not configured" };
     const response = await fetch(`${cloudBase}/v1/webhooks/dialpad`, {
       method: "POST",

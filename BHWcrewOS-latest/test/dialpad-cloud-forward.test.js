@@ -13,9 +13,11 @@ function signedDialpadEvent(payload, secret) {
 test("verified Dialpad events forward unchanged to the Google workflow endpoint", async () => {
   const priorFetch = global.fetch;
   const priorSecret = process.env.DIALPAD_WEBHOOK_SECRET;
-  const priorUrl = process.env.RCM_CLOUD_API_URL;
+  const priorUrl = process.env.OPERATIONS_CLOUD_API_URL;
+  const priorRcmUrl = process.env.RCM_CLOUD_API_URL;
   process.env.DIALPAD_WEBHOOK_SECRET = "synthetic-dialpad-secret";
-  process.env.RCM_CLOUD_API_URL = "https://api.example.test/";
+  process.env.OPERATIONS_CLOUD_API_URL = "https://api.example.test/";
+  process.env.RCM_CLOUD_API_URL = "https://rcm-must-not-receive.example.test/";
   const jwt = signedDialpadEvent({ id: "synthetic-event-1", direction: "inbound", text: "Synthetic message" }, process.env.DIALPAD_WEBHOOK_SECRET);
   let forwarded;
   global.fetch = async (url, options) => {
@@ -31,24 +33,28 @@ test("verified Dialpad events forward unchanged to the Google workflow endpoint"
   } finally {
     global.fetch = priorFetch;
     if (priorSecret === undefined) delete process.env.DIALPAD_WEBHOOK_SECRET; else process.env.DIALPAD_WEBHOOK_SECRET = priorSecret;
-    if (priorUrl === undefined) delete process.env.RCM_CLOUD_API_URL; else process.env.RCM_CLOUD_API_URL = priorUrl;
+    if (priorUrl === undefined) delete process.env.OPERATIONS_CLOUD_API_URL; else process.env.OPERATIONS_CLOUD_API_URL = priorUrl;
+    if (priorRcmUrl === undefined) delete process.env.RCM_CLOUD_API_URL; else process.env.RCM_CLOUD_API_URL = priorRcmUrl;
   }
 });
 
 test("Dialpad forwarding fails closed without signing or Google Cloud configuration", async () => {
   const priorSecret = process.env.DIALPAD_WEBHOOK_SECRET;
-  const priorUrl = process.env.RCM_CLOUD_API_URL;
+  const priorUrl = process.env.OPERATIONS_CLOUD_API_URL;
+  const priorRcmUrl = process.env.RCM_CLOUD_API_URL;
   try {
     delete process.env.DIALPAD_WEBHOOK_SECRET;
     let response = await handler({ httpMethod: "POST", body: "unsigned" });
     assert.equal(response.statusCode, 503);
     process.env.DIALPAD_WEBHOOK_SECRET = "synthetic-dialpad-secret";
-    delete process.env.RCM_CLOUD_API_URL;
+    delete process.env.OPERATIONS_CLOUD_API_URL;
+    process.env.RCM_CLOUD_API_URL = "https://rcm-must-not-receive.example.test/";
     const jwt = signedDialpadEvent({ id: "synthetic-event-2", direction: "inbound", text: "Synthetic message" }, process.env.DIALPAD_WEBHOOK_SECRET);
     response = await handler({ httpMethod: "POST", body: jwt });
     assert.equal(response.statusCode, 503);
   } finally {
     if (priorSecret === undefined) delete process.env.DIALPAD_WEBHOOK_SECRET; else process.env.DIALPAD_WEBHOOK_SECRET = priorSecret;
-    if (priorUrl === undefined) delete process.env.RCM_CLOUD_API_URL; else process.env.RCM_CLOUD_API_URL = priorUrl;
+    if (priorUrl === undefined) delete process.env.OPERATIONS_CLOUD_API_URL; else process.env.OPERATIONS_CLOUD_API_URL = priorUrl;
+    if (priorRcmUrl === undefined) delete process.env.RCM_CLOUD_API_URL; else process.env.RCM_CLOUD_API_URL = priorRcmUrl;
   }
 });
