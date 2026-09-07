@@ -622,6 +622,39 @@ test("an unmatched STOP suppresses the phone destination and is still logged", a
   assert.equal([...repository.communications.values()].some((item) => item.statusReason === "opt-out-unmatched"), true);
 });
 
+test("Dialpad delivery callbacks update status and delivery-result metadata", async () => {
+  const repository = inMemoryRepository();
+  let deliveryUpdate = null;
+  repository.updateCommunicationDelivery = async (providerMessageId, patch) => {
+    deliveryUpdate = { providerMessageId, ...patch };
+    return 1;
+  };
+  const service = createWorkflowService(repository, {
+    environment: { PATIENT_WORKFLOW_AUTOMATION_ENABLED: "false" },
+    dialpad: {
+      configured: true,
+      webhookConfigured: true,
+      verifyWebhook(raw) { return JSON.parse(raw); },
+    },
+    chat: { enabled: false },
+    clock: () => NOON,
+  });
+  const result = await service.handleDialpadWebhook(JSON.stringify({
+    id: "synthetic-delivery-event",
+    direction: "outbound",
+    from_number: "+15555550100",
+    to_number: ["+15555550199"],
+    message_status: "undelivered",
+    message_delivery_result: "rejected_spam",
+    created_date: 1788811200000,
+  }));
+  assert.equal(result.deliveryUpdated, 1);
+  assert.equal(deliveryUpdate.providerMessageId, "synthetic-delivery-event");
+  assert.equal(deliveryUpdate.status, "failed");
+  assert.equal(deliveryUpdate.providerStatus, "undelivered");
+  assert.equal(deliveryUpdate.providerDetail, "rejected_spam");
+});
+
 test("a matched START restores consent without creating a patient request", async () => {
   const repository = inMemoryRepository();
   let patientSuppression = null;

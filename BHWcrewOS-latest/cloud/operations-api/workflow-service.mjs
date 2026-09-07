@@ -57,8 +57,8 @@ function safeHttpsUrl(value) {
 
 function deliveryStatus(value) {
   const status = cleanText(value, 80).toLowerCase();
-  if (/deliver/.test(status)) return "delivered";
   if (/fail|undeliver|reject|error/.test(status)) return "failed";
+  if (/deliver/.test(status)) return "delivered";
   if (/sent|accept|queued|pending/.test(status)) return status.includes("pending") || status.includes("queued") ? "pending" : "sent";
   return "unknown";
 }
@@ -572,6 +572,7 @@ export function createWorkflowService(repository, {
         ? await repository.updateCommunicationDelivery(event.providerMessageId, {
           status: deliveryStatus(event.providerStatus),
           providerStatus: event.providerStatus,
+          providerDetail: event.providerDetail,
           providerEventAt: event.occurredAt,
           updatedAt: iso(clock()),
         }) : 0;

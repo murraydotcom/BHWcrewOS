@@ -35,10 +35,12 @@ function eventIdentifier(payload = {}) {
 
 export function normalizeDialpadEvent(payload = {}, now = new Date()) {
   const direction = cleanText(payload.direction, 40).toLowerCase();
-  const from = normalizePhone(payload.from_number || payload.external_number || payload.contact?.phone || payload.from?.phone_number);
-  const to = normalizePhone(payload.to_number || payload.internal_number || payload.target?.phone || payload.to?.phone_number);
+  const toNumber = Array.isArray(payload.to_number) ? payload.to_number[0] : payload.to_number;
+  const from = normalizePhone(payload.from_number || payload.external_number || payload.contact?.phone_number || payload.contact?.phone || payload.from?.phone_number);
+  const to = normalizePhone(toNumber || payload.internal_number || payload.target?.phone_number || payload.target?.phone || payload.to?.phone_number);
   const text = cleanText(payload.text || payload.text_content || payload.message?.text, 4000);
-  const state = cleanText(payload.state || payload.call_state || payload.event_type || payload.event, 120).toLowerCase();
+  const state = cleanText(payload.message_status || payload.status || payload.state || payload.call_state || payload.event_type || payload.event, 120).toLowerCase();
+  const providerDetail = cleanText(payload.message_delivery_result || payload.delivery_result, 120).toLowerCase();
   const providerMessageId = eventIdentifier(payload);
   const occurredAtValue = payload.created_date || payload.date_created || payload.timestamp || payload.event_timestamp;
   const occurredAtDate = new Date(occurredAtValue || now);
@@ -54,6 +56,7 @@ export function normalizeDialpadEvent(payload = {}, now = new Date()) {
       source: "dialpad-sms",
       providerMessageId,
       providerStatus: cleanText(payload.status || state || "received", 80).toLowerCase(),
+      providerDetail,
       occurredAt,
       rawEventType: state,
     };
@@ -69,6 +72,7 @@ export function normalizeDialpadEvent(payload = {}, now = new Date()) {
       source: "dialpad-sms",
       providerMessageId,
       providerStatus: cleanText(payload.status || state || "unknown", 80).toLowerCase(),
+      providerDetail,
       occurredAt,
       rawEventType: state,
     };
