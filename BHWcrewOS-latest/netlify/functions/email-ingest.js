@@ -119,7 +119,7 @@ exports.handler = async (event) => {
     const sourceUrl = String(body.attachmentUrl || "").trim();
     if (sourceUrl && /fax/i.test(source)) summary = `${summary} · PDF: ${body.attachmentName || "attachment"}`;
     const r = await createQueueEntry({ patientId, patientName, from, summary, source, link, sourceUrl, receivedISO: body.receivedISO || new Date().toISOString() });
-    if (!r.ok) return { statusCode: 502, body: `notion error: ${r.error}` };
+    if (!r.ok) return { statusCode: 502, body: `operations intake error: ${r.error}` };
     return { statusCode: 200, body: JSON.stringify({ ok: true, source, matched: r.matched }) };
   } catch (e) {
     return { statusCode: 500, body: String(e) };

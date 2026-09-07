@@ -1345,7 +1345,7 @@ function cmCard(){
     <p class="lede">The CharmEd Minds flow separates what can be sent before the visit from supervised in-person screening: intake → school & attention → social & sensory → wellbeing → questionnaires & records → in-person screening → results & recommendations. Saves after every step.</p>
     ${open.length ? `<div class="tbl-wrap"><table><thead><tr><th>Patient</th><th>Age</th><th>Stage</th><th>Progress</th><th></th></tr></thead><tbody>
       ${open.map(e=>`<tr><td><b>${esc(patLabel(e.patient))}</b></td><td>${esc(e.ageGroup||"—")}</td>
-        <td><span class="pill info">${esc(e.status)}</span></td>
+        <td><span class="pill info">${esc(e.status)}</span>${(e.responses||[]).length?` <span class="pill ok">${e.responses.length} received</span>`:""}</td>
         <td>${e.steps.map((s,i)=>`<span class="pill ${s==="Complete"?"ok":s==="In Progress"?"warn":"gray"}">${i+1}</span>`).join(" ")}</td>
         <td style="white-space:nowrap"><button class="btn sm" onclick="cmResume('${e.id}')">Resume</button>${(e.screeners||[]).length&&["Intake","Screeners Pending","In-Person Screening","In-Person Complete"].includes(e.status)?` <button class="btn sm sec" onclick="cmSendOpen('${e.id}','peds')">📤 Send</button>`:""}</td></tr>`).join("")}
     </tbody></table></div>` : `<div class="empty">No assessments in progress.</div>`}
@@ -1640,7 +1640,7 @@ function cmaCard(){
     <p class="lede">The Adult Assessment Hub intake as one guided flow: concerns → EF/social/sensory → mental health & cognition → substance/injury/trauma → vascular & sleep → screeners. Brain-based routing flags fire automatically, including Flow vascular candidates.</p>
     ${open.length ? `<div class="tbl-wrap"><table><thead><tr><th>Patient</th><th>Stage</th><th>Progress</th><th></th></tr></thead><tbody>
       ${open.map(e=>`<tr><td><b>${esc(patLabel(e.patient))}</b></td>
-        <td><span class="pill info">${esc(e.status)}</span></td>
+        <td><span class="pill info">${esc(e.status)}</span>${(e.responses||[]).length?` <span class="pill ok">${e.responses.length} received</span>`:""}</td>
         <td>${e.steps.map((s,i)=>`<span class="pill ${s==="Complete"?"ok":s==="In Progress"?"warn":"gray"}">${i+1}</span>`).join(" ")}</td>
         <td style="white-space:nowrap"><button class="btn sm" onclick="cmaResume('${e.id}')">Resume</button>${(e.screeners||[]).length&&["Intake","Screeners Pending"].includes(e.status)?` <button class="btn sm sec" onclick="cmSendOpen('${e.id}','adult')">📤 Send</button>`:""}</td></tr>`).join("")}
     </tbody></table></div>` : `<div class="empty">No adult assessments in progress.</div>`}
@@ -1927,8 +1927,8 @@ function openContextPatient(){
 function openNewPatient(){
   npEnsureOverlay();
   document.getElementById("np-card").innerHTML = `
-  <h3>Choose or register a patient</h3>
-  <div class="msub">Search the Master Patient List first. Choose an existing patient to use them immediately, or complete the form below only for someone truly new.</div>
+  <h3>Choose a patient or add a prospective patient</h3>
+  <div class="msub">Search the protected Patient Registry first. Choose an active patient to use them immediately. A truly new person receives a temporary holding ID until CharmHealth assigns the canonical BHW ID.</div>
   <div class="f">
     <label>🔎 Search the Master Patient List</label>
     <input type="text" id="np-search" placeholder="Search by name or BHW ID — then choose" autocomplete="off" oninput="npSearch()">
@@ -1947,7 +1947,7 @@ function openNewPatient(){
     <div class="needs" id="np-progs">${NP_PROGS.map(p=>`<button class="chip" type="button" onclick="this.classList.toggle('on')" data-p="${p}">${p}</button>`).join("")}</div>
     <div id="np-dupes"></div>
     <div class="ferr" id="np-err"></div>
-    <div class="macts"><button class="btn sec" onclick="npClose()">Cancel</button><button class="btn" id="np-save" onclick="npSubmit(false)">Register patient</button></div>
+    <div class="macts"><button class="btn sec" onclick="npClose()">Cancel</button><button class="btn" id="np-save" onclick="npSubmit(false)">Add prospective patient</button></div>
   </div>`;
   window.__npHits = [];
   document.getElementById("np-overlay").classList.add("open");
@@ -2028,11 +2028,11 @@ async function npSubmit(force){
         <button class="btn sm sec" style="margin-top:2px" onclick="npSubmit(true)">None of these — create new anyway</button>`;
       return;
     }
-    // created — add to the live directory and select in any open picker
-    D.patients.push({ id: res.id, relationId:res.id, name: res.name, bhwId:res.bhwId, chart: body.chart||"", dob: body.dob, insurance: body.insurance||"", registrySource:"cloud", selectable:true });
+    // Prospective records stay out of clinical pickers until CharmHealth
+    // assigns the canonical BHW ID and the protected loader promotes them.
+    D.patients.push({ id: res.id, relationId:"", name: res.name, bhwId:res.bhwId, chart: body.chart||"", dob: body.dob, insurance: body.insurance||"", status:"prospective", registrySource:"cloud", selectable:false });
     D.patientLabel[res.id] = `${res.name} (${res.bhwId})`;
-    npSelectInPicker(res.id, res.name + " — just registered");
-    toast(`✓ ${res.name} registered`);
+    toast(`Saved to BHW Cloud · ${res.bhwId} pending CharmHealth enrollment`);
     npClose();
     refreshSoft();
   }catch(e){

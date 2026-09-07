@@ -14,6 +14,21 @@ import { buildPatientRequestBundle } from "./domain.mjs";
 import { verifyCrewToken, verifyIntakeClient } from "./auth.mjs";
 
 const MAX_BODY_BYTES = 64 * 1024;
+const MAX_BULK_BODY_BYTES = 2 * 1024 * 1024;
+const MAX_BULK_RECORDS = 300;
+
+async function mapLimit(items, limit, worker) {
+  const output = new Array(items.length);
+  let cursor = 0;
+  async function run() {
+    while (cursor < items.length) {
+      const index = cursor++;
+      output[index] = await worker(items[index], index);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, run));
+  return output;
+}
 
 function json(status, body, extraHeaders = {}) {
   return new Response(JSON.stringify(body), {
@@ -44,9 +59,9 @@ function corsHeaders(request, environment) {
   };
 }
 
-async function readJson(request) {
+async function readJson(request, maxBytes = MAX_BODY_BYTES) {
   const raw = await request.text();
-  if (Buffer.byteLength(raw, "utf8") > MAX_BODY_BYTES) throw apiError(413, "payload_too_large", "request body is too large");
+  if (Buffer.byteLength(raw, "utf8") > maxBytes) throw apiError(413, "payload_too_large", "request body is too large");
   if (!raw) return {};
   try {
     const value = JSON.parse(raw);
@@ -204,6 +219,103 @@ export function createOperationsApp({
           patientRequest: automation?.request || result.request,
           notification: automation?.notification || null,
           chat: automation?.chat || null,
+        }, cors);
+      }
+
+      if (url.pathname === "/v1/intake/front-desk-patient-requests" && request.method === "POST") {
+        const actor = frontDeskReferralActor(request, environment);
+        const idempotencyKey = requireIdempotencyKey(request.headers.get("idempotency-key"));
+        const body = await readJson(request);
+        const historicalTimestamp = body.notificationMode === "none" ? new Date(body.historicalReceivedAt || "") : null;
+        const timestamp = historicalTimestamp && Number.isFinite(historicalTimestamp.getTime())
+          ? historicalTimestamp.toISOString() : now().toISOString();
+        const bundle = buildPatientRequestBundle({
+          ...body,
+          source: body.source || "front-desk-os",
+          routing: { targetSystem: "crewos", assignedTeam: "front-desk", ...(body.routing || {}) },
+          workflowContext: {
+            kind: "patient-request",
+            ...(body.workflowContext || {}),
+            historicalReceivedAt: body.historicalReceivedAt || body.workflowContext?.historicalReceivedAt || "",
+          },
+        }, actor, { now: timestamp, idFactory, intake: true });
+        const result = await repository.createPatientRequest(bundle, {
+          scope: `intake:${actor.id}`,
+          key: idempotencyKey,
+          payloadHash: bundle.payloadHash,
+        });
+        let automation = null;
+        if (workflow && !result.replayed && body.notificationMode !== "none") {
+          automation = await workflow.syncCreatedRequest(result.request.patientRequestId, {
+            sub: `integration:${actor.id}`,
+            name: "Front Desk OS",
+            role: "front-desk",
+            source: "front-desk-os",
+          });
+        }
+        return json(result.replayed ? 200 : 201, {
+          ok: true,
+          replayed: result.replayed,
+          patientRequest: automation?.request || result.request,
+          notification: automation?.notification || null,
+          chat: automation?.chat || null,
+        }, cors);
+      }
+
+      if (url.pathname === "/v1/intake/front-desk-patient-requests/bulk" && request.method === "POST") {
+        const actor = frontDeskReferralActor(request, environment);
+        const input = await readJson(request, MAX_BULK_BODY_BYTES);
+        const records = Array.isArray(input.records) ? input.records : [];
+        if (!records.length || records.length > MAX_BULK_RECORDS) {
+          throw apiError(400, "validation_error", `bulk migration requires 1-${MAX_BULK_RECORDS} records`);
+        }
+        // Validate and normalize the entire batch before the first Firestore write.
+        // A malformed record must not create a partially applied migration batch.
+        const prepared = records.map((entry) => {
+          const body = entry?.body && typeof entry.body === "object" ? entry.body : {};
+          if (body.notificationMode !== "none") {
+            throw apiError(400, "validation_error", "bulk migration records must suppress notifications");
+          }
+          const idempotencyKey = requireIdempotencyKey(entry?.submissionId);
+          const historicalReceivedAt = body.historicalReceivedAt || body.workflowContext?.historicalReceivedAt || "";
+          const historicalTimestamp = new Date(historicalReceivedAt);
+          const timestamp = Number.isFinite(historicalTimestamp.getTime())
+            ? historicalTimestamp.toISOString() : now().toISOString();
+          const bundle = buildPatientRequestBundle({
+            ...body,
+            source: body.source || "front-desk-os",
+            routing: { targetSystem: "crewos", assignedTeam: "front-desk", ...(body.routing || {}) },
+            workflowContext: {
+              kind: "patient-request",
+              ...(body.workflowContext || {}),
+              historicalReceivedAt,
+            },
+          }, actor, { now: timestamp, idFactory, intake: true });
+          return { bundle, idempotencyKey };
+        });
+        const results = await mapLimit(prepared, 24, async ({ bundle, idempotencyKey }) => {
+          const result = await repository.createPatientRequest(bundle, {
+            scope: `intake:${actor.id}`,
+            key: idempotencyKey,
+            payloadHash: bundle.payloadHash,
+          });
+          const requestId = result.request.patientRequestId;
+          const readBack = await repository.getPatientRequest(requestId);
+          if (!readBack || readBack.patientRequestId !== requestId) {
+            throw apiError(502, "readback_failed", "a migrated patient request was not read back from BHW Cloud");
+          }
+          return { submissionId: idempotencyKey, patientRequestId: requestId, replayed: result.replayed, verified: true };
+        });
+        return json(200, {
+          ok: true,
+          storage: "BHW Cloud",
+          savedAt: now().toISOString(),
+          writtenCount: results.length,
+          verifiedCount: results.filter((result) => result.verified).length,
+          replayedCount: results.filter((result) => result.replayed).length,
+          results,
+          notification: null,
+          chat: null,
         }, cors);
       }
 

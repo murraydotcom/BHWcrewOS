@@ -415,9 +415,10 @@ export function createWorkflowService(repository, {
       serviceLine: saved.serviceLine,
       source: saved.source,
     });
+    const silent = saved.notificationMode === "none";
     const [chatResult, notification] = await Promise.all([
-      syncChat(saved, user),
-      notifyForCurrentState(saved, user),
+      silent ? Promise.resolve({ status: "suppressed", reason: "notification-mode-none" }) : syncChat(saved, user),
+      silent ? Promise.resolve({ status: "suppressed", reason: "notification-mode-none" }) : notifyForCurrentState(saved, user),
     ]);
     return { request: saved, chat: chatResult, notification };
   }
