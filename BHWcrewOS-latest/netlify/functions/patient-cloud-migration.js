@@ -46,8 +46,11 @@ async function writeRecord(record, session) {
   throw new Error("Unsupported migration target");
 }
 
-const FRONT_DESK_BULK_TARGET_BYTES = 1536 * 1024;
-const FRONT_DESK_BULK_MAX_RECORDS = 100;
+// Keep each protected batch below the smallest request gateway in the
+// production path. The Operations API allows more, but its upstream ingress
+// may enforce the standard 64 KiB body ceiling before that route is reached.
+const FRONT_DESK_BULK_TARGET_BYTES = 48 * 1024;
+const FRONT_DESK_BULK_MAX_RECORDS = 25;
 
 function frontDeskBulkBody(records) {
   return {
@@ -86,9 +89,8 @@ async function writeDataset(records, session) {
   const receipts = await mapLimit(standard, 4, (record) => writeRecord(record, session));
   if (!frontDesk.length) return receipts;
 
-  // The Operations API accepts at most 2 MiB per protected bulk request.
-  // Build every batch below that ceiling before the first write, with a count
-  // limit as a second guard for unusually small records.
+  // Build every batch below the protected ingress ceiling before the first
+  // write, with a count limit as a second guard for unusually small records.
   const batches = await mapLimit(chunkFrontDeskRecords(frontDesk), 6, async (batch) => {
     const result = await createFrontDeskIntakeBulk(batch.map((record) => record.target));
     if (!result || result.verifiedCount !== batch.length) {

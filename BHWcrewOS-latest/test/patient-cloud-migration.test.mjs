@@ -74,9 +74,9 @@ test("approved Patient Requests are split below the protected bulk body ceiling"
   assert.ok(batches.length > 2);
   assert.equal(batches.flat().length, records.length);
   for (const batch of batches) {
-    assert.ok(batch.length <= 100);
+    assert.ok(batch.length <= 25);
     const bulkBody = { records: batch.map((record) => ({ submissionId: record.target.submissionId, body: record.target.body })) };
-    assert.ok(Buffer.byteLength(JSON.stringify(bulkBody), "utf8") <= 1536 * 1024);
+    assert.ok(Buffer.byteLength(JSON.stringify(bulkBody), "utf8") <= 48 * 1024);
   }
 });
 
