@@ -3,7 +3,7 @@
 // it does not maintain a separate patient list.
 
 const { getSession, json } = require("./_lib");
-const { cloudRequest, listCloudPatients, searchCloudPatients } = require("./lib/cloud-patients");
+const { cloudRequest, findCloudPatient, listCloudPatients, searchCloudPatients } = require("./lib/cloud-patients");
 
 function registryPatientSummary(patient) {
   return {
@@ -29,6 +29,7 @@ function panelPatient(profile, patient) {
     enrollDate: profile.enrollDate || null,
     hedis: profile.hedis || {},
     bhwPatientId: profile.bhwPatientId,
+    registryName: patient?.name || "",
     rosterLinked: Boolean(patient),
   };
 }
@@ -76,14 +77,22 @@ exports.handler = async (event) => {
       return json(200, { patients });
     }
     if (action === "addPatient") {
-      const bhwPatientId = String(payload.bhwPatientId || "").trim().toUpperCase();
-      if (!/^BHW\d{4}$/.test(bhwPatientId)) return json(400, { error: "Choose a patient from the Patient Registry." });
+      const registryPatient = await findCloudPatient(payload?.bhwPatientId);
+      if (!registryPatient || registryPatient.selectable === false) {
+        return json(400, { error: "Select a current patient from the protected Patient Registry" });
+      }
+      const bhwPatientId = registryPatient.bhwPatientId;
       const result = await cloudRequest("/v1/panel/profiles", {
         actor: session,
         method: "POST",
         body: { ...payload, bhwPatientId },
       });
-      return json(200, { id: bhwPatientId, savedAt: result.profile.updatedAt, storage: "BHW Cloud" });
+      return json(200, {
+        id: bhwPatientId,
+        registryName: registryPatient.name,
+        savedAt: result.profile.updatedAt,
+        storage: "BHW Cloud",
+      });
     }
     if (action === "updatePatient") {
       const bhwPatientId = String(payload.bhwPatientId || payload.id || "").trim().toUpperCase();

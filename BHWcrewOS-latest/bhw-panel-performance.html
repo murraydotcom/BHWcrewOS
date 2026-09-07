@@ -429,6 +429,7 @@ async function api(action,payload){
   if(data.savedAt)setPill('Saved to BHW Cloud · '+new Date(data.savedAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}),false);
   return data;
 }
+function patientDisplay(patient){return patient?.registryName||patient?.label||'Unknown';}
 function registryChoice(patient){return `${patient.name} — ${patient.bhwPatientId}${patient.dob?` · DOB ${patient.dob}`:''}${patient.mrn?` · MRN ${patient.mrn}`:''}`;}
 function applyRegistryChoice(){
   const id=((($('pRegistrySearch').value||'').match(/\bBHW\d{4}\b/i)||[])[0]||'').toUpperCase();
@@ -459,7 +460,7 @@ async function refresh(){
     const res=await fetch(API,{headers:headers()});
     if(!res.ok){ const e=await res.json().catch(()=>({})); throw new Error(e.error||('HTTP '+res.status)); }
     state=await res.json();
-    try{ localStorage.setItem(CACHE_KEY,JSON.stringify(state)); }catch(e){}
+    try{ localStorage.setItem(CACHE_KEY,JSON.stringify({...state,patients:(state.patients||[]).map(({registryName,...patient})=>patient)})); }catch(e){}
     online=true; setPill('BHW Cloud synced',false);
   }catch(err){
     online=false;
@@ -659,17 +660,17 @@ function renderOverview(){
 function programChip(pr){ return `<span class="chip ${pr==='none'?'none':pr.toLowerCase()}">${pr==='none'?'No program':pr}</span>`; }
 function renderPatients(){
   const q=($('pSearch').value||'').toLowerCase();
-  const list=state.patients.filter(p=>p.label.toLowerCase().includes(q))
-    .sort((a,b)=>a.label.localeCompare(b.label));
+  const list=state.patients.filter(p=>patientDisplay(p).toLowerCase().includes(q))
+    .sort((a,b)=>patientDisplay(a).localeCompare(patientDisplay(b)));
   $('patientList').innerHTML=list.length?list.map(p=>`
     <div class="row tap" data-open="${p.id}">
-      <div class="grow"><div class="t">${esc(p.label)}</div>
+      <div class="grow"><div class="t">${esc(patientDisplay(p))}</div>
       <div class="s">${esc(p.payer)}${p.enrollDate?' · enrolled '+p.enrollDate:''}</div></div>
-      ${p.cloudOnly?'<span class="chip obs">Hospital feed</span>':programChip(p.program)}
+      ${p.cloudOnly?'<span class="chip obs">Hospital feed</span>':!p.rosterLinked?'<span class="chip warn">Registry link required</span>':programChip(p.program)}
     </div>`).join('')
     :'<div class="empty">No patients yet. Add your CCM panel above — include a few non-enrolled patients as a comparison group.</div>';
-  $('ePatient').innerHTML=state.patients.filter(p=>!p.cloudOnly).sort((a,b)=>a.label.localeCompare(b.label))
-    .map(p=>`<option value="${p.id}">${esc(p.label)} — ${esc(p.payer)}</option>`).join('');
+  $('ePatient').innerHTML=state.patients.filter(p=>!p.cloudOnly&&p.rosterLinked).sort((a,b)=>patientDisplay(a).localeCompare(patientDisplay(b)))
+    .map(p=>`<option value="${p.id}">${esc(patientDisplay(p))} — ${esc(p.bhwPatientId)} · ${esc(p.payer)}</option>`).join('');
 }
 
 /* ============ Render: events ============ */
@@ -683,7 +684,7 @@ function renderEvents(){
     const p=state.patients.find(x=>x.id===ev.patientId);
     const tries=[ev.outreach1,ev.outreach2,ev.outreach3].filter(Boolean).length;
     return `<div class="row tap" data-open-event="${ev.id}">
-      <div class="grow"><div class="t">${esc(p?p.label:'Unknown')}</div>
+      <div class="grow"><div class="t">${esc(patientDisplay(p))}</div>
       <div class="s">${evDates(ev)} · ${esc(ev.facility)} · ${tries} outreach ${tries===1?'call':'calls'}${ev.discharge?'':' · discharge info pending'}</div></div>
       <span class="chip queue">No appt</span></div>`;
   }).join('')
@@ -693,7 +694,7 @@ function renderEvents(){
   $('eventList').innerHTML=list.length?list.map(ev=>{
     const p=state.patients.find(x=>x.id===ev.patientId);
     return `<div class="row tap" data-open-event="${ev.id}">
-      <div class="grow"><div class="t">${esc(p?p.label:'Unknown')}</div>
+      <div class="grow"><div class="t">${esc(patientDisplay(p))}</div>
       <div class="s">${evDates(ev)} · ${esc(ev.facility)} · ${esc(ev.reason)}</div></div>
       ${ev.historical?'<span class="chip obs">Backfill</span>':ev.appointment?'<span class="chip done">Appt set</span>':'<span class="chip queue">No appt</span>'}
       <span class="chip ${ev.type}">${TYPE_LABEL[ev.type]}</span></div>`;
@@ -705,7 +706,7 @@ function renderHedis(){
   $('hedisList').innerHTML=MEASURES.map(m=>{
     let met=0,elig=0,gaps=[];
     for(const p of state.patients){ const s=p.hedis?.[m.k]||'na';
-      if(s!=='na'){elig++; if(s==='met')met++; else gaps.push(p.label);} }
+      if(s!=='na'){elig++; if(s==='met')met++; else gaps.push(patientDisplay(p));} }
     const pct=elig?Math.round(met/elig*100):null;
     const color=pct==null?'#AEB9C4':pct>=80?'var(--good)':pct>=60?'var(--warn)':'var(--bad)';
     return `<div class="measure">
@@ -724,7 +725,7 @@ function openSheet(id){
   const events=state.events.filter(e=>e.patientId===id).sort((a,b)=>b.date.localeCompare(a.date));
   $('sheetBody').innerHTML=`
     <div class="eyebrow">Patient</div>
-    <h2 style="font-size:19px">${esc(p.label)} ${programChip(p.program)}</h2>
+    <h2 style="font-size:19px">${esc(patientDisplay(p))} ${programChip(p.program)}</h2>
     <p class="muted">${esc(p.payer)}${p.enrollDate?' · enrolled '+p.enrollDate:''}</p>
 
     <div class="card" style="margin-top:14px">
@@ -801,7 +802,7 @@ function openEventSheet(id){
   const p=state.patients.find(x=>x.id===ev.patientId);
   $('sheetBody').innerHTML=`
     <div class="eyebrow">Utilization event</div>
-    <h2 style="font-size:19px">${esc(p?p.label:'Unknown')} <span class="chip ${ev.type}">${TYPE_LABEL[ev.type]}</span></h2>
+    <h2 style="font-size:19px">${esc(patientDisplay(p))} <span class="chip ${ev.type}">${TYPE_LABEL[ev.type]}</span></h2>
     <p class="muted">${evDates(ev)} · ${esc(ev.facility)}</p>
     <p class="muted" style="margin-top:2px">Reason: ${esc(ev.reason)}</p>
 

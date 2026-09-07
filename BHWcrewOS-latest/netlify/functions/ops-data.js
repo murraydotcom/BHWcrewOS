@@ -72,13 +72,15 @@ exports.handler = async (event) => {
   const inVis = (d) => vis.includes(d);
  
   try {
-    const [staffPages, roomPages, schedulePages, resourcePages, patientRegistry, operationsRows, careLogRows, wellnessRows, programPlanRows, panelRows] =
+    const [staffPages, roomPages, schedulePages, resourcePages, patientRegistryResult, operationsRows, careLogRows, wellnessRows, programPlanRows, panelRows] =
       await Promise.all([
         queryDb(DB.staff),
         queryDb(DB.rooms),
         queryDb(DB.schedule),
         queryDb(DB.resources),
-        listCloudPatients(session),
+        listCloudPatients(session)
+          .then((patients) => ({ ready: true, patients, error: "" }))
+          .catch((error) => ({ ready: false, patients: [], error: error.message || "Patient Registry unavailable" })),
         operationsRequest("/v1/patient-requests?limit=500", { actor: session }),
         cloudRequest("/v1/care-management/logs", { actor: session }),
         cloudRequest("/v1/wellness-visits", { actor: session }),
@@ -95,7 +97,10 @@ exports.handler = async (event) => {
     }));
     const staffName = Object.fromEntries(staff.map((s) => [s.id, s.name]));
  
-    const directory = buildPatientDirectory(patientRegistry);
+    const patientRegistry = patientRegistryResult.patients;
+    const directory = patientRegistryResult.ready
+      ? buildPatientDirectory(patientRegistry)
+      : { patients: [], patientLabel: {} };
     const { patients, patientLabel } = directory;
  
     const rooms = roomPages.map((pg) => ({
@@ -276,8 +281,8 @@ exports.handler = async (event) => {
       staffName,
       patients,
       patientLabel,
-      patientRegistryReady: true,
-      patientRegistryError: "",
+      patientRegistryReady: patientRegistryResult.ready,
+      patientRegistryError: patientRegistryResult.error,
       rooms: rooms.filter((r) => r.active),
       referrals,
       handoffs,
