@@ -204,6 +204,15 @@ export async function createEncounterCloudClient(fetchImpl = fetch) {
         body: JSON.stringify(input),
       });
     },
+    async patientNutritionIntelligence(bhwPatientId = "BHW0000") {
+      return request(`/v1/patients/${encodeURIComponent(bhwPatientId)}/nutrition-intelligence`);
+    },
+    async savePatientNutritionIntelligence(bhwPatientId = "BHW0000", input = {}) {
+      return request(`/v1/patients/${encodeURIComponent(bhwPatientId)}/nutrition-intelligence`, {
+        method: "PUT",
+        body: JSON.stringify(input),
+      });
+    },
     async patientMonitoringPlan(bhwPatientId = "BHW0000", program = "mind") {
       return request(`/v1/patients/${encodeURIComponent(bhwPatientId)}/monitoring-plans/${encodeURIComponent(program)}`);
     },

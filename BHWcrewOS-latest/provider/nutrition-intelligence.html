@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="/crew-provider-gate.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BHW Clinical Intelligence - Nutrition Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="patient-360.css">
+<link rel="stylesheet" href="nutrition-intelligence.css">
+</head>
+<body data-p360-view="nutrition">
+<div class="app">
+<aside class="sidebar">
+  <div class="brand"><h1>BHW Clinical Intelligence</h1><div>Physiologic patient navigation</div></div>
+  <div class="nav-label">Patient Operations</div>
+  <a class="nav" href="patient-registry.html">◎ Patient Registry</a>
+  <a class="nav" href="patient-360.html">◉ Patient 360</a>
+  <a class="nav active" href="nutrition-intelligence.html">◇ Nutrition Intelligence</a>
+  <a class="nav" href="preventive.html">✓ Preventive Services</a>
+  <a class="nav" href="workflow.html">◷ 24-Hour Work Queue</a>
+  <a class="nav" href="transcription.html">◉ Visit Transcription</a>
+  <a class="nav" href="index.html">◈ Encounter Scrub</a>
+  <div class="nav-label">Lab Intelligence</div>
+  <a class="nav" href="lab-dashboard.html">Lab Dashboard</a>
+  <div class="side-note">Synthetic BHW0000 pilot.<br><br>Questionnaire = real life.<br>Chart = physiology.<br>Nutrition Intelligence reconciles both.</div>
+</aside>
+<main class="main">
+  <header class="top"><div class="crumb">Clinical Intelligence · <b>Nutrition Intelligence</b></div><div class="tools"><span class="badge warning" id="connection-status">Connecting...</span><button class="btn" id="refresh">Refresh</button><button class="btn" id="print" disabled>Print reviewed output</button><button class="btn" id="theme">Theme</button></div></header>
+  <div class="content nutrition-content">
+    <section class="nutrition-hero">
+      <div><span class="eyebrow">Whole-person nutrition decision support</span><h1>Nutrition Intelligence</h1><p>Reconcile the person’s actual eating life with charted physiology. This workspace supports adequacy, function, GI tolerance, metabolism, hydration, culture, sensory needs, and food access—not just weight.</p></div>
+      <div class="nutrition-identity"><span>Selected patient</span><b id="patient-id">BHW0000</b><small>Synthetic-only implementation pilot</small></div>
+    </section>
+
+    <div class="safe-notice"><b>Clinical boundary:</b> previews create no diagnosis, order, medication change, supplement order, message, CrewOS task, or patient-facing Blueprint. A provider must approve the exact saved revision, then separately publish its bounded projections. The existing Personal Health Blueprint still requires its own review.</div>
+
+    <section class="evidence-model" aria-label="Nutrition Intelligence evidence model">
+      <article><span class="model-number">1</span><div><b>Questionnaire reflects real life</b><p>Meals, appetite, symptoms, safe foods, sensory fit, culture, access, preparation, and goals.</p></div></article>
+      <article><span class="model-number">2</span><div><b>Chart reflects physiology</b><p>Diagnoses, medications, labs, weight trajectory, renal/fluid orders, swallowing safety, pregnancy, and function.</p></div></article>
+      <article><span class="model-number">3</span><div><b>Nutrition Intelligence reconciles both</b><p>Conflicts remain visible. Safety gates run before phenotypes, targets, food sources, supplements, GI/5R, or publication.</p></div></article>
+    </section>
+
+    <form id="nutrition-form" novalidate>
+      <div class="nutrition-columns">
+        <section class="panel evidence-column patient-evidence">
+          <div class="panel-head"><div><span class="eyebrow">Patient-reported</span><h3>Real-life intake</h3><span class="panel-subtitle">What eating and drinking actually look like.</span></div><span class="badge neutral" id="questionnaire-version">Questionnaire v1.2</span></div>
+          <div class="panel-body nutrition-fields">
+            <fieldset><legend>Goals and capacity</legend>
+              <label class="wide"><span>Primary goals</span><select multiple data-fact="primary_goals" data-source="patient"><option value="improve_energy">Improve energy</option><option value="improve_strength_function">Improve strength or function</option><option value="maintain_weight">Maintain weight</option><option value="restore_weight">Restore weight</option><option value="reduce_body_fat">Reduce body fat</option><option value="improve_glucose">Improve glucose</option><option value="support_heart_health">Support heart health</option><option value="improve_gi_tolerance">Improve GI tolerance</option><option value="improve_hydration">Improve hydration</option><option value="simplify_eating">Simplify eating</option><option value="food_access_support">Food access support</option></select><small>Ctrl/Cmd-click to choose more than one.</small></label>
+              <label><span>Appetite, past 2 weeks</span><select data-fact="appetite" data-source="patient"><option value="">Not answered</option><option value="very_poor">Very poor</option><option value="poor">Poor</option><option value="variable">Variable</option><option value="good">Good</option><option value="very_good">Very good</option><option value="high">High</option></select></label>
+              <label><span>Usual meal completed</span><input type="number" min="0" max="100" data-fact="meal_completion_pct" data-source="patient" placeholder="%"></label>
+              <label><span>Meals per day</span><input type="number" min="0" max="12" step="0.5" data-fact="meals_per_day" data-source="patient"></label>
+              <label><span>Meals with a protein food</span><input type="number" min="0" max="12" data-fact="protein_meals_per_day" data-source="patient"></label>
+              <label><span>Meal skipping</span><select data-fact="meal_skipping_frequency" data-source="patient"><option value="">Not answered</option><option value="never_rarely">Never or rarely</option><option value="one_two_week">1–2 times/week</option><option value="three_four_week">3–4 times/week</option><option value="most_days">Most days</option><option value="daily">Daily</option></select></label>
+              <label class="check"><input type="checkbox" data-fact="unintentional_loss_reported" data-source="patient"> <span>Reports weight loss without trying</span></label>
+            </fieldset>
+
+            <fieldset><legend>Food pattern and preference</legend>
+              <label><span>Refined starch</span><select data-fact="refined_starch_frequency" data-source="patient"><option value="">Not answered</option><option value="never_rarely">Never/rarely</option><option value="one_two_week">1–2/week</option><option value="three_four_week">3–4/week</option><option value="most_days">Most days</option><option value="daily">Daily</option><option value="multiple_daily">Multiple daily</option></select></label>
+              <label><span>Sweets</span><select data-fact="sweets_frequency" data-source="patient"><option value="">Not answered</option><option value="never_rarely">Never/rarely</option><option value="one_two_week">1–2/week</option><option value="three_four_week">3–4/week</option><option value="most_days">Most days</option><option value="daily">Daily</option><option value="multiple_daily">Multiple daily</option></select></label>
+              <label><span>Sweetened drinks</span><input type="number" min="0" max="6000" data-fact="sweetened_beverage_ml_day" data-source="patient" placeholder="mL/day"></label>
+              <label><span>Vegetables</span><select data-fact="vegetable_servings_band" data-source="patient"><option value="">Not answered</option><option value="none">None</option><option value="lt_one">Less than 1/day</option><option value="one_two">1–2/day</option><option value="three_four">3–4/day</option><option value="five_plus">5+/day</option></select></label>
+              <label class="wide"><span>Cuisines and food traditions to preserve</span><input type="text" data-fact="cuisines" data-source="patient" data-list placeholder="e.g., Caribbean, Southern soul, West African"></label>
+              <label><span>Preferred support</span><select data-fact="food_first_preference" data-source="patient"><option value="">Not answered</option><option value="prefer_food_first">Prefer foods first</option><option value="open_to_food_and_supplements">Open to food and supplements</option><option value="depends_on_goal">Depends on the goal</option><option value="prefer_supplement">Prefer a supplement when appropriate</option></select></label>
+              <label class="check"><input type="checkbox" data-fact="vegan_or_vegetarian_pattern" data-source="patient"> <span>Vegan or vegetarian pattern</span></label>
+              <label class="check"><input type="checkbox" data-fact="clean_keto_interest" data-source="patient"> <span>Interested in clean keto</span></label>
+            </fieldset>
+
+            <fieldset><legend>Sensory, executive function, and practical fit</legend>
+              <div class="wide checkbox-grid" data-group="sensory"><span class="field-label">Sensory barriers</span><label><input type="checkbox" data-fact="sensory_barriers" data-array data-source="patient" value="mixed_foods"> Mixed foods</label><label><input type="checkbox" data-fact="sensory_barriers" data-array data-source="patient" value="soft_mushy"> Soft/mushy</label><label><input type="checkbox" data-fact="sensory_barriers" data-array data-source="patient" value="strong_smell"> Strong smells</label><label><input type="checkbox" data-fact="sensory_barriers" data-array data-source="patient" value="temperature"> Temperature</label><label><input type="checkbox" data-fact="sensory_barriers" data-array data-source="patient" value="foods_touching"> Foods touching</label></div>
+              <label class="wide"><span>Safe or reliably accepted foods</span><input type="text" data-fact="safe_foods" data-source="patient" data-list placeholder="Comma-separated"></label>
+              <div class="wide checkbox-grid"><span class="field-label">What makes eating harder?</span><label><input type="checkbox" data-fact="barriers" data-array data-source="patient" value="forget_to_eat"> Forgetting</label><label><input type="checkbox" data-fact="barriers" data-array data-source="patient" value="hyperfocus_busy"> Hyperfocus/busy</label><label><input type="checkbox" data-fact="barriers" data-array data-source="patient" value="prep_overwhelming"> Prep is overwhelming</label><label><input type="checkbox" data-fact="barriers" data-array data-source="patient" value="early_satiety"> Early fullness</label><label><input type="checkbox" data-fact="barriers" data-array data-source="patient" value="nausea"> Nausea</label><label><input type="checkbox" data-fact="barriers" data-array data-source="patient" value="swallowing"> Swallowing</label></div>
+              <label><span>Food may run out</span><select data-fact="worried_food_would_run_out" data-source="patient"><option value="">Not answered</option><option value="never">Never</option><option value="sometimes">Sometimes</option><option value="often">Often</option></select></label>
+              <label><span>Food did not last</span><select data-fact="food_did_not_last" data-source="patient"><option value="">Not answered</option><option value="never">Never</option><option value="sometimes">Sometimes</option><option value="often">Often</option></select></label>
+              <label class="check"><input type="checkbox" data-fact="food_available_next_48h" data-source="patient" checked> <span>Food available for the next 48 hours</span></label>
+              <div class="wide checkbox-grid"><span class="field-label">Access barriers</span><label><input type="checkbox" data-fact="access_barriers" data-array data-source="patient" value="cost"> Cost</label><label><input type="checkbox" data-fact="access_barriers" data-array data-source="patient" value="transportation"> Transportation</label><label><input type="checkbox" data-fact="access_barriers" data-array data-source="patient" value="equipment"> Equipment</label><label><input type="checkbox" data-fact="access_barriers" data-array data-source="patient" value="storage"> Storage</label><label><input type="checkbox" data-fact="access_barriers" data-array data-source="patient" value="time"> Time</label></div>
+              <label class="wide"><span>Available equipment</span><input type="text" data-fact="equipment" data-source="patient" data-list placeholder="e.g., microwave, can opener"></label>
+              <label class="check"><input type="checkbox" data-fact="navigation_consent" data-source="patient"> <span>Consents to food-access navigation</span></label>
+            </fieldset>
+
+            <fieldset><legend>GI symptoms and lived experience</legend>
+              <div class="wide checkbox-grid"><span class="field-label">Current/recurrent symptoms</span><label><input type="checkbox" data-fact="gi_symptoms" data-array data-source="patient" value="heartburn"> Heartburn</label><label><input type="checkbox" data-fact="gi_symptoms" data-array data-source="patient" value="regurgitation"> Regurgitation</label><label><input type="checkbox" data-fact="gi_symptoms" data-array data-source="patient" value="bloating"> Bloating</label><label><input type="checkbox" data-fact="gi_symptoms" data-array data-source="patient" value="constipation"> Constipation</label><label><input type="checkbox" data-fact="gi_symptoms" data-array data-source="patient" value="diarrhea"> Diarrhea</label><label><input type="checkbox" data-fact="gi_symptoms" data-array data-source="patient" value="early_satiety"> Early fullness</label><label><input type="checkbox" data-fact="gi_symptoms" data-array data-source="patient" value="nausea"> Nausea</label><label><input type="checkbox" data-fact="gi_symptoms" data-array data-source="patient" value="vomiting"> Vomiting</label></div>
+              <label><span>Loose stools/day</span><input type="number" min="0" max="30" data-fact="loose_stools_per_day" data-source="patient"></label>
+              <label class="check"><input type="checkbox" data-fact="late_or_bedtime_meal_trigger" data-source="patient"> <span>Late meal reproducibly triggers reflux</span></label>
+              <label class="check"><input type="checkbox" data-fact="reproducible_food_trigger_present" data-source="patient"> <span>Reproducible personal food trigger</span></label>
+              <label class="check"><input type="checkbox" data-fact="greasy_or_difficult_to_flush" data-source="patient"> <span>Greasy/difficult-to-flush stool</span></label>
+              <div class="wide alarm-box"><b>GI alarm and acute safety screen</b><label><input type="checkbox" data-fact="blood_visible" data-source="patient"> Visible blood</label><label><input type="checkbox" data-fact="black_tarry" data-source="patient"> Black/tarry stool</label><label><input type="checkbox" data-fact="persistent_vomiting" data-source="patient"> Persistent vomiting</label><label><input type="checkbox" data-fact="unable_to_retain_fluids" data-source="patient"> Cannot retain fluids</label><label><input type="checkbox" data-fact="severe_or_progressive_pain" data-source="patient"> Severe/progressive pain</label><label><input type="checkbox" data-fact="jaundice" data-source="patient"> Jaundice</label><label><input type="checkbox" data-fact="dehydration_symptoms" data-source="patient"> Dehydration symptoms</label></div>
+              <label class="check"><input type="checkbox" data-fact="gluten_restriction_current_or_requested" data-source="patient"> <span>Currently/requesting gluten elimination</span></label>
+              <label class="check"><input type="checkbox" data-fact="fermented_food_willing" data-source="patient"> <span>Interested in fermented foods</span></label>
+            </fieldset>
+          </div>
+        </section>
+
+        <section class="panel evidence-column chart-evidence">
+          <div class="panel-head"><div><span class="eyebrow">Clinician/chart reconciliation</span><h3>Physiology and orders</h3><span class="panel-subtitle">Confirm against the authoritative record before approval.</span></div><span class="badge warning">Source review required</span></div>
+          <div class="panel-body nutrition-fields">
+            <fieldset><legend>Measurements and function</legend>
+              <label><span>Age</span><input type="number" min="0" max="120" data-fact="age_years" data-source="chart"></label>
+              <label><span>Equation sex</span><select data-fact="sex_for_equation" data-source="chart"><option value="">Not selected</option><option value="female">Female</option><option value="male">Male</option></select></label>
+              <label><span>Height</span><input type="number" min="50" max="250" data-fact="height_cm" data-source="chart" placeholder="cm"></label>
+              <label><span>Calculation weight</span><input type="number" min="10" max="400" step="0.1" data-fact="calculation_weight_kg" data-source="chart" placeholder="kg"></label>
+              <label><span>Weight change</span><input type="number" min="-100" max="100" step="0.1" data-fact="weight_change_pct" data-source="chart" placeholder="%"></label>
+              <label><span>Interval</span><input type="number" min="1" max="730" data-fact="weight_interval_days" data-source="chart" placeholder="days"></label>
+              <label><span>Sarcopenia status</span><select data-fact="sarcopenia_status" data-source="chart"><option value="">Not assessed</option><option value="none">No identified risk</option><option value="risk">At risk</option><option value="confirmed">Confirmed</option></select></label>
+              <label><span>Adiposity status</span><select data-fact="adiposity_status" data-source="chart"><option value="">Not assessed</option><option value="not_elevated">Not elevated</option><option value="elevated">Elevated</option><option value="clinically_high">Clinically high</option></select></label>
+              <label class="check"><input type="checkbox" data-fact="strength_decline" data-source="chart"> <span>Strength decline</span></label>
+              <label class="check"><input type="checkbox" data-fact="functional_decline" data-source="chart"> <span>Functional decline</span></label>
+            </fieldset>
+
+            <fieldset><legend>Renal, hepatic, fluid, pregnancy</legend>
+              <label class="check"><input type="checkbox" data-fact="pregnant" data-source="chart"> <span>Pregnant</span></label>
+              <label class="check"><input type="checkbox" data-fact="lactating" data-source="chart"> <span>Lactating</span></label>
+              <label class="check"><input type="checkbox" data-fact="ckd_present" data-source="chart"> <span>CKD present</span></label>
+              <label><span>CKD stage</span><select data-fact="ckd_stage" data-source="chart"><option value="">Not documented</option><option value="G1">G1</option><option value="G2">G2</option><option value="G3a">G3a</option><option value="G3b">G3b</option><option value="G4">G4</option><option value="G5">G5</option></select></label>
+              <label><span>eGFR</span><input type="number" min="0" max="200" data-fact="egfr_ml_min_1_73m2" data-source="chart"></label>
+              <label><span>Dialysis</span><select data-fact="dialysis_status" data-source="chart"><option value="none">None</option><option value="hemodialysis">Hemodialysis</option><option value="peritoneal">Peritoneal dialysis</option></select></label>
+              <label><span>Active fluid order</span><input type="number" min="0" max="10000" data-fact="fluid_order_ml_day" data-source="chart" placeholder="mL/day"></label>
+              <label class="check"><input type="checkbox" data-fact="heart_failure_with_fluid_concern" data-source="chart"> <span>Heart failure/fluid concern</span></label>
+              <label class="check"><input type="checkbox" data-fact="hepatic_decompensated" data-source="chart"> <span>Hepatic decompensation</span></label>
+              <label class="check"><input type="checkbox" data-fact="electrolyte_instability" data-source="chart"> <span>Electrolyte instability</span></label>
+            </fieldset>
+
+            <fieldset><legend>Medication and metabolic context</legend>
+              <label><span>Diabetes context</span><select data-fact="diabetes_type" data-source="chart"><option value="none">None documented</option><option value="type1">Type 1</option><option value="type2">Type 2</option><option value="gestational">Gestational</option><option value="other">Other</option></select></label>
+              <label class="check"><input type="checkbox" data-fact="insulin_resistance_or_prediabetes" data-source="chart"> <span>Prediabetes/insulin resistance</span></label>
+              <label class="check"><input type="checkbox" data-fact="active_insulin" data-source="chart"> <span>Active insulin</span></label>
+              <label class="check"><input type="checkbox" data-fact="active_secretagogue" data-source="chart"> <span>Active secretagogue</span></label>
+              <label class="check"><input type="checkbox" data-fact="active_sglt2" data-source="chart"> <span>Active SGLT2 inhibitor</span></label>
+              <label class="check"><input type="checkbox" data-fact="active_glp1" data-source="chart"> <span>Active GLP-1 therapy</span></label>
+              <label class="check"><input type="checkbox" data-fact="recurrent_hypoglycemia" data-source="chart"> <span>Recurrent hypoglycemia</span></label>
+            </fieldset>
+
+            <fieldset><legend>Swallowing and GI clinical context</legend>
+              <label class="check"><input type="checkbox" data-fact="swallowing_difficulty" data-source="chart"> <span>Swallowing difficulty</span></label>
+              <label class="check"><input type="checkbox" data-fact="aspiration_concern" data-source="chart"> <span>Aspiration concern</span></label>
+              <label><span>Swallow evaluation</span><select data-fact="swallow_evaluation_status" data-source="chart"><option value="not_assessed">Not assessed</option><option value="pending">Pending</option><option value="completed">Completed</option></select></label>
+              <label><span>Texture order</span><input type="text" data-fact="texture_order" data-source="chart" placeholder="Use chart wording"></label>
+              <label class="wide"><span>Confirmed GI conditions</span><select multiple data-fact="confirmed_gi_condition_codes" data-source="chart"><option value="documented_gerd">GERD</option><option value="documented_ibs">IBS</option><option value="confirmed_celiac_disease">Celiac disease</option><option value="inflammatory_bowel_disease">Inflammatory bowel disease</option><option value="documented_gastroparesis">Gastroparesis</option><option value="confirmed_exocrine_pancreatic_insufficiency">Exocrine pancreatic insufficiency</option><option value="lactose_intolerance">Lactose intolerance</option><option value="chronic_idiopathic_constipation">Chronic idiopathic constipation</option></select><small>Symptoms alone do not create a diagnosis.</small></label>
+              <label><span>IBS/IBD subtype</span><input type="text" data-fact="gi_condition_subtype" data-source="chart" placeholder="e.g., IBS_C or Crohn disease"></label>
+              <label><span>Celiac evaluation</span><select data-fact="celiac_evaluation_status" data-source="chart"><option value="">Not applicable/unknown</option><option value="testing_planned">Testing planned</option><option value="in_progress">In progress</option><option value="confirmed">Confirmed</option><option value="ruled_out">Ruled out</option></select></label>
+              <label class="check"><input type="checkbox" data-fact="active_complex_gi_state" data-source="chart"> <span>Active/complex GI state</span></label>
+              <label class="check"><input type="checkbox" data-fact="obstruction_or_stricture_risk" data-source="chart"> <span>Obstruction/stricture risk</span></label>
+              <label class="check"><input type="checkbox" data-fact="active_pert_order_present" data-source="chart"> <span>Active prescription PERT order</span></label>
+              <label class="check"><input type="checkbox" data-fact="food_safety_high_risk" data-source="chart"> <span>High foodborne-illness risk</span></label>
+              <label class="check"><input type="checkbox" data-fact="documented_severe_deficiency_or_malabsorption" data-source="chart"> <span>Severe deficiency/malabsorption requiring clinician replacement</span></label>
+              <label class="check"><input type="checkbox" data-fact="critical_chart_fact_stale_or_conflicting" data-source="chart"> <span>Critical chart fact is stale/conflicting</span></label>
+            </fieldset>
+          </div>
+        </section>
+      </div>
+
+      <section class="panel review-panel">
+        <div class="panel-head"><div><h3>Evaluate, save, review, and project</h3><span class="panel-subtitle">Safety gates always run first. Evaluation is side-effect free.</span></div><span class="badge neutral" id="record-status">No saved assessment</span></div>
+        <div class="panel-body review-workflow">
+          <div class="save-state"><b id="save-state" data-state="not-saved">Not saved</b><span id="save-detail">No Nutrition Intelligence record has been saved.</span></div>
+          <div class="workflow-actions"><button class="btn" type="button" id="evaluate">Evaluate preview</button><button class="btn primary" type="button" id="save-draft">Save clinical draft</button></div>
+          <div class="approval-controls">
+            <label><input type="checkbox" id="review-attestation"> I reviewed the saved assessment, source conflicts, safety gates, and proposed outputs against the patient record.</label>
+            <label><input type="checkbox" id="publication-allowed"> This reviewed plan may become a bounded Patient 360/Blueprint source projection.</label>
+            <button class="btn" type="button" id="approve" disabled>Approve exact saved revision</button>
+          </div>
+          <div class="publication-controls">
+            <label><input type="checkbox" id="publish-attestation"> I attest that the approved version is ready to project. Blueprint review and patient-release safeguards still apply.</label>
+            <button class="btn" type="button" id="publish" disabled>Publish bounded projections</button>
+          </div>
+        </div>
+      </section>
+    </form>
+
+    <section id="results" class="nutrition-results" aria-live="polite"><div class="panel"><div class="panel-body"><div class="empty-note">Complete the questionnaire and chart reconciliation, then run a preview. No recommendation will be published automatically.</div></div></div></section>
+  </div>
+</main>
+</div>
+<script type="module" src="nutrition-intelligence.mjs"></script>
+</body>
+</html>
