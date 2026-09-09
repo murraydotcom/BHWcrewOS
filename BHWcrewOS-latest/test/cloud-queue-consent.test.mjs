@@ -37,6 +37,8 @@ test("CrewHQ keeps its protected token exchange while using consent-aware transc
   await client.savePatientAtlas("BHW12/34", { action: "save-draft", content: { primaryConcern: "Synthetic concern" } });
   await client.patientClinicalEvents("BHW12/34");
   await client.savePatientClinicalEvent("BHW12/34", { action: "save-draft", content: { title: "Synthetic flare" } });
+  await client.patientNutritionIntelligence("BHW12/34");
+  await client.savePatientNutritionIntelligence("BHW12/34", { action: "save-draft", content: { inputFacts: { appetite: "poor" } } });
   await client.recordingConsent("BHW12/34");
   await client.saveRecordingConsent("BHW12/34", {
     sourceType: "previsit-form",
@@ -69,6 +71,10 @@ test("CrewHQ keeps its protected token exchange while using consent-aware transc
   assert.equal(clinicalEventRead.options.headers.Authorization, "Bearer short-cloud-token");
   const clinicalEventWrite = requests.find(({ url, options }) => url.endsWith("/v1/patients/BHW12%2F34/clinical-events") && options.method === "PUT");
   assert.equal(JSON.parse(clinicalEventWrite.options.body).action, "save-draft");
+  const nutritionRead = requests.find(({ url, options }) => url.endsWith("/v1/patients/BHW12%2F34/nutrition-intelligence") && !options.method);
+  assert.equal(nutritionRead.options.headers.Authorization, "Bearer short-cloud-token");
+  const nutritionWrite = requests.find(({ url, options }) => url.endsWith("/v1/patients/BHW12%2F34/nutrition-intelligence") && options.method === "PUT");
+  assert.equal(JSON.parse(nutritionWrite.options.body).action, "save-draft");
 
   const consentRead = requests.find(({ url }) => url.endsWith("/v1/patients/BHW12%2F34/recording-consent") && !url.includes("transcriptions"));
   assert.ok(consentRead, "patient ID is encoded in the consent endpoint");
