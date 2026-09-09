@@ -175,7 +175,7 @@ textarea{resize:vertical;min-height:60px;line-height:1.5}
         </div>
       </div>
 
-      <div class="grid2" id="reqFields"></div>
+      <div id="fmlaStudio" class="prefill" hidden></div><div class="grid2" id="reqFields"></div>
     </div>
 
     <div class="panel" style="margin-top:16px">
@@ -343,7 +343,7 @@ const PACKETS = [
   },
   {
     id:"fmla", name:"FMLA", blurb:"Certification support statement", color:"var(--teal)",
-    fields:["patient","dob","employer","provider","leaveFrom","leaveTo","duration","limitations"],
+    fields:["patient","dob"],
     bodyTitle:"FMLA support body",
     checkTitle:"Complete (FMLA support)",
     checkLede:"",
@@ -376,7 +376,7 @@ const state = { packet:"chart", fields:{}, icds:[], bodyOverride:"", checks:{} }
 // ---- helpers ----
 const $ = id => document.getElementById(id);
 const val = id => (state.fields[id] || "").trim();
-const esc = s => (s||"").replace(/[&<>]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;" }[c]));
+const esc = s => String(s??"").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':'&quot;',"'":'&#39;' }[c]));
 const fmtDate = s => { if(!s) return ""; const [y,m,d]=s.split("-"); return d ? `${m}/${d}/${y}` : s; };
 const or = (v, ph) => v ? esc(v) : `<span class="muted-fill">${ph}</span>`;
 const packet = () => PACKETS.find(p => p.id === state.packet);
@@ -393,6 +393,12 @@ $("types").addEventListener("click", e => {
 
 /* ---------- render: request fields ---------- */
 function buildForm(){
+  $("fmlaStudio").hidden=state.packet!=="fmla";
+  $("reqFields").hidden=state.packet==="fmla";
+  $("faxBtn").disabled=state.packet==="fmla";
+  $("printBtn").disabled=state.packet==="fmla";
+  for(const id of ["icdInput","bodyText","checklist"]) $(id).closest('.panel').hidden=state.packet==="fmla";
+  $("officialBtn").textContent=state.packet==="fmla"?"Download reviewed FMLA draft":"Fill official form";
   const p = packet();
   document.querySelectorAll(".type").forEach(t => t.classList.toggle("active", t.dataset.id===p.id));
   $("bodyTitle").textContent = p.bodyTitle;
@@ -445,6 +451,7 @@ function renderIcds(){
 
 /* ---------- smart prefill (local regex, no upload) ---------- */
 function localScan(){
+  if(state.packet==="fmla"){ $("prefillNote").textContent="Use the FMLA evidence review below. Dates in a note are not automatically certified leave dates."; return; }
   const t = $("noteText").value; if(!t.trim()){ return; }
   // ICD-10 codes
   const codes = [...new Set((t.match(/\b[A-TV-Z][0-9][0-9AB](?:\.[0-9A-Z]{1,4})?\b/g)||[]))];
@@ -466,6 +473,9 @@ $("prefillBtn").addEventListener("click", localScan);
 /* ---------- connect to crewOS (session) + patient pull + AI extract ---------- */
 let TOKEN = sessionStorage.getItem("crewos_token") || "";
 let PATIENTS = [];
+let requestedLeavePatient=new URLSearchParams(location.search).get("patient") || "";
+let fmlaStudio=null;
+const fmlaReady=import("/assets/fmla-studio.mjs").then(({createFmlaStudio})=>{fmlaStudio=createFmlaStudio({root:$("fmlaStudio"),session:()=>TOKEN,notes:$("noteText"),loadPdfLib});return fmlaStudio;});
 
 async function post(fn, body){
   const r = await fetch(`/.netlify/functions/${fn}`, { method:"POST",
@@ -477,6 +487,7 @@ async function post(fn, body){
 function payerMatch(v){ if(!v) return ""; const s=String(v).toLowerCase(); const hit=F.payer.options.find(o=>o && (o.toLowerCase().includes(s)||s.includes(o.toLowerCase()))); return hit || "Other"; }
 
 function setConnected(name){
+  if(!TOKEN && fmlaStudio) fmlaStudio.disconnect();
   const b=$("connBtn");
   if(TOKEN){
     b.textContent = name ? `✓ ${String(name).split(" ")[0]}` : "✓ Connected";
@@ -516,17 +527,20 @@ async function loadPatients(){
   const { ok, status, d } = await post("patients",{action:"list"});
   if(status===401) return expire("Session expired — reconnect.");
   if(ok && d.patients){ PATIENTS=d.patients;
-    $("patientOptions").innerHTML = PATIENTS.map(p=>`<option ${p.selectable===false?'disabled ':''}value="${esc(patientChoice(p))}">`).join(""); }
+    $("patientOptions").innerHTML = PATIENTS.map(p=>`<option ${p.selectable===false?'disabled ':''}value="${esc(patientChoice(p))}">`).join("");
+    if(/^BHW\d{4}$/.test(requestedLeavePatient)){ const requested=PATIENTS.find(p=>(p.bhwId||p.bhwPatientId)===requestedLeavePatient); requestedLeavePatient=""; if(requested && requested.selectable!==false){$("patientSearch").value=patientChoice(requested); $("patientPickBtn").click(); document.querySelector('.type[data-id="fmla"]')?.click();}} }
 }
 function patientChoice(p){ return `${p.name}${p.bhwId?` — ${p.bhwId}`:""}${p.dob?` · DOB ${fmtDate(p.dob)}`:""}${p.status&&p.status!=="active"?` · ${p.status}`:""}`; }
 $("patientPickBtn").addEventListener("click", ()=>{
   const raw=$("patientSearch").value.trim(); if(!raw) return;
   const id=(raw.match(/\bBHW\d{4}\b/i)||[])[0]?.toUpperCase();
   const q=raw.split(" — ")[0].split(" (")[0].toLowerCase();
-  const p = (id&&PATIENTS.find(x=>(x.bhwId||x.bhwPatientId)===id)) || PATIENTS.find(x=>patientChoice(x)===raw) || PATIENTS.find(x=>x.name.toLowerCase()===q) || PATIENTS.find(x=>x.name.toLowerCase().includes(q));
-  if(!p){ $("patientHint").textContent="No match — check the name."; return; }
+  const exactMatches=PATIENTS.filter(x=>patientChoice(x)===raw || x.name.toLowerCase()===q);
+  const p = id ? PATIENTS.find(x=>(x.bhwId||x.bhwPatientId)===id) : exactMatches.length===1 ? exactMatches[0] : null;
+  if(!p){ fmlaReady.then(studio=>studio.disconnect()); $("patientHint").textContent="No unique Registry match — select the exact patient."; return; }
   if(p.selectable===false){ $("patientHint").textContent=`${p.name} (${p.bhwId}) is ${p.status}; new paperwork cannot be started from this list.`; return; }
-  state.fields.patient=p.name;
+  state.fields={patient:p.name}; state.icds=[]; state.bodyOverride=""; state.checks={};
+  fmlaReady.then(studio=>studio.setPatient(p));
   if(p.dob) state.fields.dob=p.dob;
   if(p.chart && packet().fields.includes("mrn")) state.fields.mrn=p.chart;
   if(p.memberId && packet().fields.includes("member")) state.fields.member=p.memberId;
@@ -540,6 +554,7 @@ $("patientPickBtn").addEventListener("click", ()=>{
 
 $("aiBtn").addEventListener("click", aiExtract);
 async function aiExtract(){
+  if(state.packet==="fmla") return (await fmlaReady).analyze();
   const t=$("noteText").value.trim(); if(!t) return;
   if(!TOKEN){ openSignin(); return; }
   $("prefillNote").textContent="Reading note with AI…";
@@ -654,7 +669,7 @@ $("auditor").addEventListener("input", e => { state.fields.auditor = e.target.va
 $("auditDate").addEventListener("input", e => { state.fields.auditDate = e.target.value; renderDoc(); });
 $("printBtn").addEventListener("click", () => window.print());
 
-function renderDoc(){ $("doc").innerHTML = packet().doc(); }
+function renderDoc(){ $("doc").innerHTML = state.packet==="fmla" ? '<h2>Official FMLA certification draft</h2><p>Select WH-380-E for the employee’s condition or WH-380-F for family caregiving in the intake panel.</p><p>Review patient answers, upload relevant notes, and accept or edit evidence-backed suggestions in the certification fields. Then download the reviewed official PDF.</p><p>The PDF is an editable draft. Complete all applicable sections, signatures, and release authorization before delivering the final certification.</p>' : packet().doc(); }
 function renderAll(){ renderIcds(); renderStatus(); renderDoc(); }
 
 /* ============================================================
@@ -683,16 +698,6 @@ function fillCtx(){
     auditMDY:mdy(val("auditDate")),
   };
 }
-const FMLA_MAP={
-  "Employee name First":"first","Employee name Middle":"middle","Employee name Last":"last",
-  "Employee Name":"full","Employer name":"employer",
-  "Health Care Providers name Print":"provider","Health Care Providers business address":"orgAddr",
-  "Type of practice  Medical specialty":"specialty","Telephone":"orgPhone","Fax":"orgFax","Email":"orgEmail",
-  "1 State the approximate date the condition started or will start":"onset",
-  "2 Provide your best estimate of how long the condition lasted or will last":"duration",
-  "If needed, briefly describe other appropriate medical facts related to the condition(s) for which the employee seeks FMLA leave. (e., use of nebulizer, dialysis)., use of nebulizer, dialysis)":"dxNarrative",
-  "Date":"auditMDY","Date_2":"auditMDY",
-};
 const MTA_CERT_MAP={
   "Last Name":"last","First Name":"first","Middle Initial":"middle1","Date of Birth MMDDYYYY":"dobMDY",
   "Applicant Last Name":"last","Applicant First Name":"first","Applicant Middle Initial":"middle1","Applicant Name":"full",
@@ -708,7 +713,10 @@ const MTA_RECERT_MAP={
   "Date of Diagnosis or Onset":"onset","Date of Signature":"auditMDY",
 };
 const FORMS={
-  fmla:[{ id:"FMLA-WH380E", label:"FMLA WH-380-E (official DOL form)", file:"/assets/forms/fmla-wh380e.pdf", map:FMLA_MAP }],
+  fmla:[
+    {id:"FMLA-WH380E",label:"WH-380-E — employee condition",file:"/assets/forms/fmla-wh380e-2029.pdf"},
+    {id:"FMLA-WH380F",label:"WH-380-F — family caregiving",file:"/assets/forms/fmla-wh380f-2029.pdf"},
+  ],
   mta:[
     { id:"MTA-Certification", label:"MTA Mobility Certification (official)", file:"/assets/forms/mta-certification.pdf", map:MTA_CERT_MAP },
     { id:"MTA-Recertification", label:"MTA Recertification (official)", file:"/assets/forms/mta-recertification.pdf", map:MTA_RECERT_MAP },
@@ -719,10 +727,12 @@ function updateOfficial(){
   const forms=FORMS[state.packet]; const wrap=$("officialWrap"), sel=$("officialSel");
   if(!forms){ wrap.style.display="none"; return; }
   wrap.style.display="flex";
+  sel.hidden=state.packet==="fmla";
   sel.innerHTML=forms.map((f,i)=>`<option value="${i}">${f.label}</option>`).join("");
 }
 // Fill the selected official agency/payer PDF; returns {bytes, name, filled}.
 async function fillOfficialForm(){
+  if(state.packet==="fmla") return (await fmlaReady).fill();
   const forms=FORMS[state.packet]; if(!forms) return null;
   const form=forms[+$("officialSel").value || 0];
   await loadPdfLib();
@@ -744,7 +754,7 @@ $("officialBtn").addEventListener("click", async () => {
     a.click(); URL.revokeObjectURL(a.href);
     btn.textContent=`Filled ${r.filled} fields ✓`;
     setTimeout(()=>{ btn.textContent=label; btn.disabled=false; }, 2200);
-  }catch(e){ btn.textContent="Error — retry"; btn.disabled=false; setTimeout(()=>btn.textContent=label,2200); }
+  }catch(e){ $("prefillNote").textContent=e.message; btn.textContent="Error — retry"; btn.disabled=false; setTimeout(()=>btn.textContent=label,2200); }
 });
 
 /* ---------- fax the document out via Dialpad ---------- */
@@ -774,6 +784,7 @@ async function buildFaxPdf(){
   return { b64:u8ToB64(out), name:`Paperwork_${(val('patient')||'patient').replace(/[^a-z0-9]+/gi,'-')}.pdf` };
 }
 $("faxBtn").addEventListener("click", async ()=>{
+  if(state.packet==="fmla") {$("prefillNote").textContent="Download the review draft. Complete signatures and verify release permission before sending the final certification."; return;}
   const inp=$("faxTo");
   if(inp.style.display==='none'){ inp.style.display='inline-block'; inp.focus(); return; }
   const to=(inp.value||'').replace(/\D/g,'');

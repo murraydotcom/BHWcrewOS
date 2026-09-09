@@ -104,6 +104,10 @@ export async function createEncounterCloudClient(fetchImpl = fetch) {
   }
 
   return {
+    async listLeaveRequests(bhwPatientId) {
+      const body=await request(`/v1/patients/${encodeURIComponent(bhwPatientId)}/leave-requests`);
+      return Array.isArray(body.requests)?body.requests:[];
+    },
     apiBase: config.apiBase,
     async list() {
       const body = await request("/v1/encounters");
