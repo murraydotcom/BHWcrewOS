@@ -122,7 +122,9 @@ body[data-p360-view="nutrition"]{
 .alarm-box label{display:flex;align-items:flex-start;gap:6px;font-weight:600}
 
 .review-panel{margin-top:16px;border-left:3px solid var(--nutrition-kintsugi);background-image:linear-gradient(118deg,color-mix(in srgb,var(--card) 86%,var(--nutrition-opal-sage-soft)),var(--card) 48%,color-mix(in srgb,var(--card) 88%,var(--nutrition-opal-violet-soft)))}
-.review-workflow{display:grid;grid-template-columns:minmax(230px,.8fr) auto minmax(310px,1fr) minmax(310px,1fr);gap:14px;align-items:center}
+.review-workflow{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:14px;align-items:center}
+.review-workflow>*{min-width:0}
+.review-workflow .btn{white-space:normal;overflow-wrap:anywhere}
 .save-state{display:grid;gap:4px}
 .save-state b{font-size:var(--text-sm)}
 .save-state b[data-state="not-saved"],.save-state b[data-state="error"]{color:var(--coral)}
@@ -168,7 +170,7 @@ body[data-p360-view="nutrition"]{
 
 @media(max-width:1260px){
   .nutrition-columns{grid-template-columns:1fr}
-  .review-workflow{grid-template-columns:1fr 1fr}
+  .review-workflow{grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
   .result-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:760px){
