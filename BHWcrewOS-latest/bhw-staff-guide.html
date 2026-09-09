@@ -51,7 +51,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
 <header>
   <img src="/assets/bhw-medical-logo.png" alt="BHW Medical" onerror="this.style.display='none'">
   <div><h1>Staff Guide — Where Everything Is</h1><div class="sub">BHW Medical Group · BHWcrewOS</div></div>
-  <div class="updated">Updated September 7, 2026<br>Patient Requests + Website Content</div>
+  <div class="updated">Updated September 9, 2026<br>Patient Requests + Website Content + BHW Capture</div>
 </header>
 
 <button class="print" onclick="window.print()">Print this guide</button>
@@ -428,6 +428,46 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
     <tr><td><b>Billing Toolkit</b></td><td>Documenting care management months, auditing before you bill, and finding the right preventive code with its ICD-10 pair for the superbill.</td></tr>
   </table>
   <div class="rule"><b>Every clinical tool is decision support, not a diagnosis.</b> They organize thinking and surface what to check next. The chart, the exam, and your judgment decide.</div>
+</div>
+
+<h2 id="bhw-capture-training"><span class="n">08a</span>BHW Capture — visit recording &amp; recovery</h2>
+<div class="sec" data-k="bhw capture visit transcription patient registry recording segments interruption retry consent long visit competency">
+  <h3>Start from the authoritative patient identity <span class="who">Patient-facing staff</span></h3>
+  <ol>
+    <li>Open <b>BHW Capture</b> and choose <b>Visit Transcription</b> for patient audio.</li>
+    <li>Select the patient only from the protected <b>Google Cloud Patient Registry</b>. Match the displayed name and canonical <b>BHW ID</b> to the scheduled patient before recording.</li>
+    <li>If the patient is missing, duplicated, or does not match, stop and route the identity issue to the Registry owner. Do not use the historical Patient Index Guide, create a substitute record, or record under another patient.</li>
+    <li>Verify the current signed recording/AI-transcription consent and confirm that the patient and everyone who may be heard agrees to recording today.</li>
+  </ol>
+  <div class="rule"><b>The Patient Registry is the identity authority.</b> The historical Patient Index and its guide are retired migration references and must not be used to select or create the patient for Capture.</div>
+
+  <h3 style="margin-top:16px">Long visits and five-minute protected segments</h3>
+  <ol>
+    <li>Keep the Visit Transcription tab open and visible for the entire visit. Confirm the screen-awake indicator is active; if it is not, keep the device awake manually.</li>
+    <li>The recorder automatically closes, secures, and transcribes each five-minute segment while the next segment continues. Do not end a longer visit merely because a segment is processing.</li>
+    <li>At the end of the encounter, select <b>Finish</b> once and wait until every segment reports transcribed before closing the tab.</li>
+    <li>Review the assembled transcript for missing transitions, repeated text, speaker errors, and the segment immediately before and after any interruption.</li>
+  </ol>
+
+  <h3 style="margin-top:16px">If recording is interrupted</h3>
+  <ol>
+    <li><b>Pause</b> for an intentional interruption or when anyone withdraws agreement. Resume only after agreement is reconfirmed.</li>
+    <li>If the session expires or a segment fails, leave this tab open. Use the new-tab CrewHQ sign-in, return to the same Visit Transcription tab, and choose <b>Retry retained audio</b>.</li>
+    <li>Do not refresh, close the tab, switch patients, or press <b>Clear audio and draft</b> while a segment is retained. Those actions can remove audio still held only in page memory.</li>
+    <li>If the browser, device, or tab closes, document the interruption and notify the provider. Never claim the transcript is complete; reconstruct missing clinical content through provider review and the legal-record workflow.</li>
+  </ol>
+  <div class="tip"><b>Safe completion:</b> all segment audio shows successfully transcribed, the assembled draft is reviewed, and any gap or interruption is identified before the transcript is copied into the documentation workflow.</div>
+
+  <h3 style="margin-top:16px">Competency check and sign-off <span class="who">Training owner</span></h3>
+  <p>Before independent real-patient use, the learner must complete all four checks with synthetic patient <b>BHW0000</b>. Attendance or reading the guide is not sufficient.</p>
+  <table>
+    <tr><th>Observed check</th><th>Passing evidence</th></tr>
+    <tr><td><b>Registry identity</b></td><td>Selects BHW0000 from the protected Patient Registry, verifies name + canonical BHW ID, and states that a missing or mismatched patient must be escalated rather than recreated.</td></tr>
+    <tr><td><b>Segmented longer visit</b></td><td>Records across a segment boundary, explains that recording continues while five-minute protected segments transcribe in order, finishes once, and waits for all segments.</td></tr>
+    <tr><td><b>Planned interruption</b></td><td>Pauses, reconfirms agreement, resumes, and checks the transcript on both sides of the interruption.</td></tr>
+    <tr><td><b>Failure recovery</b></td><td>Responds to a simulated expired session or failed segment by preserving the open tab, reauthenticating in a new tab, retrying retained audio, and escalating any unrecoverable gap.</td></tr>
+  </table>
+  <div class="rule"><b>Training owner sign-off:</b> record learner, trainer, date, device/browser, four pass results, remediation if needed, and authorization status. Any failed check means supervised use only until successfully repeated.</div>
 </div>
 
 <h2><span class="n">08b</span>My Space — your role &amp; the office calendar</h2>
