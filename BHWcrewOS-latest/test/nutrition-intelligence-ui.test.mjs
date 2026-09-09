@@ -53,6 +53,24 @@ test("preview and publication copy keep prohibited autonomous actions explicit",
   assert.match(app, /no Care Connect delivery, order, medication change, or message was created/);
 });
 
+test("Nutrition Intelligence uses the shared Opal and Ironstone visual system", async () => {
+  const [html, css, app] = await Promise.all([
+    provider("nutrition-intelligence.html"),
+    provider("nutrition-intelligence.css"),
+    provider("nutrition-intelligence.mjs"),
+  ]);
+
+  assert.match(css, /background:var\(--opal-stone\)/);
+  assert.match(css, /--nutrition-ironstone:var\(--sidebar\)/);
+  for (const token of ["--teal", "--green", "--purple", "--gold"]) {
+    assert.match(css, new RegExp(`var\\(${token}\\)`));
+  }
+  assert.match(css, /prefers-reduced-motion:reduce/);
+  assert.match(html, />Black Opal<\/button>/);
+  assert.match(app, /dark \? "Light Opal" : "Black Opal"/);
+  assert.match(app, /aria-pressed/);
+});
+
 test("Patient 360 exposes a patient-scoped Nutrition Intelligence path", async () => {
   const app = await provider("patient-360-app.mjs");
   assert.match(app, /\["nutrition", "Nutrition", "nutrition-intelligence\.html"\]/);

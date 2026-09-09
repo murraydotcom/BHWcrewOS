@@ -15,6 +15,13 @@ let formDirty = false;
 
 function setTheme(theme) {
   document.documentElement.dataset.theme = theme;
+  const control = $("theme");
+  if (control) {
+    const dark = theme === "dark";
+    control.textContent = dark ? "Light Opal" : "Black Opal";
+    control.setAttribute("aria-pressed", String(dark));
+    control.setAttribute("aria-label", dark ? "Switch to Light Opal theme" : "Switch to Black Opal theme");
+  }
   try { localStorage.setItem(THEME_KEY, theme); } catch { /* storage unavailable */ }
 }
 
