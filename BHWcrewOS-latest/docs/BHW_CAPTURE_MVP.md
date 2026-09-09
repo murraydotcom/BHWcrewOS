@@ -103,6 +103,19 @@ The Cloud Run service continues to use its existing `GOOGLE_CLOUD_PROJECT` and `
 17. Confirm the clinical transcript does not appear in `/v1/memories`, IndexedDB, local fallback storage, service-worker caches, or the JSON export.
 18. Wait 15 minutes or background the app for more than five minutes. Confirm patient options and Clinical references disappear and the PIN is required again.
 
+## Staff training authority and competency gate
+
+The authoritative staff procedure is `bhw-staff-guide.html#bhw-capture-training`. Any earlier Capture PDF instruction that points staff to the historical Patient Index Guide is superseded. Patient selection for recording must come from the protected Google Cloud Patient Registry and use its canonical BHW ID. Missing, duplicate, or mismatched identity is an escalation condition; staff must not create a substitute patient or record under a different patient.
+
+Before independent real-patient recording, the training owner must observe and document all four synthetic BHW0000 competencies:
+
+1. Registry identity selection and mismatch escalation.
+2. Recording across a five-minute boundary and waiting for every ordered segment to transcribe after Finish.
+3. Pausing and safely resuming around an intentional interruption, including transcript review on both sides of the interruption.
+4. Preserving the original tab through a failed segment or expired session, reauthenticating in a new tab, retrying retained audio, and escalating any unrecoverable gap.
+
+Training evidence records learner, trainer, date, device/browser, individual check results, remediation, and authorization status. A failed check permits supervised use only until the learner repeats it successfully.
+
 ## Production storage-path verification
 
 Use synthetic data for the first deployed trace; do not place a real patient's information in deployment logs or screenshots.
@@ -119,4 +132,3 @@ Use synthetic data for the first deployed trace; do not place a real patient's i
 ## Clinical mode
 
 Clinical is available to every active, verified CrewOS staff account because all current staff see patients. The individual staff identity and role remain recorded for audit, but role is not an additional access gate. Real-patient recording still fails closed unless the patient exists, signed recording/AI-transcription consent is current, current-session agreement is confirmed, and both clinical feature flags are enabled.
-

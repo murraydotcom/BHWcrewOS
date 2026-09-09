@@ -5,7 +5,7 @@ import test from "node:test";
 test("staff guide teaches the current Patient Requests and alert workflow", async () => {
   const html = await readFile(new URL("../bhw-staff-guide.html", import.meta.url), "utf8");
 
-  assert.match(html, /Updated September 7, 2026/);
+  assert.match(html, /Updated September 9, 2026/);
   assert.match(html, /crewhq\.bhwmedical\.org\/crewos/);
   assert.match(html, /id="patient-requests-training"/);
   assert.match(html, /Patient Requests is the one queue/);
@@ -33,6 +33,14 @@ test("staff guide teaches the current Patient Requests and alert workflow", asyn
   assert.match(html, /approved staff ChatGPT may help with wording/);
   assert.match(html, /operations manager or executive.*Publish/s);
   assert.match(html, /Saved to BHW Cloud/);
+  assert.match(html, /id="bhw-capture-training"/);
+  assert.match(html, /Patient Registry is the identity authority/);
+  assert.match(html, /historical Patient Index and its guide are retired migration references/);
+  assert.match(html, /five-minute protected segments/);
+  assert.match(html, /Retry retained audio/);
+  assert.match(html, /planned interruption/i);
+  assert.match(html, /Failure recovery/);
+  assert.match(html, /four pass results/);
   assert.doesNotMatch(html, /bhwcrewos\.netlify\.app/);
   assert.doesNotMatch(html, /duplicate the .*template/i);
 });
