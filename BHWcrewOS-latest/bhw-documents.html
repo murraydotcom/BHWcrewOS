@@ -479,6 +479,7 @@ function defaultStateFor(docType){
     badgeText: "",
     rawText: "",
     sections: [ blankSection() ],
+    greeting: "",
     closing: cfg.isLetter ? "Sincerely," : "",
     signatureName: "",
     signatureCredentials: "",
@@ -855,7 +856,8 @@ function renderLetterTop(cfg){
   const salTo = cfg.letterRecipientIsPatient
     ? (state.meta.patientName ? state.meta.patientName.split(" ")[0] : "")
     : (state.meta.recipientName || "");
-  html += `<div class="salutation">Dear ${salTo ? escapeHtml(salTo) : "___"},</div>`;
+  const greeting = state.docType === "patient_letter" ? (state.greeting || "").trim() : "Dear";
+  html += `<div class="salutation">${greeting ? escapeHtml(greeting) + " " : ""}${salTo ? escapeHtml(salTo) : "___"},</div>`;
   html += `</div>`;
   return html;
 }
@@ -1077,6 +1079,10 @@ function renderEditor(){
     html += `<div class="field"><label>${META_LABELS[f]}</label><input type="text" data-role="meta" data-key="${f}" value="${escapeHtml(state.meta[f])}"/></div>`;
   });
 
+  if(state.docType === "patient_letter"){
+    html += `<div class="field"><label for="patientLetterGreeting">Greeting (optional)</label><input id="patientLetterGreeting" type="text" data-role="greeting" value="${escapeHtml(state.greeting || "")}" placeholder="e.g. Dear or Hello" aria-describedby="patientLetterGreetingHelp"/><div id="patientLetterGreetingHelp" class="paste-help">Appears before the patient's first name. Leave blank to use just their name.</div></div>`;
+  }
+
   html += `<h3>Body content</h3>`;
 
   if(state.mode === "paste"){
@@ -1253,6 +1259,8 @@ function bindEditorEvents(){
     });
   });
 
+  const greetingInp = ed.querySelector('input[data-role="greeting"]');
+  if(greetingInp) greetingInp.addEventListener("input", e=>{ state.greeting = e.target.value; syncPreviewOnly(); });
   const closingInp = ed.querySelector('input[data-role="closing"]');
   if(closingInp) closingInp.addEventListener("input", e=>{ state.closing = e.target.value; syncPreviewOnly(); });
   const sigName = ed.querySelector('input[data-role="signatureName"]');
