@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="/assets/bhw-tokens.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 body{font-family:var(--sans);color:var(--ink);font-size:14px;line-height:1.55;
   background:var(--page-wash),var(--bg);min-height:100vh}
@@ -117,6 +118,7 @@ textarea{resize:vertical;min-height:60px;line-height:1.5}
 .muted-fill{color:#b7bec3;font-style:italic}
 
 @media (max-width:960px){.wrap{grid-template-columns:1fr}.preview-panel{position:static}}
+@media (max-width:600px){.top-inner{flex-wrap:wrap}.top-right{margin-left:0;flex-wrap:wrap}.wrap{padding:16px 12px 40px}.panel{padding:16px}.prefill{min-width:0}.prefill input[type=file]{max-width:100%}}
 
 /* ---- print: only the document ---- */
 @media print{
@@ -175,7 +177,7 @@ textarea{resize:vertical;min-height:60px;line-height:1.5}
         </div>
       </div>
 
-      <div id="fmlaStudio" class="prefill" hidden></div><div class="grid2" id="reqFields"></div>
+      <div id="fmlaStudio" class="prefill" hidden></div><div id="disabilityStudio" class="prefill" hidden></div><div class="grid2" id="reqFields"></div>
     </div>
 
     <div class="panel" style="margin-top:16px">
@@ -394,10 +396,11 @@ $("types").addEventListener("click", e => {
 /* ---------- render: request fields ---------- */
 function buildForm(){
   $("fmlaStudio").hidden=state.packet!=="fmla";
-  $("reqFields").hidden=state.packet==="fmla";
-  $("faxBtn").disabled=state.packet==="fmla";
-  $("printBtn").disabled=state.packet==="fmla";
-  for(const id of ["icdInput","bodyText","checklist"]) $(id).closest('.panel').hidden=state.packet==="fmla";
+  $("disabilityStudio").hidden=state.packet!=="disability";
+  $("reqFields").hidden=["fmla","disability"].includes(state.packet);
+  $("faxBtn").disabled=["fmla","disability"].includes(state.packet);
+  $("printBtn").disabled=["fmla","disability"].includes(state.packet);
+  for(const id of ["icdInput","bodyText","checklist"]) $(id).closest('.panel').hidden=["fmla","disability"].includes(state.packet);
   $("officialBtn").textContent=state.packet==="fmla"?"Download reviewed FMLA draft":"Fill official form";
   const p = packet();
   document.querySelectorAll(".type").forEach(t => t.classList.toggle("active", t.dataset.id===p.id));
@@ -451,6 +454,7 @@ function renderIcds(){
 
 /* ---------- smart prefill (local regex, no upload) ---------- */
 function localScan(){
+  if(state.packet==="disability"){ $("prefillNote").textContent="Use the disability packet review below to connect functional opinions to evidence."; return; }
   if(state.packet==="fmla"){ $("prefillNote").textContent="Use the FMLA evidence review below. Dates in a note are not automatically certified leave dates."; return; }
   const t = $("noteText").value; if(!t.trim()){ return; }
   // ICD-10 codes
@@ -476,6 +480,8 @@ let PATIENTS = [];
 let requestedLeavePatient=new URLSearchParams(location.search).get("patient") || "";
 let fmlaStudio=null;
 const fmlaReady=import("/assets/fmla-studio.mjs").then(({createFmlaStudio})=>{fmlaStudio=createFmlaStudio({root:$("fmlaStudio"),session:()=>TOKEN,notes:$("noteText"),loadPdfLib});return fmlaStudio;});
+let disabilityStudio=null;
+const disabilityReady=import("/assets/disability-studio.mjs").then(({createDisabilityStudio})=>{disabilityStudio=createDisabilityStudio({root:$("disabilityStudio"),session:()=>TOKEN,notes:$("noteText"),loadPdfLib});return disabilityStudio;});
 
 async function post(fn, body){
   const r = await fetch(`/.netlify/functions/${fn}`, { method:"POST",
@@ -488,6 +494,7 @@ function payerMatch(v){ if(!v) return ""; const s=String(v).toLowerCase(); const
 
 function setConnected(name){
   if(!TOKEN && fmlaStudio) fmlaStudio.disconnect();
+  if(!TOKEN && disabilityStudio) disabilityStudio.disconnect();
   const b=$("connBtn");
   if(TOKEN){
     b.textContent = name ? `✓ ${String(name).split(" ")[0]}` : "✓ Connected";
@@ -537,10 +544,11 @@ $("patientPickBtn").addEventListener("click", ()=>{
   const q=raw.split(" — ")[0].split(" (")[0].toLowerCase();
   const exactMatches=PATIENTS.filter(x=>patientChoice(x)===raw || x.name.toLowerCase()===q);
   const p = id ? PATIENTS.find(x=>(x.bhwId||x.bhwPatientId)===id) : exactMatches.length===1 ? exactMatches[0] : null;
-  if(!p){ fmlaReady.then(studio=>studio.disconnect()); $("patientHint").textContent="No unique Registry match — select the exact patient."; return; }
-  if(p.selectable===false){ $("patientHint").textContent=`${p.name} (${p.bhwId}) is ${p.status}; new paperwork cannot be started from this list.`; return; }
+  if(!p){ fmlaReady.then(studio=>studio.disconnect()); disabilityReady.then(studio=>studio.disconnect()); $("patientHint").textContent="No unique Registry match — select the exact patient."; return; }
+  if(p.selectable===false){ fmlaReady.then(studio=>studio.disconnect()); disabilityReady.then(studio=>studio.disconnect()); $("patientHint").textContent=`${p.name} (${p.bhwId}) is ${p.status}; new paperwork cannot be started from this list.`; return; }
   state.fields={patient:p.name}; state.icds=[]; state.bodyOverride=""; state.checks={};
   fmlaReady.then(studio=>studio.setPatient(p));
+  disabilityReady.then(studio=>studio.setPatient(p));
   if(p.dob) state.fields.dob=p.dob;
   if(p.chart && packet().fields.includes("mrn")) state.fields.mrn=p.chart;
   if(p.memberId && packet().fields.includes("member")) state.fields.member=p.memberId;
@@ -554,6 +562,7 @@ $("patientPickBtn").addEventListener("click", ()=>{
 
 $("aiBtn").addEventListener("click", aiExtract);
 async function aiExtract(){
+  if(state.packet==="disability") return (await disabilityReady).analyze();
   if(state.packet==="fmla") return (await fmlaReady).analyze();
   const t=$("noteText").value.trim(); if(!t) return;
   if(!TOKEN){ openSignin(); return; }
@@ -669,7 +678,7 @@ $("auditor").addEventListener("input", e => { state.fields.auditor = e.target.va
 $("auditDate").addEventListener("input", e => { state.fields.auditDate = e.target.value; renderDoc(); });
 $("printBtn").addEventListener("click", () => window.print());
 
-function renderDoc(){ $("doc").innerHTML = state.packet==="fmla" ? '<h2>Official FMLA certification draft</h2><p>Select WH-380-E for the employee’s condition or WH-380-F for family caregiving in the intake panel.</p><p>Review patient answers, upload relevant notes, and accept or edit evidence-backed suggestions in the certification fields. Then download the reviewed official PDF.</p><p>The PDF is an editable draft. Complete all applicable sections, signatures, and release authorization before delivering the final certification.</p>' : packet().doc(); }
+function renderDoc(){ if(state.packet==="disability"){ $("doc").innerHTML="<h2>Disability packet draft</h2><p>Upload the actual packet in the disability panel, review applicable guidelines and source evidence, and complete the visit questions. Use the panel’s download button for the original packet with reviewed text fields and a narrative addendum. Complete remaining fields, signatures, and authorization before submission.</p>"; return; } $("doc").innerHTML = state.packet==="fmla" ? '<h2>Official FMLA certification draft</h2><p>Select WH-380-E for the employee’s condition or WH-380-F for family caregiving in the intake panel.</p><p>Review patient answers, upload relevant notes, and accept or edit evidence-backed suggestions in the certification fields. Then download the reviewed official PDF.</p><p>The PDF is an editable draft. Complete all applicable sections, signatures, and release authorization before delivering the final certification.</p>' : packet().doc(); }
 function renderAll(){ renderIcds(); renderStatus(); renderDoc(); }
 
 /* ============================================================
