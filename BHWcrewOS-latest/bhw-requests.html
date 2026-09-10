@@ -84,6 +84,21 @@
   .commitem.suppressed:before{background:var(--gold)}
   .commitem.sent:before{background:var(--ok)}
   .commitem.failed:before{background:var(--urgent)}
+  .teamnote-unread{display:inline-flex;align-items:center;gap:5px;font-size:.58rem;font-weight:800;color:#7d4d19;background:#fbf1dd;border:1px solid #ead5aa;border-radius:20px;padding:3px 7px}
+  .teamnote-unread:before{content:'';width:6px;height:6px;border-radius:50%;background:var(--gold)}
+  .teamnotes{border-top:1px solid var(--line);padding:17px 18px;background:#fcfaf6}
+  .teamnotes-head{display:flex;align-items:center;gap:8px;margin-bottom:5px}.teamnotes-head h3{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-mute)}
+  .teamnotes-head .count{font-size:.58rem;font-weight:800;color:var(--teal-deep);background:#eaf2f1;border-radius:20px;padding:4px 7px}
+  .teamnotes-privacy{font-size:.65rem;line-height:1.45;color:var(--ink-soft);font-weight:600;margin-bottom:12px}
+  .teamnotes-list{display:flex;flex-direction:column;gap:8px;max-height:300px;overflow:auto;margin-bottom:12px}
+  .teamnote{background:#fff;border:1px solid var(--line);border-radius:12px;padding:11px 12px}
+  .teamnote .notehead{display:flex;gap:7px;align-items:center;font-size:.68rem}.teamnote .notehead b{font-size:.73rem}.teamnote .noterole{color:var(--ink-mute);font-weight:700}.teamnote .notetime{margin-left:auto;color:var(--ink-mute);font-size:.6rem;font-weight:600}
+  .teamnote .notebody{white-space:pre-wrap;word-break:break-word;font-size:.76rem;line-height:1.48;color:var(--ink);margin-top:7px}
+  .teamnote-mentions{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}.teamnote-mention{font-size:.58rem;font-weight:800;color:var(--teal-deep);background:#eaf2f1;border-radius:20px;padding:4px 7px}
+  .teamnote-compose{background:#fff;border:1px solid var(--line);border-radius:12px;padding:11px}.teamnote-compose textarea{width:100%;min-height:76px;resize:vertical;border:1px solid var(--line);border-radius:9px;padding:9px 10px;font:500 .76rem/1.45 Montserrat,sans-serif;color:var(--ink)}
+  .teamnote-compose-foot{display:flex;align-items:flex-end;gap:9px;flex-wrap:wrap;margin-top:8px}.teamnote-compose-foot .btn{margin-left:auto}
+  .mentionpicker{font-size:.64rem;color:var(--ink-soft)}.mentionpicker summary{font-weight:800;cursor:pointer}.mentiongrid{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}.mentiongrid label{display:inline-flex;align-items:center;gap:5px;background:#f4f7f6;border:1px solid var(--line);border-radius:20px;padding:5px 8px;font-weight:700;cursor:pointer}.mentiongrid input{accent-color:var(--teal)}
+  .teamnote-status{font-size:.63rem;font-weight:700;color:var(--ink-soft);min-height:1em;margin-top:7px}.teamnotes .empty{padding:18px;border:1px dashed var(--line);border-radius:10px;background:#fff}
   .detailreply{padding:0 18px 18px}
   .detailreply .replybox{margin:0}
   .mirror-note{display:inline-flex;align-items:center;gap:6px;font-size:.62rem;font-weight:800;color:var(--teal-deep);background:#eaf2f1;border:1px solid #cfe4e1;border-radius:20px;padding:6px 10px}
@@ -275,7 +290,8 @@ let REQUEST_TYPE='';
 let SELECTED=new URLSearchParams(location.search).get('request')||'';
 let SEARCH=SELECTED.trim().toLowerCase();
 let DETAIL_LOAD=0;
-let ROSTER=[]; // active staff names, pulled from the crewOS Staff & Roles roster
+let TEAM_NOTE_LOAD=0;
+let ROSTER=[]; // active staff identities, pulled from the existing crewOS Staff & Roles roster
 let CLOUD_CLIENT_PROMISE=null;
 let CURRENT_ROLE='';
 let CURRENT_ACTIONS=new Set();
@@ -464,11 +480,11 @@ function completionControls(it,isDone){
 function cardHTML(it){
   const st=stageOf(it.status,it.statusCategory), hot=isHot(it), id=encodeURIComponent(String(it.id));
   const owner=it.assigned||'Unassigned';
-  return `<button type="button" class="requestrow ${hot?'urgent':''} ${SELECTED===it.id?'on':''}" onclick="selectRequest(decodeURIComponent('${id}'))">
+  return `<button type="button" class="requestrow ${hot?'urgent':''} ${SELECTED===it.id?'on':''}" data-request-id="${esc(it.id)}" onclick="selectRequest(decodeURIComponent('${id}'))">
     <span class="top"><span class="type">${esc(workflowUI(it).label)}</span><span class="stagepill ${st}">${esc(humanStatus(it))}</span></span>
     <span class="patient">${esc(it.name||'Patient')}</span>
     <span class="meta"><span>${esc(srcLabel(it.source))}</span><span>·</span><span>${esc(fmtTime(it.received))}</span><span class="routechip">${esc(routeName(it))}</span></span>
-    <span class="ownerline"><span class="av sm ${it.assigned?'':'un'}">${it.assigned?initials(it.assigned):'?'}</span>${esc(owner)}</span>
+    <span class="ownerline"><span class="av sm ${it.assigned?'':'un'}">${it.assigned?initials(it.assigned):'?'}</span>${esc(owner)}${it.teamNoteUnread?`<span class="teamnote-unread">${it.teamNoteMentioned?'You were mentioned':'New team note'}</span>`:''}</span>
   </button>`;
 }
 
@@ -503,6 +519,10 @@ function historyHTML(it){
   })) : journeyOf(it).map(step=>({label:String(step.text||'').replace(/<[^>]+>/g,''),when:'',who:step.who||''}));
   return rows.map(row=>`<div class="historyitem"><div class="label">${esc(row.label)}</div><div class="when">${esc(row.when?new Date(row.when).toLocaleString():row.who)}</div></div>`).join('')||'<div class="empty">No status history yet.</div>';
 }
+function teamNoteMentionPicker(){
+  if(!ROSTER.length)return '<span>No staff roster available for mentions.</span>';
+  return `<details class="mentionpicker"><summary>Mention teammates (optional)</summary><div class="mentiongrid">${ROSTER.map(person=>`<label><input type="checkbox" name="teamNoteMention" value="${esc(person.id)}" data-name="${esc(person.name)}">@${esc(person.name)}</label>`).join('')}</div></details>`;
+}
 function renderDetail(){
   const panel=document.getElementById('detailPanel');
   const it=ITEMS.find(item=>item.id===SELECTED);
@@ -521,8 +541,19 @@ function renderDetail(){
       <section class="detailsection"><h3>Status history</h3>${historyHTML(it)}</section>
       <section class="detailsection"><h3>Communications and delivery</h3><div id="communications"><div class="empty">Loading communication record…</div></div></section>
     </div>
+    <section class="teamnotes" aria-label="Internal team notes">
+      <div class="teamnotes-head"><h3>Team Notes</h3><span class="count" id="teamNoteCount">Loading…</span></div>
+      <div class="teamnotes-privacy">Internal staff discussion for this request. Notes stay in protected CrewOS and are never sent by SMS or copied to Google Chat. Include only information needed to coordinate care.</div>
+      <div class="teamnotes-list" id="teamNotes"><div class="empty">Loading team notes…</div></div>
+      <form class="teamnote-compose" onsubmit="addTeamNote(event,decodeURIComponent('${encodeURIComponent(String(it.id))}'))">
+        <textarea name="teamNoteText" maxlength="2000" required placeholder="Add an internal note for the team…" aria-label="New internal team note"></textarea>
+        <div class="teamnote-compose-foot">${teamNoteMentionPicker()}<button class="btn p" type="submit">Add team note</button></div>
+        <div class="teamnote-status" role="status" aria-live="polite"></div>
+      </form>
+    </section>
     <div class="detailreply" id="detailReply"></div>`;
   loadSelectedCommunications(it.id);
+  loadSelectedTeamNotes(it.id);
 }
 function selectRequest(id){
   SELECTED=id;
@@ -550,6 +581,49 @@ async function loadSelectedCommunications(id){
     if(sequence!==DETAIL_LOAD||id!==SELECTED)return;
     const box=document.getElementById('communications');if(box)box.innerHTML='<div class="empty">Communication history is unavailable right now.</div>';
   }
+}
+function teamNotesHTML(rows){
+  if(!rows.length)return '<div class="empty">No internal team notes yet.</div>';
+  return rows.map(note=>{
+    const mentions=Array.isArray(note.mentions)&&note.mentions.length?`<div class="teamnote-mentions">${note.mentions.map(person=>`<span class="teamnote-mention">@${esc(person.name||'Teammate')}</span>`).join('')}</div>`:'';
+    return `<article class="teamnote"><div class="notehead"><b>${esc(note.authorName||'CrewOS staff')}</b><span class="noterole">${esc(note.authorRole||'staff')}</span><time class="notetime">${esc(note.createdAt?new Date(note.createdAt).toLocaleString():'')}</time></div><div class="notebody">${esc(note.content)}</div>${mentions}</article>`;
+  }).join('');
+}
+async function loadSelectedTeamNotes(id){
+  const sequence=++TEAM_NOTE_LOAD;
+  try{
+    const result=await (await cloudClient()).listPatientRequestTeamNotes(id);
+    if(sequence!==TEAM_NOTE_LOAD||id!==SELECTED)return;
+    const rows=Array.isArray(result.notes)?result.notes:[];
+    const list=document.getElementById('teamNotes');if(list)list.innerHTML=teamNotesHTML(rows);
+    const count=document.getElementById('teamNoteCount');if(count)count.textContent=`${rows.length} note${rows.length===1?'':'s'}${result.unreadCount?` · ${result.unreadCount} new`:''}`;
+    if(result.unreadCount&&result.lastNoteAt){
+      try{
+        await (await cloudClient()).markPatientRequestTeamNotesRead(id,result.lastNoteAt);
+        const item=ITEMS.find(row=>row.id===id);if(item){item.teamNoteUnread=false;item.teamNoteMentioned=false;}
+        document.querySelectorAll('.requestrow').forEach(row=>{if(row.dataset.requestId===id)row.querySelector('.teamnote-unread')?.remove();});
+        if(count)count.textContent=`${rows.length} note${rows.length===1?'':'s'}`;
+      }catch(_){ /* the notes remain visible and will stay unread until the marker can be saved */ }
+    }
+  }catch(e){
+    if(sequence!==TEAM_NOTE_LOAD||id!==SELECTED)return;
+    const list=document.getElementById('teamNotes');if(list)list.innerHTML='<div class="empty">Team notes are unavailable right now.</div>';
+  }
+}
+async function addTeamNote(event,id){
+  event.preventDefault();
+  const form=event.currentTarget,textarea=form.elements.teamNoteText,button=form.querySelector('button[type="submit"]'),status=form.querySelector('.teamnote-status');
+  const content=textarea.value.trim();if(!content)return;
+  const mentions=[...form.querySelectorAll('input[name="teamNoteMention"]:checked')].map(input=>({staffId:input.value,name:input.dataset.name}));
+  button.disabled=true;button.textContent='Saving…';status.textContent='';
+  try{
+    const result=await (await cloudClient()).addPatientRequestTeamNote(id,content,mentions);
+    textarea.value='';form.querySelectorAll('input[name="teamNoteMention"]:checked').forEach(input=>{input.checked=false;});
+    const item=ITEMS.find(row=>row.id===id);if(item&&!result.replayed){item.teamNoteCount=Math.max(0,Number(item.teamNoteCount)||0)+1;item.teamNoteLastAt=result.note?.createdAt||item.teamNoteLastAt;}
+    status.textContent=`Saved to BHW Cloud · ${new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}. Not sent externally.`;
+    button.disabled=false;button.textContent='Add team note';
+    await loadSelectedTeamNotes(id);
+  }catch(e){status.textContent=String(e.message||'The team note could not be saved.');button.disabled=false;button.textContent='Add team note';}
 }
 
 // ---- reply (text back via Dialpad; fax back when the request came in by fax) ----
@@ -676,7 +750,7 @@ function showActionError(message){const b=document.getElementById('banner');b.cl
 async function loadRoster(){
   try{
     const r=await fetch(`${API}/auth`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'roster'})});
-    if(r.ok){ const d=await r.json(); if(Array.isArray(d.staff)){ ROSTER=d.staff.map(s=>s.name).filter(Boolean); render(); } }
+    if(r.ok){ const d=await r.json(); if(Array.isArray(d.staff)){ ROSTER=d.staff.map(s=>({id:s.id,name:s.name,role:s.role})).filter(s=>s.id&&s.name); render(); } }
   }catch(_){ /* best-effort — the rail still shows anyone already assigned */ }
 }
 

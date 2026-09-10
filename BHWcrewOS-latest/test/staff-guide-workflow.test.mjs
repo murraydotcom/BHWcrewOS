@@ -5,7 +5,7 @@ import test from "node:test";
 test("staff guide teaches the current Patient Requests and alert workflow", async () => {
   const html = await readFile(new URL("../bhw-staff-guide.html", import.meta.url), "utf8");
 
-  assert.match(html, /Updated September 9, 2026/);
+  assert.match(html, /Updated September 10, 2026/);
   assert.match(html, /crewhq\.bhwmedical\.org\/crewos/);
   assert.match(html, /id="patient-requests-training"/);
   assert.match(html, /Patient Requests is the one queue/);
@@ -28,6 +28,10 @@ test("staff guide teaches the current Patient Requests and alert workflow", asyn
   assert.match(html, /Visibility and alerts are separate/);
   assert.match(html, /view-only for provider oversight/);
   assert.match(html, /does not send a patient text/);
+  assert.match(html, /Team Notes — internal staff coordination/);
+  assert.match(html, /Mentioned in team note/);
+  assert.match(html, /Team Notes are not the legal medical record/);
+  assert.match(html, /Team Notes never send an SMS/);
   assert.match(html, /id="website-content-training"/);
   assert.match(html, /CrewHQ → Website Content/);
   assert.match(html, /approved staff ChatGPT may help with wording/);

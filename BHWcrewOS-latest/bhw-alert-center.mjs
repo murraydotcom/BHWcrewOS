@@ -100,13 +100,17 @@ export function safeAlertForRequest(request, actor = {}, now = Date.now()) {
   const overdue = /overdue|breach/.test(normalized(request.sla)) || (Number.isFinite(dueAt) && dueAt < now);
   const urgent = ["urgent", "emergency"].includes(priority) || (Array.isArray(request.safetyFlags) && request.safetyFlags.length > 0);
   const providerOnly = isProviderActor(actor);
-  const providerAttention = requiresProviderAlert(request, actor);
+  const teamNoteUnread = request.teamNoteUnread === true;
+  const teamNoteMentioned = teamNoteUnread && request.teamNoteMentioned === true;
+  const providerAttention = requiresProviderAlert(request, actor) || teamNoteMentioned;
   if (providerOnly && !providerAttention) return null;
 
   let reason = "";
   let severity = "routine";
   if (urgent) { reason = "Urgent review"; severity = "urgent"; }
   else if (category === "escalated" || status === "escalated") { reason = "Escalated"; severity = "urgent"; }
+  else if (teamNoteMentioned) { reason = "Mentioned in team note"; severity = "warning"; }
+  else if (teamNoteUnread) { reason = "New team note"; }
   else if (overdue) { reason = "Overdue"; severity = "warning"; }
   else if (assignedToMe) { reason = "Assigned to you"; }
   else if (providerAttention) { reason = "Needs provider"; severity = "warning"; }

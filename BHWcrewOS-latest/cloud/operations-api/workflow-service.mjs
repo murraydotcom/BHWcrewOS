@@ -19,10 +19,25 @@ import {
   sanitizePatientRequest,
 } from "./workflow-automation.mjs";
 import { normalizeDialpadEvent } from "./dialpad-service.mjs";
+import { noteIsUnread, sanitizeTeamNote, teamNoteIndicator } from "./team-notes.mjs";
 
 const cleanText = (value, max = 4000) => String(value ?? "").trim().slice(0, max);
 const iso = (value = new Date()) => (value instanceof Date ? value : new Date(value)).toISOString();
 const dispatcherOauthClient = new OAuth2Client();
+
+function presentTeamNote(note = {}) {
+  return {
+    id: cleanText(note.id, 80),
+    requestId: cleanText(note.requestId, 100),
+    content: cleanText(note.content, 2000),
+    mentions: (Array.isArray(note.mentions) ? note.mentions : []).slice(0, 10).map((mention) => ({
+      name: cleanText(mention?.name, 120) || "Teammate",
+    })),
+    authorName: cleanText(note.authorName, 120) || "CrewOS staff",
+    authorRole: cleanText(note.authorRole, 80) || "staff",
+    createdAt: cleanText(note.createdAt, 40),
+  };
+}
 
 async function verifyGoogleOidcToken(token, audience) {
   const ticket = await dispatcherOauthClient.verifyIdToken({ idToken: token, audience });
@@ -750,6 +765,70 @@ export function createWorkflowService(repository, {
     return rule;
   }
 
+  async function requireReadableRequest(requestId, user = {}) {
+    const patientRequest = await repository.getPatientRequest(requestId);
+    if (!patientRequest) throw Object.assign(new Error("request was not found"), { status: 404 });
+    if (!canViewRequest(patientRequest, user)) {
+      throw Object.assign(new Error("role is not authorized to view this request"), { status: 403 });
+    }
+    return patientRequest;
+  }
+
+  async function decorateTeamNoteIndicators(rows, user = {}) {
+    if (typeof repository.getTeamNoteReadStates !== "function") {
+      return rows.map((request) => ({ ...request, teamNoteUnread: false, teamNoteMentioned: false }));
+    }
+    const states = await repository.getTeamNoteReadStates(user.sub, rows.map((request) => request.id));
+    return rows.map((request) => {
+      const indicator = teamNoteIndicator(request, states?.[request.id] || {}, user);
+      const { teamNoteLastAuthorId: _authorId, teamNoteLastAuthorName: _authorName, ...visibleRequest } = request;
+      return { ...visibleRequest, ...indicator };
+    });
+  }
+
+  async function listTeamNotes(requestId, user = {}) {
+    const patientRequest = await requireReadableRequest(requestId, user);
+    if (typeof repository.listRequestTeamNotes !== "function") {
+      throw Object.assign(new Error("team notes are not configured"), { status: 503 });
+    }
+    const result = await repository.listRequestTeamNotes(patientRequest.id, user.sub);
+    const notes = Array.isArray(result?.notes) ? result.notes : [];
+    const lastReadAt = cleanText(result?.lastReadAt, 40);
+    return {
+      notes: notes.map(presentTeamNote),
+      unreadCount: notes.filter((note) => noteIsUnread(note, lastReadAt, user)).length,
+      lastReadAt,
+      lastNoteAt: cleanText(notes.at(-1)?.createdAt, 40),
+    };
+  }
+
+  async function createTeamNote(requestId, input, user = {}) {
+    const patientRequest = await requireReadableRequest(requestId, user);
+    if (typeof repository.createRequestTeamNote !== "function") {
+      throw Object.assign(new Error("team notes are not configured"), { status: 503 });
+    }
+    const note = sanitizeTeamNote(input, { requestId: patientRequest.id, user, now: clock() });
+    const result = await repository.createRequestTeamNote(note, user);
+    return { ...result, note: presentTeamNote(result.note) };
+  }
+
+  async function markTeamNotesRead(requestId, input = {}, user = {}) {
+    const patientRequest = await requireReadableRequest(requestId, user);
+    if (typeof repository.markRequestTeamNotesRead !== "function") {
+      throw Object.assign(new Error("team notes are not configured"), { status: 503 });
+    }
+    const latest = cleanText(patientRequest.teamNoteLastAt, 40);
+    if (!latest) return { requestId: patientRequest.id, lastReadAt: "" };
+    const supplied = cleanText(input.readThroughAt || latest, 40);
+    const suppliedDate = new Date(supplied);
+    const current = clock();
+    if (!Number.isFinite(suppliedDate.getTime()) || suppliedDate.getTime() > current.getTime() + 60_000) {
+      throw Object.assign(new Error("valid team-note read timestamp is required"), { status: 400 });
+    }
+    const readThroughAt = supplied > latest ? latest : supplied;
+    return repository.markRequestTeamNotesRead(patientRequest.id, user.sub, readThroughAt, iso(current));
+  }
+
   return {
     automationEnabled,
     requestActions: [...REQUEST_ACTIONS],
@@ -765,19 +844,20 @@ export function createWorkflowService(repository, {
     saveNotificationRule,
     async listRequests(filters, user) {
       const rows = await repository.listPatientRequests(filters, user);
-      return rows
+      return decorateTeamNoteIndicators(rows
         .filter((request) => canViewRequest(request, user))
-        .map((request) => ({ ...request, canAct: canActOnRequest(request, user) }));
+        .map((request) => ({ ...request, canAct: canActOnRequest(request, user) })), user);
     },
     async getRequest(id, user) {
-      const request = await repository.getPatientRequest(id);
-      if (!request) throw Object.assign(new Error("request was not found"), { status: 404 });
-      if (!canViewRequest(request, user)) throw Object.assign(new Error("role is not authorized to view this request"), { status: 403 });
-      return { ...request, canAct: canActOnRequest(request, user) };
+      const request = await requireReadableRequest(id, user);
+      return (await decorateTeamNoteIndicators([{ ...request, canAct: canActOnRequest(request, user) }], user))[0];
     },
     async listCommunications(id, user) {
       await this.getRequest(id, user);
       return repository.listRequestCommunications(id);
     },
+    listTeamNotes,
+    createTeamNote,
+    markTeamNotesRead,
   };
 }

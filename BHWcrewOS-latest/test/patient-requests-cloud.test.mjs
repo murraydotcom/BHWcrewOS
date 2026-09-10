@@ -13,6 +13,12 @@ test("Patient Requests is the command center and Google Chat is only a mirror", 
   assert.match(html, /Patient request work queue/);
   assert.match(script, /listPatientRequests/);
   assert.match(script, /listPatientRequestCommunications/);
+  assert.match(html, /Team Notes/);
+  assert.match(html, /never sent by SMS or copied to Google Chat/);
+  assert.match(script, /listPatientRequestTeamNotes/);
+  assert.match(script, /addPatientRequestTeamNote/);
+  assert.match(script, /markPatientRequestTeamNotesRead/);
+  assert.match(script, /Saved to BHW Cloud/);
   assert.match(script, /patientRequestAction/);
   assert.match(script, /pa_submitted/);
   assert.match(script, /referral_sent/);
@@ -73,6 +79,18 @@ test("Patient Requests uses the dedicated Operations token exchange and one Goog
       assert.equal("to" in body, false, "phone number stays server-side");
       return new Response(JSON.stringify({ ok: true, status: "sent", communicationId: "synthetic-comm-1" }), { status: 202 });
     }
+    if (String(url).endsWith("/team-notes/read")) {
+      return new Response(JSON.stringify({ ok: true, readState: { lastReadAt: JSON.parse(options.body).readThroughAt } }), { status: 200 });
+    }
+    if (String(url).endsWith("/team-notes") && options.method === "POST") {
+      const body = JSON.parse(options.body);
+      assert.ok(body.idempotencyKey);
+      assert.equal(body.content, "Synthetic internal coordination note");
+      return new Response(JSON.stringify({ ok: true, note: { id: "NOTE-synthetic", content: body.content }, replayed: false }), { status: 201 });
+    }
+    if (String(url).endsWith("/team-notes")) {
+      return new Response(JSON.stringify({ notes: [{ id: "NOTE-synthetic", content: "Synthetic internal coordination note" }], unreadCount: 1, lastNoteAt: "2026-09-10T16:00:00.000Z" }), { status: 200 });
+    }
     return new Response(JSON.stringify({ error: "unexpected request" }), { status: 500 });
   };
 
@@ -95,6 +113,12 @@ test("Patient Requests uses the dedicated Operations token exchange and one Goog
       idempotencyKey: "synthetic-message",
     });
     assert.equal(sent.status, "sent");
+    const noteCreated = await client.addPatientRequestTeamNote("synthetic-request-1", "Synthetic internal coordination note", [{ staffId: "synthetic-provider", name: "Synthetic Provider" }]);
+    assert.equal(noteCreated.replayed, false);
+    const notes = await client.listPatientRequestTeamNotes("synthetic-request-1");
+    assert.equal(notes.unreadCount, 1);
+    const read = await client.markPatientRequestTeamNotesRead("synthetic-request-1", notes.lastNoteAt);
+    assert.equal(read.readState.lastReadAt, notes.lastNoteAt);
     assert.equal(calls.filter((call) => call.url === "/.netlify/functions/operations-cloud-token").length, 1, "short-lived token is reused");
   } finally {
     globalThis.sessionStorage = priorStorage;

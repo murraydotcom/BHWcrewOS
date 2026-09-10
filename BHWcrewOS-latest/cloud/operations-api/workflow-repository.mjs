@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { FirestoreOperationsRepository } from "./firestore-repository.mjs";
 import { normalizePhone } from "./dialpad-service.mjs";
+import { COLLECTIONS } from "./schema.mjs";
 import { sanitizePatientRequest, WORKFLOW_DEFINITIONS } from "./workflow-automation.mjs";
 
 const clean = (value, max = 4000) => String(value ?? "").trim().slice(0, max);
@@ -84,6 +85,9 @@ export class FirestoreWorkflowRepository extends FirestoreOperationsRepository {
     this.communicationConsents = this.db.collection("communicationConsents");
     this.smsSuppressions = this.db.collection("smsSuppressions");
     this.notificationRules = this.db.collection("notificationRules");
+    this.patientRequestTeamNotes = this.db.collection(COLLECTIONS.patientRequestTeamNotes);
+    this.patientRequestTeamNoteReads = this.db.collection(COLLECTIONS.patientRequestTeamNoteReads);
+    this.patientRequestTeamNoteMentions = this.db.collection(COLLECTIONS.patientRequestTeamNoteMentions);
   }
 
   async createPatientRequest(value, metadata = {}) {
@@ -203,6 +207,110 @@ export class FirestoreWorkflowRepository extends FirestoreOperationsRepository {
     };
     await this.patientRequests.doc(requestId).set(updated, { merge: true });
     return updated;
+  }
+
+  async createRequestTeamNote(note, user = {}) {
+    const requestRef = this.patientRequests.doc(note.requestId);
+    const noteRef = this.patientRequestTeamNotes.doc(note.id);
+    const readRef = this.patientRequestTeamNoteReads.doc(keyFor(`${note.requestId}:${note.authorId}`));
+    const auditRef = this.auditEvents.doc(crypto.randomUUID());
+    return this.db.runTransaction(async (transaction) => {
+      const [requestDoc, existingNote] = await transaction.getAll(requestRef, noteRef);
+      if (!requestDoc.exists) throw Object.assign(new Error("request was not found"), { status: 404 });
+      if (existingNote.exists) return { note: clone(existingNote.data()), replayed: true };
+      const request = toWorkflowRequest(requestDoc.data());
+      transaction.create(noteRef, note);
+      transaction.set(requestRef, {
+        teamNoteCount: Math.max(0, Number(request.teamNoteCount) || 0) + 1,
+        teamNoteLastAt: note.createdAt,
+        teamNoteLastAuthorId: note.authorId,
+        teamNoteLastAuthorName: note.authorName,
+        updatedAt: request.updatedAt,
+      }, { merge: true });
+      transaction.set(readRef, {
+        requestId: note.requestId,
+        actorReference: keyFor(note.authorId),
+        lastReadAt: note.createdAt,
+        updatedAt: note.createdAt,
+      }, { merge: true });
+      for (const mention of note.mentions) {
+        const mentionRef = this.patientRequestTeamNoteMentions.doc(keyFor(`${note.requestId}:${mention.actorId}`));
+        transaction.set(mentionRef, {
+          requestId: note.requestId,
+          actorReference: keyFor(mention.actorId),
+          lastMentionAt: note.createdAt,
+          lastNoteId: note.id,
+          updatedAt: note.createdAt,
+        }, { merge: true });
+      }
+      transaction.create(auditRef, {
+        eventType: "patient-request.team-note-created",
+        requestId: note.requestId,
+        ...(request.bhwPatientId ? { patientReference: keyFor(request.bhwPatientId) } : {}),
+        actor: note.authorId,
+        actorRole: clean(user.role || note.authorRole || "staff", 80),
+        metadata: {
+          noteId: note.id,
+          characterCount: note.content.length,
+          mentionCount: note.mentions.length,
+        },
+        occurredAt: note.createdAt,
+      });
+      return { note: clone(note), replayed: false };
+    });
+  }
+
+  async listRequestTeamNotes(requestId, actorId) {
+    const id = clean(requestId, 100);
+    const [notesSnapshot, readSnapshot] = await Promise.all([
+      this.patientRequestTeamNotes.where("requestId", "==", id).limit(200).get(),
+      this.patientRequestTeamNoteReads.doc(keyFor(`${id}:${actorId}`)).get(),
+    ]);
+    const notes = notesSnapshot.docs.map((doc) => clone(doc.data()))
+      .sort((left, right) => String(left.createdAt).localeCompare(String(right.createdAt)));
+    return {
+      notes,
+      lastReadAt: readSnapshot.exists ? clean(readSnapshot.data()?.lastReadAt, 40) : "",
+    };
+  }
+
+  async markRequestTeamNotesRead(requestId, actorId, readThroughAt, now) {
+    const id = clean(requestId, 100);
+    const ref = this.patientRequestTeamNoteReads.doc(keyFor(`${id}:${actorId}`));
+    return this.db.runTransaction(async (transaction) => {
+      const current = await transaction.get(ref);
+      const prior = current.exists ? clean(current.data()?.lastReadAt, 40) : "";
+      const lastReadAt = prior && prior > readThroughAt ? prior : readThroughAt;
+      transaction.set(ref, {
+        requestId: id,
+        actorReference: keyFor(actorId),
+        lastReadAt,
+        updatedAt: now,
+      }, { merge: true });
+      return { requestId: id, lastReadAt };
+    });
+  }
+
+  async getTeamNoteReadStates(actorId, requestIds = []) {
+    const allowed = new Set(requestIds.map((value) => clean(value, 100)).filter(Boolean));
+    if (!allowed.size) return {};
+    const ids = [...allowed];
+    const [reads, mentions] = await Promise.all([
+      this.db.getAll(...ids.map((id) => this.patientRequestTeamNoteReads.doc(keyFor(`${id}:${actorId}`)))),
+      this.db.getAll(...ids.map((id) => this.patientRequestTeamNoteMentions.doc(keyFor(`${id}:${actorId}`)))),
+    ]);
+    const states = {};
+    for (const doc of reads) {
+      if (!doc.exists) continue;
+      const value = doc.data();
+      if (allowed.has(value.requestId)) states[value.requestId] = { ...(states[value.requestId] || {}), lastReadAt: clean(value.lastReadAt, 40) };
+    }
+    for (const doc of mentions) {
+      if (!doc.exists) continue;
+      const value = doc.data();
+      if (allowed.has(value.requestId)) states[value.requestId] = { ...(states[value.requestId] || {}), lastMentionAt: clean(value.lastMentionAt, 40) };
+    }
+    return states;
   }
 
   async getPatientMessagingContext(bhwPatientId) {

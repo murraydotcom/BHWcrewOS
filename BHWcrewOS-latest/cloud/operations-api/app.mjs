@@ -499,6 +499,23 @@ export function createOperationsApp({
           decodeURIComponent(requestCommunicationsMatch[1]), workflowActor(actor),
         ) }, cors);
       }
+      const requestTeamNotesMatch = url.pathname.match(/^\/v1\/patient-requests\/([^/]+)\/team-notes$/);
+      if (requestTeamNotesMatch && ["GET", "POST"].includes(request.method)) {
+        if (!workflow) throw apiError(503, "workflow_not_configured", "team notes are not configured");
+        const requestId = decodeURIComponent(requestTeamNotesMatch[1]);
+        if (request.method === "GET") {
+          return json(200, { ok: true, ...(await workflow.listTeamNotes(requestId, workflowActor(actor))) }, cors);
+        }
+        const result = await workflow.createTeamNote(requestId, await readJson(request), workflowActor(actor));
+        return json(result.replayed ? 200 : 201, { ok: true, ...result }, cors);
+      }
+      const requestTeamNotesReadMatch = url.pathname.match(/^\/v1\/patient-requests\/([^/]+)\/team-notes\/read$/);
+      if (requestTeamNotesReadMatch && request.method === "POST") {
+        if (!workflow) throw apiError(503, "workflow_not_configured", "team notes are not configured");
+        return json(200, { ok: true, readState: await workflow.markTeamNotesRead(
+          decodeURIComponent(requestTeamNotesReadMatch[1]), await readJson(request), workflowActor(actor),
+        ) }, cors);
+      }
       const requestStatusMatch = url.pathname.match(/^\/v1\/patient-requests\/([^/]+)\/status$/);
       if (requestStatusMatch && request.method === "PATCH") {
         const patientRequest = await repository.updatePatientRequestStatus(
