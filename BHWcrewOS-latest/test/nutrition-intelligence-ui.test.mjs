@@ -16,6 +16,11 @@ test("Nutrition Intelligence preserves the real-life, physiology, and reconcilia
   assert.match(html, /Cuisines and food traditions to preserve/);
   assert.match(html, /Safe or reliably accepted foods/);
   assert.match(html, /Consents to food-access navigation/);
+  assert.match(html, /Kidney health and real-life food rules/);
+  assert.match(html, /Familiar, cultural, religious, or safe foods to preserve/);
+  assert.match(html, /Salt substitute\/electrolyte product/);
+  assert.match(html, /Potassium interpretation/);
+  assert.match(html, /Protein-energy-wasting risk/);
 });
 
 test("Nutrition Intelligence uses the protected cloud client and exact review lifecycle", async () => {
@@ -40,6 +45,11 @@ test("Nutrition Intelligence uses the protected cloud client and exact review li
   assert.match(app, /draft\?\.evaluation\?\.reviewReadiness\?\.approvalReady === true/);
   assert.match(app, /It remains incomplete and cannot be approved yet/);
   for (const target of ["Carbohydrate", "Fat", "Fiber", "Hydration"]) assert.match(app, new RegExp(`<b>${target}<\\/b>`));
+  for (const target of ["energy", "protein", "sodium", "potassium", "phosphorus", "fluid"]) assert.match(app, new RegExp(`"${target}"`));
+  assert.match(app, /kidneyPanel\(evaluation\.kidney\)/);
+  assert.match(app, /Clinical \+ renal-RDN approval pending/);
+  assert.match(app, /kidney\.patientPublicationAllowed !== true/);
+  assert.match(app, /Kidney patient outputs require BHW clinical-owner and renal-RDN content approval first/);
   assert.match(cloud, /patientNutritionIntelligence\(bhwPatientId = "BHW0000"\)/);
   assert.match(cloud, /savePatientNutritionIntelligence\(bhwPatientId = "BHW0000", input = \{\}\)/);
   assert.doesNotMatch(app, /localStorage\.(?:setItem|getItem)\([^)]*(?:nutrition|patient|assessment)/i);
