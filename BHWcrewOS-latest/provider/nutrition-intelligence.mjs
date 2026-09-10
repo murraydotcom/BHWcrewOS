@@ -42,6 +42,24 @@ function setSaveState(text, state, detail = "") {
   if (detail) $("save-detail").textContent = detail;
 }
 
+function setReviewReadiness(evaluation) {
+  const node = $("review-readiness");
+  const readiness = evaluation?.reviewReadiness;
+  if (!readiness) {
+    node.dataset.state = "not-evaluated";
+    node.innerHTML = "<b>Approval readiness not evaluated</b><span>Run a preview to identify required patient-reported and chart fields.</span>";
+    return;
+  }
+  if (readiness.approvalReady) {
+    node.dataset.state = "ready";
+    node.innerHTML = "<b>Ready for clinician review</b><span>Minimum patient-reported and chart review fields are complete. Safety gates and source reconciliation still apply.</span>";
+    return;
+  }
+  const missing = list(readiness.missingRequiredFacts).map((item) => item.label || label(item.fact)).filter(Boolean);
+  node.dataset.state = "incomplete";
+  node.innerHTML = `<b>Incomplete—approval blocked</b><span>Complete: ${esc(missing.join(", ") || "the required patient-reported and chart review fields")}.</span>`;
+}
+
 function readElement(element) {
   if (element.type === "checkbox") return element.checked;
   if (element.tagName === "SELECT" && element.multiple) return [...element.selectedOptions].map((option) => option.value).filter(Boolean);
@@ -138,6 +156,7 @@ function taskItems(tasks = []) {
 
 function renderEvaluation(evaluation, sourceStatus = "Preview only") {
   activeEvaluation = evaluation;
+  setReviewReadiness(evaluation);
   const gates = evaluation.safetyGates || [];
   const blueprint = evaluation.projections?.personalHealthBlueprint || {};
   $("results").innerHTML = `
@@ -163,7 +182,8 @@ function updateWorkflowControls() {
   const draft = workspace?.draft || null;
   const approved = workspace?.approved || null;
   const published = workspace?.published || null;
-  $("approve").disabled = !draft || !$("review-attestation").checked || formDirty;
+  const approvalReady = draft?.evaluation?.reviewReadiness?.approvalReady === true;
+  $("approve").disabled = !draft || !approvalReady || !$("review-attestation").checked || formDirty;
   $("publish").disabled = !approved || !approved.publicationAllowed || !$("publish-attestation").checked;
   $("print").disabled = !published;
   $("record-status").textContent = published ? `Published v${published.version}` : approved ? `Approved v${approved.version}` : draft ? `Draft r${draft.revision}` : "No saved assessment";
@@ -182,7 +202,10 @@ async function loadWorkspace({ populate = true } = {}) {
     const current = workspace?.approved?.evaluation || workspace?.draft?.evaluation || null;
     if (current?.rulesetVersion) renderEvaluation(current, workspace?.published ? `Published v${workspace.published.version}` : workspace?.approved ? `Approved v${workspace.approved.version}` : `Saved draft r${workspace.draft.revision}`);
     if (workspace?.updatedAt) setSaveState(`Saved to BHW Cloud · ${new Date(workspace.updatedAt).toLocaleString()}`, "saved", "The protected nutrition workspace was read back from Health Core.");
-    else setSaveState("Not saved", "not-saved", "No Nutrition Intelligence record has been saved.");
+    else {
+      setSaveState("Not saved", "not-saved", "No Nutrition Intelligence record has been saved.");
+      setReviewReadiness(null);
+    }
     setConnection("Health Core connected", "complete");
     updateWorkflowControls();
   } catch (error) {
@@ -212,7 +235,9 @@ async function saveDraft() {
     workspace = body.workspace;
     formDirty = false;
     renderEvaluation(workspace.draft.evaluation, `Saved draft r${workspace.draft.revision}`);
-    setSaveState(`Saved to BHW Cloud · ${new Date(body.savedAt).toLocaleString()}`, "saved", `Draft revision ${workspace.draft.revision} was saved and read back. It is not patient-visible.`);
+    const readiness = workspace.draft.evaluation?.reviewReadiness;
+    const readinessDetail = readiness?.approvalReady ? "It is ready for clinician review." : "It remains incomplete and cannot be approved yet.";
+    setSaveState(`Saved to BHW Cloud · ${new Date(body.savedAt).toLocaleString()}`, "saved", `Draft revision ${workspace.draft.revision} was saved and read back. It is not patient-visible. ${readinessDetail}`);
     updateWorkflowControls();
   } catch (error) {
     setSaveState("Not saved", "error", error.message);
