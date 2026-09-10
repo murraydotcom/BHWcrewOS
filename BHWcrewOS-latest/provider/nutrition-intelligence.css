@@ -101,6 +101,8 @@ body[data-p360-view="nutrition"]{
 .patient-evidence .nutrition-fields fieldset:nth-of-type(even){background:color-mix(in srgb,var(--card) 62%,var(--nutrition-opal-sage-soft))}
 .chart-evidence .nutrition-fields fieldset{background:var(--nutrition-chart)}
 .chart-evidence .nutrition-fields fieldset:nth-of-type(even){background:color-mix(in srgb,var(--card) 64%,var(--nutrition-opal-violet-soft))}
+.nutrition-fields fieldset.kidney-fieldset{border-top:3px solid var(--nutrition-opal-blue);background:linear-gradient(145deg,color-mix(in srgb,var(--card) 68%,var(--nutrition-opal-blue-soft)),color-mix(in srgb,var(--card) 74%,var(--nutrition-opal-sage-soft)))}
+.chart-evidence .nutrition-fields fieldset.kidney-fieldset{border-top-color:var(--nutrition-kintsugi);background:linear-gradient(145deg,color-mix(in srgb,var(--card) 68%,var(--nutrition-ironstone)),color-mix(in srgb,var(--card) 74%,var(--nutrition-opal-violet-soft)))}
 .nutrition-fields legend{padding:0 8px;color:var(--ink);font-size:var(--text-sm);font-weight:700}
 .nutrition-fields label{display:grid;gap:6px;min-width:0;color:var(--ink);font-size:var(--text-xs);font-weight:700}
 .nutrition-fields label.wide,.nutrition-fields .wide{grid-column:1/-1}
@@ -156,6 +158,17 @@ body[data-p360-view="nutrition"]{
 .result-summary span{color:var(--muted);font-size:var(--text-xs);font-weight:700}
 .result-summary b{font-size:var(--text-sm);overflow-wrap:anywhere}
 .result-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.kidney-result{grid-column:1/-1;border-top:3px solid var(--nutrition-kintsugi);background:linear-gradient(145deg,color-mix(in srgb,var(--card) 76%,var(--nutrition-opal-blue-soft)),var(--card) 48%,color-mix(in srgb,var(--card) 78%,var(--nutrition-opal-violet-soft)))}
+.kidney-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.kidney-summary>div{display:grid;gap:4px;padding:11px;border:1px solid var(--line);border-left:3px solid var(--nutrition-opal-blue);border-radius:8px;background:var(--card)}
+.kidney-summary>div:nth-child(2){border-left-color:var(--nutrition-opal-sage)}
+.kidney-summary>div:nth-child(3){border-left-color:var(--nutrition-opal-violet)}
+.kidney-summary>div:nth-child(4){border-left-color:var(--nutrition-kintsugi)}
+.kidney-summary span{color:var(--muted);font-size:var(--text-xs);font-weight:700}
+.kidney-summary b{font-size:var(--text-sm);overflow-wrap:anywhere}
+.kidney-decisions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.kidney-decisions .result-item:nth-child(2n){border-left-color:var(--nutrition-opal-sage)}
+.kidney-decisions .result-item:nth-child(3n){border-left-color:var(--nutrition-opal-violet)}
 .result-list{display:grid;gap:8px}
 .result-item{padding:11px;border:1px solid var(--line);border-left:3px solid var(--nutrition-opal-blue);border-radius:8px;background:var(--card)}
 .result-item b{display:block;font-size:var(--text-sm)}
@@ -188,6 +201,7 @@ body[data-p360-view="nutrition"]{
   .checkbox-grid,.alarm-box{grid-template-columns:1fr}
   .checkbox-grid .field-label,.alarm-box>b{grid-column:auto}
   .review-workflow,.result-summary{grid-template-columns:1fr}
+  .kidney-summary,.kidney-decisions{grid-template-columns:1fr}
   .workflow-actions{display:grid}
   .workflow-actions .btn{width:100%}
 }

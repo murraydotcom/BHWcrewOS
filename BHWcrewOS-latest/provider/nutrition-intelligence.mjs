@@ -96,8 +96,8 @@ function collectFacts() {
   inputFacts.any_gi_alarm = ["blood_visible", "black_tarry", "persistent_vomiting", "unable_to_retain_fluids", "severe_or_progressive_pain", "jaundice"].some((key) => inputFacts[key] === true);
   return {
     patientRef: PATIENT_ID,
-    schemaVersion: "1.2.0",
-    questionnaireVersion: "1.2.0",
+    schemaVersion: "1.3.0",
+    questionnaireVersion: "1.3.0",
     sourceModel: "questionnaire-reflects-real-life_chart-reflects-physiology_intelligence-reconciles-both",
     patientReported,
     chartFacts,
@@ -154,6 +154,30 @@ function taskItems(tasks = []) {
   return tasks.length ? tasks.map((item) => `<div class="result-item warning"><b>${esc(label(item.taskType))}</b><p>${esc(label(item.priority))} priority · due within ${esc(item.dueWithinHours)} hour(s) after approval · proposal only</p><small>${esc(item.reasonCodes.map(label).join(", "))}</small></div>`).join("") : '<div class="empty-note">No operational task proposal from the current inputs.</div>';
 }
 
+function kidneyDecisionText(decision = {}) {
+  if (decision.status === "blocked") return `${label(decision.direction || "blocked")} · no target released`;
+  if (decision.status === "follow-existing-plan" && decision.target != null) return `${label(decision.direction)} · ${Number(decision.target).toLocaleString()} ${decision.unit || ""}`.trim();
+  const anchor = decision.referenceAnchor != null ? ` · review anchor ${Number(decision.referenceAnchor).toLocaleString()} ${decision.unit || ""}` : "";
+  return `${label(decision.direction || decision.status)}${anchor}`;
+}
+
+function kidneyPanel(kidney = {}) {
+  if (!kidney || kidney.status === "not-applicable") {
+    return '<section class="panel kidney-result"><div class="panel-head"><h3>Kidney nutrition</h3><span class="badge neutral">Not applicable</span></div><div class="panel-body"><div class="empty-note">No chart-confirmed kidney pathway is active in this preview.</div></div></section>';
+  }
+  const decisions = kidney.nutrientDecisions || {};
+  const missing = kidney.dataCompleteness?.missingFacts || [];
+  return `<section class="panel kidney-result"><div class="panel-head"><div><h3>Kidney nutrition pathway</h3><span class="panel-subtitle">Module ${esc(kidney.moduleVersion || "1.0.0")} · chart physiology controls clinical decisions</span></div><span class="badge warning">Clinical + renal-RDN approval pending</span></div><div class="panel-body result-list">
+    <div class="kidney-summary"><div><span>Pathway</span><b>${esc(label(kidney.pathway))}</b></div><div><span>CKD stage</span><b>${esc(kidney.ckdStage || "Not applicable")}</b></div><div><span>Albuminuria</span><b>${esc(kidney.albuminuriaStatus || "Not assessed")}</b></div><div><span>Data readiness</span><b>${esc(label(kidney.dataCompleteness?.status))}</b></div></div>
+    ${missing.length ? `<div class="gate-block"><b>Kidney plan needs current chart context</b><p>${esc(missing.map(label).join(", "))}</p></div>` : ""}
+    <div class="kidney-decisions">${["energy", "protein", "sodium", "potassium", "phosphorus", "fluid"].map((code) => `<div class="result-item"><b>${esc(label(code))}</b><p>${esc(kidneyDecisionText(decisions[code]))}</p><small>${esc(list(decisions[code]?.rationaleCodes).map(label).join(" · "))}</small></div>`).join("")}</div>
+    <div class="result-item"><b>Food-first and natural-source strategies</b>${chips(kidney.foodStrategyCodes)}<small>Suggestions must preserve culture, sensory-safe foods, affordability, GI tolerance, and adequacy. Normal potassium or phosphorus does not justify a blanket restriction.</small></div>
+    <div class="result-item"><b>Supplement and shake safety</b>${chips(kidney.supplementSafetyCodes)}<small>No product is automatically selected or called kidney safe.</small></div>
+    <div class="result-item"><b>Monitoring</b>${chips(kidney.monitoringCodes)}</div>
+    <div class="natural-disclosure"><b>Publication boundary:</b> This kidney plan is clinician-only synthetic review material. It cannot enter Patient 360, the Personal Health Blueprint, or printable education until the kidney module has both clinical-owner and renal-RDN approval.</div>
+  </div></section>`;
+}
+
 function renderEvaluation(evaluation, sourceStatus = "Preview only") {
   activeEvaluation = evaluation;
   setReviewReadiness(evaluation);
@@ -167,6 +191,7 @@ function renderEvaluation(evaluation, sourceStatus = "Preview only") {
     <div class="result-grid">
       <section class="panel"><div class="panel-head"><h3>Safety gates</h3><span class="badge ${gates.length ? "warning" : "neutral"}">Runs first</span></div><div class="panel-body result-list">${gateList(gates)}</div></section>
       <section class="panel"><div class="panel-head"><h3>Phenotypes—not diagnoses</h3><span class="badge neutral">Evidence-linked</span></div><div class="panel-body">${chips(evaluation.phenotypeCodes)}</div></section>
+      ${kidneyPanel(evaluation.kidney)}
       <section class="panel"><div class="panel-head"><h3>GI and BHW 5R</h3><span class="badge neutral">Existing Blueprint model</span></div><div class="panel-body result-list"><div class="result-item"><b>Presentation profiles</b>${chips(evaluation.gi?.presentationProfiles)}</div><div class="result-item"><b>Confirmed chart conditions</b>${chips(evaluation.gi?.confirmedConditions)}</div><div class="result-item"><b>Eligible GI actions</b>${chips(evaluation.gi?.eligibleInterventions)}</div><div class="result-item"><b>5R candidates</b>${chips(evaluation.gi?.fiveR?.candidates)}<small>Steps are optional clinical lenses—not a universal sequence or diagnosis.</small></div></div></section>
       <section class="panel"><div class="panel-head"><h3>Dietary pattern and targets</h3><span class="badge neutral">Clinician review</span></div><div class="panel-body result-list"><div class="result-item"><b>Overlays and modifiers</b>${chips(evaluation.dietaryPattern?.overlays)}</div><div class="result-item"><b>Energy</b><p>${esc(targetText(evaluation.targets?.energy))}</p></div><div class="result-item"><b>Protein</b><p>${esc(targetText(evaluation.targets?.protein))}</p></div><div class="result-item"><b>Carbohydrate</b><p>${esc(targetText(evaluation.targets?.carbohydrate))}</p></div><div class="result-item"><b>Fat</b><p>${esc(targetText(evaluation.targets?.fat))}</p></div><div class="result-item"><b>Fiber</b><p>${esc(targetText(evaluation.targets?.fiber))}</p></div><div class="result-item"><b>Hydration</b><p>${esc(targetText(evaluation.targets?.hydration))}</p></div></div></section>
       <section class="panel"><div class="panel-head"><h3>Natural and food-first sources</h3><span class="badge neutral">Filter, then rank</span></div><div class="panel-body result-list">${foodSources(evaluation.foodFirst)}</div></section>
@@ -176,6 +201,7 @@ function renderEvaluation(evaluation, sourceStatus = "Preview only") {
       <section class="panel"><div class="panel-head"><h3>Patient 360 and Blueprint output</h3><span class="badge ${blueprint.status === "blocked" ? "warning" : "neutral"}">${esc(label(blueprint.status))}</span></div><div class="panel-body result-list"><div class="result-item"><b>Patient 360</b><p>Only a separately published provider-approved version becomes visible.</p></div><div class="result-item"><b>Personal Health Blueprint</b><p>Nutrition, hydration, food-first, supplement, GI/5R, and monitoring sections are sent as source material to the existing Blueprint review. Blueprint approval is never automatic.</p></div><div class="result-item"><b>Printable education</b><p>Generated from the same approved version, with food-safety and natural-source disclosures.</p></div></div></section>
       <section class="panel"><div class="panel-head"><h3>Explicit safeguards</h3><span class="badge neutral">Must not occur</span></div><div class="panel-body">${chips(evaluation.prohibited)}</div></section>
     </div>`;
+  updateWorkflowControls();
 }
 
 function updateWorkflowControls() {
@@ -183,6 +209,15 @@ function updateWorkflowControls() {
   const approved = workspace?.approved || null;
   const published = workspace?.published || null;
   const approvalReady = draft?.evaluation?.reviewReadiness?.approvalReady === true;
+  const kidneyPending = activeEvaluation?.kidney?.status && activeEvaluation.kidney.status !== "not-applicable" && activeEvaluation.kidney.patientPublicationAllowed !== true;
+  if (kidneyPending) {
+    $("publication-allowed").checked = false;
+    $("publication-allowed").disabled = true;
+    $("publication-allowed").closest("label").title = "Kidney patient outputs require BHW clinical-owner and renal-RDN content approval first.";
+  } else {
+    $("publication-allowed").disabled = false;
+    $("publication-allowed").closest("label").title = "";
+  }
   $("approve").disabled = !draft || !approvalReady || !$("review-attestation").checked || formDirty;
   $("publish").disabled = !approved || !approved.publicationAllowed || !$("publish-attestation").checked;
   $("print").disabled = !published;
@@ -197,7 +232,7 @@ async function loadWorkspace({ populate = true } = {}) {
     if (!client) throw new Error("The protected Clinical Intelligence connection is not configured.");
     const body = await client.patientNutritionIntelligence(PATIENT_ID);
     workspace = body.workspace || null;
-    $("questionnaire-version").textContent = `Questionnaire v${body.questionnaire?.version || "1.2"} · ${body.questionnaire?.fields?.length || 0} fields`;
+    $("questionnaire-version").textContent = `Questionnaire v${body.questionnaire?.version || "1.3"} · ${body.questionnaire?.fields?.length || 0} fields`;
     if (populate && workspace?.draft?.content) populateForm(workspace.draft.content);
     const current = workspace?.approved?.evaluation || workspace?.draft?.evaluation || null;
     if (current?.rulesetVersion) renderEvaluation(current, workspace?.published ? `Published v${workspace.published.version}` : workspace?.approved ? `Approved v${workspace.approved.version}` : `Saved draft r${workspace.draft.revision}`);
