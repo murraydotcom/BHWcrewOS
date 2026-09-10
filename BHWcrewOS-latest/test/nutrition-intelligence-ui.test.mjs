@@ -28,6 +28,7 @@ test("Nutrition Intelligence uses the protected cloud client and exact review li
   assert.match(html, /crew-provider-gate\.js/);
   assert.match(html, /Synthetic-only implementation pilot/);
   assert.match(html, /Not saved/);
+  assert.match(html, /Approval readiness not evaluated/);
   assert.match(app, /Saving…/);
   assert.match(app, /Saved to BHW Cloud/);
   assert.match(app, /patientNutritionIntelligence\(PATIENT_ID\)/);
@@ -35,6 +36,9 @@ test("Nutrition Intelligence uses the protected cloud client and exact review li
   assert.match(app, /action: "save-draft"/);
   assert.match(app, /action: "approve"/);
   assert.match(app, /action: "publish"/);
+  assert.match(app, /Incomplete—approval blocked/);
+  assert.match(app, /draft\?\.evaluation\?\.reviewReadiness\?\.approvalReady === true/);
+  assert.match(app, /It remains incomplete and cannot be approved yet/);
   for (const target of ["Carbohydrate", "Fat", "Fiber", "Hydration"]) assert.match(app, new RegExp(`<b>${target}<\\/b>`));
   assert.match(cloud, /patientNutritionIntelligence\(bhwPatientId = "BHW0000"\)/);
   assert.match(cloud, /savePatientNutritionIntelligence\(bhwPatientId = "BHW0000", input = \{\}\)/);
