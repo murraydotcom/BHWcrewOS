@@ -181,6 +181,11 @@ body[data-p360-view="nutrition"]{
 .food-source p{margin:5px 0;color:var(--muted);font-size:var(--text-xs);line-height:1.5}
 .food-source ul{margin:7px 0 0;padding-left:18px;color:var(--muted)}
 .food-source li{margin:3px 0;font-size:var(--text-xs)}
+.food-source-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
+.kidney-education-card:nth-child(2n){border-left-color:var(--nutrition-opal-violet);background:linear-gradient(145deg,var(--card),color-mix(in srgb,var(--card) 76%,var(--nutrition-opal-violet-soft)))}
+.kidney-education-card:nth-child(3n){border-left-color:var(--nutrition-opal-blue);background:linear-gradient(145deg,var(--card),color-mix(in srgb,var(--card) 76%,var(--nutrition-opal-blue-soft)))}
+.kidney-education-card .panel-head{align-items:flex-start;margin-bottom:4px}
+.kidney-education-card .field-label{display:block;margin-top:9px}
 .natural-disclosure{padding:12px;border:1px solid var(--line);border-left:3px solid var(--nutrition-kintsugi);border-radius:8px;background:color-mix(in srgb,var(--card) 82%,var(--gold-soft));font-size:var(--text-xs);line-height:1.55}
 .gate-block{padding:12px;border:1px solid color-mix(in srgb,var(--coral) 45%,var(--line));border-left:4px solid var(--coral);border-radius:9px;background:color-mix(in srgb,var(--card) 86%,var(--coral-soft))}
 .gate-block b{font-size:var(--text-sm)}
@@ -198,6 +203,7 @@ body[data-p360-view="nutrition"]{
   .evidence-model,.result-grid{grid-template-columns:1fr}
   .nutrition-fields fieldset{grid-template-columns:1fr}
   .nutrition-fields label.wide,.nutrition-fields .wide{grid-column:auto}
+  .food-source-grid{grid-template-columns:1fr}
   .checkbox-grid,.alarm-box{grid-template-columns:1fr}
   .checkbox-grid .field-label,.alarm-box>b{grid-column:auto}
   .review-workflow,.result-summary{grid-template-columns:1fr}
