@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<script src="/crew-provider-gate.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>BHW CrewOS — Patient Worklist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="patient-operations.css">
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+  <div class="brand"><h1>BHW CrewOS</h1><div>Patient Operations</div></div>
+  <div class="nav-label">Selected patient</div>
+  <a class="nav" href="patient-registry.html">◎ Patient Registry</a>
+  <a class="nav" href="patient-360.html">◉ Whole-Person Clinical Map</a>
+  <a class="nav" href="patient-360-atlas.html">◇ Body-System Atlas</a>
+  <a class="nav active" href="patient-operations.html">▦ Patient Worklist</a>
+  <div class="nav-label">Operations</div>
+  <a class="nav" href="/bhw-requests.html">Patient Requests</a>
+  <a class="nav" href="workflow.html">24-Hour Documentation</a>
+  <a class="nav" href="lab-dashboard.html">Laboratory Work Queues</a>
+  <div class="side-note">CrewOS coordinates ownership, due dates, follow-through, and closure.<br><br>Health Core remains the clinical record.</div>
+</aside>
+<main class="main">
+  <header class="top"><div class="crumb">Patient Operations · <b>Patient Worklist</b></div><div class="tools"><span class="badge warning" id="connection-status">Verifying context</span><button class="btn" id="refresh" type="button">Refresh</button><button class="btn" id="theme" type="button">Black Opal</button></div></header>
+  <div class="content" id="operations-root">
+    <section class="hero">
+      <div class="hero-grid"><div><span class="eyebrow">One patient · operational execution</span><h1>Patient Worklist</h1><p>Open requests, ownership, priorities, waiting states, and follow-through for the patient selected in the protected Patient Registry.</p></div><aside class="context-card"><span>Selected patient</span><b id="patient-context-label">Verifying…</b><small id="patient-context-detail">A Registry-issued treatment context is required.</small></aside></div>
+    </section>
+    <section class="kpis" id="operations-kpis"></section>
+    <section class="panel">
+      <div class="panel-head"><div><h2>Current operational work</h2><p>Clinical decisions remain in Health Core. This view coordinates the work required to carry them out.</p></div><div class="filters"><input id="work-search" type="search" placeholder="Search work"><select id="work-status"><option value="open">Open work</option><option value="all">All work</option><option value="urgent">Urgent / high</option><option value="waiting">Waiting</option><option value="completed">Completed</option></select></div></div>
+      <div class="panel-body"><div class="work-list" id="patient-work-list"><div class="empty">Loading patient work…</div></div></div>
+    </section>
+    <div class="boundary"><b>Operational boundary:</b> Patient Operations may display and route requests, assignments, due dates, contact work, referral follow-through, document retrieval, and closure status. It does not independently create diagnoses, sign notes, change medications, authorize laboratory orders, approve interpretations, or modify the canonical care plan.</div>
+  </div>
+</main>
+</div>
+<script type="module" src="patient-operations.mjs"></script>
+</body>
+</html>
