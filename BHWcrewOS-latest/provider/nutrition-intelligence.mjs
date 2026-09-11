@@ -1,4 +1,5 @@
 import { CREW_SESSION_EXPIRED, createEncounterCloudClient } from "./cloud-queue.mjs";
+import { centimetersToInches, inchesToCentimeters, kilogramsToPounds, poundsToKilograms, waistToHipRatio } from "./nutrition-unit-conversions.mjs";
 
 const requestedPatientId = new URLSearchParams(location.search).get("patient") || "";
 const PATIENT_ID = /^BHW\d{4}$/.test(requestedPatientId) ? requestedPatientId : "BHW0000";
@@ -12,6 +13,40 @@ let client = null;
 let workspace = null;
 let activeEvaluation = null;
 let formDirty = false;
+
+function setNumericValue(id, value) {
+  const element = $(id);
+  if (element) element.value = value === null ? "" : String(value);
+}
+
+function updateWaistHipRatio() {
+  setNumericValue("waist-hip-ratio", waistToHipRatio($("waist-cm")?.value, $("hip-cm")?.value));
+}
+
+function syncConvertedInput(sourceId, targetId, converter, after = null) {
+  const source = $(sourceId);
+  if (!source) return;
+  source.addEventListener("input", () => {
+    setNumericValue(targetId, converter(source.value));
+    if (after) after();
+  });
+}
+
+function syncConvenienceMeasurements() {
+  setNumericValue("calculation-weight-lb", kilogramsToPounds($("calculation-weight-kg")?.value));
+  setNumericValue("waist-in", centimetersToInches($("waist-cm")?.value));
+  setNumericValue("hip-in", centimetersToInches($("hip-cm")?.value));
+  updateWaistHipRatio();
+}
+
+function wireMeasurementConverters() {
+  syncConvertedInput("calculation-weight-lb", "calculation-weight-kg", poundsToKilograms);
+  syncConvertedInput("calculation-weight-kg", "calculation-weight-lb", kilogramsToPounds);
+  syncConvertedInput("waist-in", "waist-cm", inchesToCentimeters, updateWaistHipRatio);
+  syncConvertedInput("waist-cm", "waist-in", centimetersToInches, updateWaistHipRatio);
+  syncConvertedInput("hip-in", "hip-cm", inchesToCentimeters, updateWaistHipRatio);
+  syncConvertedInput("hip-cm", "hip-in", centimetersToInches, updateWaistHipRatio);
+}
 
 function setTheme(theme) {
   document.documentElement.dataset.theme = theme;
@@ -96,7 +131,7 @@ function collectFacts() {
   inputFacts.any_gi_alarm = ["blood_visible", "black_tarry", "persistent_vomiting", "unable_to_retain_fluids", "severe_or_progressive_pain", "jaundice"].some((key) => inputFacts[key] === true);
   return {
     patientRef: PATIENT_ID,
-    schemaVersion: "1.3.0",
+    schemaVersion: "1.3.1",
     questionnaireVersion: "1.3.0",
     sourceModel: "questionnaire-reflects-real-life_chart-reflects-physiology_intelligence-reconciles-both",
     patientReported,
@@ -126,6 +161,7 @@ function setElementValue(element, value) {
 function populateForm(content = {}) {
   const facts = content.inputFacts || { ...(content.patientReported || {}), ...(content.chartFacts || {}) };
   for (const element of document.querySelectorAll("[data-fact]")) setElementValue(element, facts[element.dataset.fact]);
+  syncConvenienceMeasurements();
   formDirty = false;
 }
 
@@ -349,6 +385,7 @@ function wire() {
   $("review-attestation").addEventListener("change", updateWorkflowControls);
   $("publication-allowed").addEventListener("change", updateWorkflowControls);
   $("publish-attestation").addEventListener("change", updateWorkflowControls);
+  wireMeasurementConverters();
   $("nutrition-form").addEventListener("input", (event) => {
     if (!["review-attestation", "publication-allowed", "publish-attestation"].includes(event.target.id)) {
       formDirty = true;

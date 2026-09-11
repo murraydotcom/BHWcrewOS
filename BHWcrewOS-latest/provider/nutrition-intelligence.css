@@ -112,6 +112,8 @@ body[data-p360-view="nutrition"]{
 .nutrition-fields input[type="checkbox"]{accent-color:var(--nutrition-opal-blue)}
 .chart-evidence .nutrition-fields input[type="checkbox"]{accent-color:var(--nutrition-opal-violet)}
 .nutrition-fields input:not([type="checkbox"]),.nutrition-fields select,.nutrition-fields textarea{width:100%;min-width:0;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink);font:500 var(--text-sm)/1.45 var(--sans);padding:9px 10px}
+.nutrition-fields .derived-measurement{padding:9px;border:1px solid var(--line);border-left:3px solid var(--nutrition-kintsugi);border-radius:9px;background:linear-gradient(145deg,var(--card),color-mix(in srgb,var(--card) 80%,var(--gold-soft)))}
+.nutrition-fields input[readonly]{background:color-mix(in srgb,var(--paper) 78%,var(--nutrition-opal-blue-soft));color:var(--ink);font-weight:800}
 .nutrition-fields select[multiple]{min-height:126px}
 .nutrition-fields input:focus,.nutrition-fields select:focus{border-color:var(--page-accent);outline:2px solid color-mix(in srgb,var(--page-accent) 20%,transparent);outline-offset:0}
 

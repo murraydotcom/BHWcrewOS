@@ -112,7 +112,13 @@
               <label><span>Age</span><input type="number" min="0" max="120" data-fact="age_years" data-source="chart"></label>
               <label><span>Equation sex</span><select data-fact="sex_for_equation" data-source="chart"><option value="">Not selected</option><option value="female">Female</option><option value="male">Male</option></select></label>
               <label><span>Height</span><input type="number" min="50" max="250" data-fact="height_cm" data-source="chart" placeholder="cm"></label>
-              <label><span>Calculation weight</span><input type="number" min="10" max="400" step="0.1" data-fact="calculation_weight_kg" data-source="chart" placeholder="kg"></label>
+              <label><span>Calculation weight (lb)</span><input id="calculation-weight-lb" type="number" min="22" max="882" step="0.1" inputmode="decimal" placeholder="Enter pounds"><small>Entry helper; converted to canonical kilograms.</small></label>
+              <label><span>Calculation weight (kg)</span><input id="calculation-weight-kg" type="number" min="10" max="400" step="0.1" inputmode="decimal" data-fact="calculation_weight_kg" data-source="chart" placeholder="kg"></label>
+              <label><span>Waist circumference (in)</span><input id="waist-in" type="number" min="1" max="158" step="0.1" inputmode="decimal" placeholder="inches"></label>
+              <label><span>Waist circumference (cm)</span><input id="waist-cm" type="number" min="1" max="400" step="0.1" inputmode="decimal" data-fact="waist_circumference_cm" data-source="chart" placeholder="cm"></label>
+              <label><span>Hip circumference (in)</span><input id="hip-in" type="number" min="1" max="158" step="0.1" inputmode="decimal" placeholder="inches"></label>
+              <label><span>Hip circumference (cm)</span><input id="hip-cm" type="number" min="1" max="400" step="0.1" inputmode="decimal" data-fact="hip_circumference_cm" data-source="chart" placeholder="cm"></label>
+              <label class="derived-measurement"><span>Waist-to-hip ratio</span><input id="waist-hip-ratio" type="number" step="0.001" data-fact="waist_to_hip_ratio" data-source="chart" readonly><small>Derived as waist ÷ hip. Context only—no automatic diagnosis or weight-loss recommendation.</small></label>
               <label><span>Weight change</span><input type="number" min="-100" max="100" step="0.1" data-fact="weight_change_pct" data-source="chart" placeholder="%"></label>
               <label><span>Interval</span><input type="number" min="1" max="730" data-fact="weight_interval_days" data-source="chart" placeholder="days"></label>
               <label><span>Sarcopenia status</span><select data-fact="sarcopenia_status" data-source="chart"><option value="">Not assessed</option><option value="none">No identified risk</option><option value="risk">At risk</option><option value="confirmed">Confirmed</option></select></label>

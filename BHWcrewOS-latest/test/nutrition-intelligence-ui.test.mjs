@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import {
+  centimetersToInches,
+  inchesToCentimeters,
+  kilogramsToPounds,
+  poundsToKilograms,
+  waistToHipRatio,
+} from "../provider/nutrition-unit-conversions.mjs";
 
 const provider = (path) => readFile(new URL(`../provider/${path}`, import.meta.url), "utf8");
 
@@ -26,6 +33,25 @@ test("Nutrition Intelligence preserves the real-life, physiology, and reconcilia
   assert.match(html, /Enteric hyperoxaluria risk/);
   assert.match(html, /Infection stone or positive culture/);
   assert.match(html, /Anemia in CKD present/);
+  assert.match(html, /Calculation weight \(lb\)/);
+  assert.match(html, /Calculation weight \(kg\)/);
+  assert.match(html, /Waist circumference \(in\)/);
+  assert.match(html, /Hip circumference \(cm\)/);
+  assert.match(html, /Context only—no automatic diagnosis or weight-loss recommendation/);
+});
+
+test("measurement converters preserve canonical kg and cm values", () => {
+  assert.equal(poundsToKilograms(220), 99.8);
+  assert.equal(kilogramsToPounds(100), 220.5);
+  assert.equal(inchesToCentimeters(40), 101.6);
+  assert.equal(centimetersToInches(101.6), 40);
+  assert.equal(waistToHipRatio(88.9, 101.6), 0.875);
+
+  for (const converter of [poundsToKilograms, kilogramsToPounds, inchesToCentimeters, centimetersToInches]) {
+    assert.equal(converter(""), null);
+    assert.equal(converter(-1), null);
+  }
+  assert.equal(waistToHipRatio(90, 0), null);
 });
 
 test("Nutrition Intelligence uses the protected cloud client and exact review lifecycle", async () => {
