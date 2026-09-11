@@ -79,6 +79,7 @@ function syncConvertedInput(sourceId, targetId, converter, after = null) {
 }
 
 function syncConvenienceMeasurements() {
+  setNumericValue("height-in", centimetersToInches($("height-cm")?.value));
   setNumericValue("calculation-weight-lb", kilogramsToPounds($("calculation-weight-kg")?.value));
   setNumericValue("waist-in", centimetersToInches($("waist-cm")?.value));
   setNumericValue("hip-in", centimetersToInches($("hip-cm")?.value));
@@ -86,6 +87,8 @@ function syncConvenienceMeasurements() {
 }
 
 function wireMeasurementConverters() {
+  syncConvertedInput("height-in", "height-cm", inchesToCentimeters);
+  syncConvertedInput("height-cm", "height-in", centimetersToInches);
   syncConvertedInput("calculation-weight-lb", "calculation-weight-kg", poundsToKilograms);
   syncConvertedInput("calculation-weight-kg", "calculation-weight-lb", kilogramsToPounds);
   syncConvertedInput("waist-in", "waist-cm", inchesToCentimeters, updateWaistHipRatio);
