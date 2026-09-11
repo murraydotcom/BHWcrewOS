@@ -137,5 +137,5 @@ test("bridge styling inherits the existing Opal and Ironstone tokens", () => {
   assert.match(css, /var\(--edge-gold\)/);
   assert.match(css, /clinical-map-connection-grid/);
   assert.match(css, /clinical-map-destination-grid/);
-  assert.doesNotMatch(css, /font-family:\s*(?!var)/);
+  assert.doesNotMatch(css, /font-family:/);
 });
