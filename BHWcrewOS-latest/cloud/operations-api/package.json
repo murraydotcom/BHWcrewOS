@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "node server.mjs",
-    "check": "node --check server.mjs && node --check app.mjs && node --check auth.mjs && node --check domain.mjs && node --check firestore-repository.mjs && node --check workflow-repository.mjs && node --check workflow-automation.mjs && node --check workflow-service.mjs && node --check dialpad-service.mjs && node --check google-chat-service.mjs && node --check schema.mjs && node --check site-content.mjs"
+    "check": "node --check server.mjs && node --check app.mjs && node --check auth.mjs && node --check clinical-context.mjs && node --check clinical-context-app.mjs && node --check clinical-context-repository.mjs && node --check domain.mjs && node --check firestore-repository.mjs && node --check workflow-repository.mjs && node --check workflow-automation.mjs && node --check workflow-service.mjs && node --check dialpad-service.mjs && node --check google-chat-service.mjs && node --check schema.mjs && node --check site-content.mjs"
   },
   "dependencies": {
     "@google-cloud/firestore": "7.11.6",

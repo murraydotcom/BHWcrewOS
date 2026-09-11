@@ -1,0 +1,42 @@
+name: Patient workspace context tests
+
+on:
+  pull_request:
+    paths:
+      - "BHWcrewOS-latest/cloud/operations-api/clinical-context*.mjs"
+      - "BHWcrewOS-latest/cloud/operations-api/server.mjs"
+      - "BHWcrewOS-latest/cloud/operations-api/package.json"
+      - "BHWcrewOS-latest/provider/patient-registry.html"
+      - "BHWcrewOS-latest/provider/patient-360*.html"
+      - "BHWcrewOS-latest/provider/patient-workspace-context*.mjs"
+      - "BHWcrewOS-latest/provider/patient-workspace-launcher.mjs"
+      - "BHWcrewOS-latest/provider/clinical-map-entry.mjs"
+      - "BHWcrewOS-latest/provider/patient-operations.*"
+      - "BHWcrewOS-latest/test/patient-workspace-context.test.mjs"
+      - ".github/workflows/patient-workspace-context-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run patient workspace handoff tests
+        run: node --test BHWcrewOS-latest/test/patient-workspace-context.test.mjs
+      - name: Check browser and Operations API modules
+        run: |
+          node --check BHWcrewOS-latest/provider/patient-workspace-context-client.mjs
+          node --check BHWcrewOS-latest/provider/patient-workspace-context.mjs
+          node --check BHWcrewOS-latest/provider/patient-workspace-launcher.mjs
+          node --check BHWcrewOS-latest/provider/clinical-map-entry.mjs
+          node --check BHWcrewOS-latest/provider/patient-operations.mjs
+          node --check BHWcrewOS-latest/cloud/operations-api/clinical-context.mjs
+          node --check BHWcrewOS-latest/cloud/operations-api/clinical-context-app.mjs
+          node --check BHWcrewOS-latest/cloud/operations-api/clinical-context-repository.mjs
+          node --check BHWcrewOS-latest/cloud/operations-api/server.mjs
