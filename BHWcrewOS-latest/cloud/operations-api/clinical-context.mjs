@@ -132,15 +132,21 @@ export function validatePatientWorkspaceContext(record = {}, input = {}, actor =
   const staff = requirePatientWorkspaceActor(actor);
   const destination = normalizePatientWorkspaceDestination(input.destination);
   const now = new Date(options.now || new Date());
-  if (!record || record.schemaVersion !== PATIENT_WORKSPACE_CONTEXT_SCHEMA_VERSION
-    || record.status !== "issued" || record.destination !== destination
+  if (!record || record.schemaVersion !== PATIENT_WORKSPACE_CONTEXT_SCHEMA_VERSION) {
+    throw apiError(403, "context_not_authorized", "patient workspace context is not authorized for this staff member and destination");
+  }
+  if (record.revokedAt || record.status === "revoked") {
+    throw apiError(410, "context_revoked", "patient workspace context was revoked");
+  }
+  if (record.consumedAt || record.status === "consumed") {
+    throw apiError(409, "context_already_used", "patient workspace context was already used");
+  }
+  if (record.status !== "issued" || record.destination !== destination
     || record.staffId !== staff.staffId || record.actorId !== staff.actorId
     || record.purposeOfUse !== "treatment" || !Array.isArray(record.scopes)
     || !record.scopes.includes(PATIENT_WORKSPACE_DESTINATIONS[destination].requiredScope)) {
     throw apiError(403, "context_not_authorized", "patient workspace context is not authorized for this staff member and destination");
   }
-  if (record.revokedAt) throw apiError(410, "context_revoked", "patient workspace context was revoked");
-  if (record.consumedAt) throw apiError(409, "context_already_used", "patient workspace context was already used");
   if (!Number.isFinite(now.getTime()) || new Date(record.expiresAt).getTime() <= now.getTime()) {
     throw apiError(410, "context_expired", "patient workspace context expired; return to Patient Registry");
   }
