@@ -67,7 +67,11 @@ body[data-p360-view="nutrition"]{
 }
 .nutrition-identity span,.nutrition-identity small{color:#d9e5e7;font-size:var(--text-xs)}
 .nutrition-identity b{font-size:22px;color:#f8f6f1}
+.nutrition-identity strong{color:#fff;font-size:var(--text-sm);letter-spacing:.04em}
 .nutrition-identity small{opacity:.78}
+.nutrition-identity .btn{justify-self:start;margin-top:5px;border-color:rgba(255,255,255,.28);background:rgba(255,255,255,.08);color:#fff}
+.nutrition-identity[data-state="verified"]{border-color:color-mix(in srgb,var(--nutrition-opal-sage) 74%,white)}
+.nutrition-identity[data-state="blocked"]{border-color:color-mix(in srgb,var(--gold) 78%,white)}
 
 .evidence-model{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:16px 0}
 .evidence-model article{

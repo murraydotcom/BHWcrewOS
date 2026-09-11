@@ -1,8 +1,9 @@
 import { CREW_SESSION_EXPIRED, createEncounterCloudClient } from "./cloud-queue.mjs";
 import { centimetersToInches, inchesToCentimeters, kilogramsToPounds, poundsToKilograms, waistToHipRatio } from "./nutrition-unit-conversions.mjs";
+import { normalizeBhwPatientId, verifiedNutritionPatientContext } from "./nutrition-patient-context.mjs";
 
 const requestedPatientId = new URLSearchParams(location.search).get("patient") || "";
-const PATIENT_ID = /^BHW\d{4}$/.test(requestedPatientId) ? requestedPatientId : "BHW0000";
+const PATIENT_ID = normalizeBhwPatientId(requestedPatientId);
 const THEME_KEY = "bhw_provider_theme_v1";
 const $ = (id) => document.getElementById(id);
 const esc = (value) => String(value ?? "").replace(/[&<>\"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[character]));
@@ -13,6 +14,51 @@ let client = null;
 let workspace = null;
 let activeEvaluation = null;
 let formDirty = false;
+let patientContextVerified = false;
+
+function patientScopedPath(path) {
+  if (!PATIENT_ID) return path;
+  const url = new URL(path, location.href);
+  url.searchParams.set("patient", PATIENT_ID);
+  return `${url.pathname.split("/").pop()}${url.search}${url.hash}`;
+}
+
+function preservePatientNavigation() {
+  for (const anchor of document.querySelectorAll('a[href^="patient-360.html"], a[href^="nutrition-intelligence.html"]')) {
+    if (PATIENT_ID) anchor.href = patientScopedPath(anchor.getAttribute("href"));
+  }
+}
+
+function setFactControlsDisabled(disabled) {
+  for (const element of document.querySelectorAll("#nutrition-form [data-fact]")) element.disabled = disabled;
+}
+
+function showVerifiedPatientContext(context) {
+  const identity = $("patient-context");
+  identity.dataset.state = "verified";
+  $("patient-name").textContent = context.displayName;
+  $("patient-id").textContent = context.bhwPatientId;
+  $("patient-context-detail").textContent = context.synthetic
+    ? "Reserved synthetic record · verified against Health Core"
+    : `${context.birthDate ? `DOB ${context.birthDate} · ` : ""}verified against Health Core`;
+  $("patient-context-action").textContent = "Back to Patient 360";
+  $("patient-context-action").href = patientScopedPath("patient-360.html");
+}
+
+function blockUnscopedPatient() {
+  patientContextVerified = false;
+  setFactControlsDisabled(true);
+  $("patient-context").dataset.state = "blocked";
+  $("patient-name").textContent = "Patient selection required";
+  $("patient-id").textContent = "No BHW Patient ID";
+  $("patient-context-detail").textContent = "Open Nutrition Intelligence from a selected Patient 360 record.";
+  $("patient-context-action").textContent = "Choose in Patient Registry";
+  $("patient-context-action").href = "patient-registry.html";
+  setConnection("Patient required", "warning");
+  setSaveState("Not saved", "error", "No patient workspace was opened or queried.");
+  $("results").innerHTML = '<div class="panel"><div class="panel-body"><div class="empty-note">Choose a patient in the Patient Registry, open Patient 360, then select Nutrition. Evaluation and saving remain locked until Health Core verifies that patient.</div></div></div>';
+  updateWorkflowControls();
+}
 
 function setNumericValue(id, value) {
   const element = $(id);
@@ -258,28 +304,41 @@ function updateWorkflowControls() {
   const draft = workspace?.draft || null;
   const approved = workspace?.approved || null;
   const published = workspace?.published || null;
+  const patientReady = Boolean(PATIENT_ID && patientContextVerified && client);
   const approvalReady = draft?.evaluation?.reviewReadiness?.approvalReady === true;
   const kidneyPending = activeEvaluation?.kidney?.status && activeEvaluation.kidney.status !== "not-applicable" && activeEvaluation.kidney.patientPublicationAllowed !== true;
-  if (kidneyPending) {
+  $("evaluate").disabled = !patientReady;
+  $("save-draft").disabled = !patientReady;
+  $("review-attestation").disabled = !patientReady || !draft;
+  $("publish-attestation").disabled = !patientReady || !approved;
+  if (!patientReady || kidneyPending) {
     $("publication-allowed").checked = false;
     $("publication-allowed").disabled = true;
-    $("publication-allowed").closest("label").title = "Kidney patient outputs require BHW clinical-owner and renal-RDN content approval first.";
+    $("publication-allowed").closest("label").title = !patientReady
+      ? "Health Core must verify the selected patient before publication controls are available."
+      : "Kidney patient outputs require BHW clinical-owner and renal-RDN content approval first.";
   } else {
-    $("publication-allowed").disabled = false;
+    $("publication-allowed").disabled = !draft;
     $("publication-allowed").closest("label").title = "";
   }
-  $("approve").disabled = !draft || !approvalReady || !$("review-attestation").checked || formDirty;
-  $("publish").disabled = !approved || !approved.publicationAllowed || !$("publish-attestation").checked;
-  $("print").disabled = !published;
-  $("record-status").textContent = published ? `Published v${published.version}` : approved ? `Approved v${approved.version}` : draft ? `Draft r${draft.revision}` : "No saved assessment";
+  $("approve").disabled = !patientReady || !draft || !approvalReady || !$("review-attestation").checked || formDirty;
+  $("publish").disabled = !patientReady || !approved || !approved.publicationAllowed || !$("publish-attestation").checked;
+  $("print").disabled = !patientReady || !published;
+  $("record-status").textContent = !PATIENT_ID ? "No patient selected" : !patientReady ? "Patient verification required" : published ? `Published v${published.version}` : approved ? `Approved v${approved.version}` : draft ? `Draft r${draft.revision}` : "No saved assessment";
   $("record-status").className = `badge ${published ? "complete" : approved ? "neutral" : draft ? "warning" : "neutral"}`;
 }
 
 async function loadWorkspace({ populate = true } = {}) {
+  patientContextVerified = false;
+  setFactControlsDisabled(true);
+  updateWorkflowControls();
   setConnection("Connecting...", "warning");
   try {
     if (!client) client = await createEncounterCloudClient();
     if (!client) throw new Error("The protected Clinical Intelligence connection is not configured.");
+    const healthRecordBody = await client.healthRecord(PATIENT_ID);
+    const patientContext = verifiedNutritionPatientContext(healthRecordBody?.healthRecord, PATIENT_ID);
+    showVerifiedPatientContext(patientContext);
     const body = await client.patientNutritionIntelligence(PATIENT_ID);
     workspace = body.workspace || null;
     $("questionnaire-version").textContent = `Questionnaire v${body.questionnaire?.version || "1.3"} · ${body.questionnaire?.fields?.length || 0} fields`;
@@ -291,17 +350,24 @@ async function loadWorkspace({ populate = true } = {}) {
       setSaveState("Not saved", "not-saved", "No Nutrition Intelligence record has been saved.");
       setReviewReadiness(null);
     }
+    patientContextVerified = true;
+    setFactControlsDisabled(false);
     setConnection("Health Core connected", "complete");
     updateWorkflowControls();
   } catch (error) {
+    patientContextVerified = false;
+    setFactControlsDisabled(true);
+    $("patient-context").dataset.state = "blocked";
+    $("patient-context-detail").textContent = error.message || "Health Core could not verify this patient.";
     setConnection("Unavailable", "warning");
     setSaveState("Not saved", "error", error.message || "Nutrition Intelligence could not be loaded.");
     if (error?.code === CREW_SESSION_EXPIRED) location.href = `/crewos?next=${encodeURIComponent(`/provider/nutrition-intelligence.html?patient=${PATIENT_ID}`)}`;
+    updateWorkflowControls();
   }
 }
 
 async function evaluatePreview() {
-  if (!client) return;
+  if (!client || !patientContextVerified) return;
   setSaveState(formDirty || !workspace?.draft ? "Not saved" : `Saved to BHW Cloud · ${new Date(workspace.updatedAt).toLocaleString()}`, formDirty || !workspace?.draft ? "not-saved" : "saved", "Evaluating without creating side effects...");
   try {
     const body = await client.savePatientNutritionIntelligence(PATIENT_ID, { action: "evaluate", content: collectFacts() });
@@ -313,7 +379,7 @@ async function evaluatePreview() {
 }
 
 async function saveDraft() {
-  if (!client) return;
+  if (!client || !patientContextVerified) return;
   setSaveState("Saving…", "saving", "Writing the clinical draft to the protected Health Core workspace.");
   try {
     const body = await client.savePatientNutritionIntelligence(PATIENT_ID, { action: "save-draft", content: collectFacts() });
@@ -331,7 +397,7 @@ async function saveDraft() {
 
 async function approveDraft() {
   const draft = workspace?.draft;
-  if (!draft || formDirty) return;
+  if (!patientContextVerified || !draft || formDirty) return;
   setSaveState("Saving…", "saving", "Locking provider review to the exact saved revision.");
   try {
     const body = await client.savePatientNutritionIntelligence(PATIENT_ID, {
@@ -354,7 +420,7 @@ async function approveDraft() {
 
 async function publishProjections() {
   const approved = workspace?.approved;
-  if (!approved) return;
+  if (!patientContextVerified || !approved) return;
   setSaveState("Saving…", "saving", "Publishing bounded source projections. Blueprint review and patient-release gates remain.");
   try {
     const body = await client.savePatientNutritionIntelligence(PATIENT_ID, {
@@ -373,9 +439,15 @@ async function publishProjections() {
 }
 
 function wire() {
-  $("patient-id").textContent = PATIENT_ID;
   setTheme(initialTheme());
   $("theme").addEventListener("click", () => setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
+  preservePatientNavigation();
+  if (!PATIENT_ID) {
+    blockUnscopedPatient();
+    return;
+  }
+  $("patient-id").textContent = PATIENT_ID;
+  $("patient-context-detail").textContent = "Health Core verification is required before evaluation or saving.";
   $("refresh").addEventListener("click", () => loadWorkspace());
   $("evaluate").addEventListener("click", evaluatePreview);
   $("save-draft").addEventListener("click", saveDraft);
@@ -393,6 +465,8 @@ function wire() {
       updateWorkflowControls();
     }
   });
+  setFactControlsDisabled(true);
+  updateWorkflowControls();
   loadWorkspace();
 }
 
