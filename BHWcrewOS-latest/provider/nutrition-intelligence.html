@@ -25,17 +25,17 @@
   <a class="nav" href="index.html">◈ Encounter Scrub</a>
   <div class="nav-label">Lab Intelligence</div>
   <a class="nav" href="lab-dashboard.html">Lab Dashboard</a>
-  <div class="side-note">Synthetic BHW0000 pilot.<br><br>Questionnaire = real life.<br>Chart = physiology.<br>Nutrition Intelligence reconciles both.</div>
+  <div class="side-note">Verified Patient 360 context required.<br><br>Questionnaire = real life.<br>Chart = physiology.<br>Nutrition Intelligence reconciles both.</div>
 </aside>
 <main class="main">
   <header class="top"><div class="crumb">Clinical Intelligence · <b>Nutrition Intelligence</b></div><div class="tools"><span class="badge warning" id="connection-status">Connecting...</span><button class="btn" id="refresh">Refresh</button><button class="btn" id="print" disabled>Print reviewed output</button><button class="btn" id="theme" type="button" aria-pressed="false" aria-label="Switch to Black Opal theme">Black Opal</button></div></header>
   <div class="content nutrition-content">
     <section class="nutrition-hero">
       <div><span class="eyebrow">Whole-person nutrition decision support</span><h1>Nutrition Intelligence</h1><p>Reconcile the person’s actual eating life with charted physiology. This workspace supports adequacy, function, GI tolerance, metabolism, hydration, culture, sensory needs, and food access—not just weight.</p></div>
-      <div class="nutrition-identity"><span>Selected patient</span><b id="patient-id">BHW0000</b><small>Synthetic-only implementation pilot</small></div>
+      <div class="nutrition-identity" id="patient-context" data-state="pending"><span>Selected patient</span><b id="patient-name">Verifying patient context…</b><strong id="patient-id">Not selected</strong><small id="patient-context-detail">Health Core verification is required before evaluation or saving.</small><a class="btn" id="patient-context-action" href="patient-registry.html">Choose in Patient Registry</a></div>
     </section>
 
-    <div class="safe-notice"><b>Clinical boundary:</b> previews create no diagnosis, order, medication change, supplement order, message, CrewOS task, or patient-facing Blueprint. A provider must approve the exact saved revision, then separately publish its bounded projections. The existing Personal Health Blueprint still requires its own review.</div>
+    <div class="safe-notice"><b>Clinical boundary:</b> a verified BHW Patient ID is required before evaluation or saving. Previews create no diagnosis, order, medication change, supplement order, message, CrewOS task, or patient-facing Blueprint. A provider must approve the exact saved revision, then separately publish its bounded projections. The existing Personal Health Blueprint still requires its own review.</div>
 
     <section class="evidence-model" aria-label="Nutrition Intelligence evidence model">
       <article><span class="model-number">1</span><div><b>Questionnaire reflects real life</b><p>Meals, appetite, symptoms, safe foods, sensory fit, culture, access, preparation, and goals.</p></div></article>
@@ -201,7 +201,7 @@
         <div class="panel-body review-workflow">
           <div class="save-state"><b id="save-state" data-state="not-saved">Not saved</b><span id="save-detail">No Nutrition Intelligence record has been saved.</span></div>
           <div class="review-readiness" id="review-readiness" data-state="not-evaluated"><b>Approval readiness not evaluated</b><span>Run a preview to identify required patient-reported and chart fields.</span></div>
-          <div class="workflow-actions"><button class="btn" type="button" id="evaluate">Evaluate preview</button><button class="btn primary" type="button" id="save-draft">Save clinical draft</button></div>
+          <div class="workflow-actions"><button class="btn" type="button" id="evaluate" disabled>Evaluate preview</button><button class="btn primary" type="button" id="save-draft" disabled>Save clinical draft</button></div>
           <div class="approval-controls">
             <label><input type="checkbox" id="review-attestation"> I reviewed the saved assessment, source conflicts, safety gates, and proposed outputs against the patient record.</label>
             <label><input type="checkbox" id="publication-allowed"> This reviewed plan may become a bounded Patient 360/Blueprint source projection.</label>

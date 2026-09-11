@@ -8,6 +8,10 @@ import {
   poundsToKilograms,
   waistToHipRatio,
 } from "../provider/nutrition-unit-conversions.mjs";
+import {
+  normalizeBhwPatientId,
+  verifiedNutritionPatientContext,
+} from "../provider/nutrition-patient-context.mjs";
 
 const provider = (path) => readFile(new URL(`../provider/${path}`, import.meta.url), "utf8");
 
@@ -54,6 +58,36 @@ test("measurement converters preserve canonical kg and cm values", () => {
   assert.equal(waistToHipRatio(90, 0), null);
 });
 
+test("Nutrition Intelligence requires a Health Core-verified patient identity", () => {
+  assert.equal(normalizeBhwPatientId(" bhw0140 "), "BHW0140");
+  assert.equal(normalizeBhwPatientId(""), "");
+  assert.equal(normalizeBhwPatientId("patient name"), "");
+
+  const healthRecord = {
+    bhwPatientId: "BHW0140",
+    fhir: {
+      entry: [{
+        resource: {
+          resourceType: "Patient",
+          id: "BHW0140",
+          identifier: [{ system: "https://bhwmedical.org/patient-id", value: "BHW0140" }],
+          name: [{ given: ["Ella"], family: "Ballard" }],
+          birthDate: "1980-01-02",
+        },
+      }],
+    },
+  };
+
+  assert.deepEqual(verifiedNutritionPatientContext(healthRecord, "BHW0140"), {
+    bhwPatientId: "BHW0140",
+    displayName: "Ella Ballard",
+    birthDate: "1980-01-02",
+    synthetic: false,
+  });
+  assert.throws(() => verifiedNutritionPatientContext(healthRecord, "BHW0141"), /different patient context/);
+  assert.throws(() => verifiedNutritionPatientContext(null, ""), /Choose a patient/);
+});
+
 test("Nutrition Intelligence uses the protected cloud client and exact review lifecycle", async () => {
   const [html, app, cloud] = await Promise.all([
     provider("nutrition-intelligence.html"),
@@ -62,9 +96,17 @@ test("Nutrition Intelligence uses the protected cloud client and exact review li
   ]);
 
   assert.match(html, /crew-provider-gate\.js/);
-  assert.match(html, /Synthetic-only implementation pilot/);
+  assert.match(html, /Health Core verification is required before evaluation or saving/);
+  assert.match(html, /id="evaluate" disabled/);
+  assert.match(html, /id="save-draft" disabled/);
   assert.match(html, /Not saved/);
   assert.match(html, /Approval readiness not evaluated/);
+  assert.match(app, /const PATIENT_ID = normalizeBhwPatientId\(requestedPatientId\)/);
+  assert.match(app, /client\.healthRecord\(PATIENT_ID\)/);
+  assert.match(app, /verifiedNutritionPatientContext\(healthRecordBody\?\.healthRecord, PATIENT_ID\)/);
+  assert.match(app, /if \(!PATIENT_ID\)/);
+  assert.match(app, /No patient workspace was opened or queried/);
+  assert.doesNotMatch(app, /requestedPatientId\) \? requestedPatientId : "BHW0000"/);
   assert.match(app, /Saving…/);
   assert.match(app, /Saved to BHW Cloud/);
   assert.match(app, /patientNutritionIntelligence\(PATIENT_ID\)/);
@@ -96,7 +138,7 @@ test("preview and publication copy keep prohibited autonomous actions explicit",
     provider("nutrition-intelligence.mjs"),
   ]);
 
-  assert.match(html, /previews create no diagnosis, order, medication change, supplement order, message, CrewOS task, or patient-facing Blueprint/);
+  assert.match(html, /previews create no diagnosis, order, medication change, supplement order, message, CrewOS task, or patient-facing Blueprint/i);
   assert.match(html, /existing Personal Health Blueprint still requires its own review/);
   assert.match(app, /No diagnosis, order, task, message, or patient projection was created/);
   assert.match(app, /no Care Connect delivery, order, medication change, or message was created/);
@@ -121,11 +163,17 @@ test("Nutrition Intelligence uses the shared Opal and Ironstone visual system", 
 });
 
 test("Patient 360 exposes a patient-scoped Nutrition Intelligence path", async () => {
-  const app = await provider("patient-360-app.mjs");
+  const [app, registryApp] = await Promise.all([
+    provider("patient-360-app.mjs"),
+    provider("patient-registry-app.mjs"),
+  ]);
   assert.match(app, /\["nutrition", "Nutrition", "nutrition-intelligence\.html"\]/);
   assert.match(app, /const patientQuery = `\?patient=\$\{encodeURIComponent\(PATIENT_ID\)\}`/);
   assert.match(app, /href="\$\{href\}\$\{patientQuery\}"/);
+  assert.match(app, /a\[href\^="patient-360"\], a\[href\^="nutrition-intelligence\.html"\]/);
   assert.match(app, /nutritionIntelligence\?\.status === "published-provider-reviewed"/);
   assert.match(app, /Nutrition phenotypes are decision-support labels, not diagnoses/);
   assert.match(app, /review-required source material/);
+  assert.match(registryApp, /Open Patient 360/);
+  assert.match(registryApp, /patient-360\.html\?patient=\$\{encodeURIComponent\(patient\.bhwPatientId\)\}/);
 });
