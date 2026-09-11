@@ -189,6 +189,7 @@ test("Patient Registry, Clinical Map, Atlas, and Patient Operations expose the g
   const registry = fs.readFileSync(path.join(provider, "patient-registry.html"), "utf8");
   const launcher = fs.readFileSync(path.join(provider, "patient-workspace-launcher.mjs"), "utf8");
   const entry = fs.readFileSync(path.join(provider, "clinical-map-entry.mjs"), "utf8");
+  const contextResolver = fs.readFileSync(path.join(provider, "patient-workspace-context.mjs"), "utf8");
   const worklist = fs.readFileSync(path.join(provider, "patient-operations.html"), "utf8");
   const repository = fs.readFileSync(path.join(root, "cloud/operations-api/clinical-context-repository.mjs"), "utf8");
   assert.match(registry, /patient-workspace-launcher\.mjs/);
@@ -197,7 +198,7 @@ test("Patient Registry, Clinical Map, Atlas, and Patient Operations expose the g
   assert.match(launcher, /Open Patient Operations/);
   assert.match(launcher, /Open Health Core Chart Summary/);
   assert.match(launcher, /Cross-domain real-patient launch remains locked/);
-  assert.match(entry, /visible patient ID cannot authorize access/i);
+  assert.match(contextResolver, /visible patient ID cannot authorize access/i);
   assert.match(entry, /temporaryPatientQuery/);
   assert.match(worklist, /Patient Worklist/);
   assert.match(worklist, /does not independently create diagnoses/);
