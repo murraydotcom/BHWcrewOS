@@ -21,6 +21,11 @@ test("Nutrition Intelligence preserves the real-life, physiology, and reconcilia
   assert.match(html, /Salt substitute\/electrolyte product/);
   assert.match(html, /Potassium interpretation/);
   assert.match(html, /Protein-energy-wasting risk/);
+  assert.match(html, /Stone type/);
+  assert.match(html, /24-hour urine reviewed/);
+  assert.match(html, /Enteric hyperoxaluria risk/);
+  assert.match(html, /Infection stone or positive culture/);
+  assert.match(html, /Anemia in CKD present/);
 });
 
 test("Nutrition Intelligence uses the protected cloud client and exact review lifecycle", async () => {
@@ -47,7 +52,11 @@ test("Nutrition Intelligence uses the protected cloud client and exact review li
   for (const target of ["Carbohydrate", "Fat", "Fiber", "Hydration"]) assert.match(app, new RegExp(`<b>${target}<\\/b>`));
   for (const target of ["energy", "protein", "sodium", "potassium", "phosphorus", "fluid"]) assert.match(app, new RegExp(`"${target}"`));
   assert.match(app, /kidneyPanel\(evaluation\.kidney\)/);
-  assert.match(app, /Clinical \+ renal-RDN approval pending/);
+  assert.match(app, /Updated education review pending/);
+  assert.match(app, /kidneyEducationCards\(kidney\.educationCandidates\)/);
+  assert.match(app, /Natural food and preparation options to review/);
+  assert.match(app, /not approved patient handouts or prescriptions/);
+  assert.match(app, /BHW clinical-owner and external renal-RDN approval/);
   assert.match(app, /kidney\.patientPublicationAllowed !== true/);
   assert.match(app, /Kidney patient outputs require BHW clinical-owner and renal-RDN content approval first/);
   assert.match(cloud, /patientNutritionIntelligence\(bhwPatientId = "BHW0000"\)/);

@@ -161,20 +161,34 @@ function kidneyDecisionText(decision = {}) {
   return `${label(decision.direction || decision.status)}${anchor}`;
 }
 
+function kidneyEducationCards(candidates = []) {
+  if (!candidates.length) return '<div class="empty-note">No kidney education topic was selected from the current chart pathway.</div>';
+  return candidates.map((item) => `<article class="food-source kidney-education-card">
+    <div class="panel-head"><h4>${esc(label(item.code))}</h4><span class="badge warning">Candidate only</span></div>
+    <p>${esc(item.patientLanguageCandidate)}</p>
+    <b class="field-label">Natural food and preparation options to review</b>
+    <ul>${list(item.naturalSourceCandidates).map((source) => `<li>${esc(source)}</li>`).join("")}</ul>
+    <b class="field-label">Clinical guardrails</b>
+    <ul>${list(item.guardrails).map((guardrail) => `<li>${esc(guardrail)}</li>`).join("")}</ul>
+    <small>Sources: ${esc(list(item.sourceIds).join(" · "))}</small>
+  </article>`).join("");
+}
+
 function kidneyPanel(kidney = {}) {
   if (!kidney || kidney.status === "not-applicable") {
     return '<section class="panel kidney-result"><div class="panel-head"><h3>Kidney nutrition</h3><span class="badge neutral">Not applicable</span></div><div class="panel-body"><div class="empty-note">No chart-confirmed kidney pathway is active in this preview.</div></div></section>';
   }
   const decisions = kidney.nutrientDecisions || {};
   const missing = kidney.dataCompleteness?.missingFacts || [];
-  return `<section class="panel kidney-result"><div class="panel-head"><div><h3>Kidney nutrition pathway</h3><span class="panel-subtitle">Module ${esc(kidney.moduleVersion || "1.0.0")} · chart physiology controls clinical decisions</span></div><span class="badge warning">Clinical + renal-RDN approval pending</span></div><div class="panel-body result-list">
+  return `<section class="panel kidney-result"><div class="panel-head"><div><h3>Kidney nutrition pathway</h3><span class="panel-subtitle">Module ${esc(kidney.moduleVersion || "1.1.0")} · chart physiology controls clinical decisions</span></div><span class="badge warning">Updated education review pending</span></div><div class="panel-body result-list">
     <div class="kidney-summary"><div><span>Pathway</span><b>${esc(label(kidney.pathway))}</b></div><div><span>CKD stage</span><b>${esc(kidney.ckdStage || "Not applicable")}</b></div><div><span>Albuminuria</span><b>${esc(kidney.albuminuriaStatus || "Not assessed")}</b></div><div><span>Data readiness</span><b>${esc(label(kidney.dataCompleteness?.status))}</b></div></div>
     ${missing.length ? `<div class="gate-block"><b>Kidney plan needs current chart context</b><p>${esc(missing.map(label).join(", "))}</p></div>` : ""}
     <div class="kidney-decisions">${["energy", "protein", "sodium", "potassium", "phosphorus", "fluid"].map((code) => `<div class="result-item"><b>${esc(label(code))}</b><p>${esc(kidneyDecisionText(decisions[code]))}</p><small>${esc(list(decisions[code]?.rationaleCodes).map(label).join(" · "))}</small></div>`).join("")}</div>
     <div class="result-item"><b>Food-first and natural-source strategies</b>${chips(kidney.foodStrategyCodes)}<small>Suggestions must preserve culture, sensory-safe foods, affordability, GI tolerance, and adequacy. Normal potassium or phosphorus does not justify a blanket restriction.</small></div>
     <div class="result-item"><b>Supplement and shake safety</b>${chips(kidney.supplementSafetyCodes)}<small>No product is automatically selected or called kidney safe.</small></div>
     <div class="result-item"><b>Monitoring</b>${chips(kidney.monitoringCodes)}</div>
-    <div class="natural-disclosure"><b>Publication boundary:</b> This kidney plan is clinician-only synthetic review material. It cannot enter Patient 360, the Personal Health Blueprint, or printable education until the kidney module has both clinical-owner and renal-RDN approval.</div>
+    <div class="result-item"><b>Clinician-only education candidates</b><p>These drafts reconcile the selected kidney pathway with current physiology. They are not approved patient handouts or prescriptions.</p><div class="food-source-grid">${kidneyEducationCards(kidney.educationCandidates)}</div></div>
+    <div class="natural-disclosure"><b>Publication boundary:</b> This kidney plan and its education candidates are clinician-only synthetic review material. They cannot enter Patient 360, the Personal Health Blueprint, or printable education until the exact content has BHW clinical-owner and external renal-RDN approval.</div>
   </div></section>`;
 }
 
