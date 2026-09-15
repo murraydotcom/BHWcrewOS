@@ -1,5 +1,5 @@
 import { CREW_SESSION_EXPIRED, createEncounterCloudClient } from "./cloud-queue.mjs";
-import { centimetersToInches, inchesToCentimeters, kilogramsToPounds, poundsToKilograms, waistToHipRatio } from "./nutrition-unit-conversions.mjs";
+import { bodyMassIndex, centimetersToInches, inchesToCentimeters, kilogramsToPounds, poundsToKilograms, waistToHipRatio } from "./nutrition-unit-conversions.mjs";
 import { normalizeBhwPatientId, verifiedNutritionPatientContext } from "./nutrition-patient-context.mjs";
 
 const requestedPatientId = new URLSearchParams(location.search).get("patient") || "";
@@ -69,6 +69,10 @@ function updateWaistHipRatio() {
   setNumericValue("waist-hip-ratio", waistToHipRatio($("waist-cm")?.value, $("hip-cm")?.value));
 }
 
+function updateBodyMassIndex() {
+  setNumericValue("body-mass-index", bodyMassIndex($("current-weight-kg")?.value, $("height-cm")?.value));
+}
+
 function syncConvertedInput(sourceId, targetId, converter, after = null) {
   const source = $(sourceId);
   if (!source) return;
@@ -80,15 +84,19 @@ function syncConvertedInput(sourceId, targetId, converter, after = null) {
 
 function syncConvenienceMeasurements() {
   setNumericValue("height-in", centimetersToInches($("height-cm")?.value));
+  setNumericValue("current-weight-lb", kilogramsToPounds($("current-weight-kg")?.value));
   setNumericValue("calculation-weight-lb", kilogramsToPounds($("calculation-weight-kg")?.value));
   setNumericValue("waist-in", centimetersToInches($("waist-cm")?.value));
   setNumericValue("hip-in", centimetersToInches($("hip-cm")?.value));
+  updateBodyMassIndex();
   updateWaistHipRatio();
 }
 
 function wireMeasurementConverters() {
-  syncConvertedInput("height-in", "height-cm", inchesToCentimeters);
-  syncConvertedInput("height-cm", "height-in", centimetersToInches);
+  syncConvertedInput("height-in", "height-cm", inchesToCentimeters, updateBodyMassIndex);
+  syncConvertedInput("height-cm", "height-in", centimetersToInches, updateBodyMassIndex);
+  syncConvertedInput("current-weight-lb", "current-weight-kg", poundsToKilograms, updateBodyMassIndex);
+  syncConvertedInput("current-weight-kg", "current-weight-lb", kilogramsToPounds, updateBodyMassIndex);
   syncConvertedInput("calculation-weight-lb", "calculation-weight-kg", poundsToKilograms);
   syncConvertedInput("calculation-weight-kg", "calculation-weight-lb", kilogramsToPounds);
   syncConvertedInput("waist-in", "waist-cm", inchesToCentimeters, updateWaistHipRatio);

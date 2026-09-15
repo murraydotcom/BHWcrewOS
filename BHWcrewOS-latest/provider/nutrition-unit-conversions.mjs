@@ -32,6 +32,14 @@ export function centimetersToInches(value) {
   return centimeters === null ? null : rounded(centimeters / CENTIMETERS_PER_INCH, 1);
 }
 
+export function bodyMassIndex(weightKg, heightCm) {
+  const weight = positiveNumber(weightKg);
+  const height = positiveNumber(heightCm);
+  if (weight === null || height === null) return null;
+  const heightMeters = height / 100;
+  return rounded(weight / (heightMeters ** 2), 1);
+}
+
 export function waistToHipRatio(waistCm, hipCm) {
   const waist = positiveNumber(waistCm);
   const hip = positiveNumber(hipCm);
