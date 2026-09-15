@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
+  bodyMassIndex,
   centimetersToInches,
   inchesToCentimeters,
   kilogramsToPounds,
@@ -39,6 +40,10 @@ test("Nutrition Intelligence preserves the real-life, physiology, and reconcilia
   assert.match(html, /Anemia in CKD present/);
   assert.match(html, /Height \(in\)/);
   assert.match(html, /Height \(cm\)/);
+  assert.match(html, /Current weight \(lb\)/);
+  assert.match(html, /Current weight \(kg\)/);
+  assert.match(html, /BMI \(derived\)/);
+  assert.match(html, /Calculation weight basis/);
   assert.match(html, /Calculation weight \(lb\)/);
   assert.match(html, /Calculation weight \(kg\)/);
   assert.match(html, /Waist circumference \(in\)/);
@@ -51,6 +56,7 @@ test("measurement converters preserve canonical kg and cm values", () => {
   assert.equal(kilogramsToPounds(100), 220.5);
   assert.equal(inchesToCentimeters(40), 101.6);
   assert.equal(centimetersToInches(101.6), 40);
+  assert.equal(bodyMassIndex(72, 165), 26.4);
   assert.equal(waistToHipRatio(88.9, 101.6), 0.875);
 
   for (const converter of [poundsToKilograms, kilogramsToPounds, inchesToCentimeters, centimetersToInches]) {
@@ -58,6 +64,22 @@ test("measurement converters preserve canonical kg and cm values", () => {
     assert.equal(converter(-1), null);
   }
   assert.equal(waistToHipRatio(90, 0), null);
+  assert.equal(bodyMassIndex("", 165), null);
+  assert.equal(bodyMassIndex(72, 0), null);
+});
+
+test("BMI is derived from current weight rather than calculation weight", async () => {
+  const [html, app] = await Promise.all([
+    provider("nutrition-intelligence.html"),
+    provider("nutrition-intelligence.mjs"),
+  ]);
+
+  assert.match(html, /id="current-weight-kg"[^>]*data-fact="current_weight_kg"/);
+  assert.match(html, /id="body-mass-index"[^>]*data-fact="bmi"[^>]*readonly/);
+  assert.match(html, /BMI alone does not determine energy direction, phenotype, diagnosis, or a weight-loss recommendation/);
+  assert.match(app, /bodyMassIndex\(\$\("current-weight-kg"\)\?\.value, \$\("height-cm"\)\?\.value\)/);
+  assert.doesNotMatch(app, /bodyMassIndex\(\$\("calculation-weight-kg"\)/);
+  assert.match(app, /syncConvertedInput\("current-weight-lb", "current-weight-kg", poundsToKilograms, updateBodyMassIndex\)/);
 });
 
 test("height accepts inches while preserving canonical centimeters", async () => {
@@ -69,8 +91,8 @@ test("height accepts inches while preserving canonical centimeters", async () =>
   assert.match(html, /id="height-in"[^>]*placeholder="inches"/);
   assert.match(html, /id="height-cm"[^>]*data-fact="height_cm"[^>]*data-source="chart"/);
   assert.match(html, /converted to canonical centimeters/);
-  assert.match(app, /syncConvertedInput\("height-in", "height-cm", inchesToCentimeters\)/);
-  assert.match(app, /syncConvertedInput\("height-cm", "height-in", centimetersToInches\)/);
+  assert.match(app, /syncConvertedInput\("height-in", "height-cm", inchesToCentimeters, updateBodyMassIndex\)/);
+  assert.match(app, /syncConvertedInput\("height-cm", "height-in", centimetersToInches, updateBodyMassIndex\)/);
   assert.equal(inchesToCentimeters(65), 165.1);
   assert.equal(centimetersToInches(165.1), 65);
 });
