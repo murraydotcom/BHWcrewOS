@@ -37,6 +37,8 @@ test("Nutrition Intelligence preserves the real-life, physiology, and reconcilia
   assert.match(html, /Enteric hyperoxaluria risk/);
   assert.match(html, /Infection stone or positive culture/);
   assert.match(html, /Anemia in CKD present/);
+  assert.match(html, /Height \(in\)/);
+  assert.match(html, /Height \(cm\)/);
   assert.match(html, /Calculation weight \(lb\)/);
   assert.match(html, /Calculation weight \(kg\)/);
   assert.match(html, /Waist circumference \(in\)/);
@@ -56,6 +58,21 @@ test("measurement converters preserve canonical kg and cm values", () => {
     assert.equal(converter(-1), null);
   }
   assert.equal(waistToHipRatio(90, 0), null);
+});
+
+test("height accepts inches while preserving canonical centimeters", async () => {
+  const [html, app] = await Promise.all([
+    provider("nutrition-intelligence.html"),
+    provider("nutrition-intelligence.mjs"),
+  ]);
+
+  assert.match(html, /id="height-in"[^>]*placeholder="inches"/);
+  assert.match(html, /id="height-cm"[^>]*data-fact="height_cm"[^>]*data-source="chart"/);
+  assert.match(html, /converted to canonical centimeters/);
+  assert.match(app, /syncConvertedInput\("height-in", "height-cm", inchesToCentimeters\)/);
+  assert.match(app, /syncConvertedInput\("height-cm", "height-in", centimetersToInches\)/);
+  assert.equal(inchesToCentimeters(65), 165.1);
+  assert.equal(centimetersToInches(165.1), 65);
 });
 
 test("Nutrition Intelligence requires a Health Core-verified patient identity", () => {
