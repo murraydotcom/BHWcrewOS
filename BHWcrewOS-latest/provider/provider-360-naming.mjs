@@ -7,6 +7,7 @@ export const PROVIDER_360_LEGACY_ALIASES = Object.freeze([
   "BHW Whole-Person Clinical Map",
   "Whole-Person Clinical Map",
   "Clinical Map",
+  "Patient 360",
 ]);
 
 const TEXT_REPLACEMENTS = Object.freeze([
@@ -14,6 +15,7 @@ const TEXT_REPLACEMENTS = Object.freeze([
   [/Whole-Person Clinical Map/g, PROVIDER_360_SHORT_TITLE],
   [/PSCM Complex Patient Navigator/g, PROVIDER_360_TITLE],
   [/Complex Patient Navigator/g, PROVIDER_360_SHORT_TITLE],
+  [/Patient 360/g, PROVIDER_360_SHORT_TITLE],
   [/Open Clinical Map/g, `Open ${PROVIDER_360_SHORT_TITLE}`],
   [/Clinical Map provides synthesis/g, `${PROVIDER_360_SHORT_TITLE} provides synthesis`],
   [/Clinical Map is the synthesis workspace/g, `${PROVIDER_360_SHORT_TITLE} is the synthesis workspace`],
@@ -76,7 +78,7 @@ export function applyProvider360Naming(root = document) {
 
   const pageName = document.getElementById("page-name")?.textContent?.trim();
   const crumb = document.querySelector(".crumb");
-  if (crumb && pageName && /Provider 360|Clinical Map|Whole-Person/i.test(crumb.textContent || "")) {
+  if (crumb && pageName && /Provider 360|Clinical Map|Whole-Person|Patient 360/i.test(crumb.textContent || "")) {
     crumb.innerHTML = `${PROVIDER_360_SHORT_TITLE} · <b id="page-name"></b>`;
     crumb.querySelector("#page-name").textContent = pageName;
   }
