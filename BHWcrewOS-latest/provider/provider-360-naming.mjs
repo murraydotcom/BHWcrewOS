@@ -1,6 +1,7 @@
 export const PROVIDER_360_TITLE = "BHW Provider 360";
 export const PROVIDER_360_SHORT_TITLE = "Provider 360";
 export const PROVIDER_360_SUBTITLE = "PSCM longitudinal synthesis, body-system mapping, and feasible care planning";
+export const PROVIDER_360_BOUNDARY = "Provider 360 is the synthesis workspace. Health Core remains the canonical record.";
 export const PROVIDER_360_LEGACY_ALIASES = Object.freeze([
   "PSCM Complex Patient Navigator",
   "Complex Patient Navigator",
