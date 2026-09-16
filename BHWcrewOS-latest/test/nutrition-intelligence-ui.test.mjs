@@ -17,17 +17,27 @@ import {
 const provider = (path) => readFile(new URL(`../provider/${path}`, import.meta.url), "utf8");
 
 test("Nutrition Intelligence preserves the real-life, physiology, and reconciliation model", async () => {
-  const html = await provider("nutrition-intelligence.html");
+  const [html, app, questionnaire] = await Promise.all([
+    provider("nutrition-intelligence.html"),
+    provider("nutrition-intelligence.mjs"),
+    provider("nutrition-questionnaire-v14.mjs"),
+  ]);
 
   assert.match(html, /Questionnaire reflects real life/);
   assert.match(html, /Chart reflects physiology/);
   assert.match(html, /Nutrition Intelligence reconciles both/);
   assert.match(html, /not just weight/);
-  assert.match(html, /GI symptoms and lived experience/);
-  assert.match(html, /GI alarm and acute safety screen/);
-  assert.match(html, /Cuisines and food traditions to preserve/);
-  assert.match(html, /Safe or reliably accepted foods/);
-  assert.match(html, /Consents to food-access navigation/);
+  assert.match(html, /Questionnaire v1\.4/);
+  assert.match(html, /id="patient-questionnaire"/);
+  assert.match(html, /Food-first and natural-source preference/);
+  assert.match(app, /renderNutritionQuestionnaire\(questionnaireContract\)/);
+  assert.match(app, /collectNutritionQuestionnaire\(\$\("patient-questionnaire"\), questionnaireContract\)/);
+  assert.match(app, /questionnaireResponses: questionnaire\.questionnaireResponses/);
+  assert.match(questionnaire, /questionnaire-section/);
+  assert.match(questionnaire, /meal_choice_with_text/);
+  assert.match(questionnaire, /structured_bowel_pattern/);
+  assert.match(questionnaire, /repeatable_beverage_grid/);
+  assert.match(questionnaire, /multi_select_with_text/);
   assert.match(html, /Kidney health and real-life food rules/);
   assert.match(html, /Familiar, cultural, religious, or safe foods to preserve/);
   assert.match(html, /Salt substitute\/electrolyte product/);
