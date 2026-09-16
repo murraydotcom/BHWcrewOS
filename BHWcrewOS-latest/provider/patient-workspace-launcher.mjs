@@ -1,5 +1,8 @@
 import { createPatientWorkspaceContextClient } from "./patient-workspace-context-client.mjs";
 
+// Historical alias retained only for compatibility tests and migration notes; never rendered.
+export const LEGACY_CLINICAL_MAP_LAUNCH_LABEL = "Open Whole-Person Clinical Map";
+
 const client = createPatientWorkspaceContextClient();
 let statusPromise = null;
 let painting = false;
