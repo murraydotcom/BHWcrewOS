@@ -8,6 +8,11 @@ import {
   renderNutritionQuestionnaire,
   updateNutritionQuestionnaireVisibility,
 } from "./nutrition-questionnaire-v14.mjs";
+import {
+  applyNutritionChartPrefill,
+  matchingNutritionChartProvenance,
+  renderNutritionChartPrefill,
+} from "./nutrition-chart-prefill.mjs";
 
 const requestedPatientId = new URLSearchParams(location.search).get("patient") || "";
 const PATIENT_ID = normalizeBhwPatientId(requestedPatientId);
@@ -23,6 +28,8 @@ let activeEvaluation = null;
 let formDirty = false;
 let patientContextVerified = false;
 let questionnaireContract = null;
+let chartPrefillContract = null;
+let appliedChartPrefillFacts = new Set();
 
 function patientScopedPath(path) {
   if (!PATIENT_ID) return path;
@@ -42,6 +49,8 @@ function setFactControlsDisabled(disabled) {
     if (!disabled && element.closest(".question-card[hidden]")) continue;
     element.disabled = disabled;
   }
+  const prefillButton = $("apply-chart-prefill");
+  if (prefillButton) prefillButton.disabled = disabled || !Object.keys(chartPrefillContract?.facts || {}).length;
 }
 
 function showVerifiedPatientContext(context) {
@@ -192,6 +201,7 @@ function collectFacts() {
     ? collectNutritionQuestionnaire($("patient-questionnaire"), questionnaireContract)
     : { intakeProfile: {}, questionnaireResponses: {}, flatFacts: {} };
   Object.assign(patientReported, questionnaire.flatFacts);
+  const chartFactSources = matchingNutritionChartProvenance(chartFacts, chartPrefillContract || {}, appliedChartPrefillFacts);
   const inputFacts = { ...patientReported, ...chartFacts };
   if (inputFacts.confirmed_gi_condition_codes?.includes("lactose_intolerance")) inputFacts.confirmed_lactose_intolerance = true;
   if (inputFacts.confirmed_gi_condition_codes?.includes("documented_gastroparesis")) inputFacts.confirmed_gastroparesis = true;
@@ -213,7 +223,7 @@ function collectFacts() {
     questionnaireResponses: questionnaire.questionnaireResponses,
     provenance: {
       patientReported: { sourceType: "clinician-entered-patient-report", sourceApplication: "BHW Clinical Intelligence", reliability: "reported" },
-      chart: { sourceType: "Health Core chart reconciliation", sourceApplication: "BHW Clinical Intelligence", reliability: "clinician-reviewed-before-approval" },
+      chart: { sourceType: "Health Core chart reconciliation", sourceApplication: "BHW Clinical Intelligence", reliability: "clinician-reviewed-before-approval", factSources: chartFactSources },
     },
   };
 }
@@ -234,10 +244,29 @@ function setElementValue(element, value) {
 
 function populateForm(content = {}) {
   const facts = content.inputFacts || { ...(content.patientReported || {}), ...(content.chartFacts || {}) };
+  appliedChartPrefillFacts = new Set(Object.keys(content.provenance?.chart?.factSources || {}));
   for (const element of document.querySelectorAll("[data-fact]")) setElementValue(element, facts[element.dataset.fact]);
   if (questionnaireContract) populateNutritionQuestionnaire($("patient-questionnaire"), questionnaireContract, content);
   syncConvenienceMeasurements();
   formDirty = false;
+}
+
+function applyChartPrefill() {
+  if (!patientContextVerified || !chartPrefillContract) return;
+  const result = applyNutritionChartPrefill($("nutrition-form"), chartPrefillContract);
+  for (const fact of result.applied) appliedChartPrefillFacts.add(fact);
+  const feedback = $("chart-prefill-feedback");
+  if (!result.applied.length) {
+    feedback.textContent = result.preserved.length
+      ? `No fields changed. ${result.preserved.length} existing value${result.preserved.length === 1 ? " was" : "s were"} preserved.`
+      : "No supported blank chart field is available to fill.";
+    return;
+  }
+  syncConvenienceMeasurements();
+  formDirty = true;
+  feedback.textContent = `${result.applied.length} blank chart field${result.applied.length === 1 ? " was" : "s were"} filled for clinician review. ${result.preserved.length} existing value${result.preserved.length === 1 ? " was" : "s were"} preserved.`;
+  setSaveState("Not saved", "not-saved", "Health Core chart suggestions were added to blank fields. Review them before saving to BHW Cloud.");
+  updateWorkflowControls();
 }
 
 function targetText(target = {}) {
@@ -371,9 +400,13 @@ async function loadWorkspace({ populate = true } = {}) {
     const body = await client.patientNutritionIntelligence(PATIENT_ID);
     workspace = body.workspace || null;
     questionnaireContract = body.questionnaire || null;
+    chartPrefillContract = body.chartPrefill || { facts: {}, provenance: {}, warnings: [] };
+    appliedChartPrefillFacts = new Set();
     if (!questionnaireContract?.questions?.length) throw new Error("The Nutrition Intelligence questionnaire contract is unavailable.");
     $("patient-questionnaire").classList.remove("questionnaire-loading");
     $("patient-questionnaire").innerHTML = renderNutritionQuestionnaire(questionnaireContract);
+    $("chart-prefill").dataset.state = chartPrefillContract.status || "unavailable";
+    $("chart-prefill").innerHTML = renderNutritionChartPrefill(chartPrefillContract);
     updateNutritionQuestionnaireVisibility($("patient-questionnaire"), questionnaireContract);
     $("questionnaire-version").textContent = `Questionnaire v${questionnaireContract.version || "1.4"} · ${questionnaireContract.questions.length} questions`;
     if (populate && workspace?.draft?.content) populateForm(workspace.draft.content);
@@ -505,6 +538,9 @@ function wire() {
     formDirty = true;
     setSaveState("Not saved", "not-saved", "This screen has changes that are not saved to BHW Cloud.");
     updateWorkflowControls();
+  });
+  $("chart-prefill").addEventListener("click", (event) => {
+    if (event.target.closest("#apply-chart-prefill")) applyChartPrefill();
   });
   setFactControlsDisabled(true);
   updateWorkflowControls();
