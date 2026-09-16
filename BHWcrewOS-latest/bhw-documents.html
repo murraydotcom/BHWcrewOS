@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BHW Document Builder</title>
+<title>Patient Education &amp; Documents · BHW CrewHQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
@@ -228,9 +228,12 @@
   .med-clinical-table td.med-notes-flag{color:var(--rust);}
   .med-clinical-table td.med-dispense{color:#5a5f5a;white-space:nowrap;}
 
+  .education-workflow{padding:12px 20px;background:var(--cream);border-bottom:1px solid var(--sand);font-size:12px;line-height:1.6;display:flex;gap:12px 24px;align-items:center;flex-wrap:wrap;}
+  .education-workflow p{margin:0;flex:1 1 420px;}
+  .education-workflow a{color:#365c6c;font-weight:600;text-underline-offset:3px;}
   @media print{
     body{background:#fff;}
-    .topbar,.editor{display:none !important;}
+    .topbar,.editor,.education-workflow{display:none !important;}
     .preview-pane{padding:0;display:block;background:#fff;}
     .page{box-shadow:none;margin:0;width:auto;min-height:auto;}
     @page{size:letter;margin:0;}
@@ -241,7 +244,7 @@
 <div class="app-shell">
 
   <div class="topbar">
-    <div class="brand">BHW Document Builder</div>
+    <div class="brand">Patient Education &amp; Documents</div>
     <select id="docTypeSelect"></select>
     <div class="mode-toggle">
       <button id="modeBuildBtn" class="active">Build sections</button>
@@ -262,6 +265,11 @@
     <button id="printBtn">Print / Save PDF</button>
   </div>
 
+  <nav class="education-workflow" aria-label="Patient education workflow">
+    <a href="/hq.html" target="_blank" rel="noopener noreferrer">CrewHQ</a>
+    <p><strong>Prepare → review → share.</strong> Build a handout here, review it with the clinician, then download HTML or save a PDF. In Patient Materials &amp; Feedback, select the verified patient and upload the reviewed file. Opening that tool does not save or transfer this draft.</p>
+    <a href="/bhw-patient-materials.html" target="_blank" rel="noopener noreferrer">Open Patient Materials &amp; Feedback</a>
+  </nav>
   <div class="main">
     <div class="editor" id="editor"></div>
     <div class="preview-pane">
