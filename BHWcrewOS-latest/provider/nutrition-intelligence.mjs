@@ -1,6 +1,13 @@
 import { CREW_SESSION_EXPIRED, createEncounterCloudClient } from "./cloud-queue.mjs";
 import { bodyMassIndex, centimetersToInches, inchesToCentimeters, kilogramsToPounds, poundsToKilograms, waistToHipRatio } from "./nutrition-unit-conversions.mjs";
 import { normalizeBhwPatientId, verifiedNutritionPatientContext } from "./nutrition-patient-context.mjs";
+import {
+  collectNutritionQuestionnaire,
+  handleNutritionQuestionnaireAction,
+  populateNutritionQuestionnaire,
+  renderNutritionQuestionnaire,
+  updateNutritionQuestionnaireVisibility,
+} from "./nutrition-questionnaire-v14.mjs";
 
 const requestedPatientId = new URLSearchParams(location.search).get("patient") || "";
 const PATIENT_ID = normalizeBhwPatientId(requestedPatientId);
@@ -15,6 +22,7 @@ let workspace = null;
 let activeEvaluation = null;
 let formDirty = false;
 let patientContextVerified = false;
+let questionnaireContract = null;
 
 function patientScopedPath(path) {
   if (!PATIENT_ID) return path;
@@ -30,7 +38,10 @@ function preservePatientNavigation() {
 }
 
 function setFactControlsDisabled(disabled) {
-  for (const element of document.querySelectorAll("#nutrition-form [data-fact]")) element.disabled = disabled;
+  for (const element of document.querySelectorAll("#nutrition-form [data-fact], #nutrition-form [data-q-role], #nutrition-form [data-grid-key], #nutrition-form [data-beverage-field], #nutrition-form [data-repeatable-field], #nutrition-form [data-question-action]")) {
+    if (!disabled && element.closest(".question-card[hidden]")) continue;
+    element.disabled = disabled;
+  }
 }
 
 function showVerifiedPatientContext(context) {
@@ -177,6 +188,10 @@ function collectFacts() {
     const value = readElement(element);
     if (value !== undefined) target[key] = value;
   }
+  const questionnaire = questionnaireContract
+    ? collectNutritionQuestionnaire($("patient-questionnaire"), questionnaireContract)
+    : { intakeProfile: {}, questionnaireResponses: {}, flatFacts: {} };
+  Object.assign(patientReported, questionnaire.flatFacts);
   const inputFacts = { ...patientReported, ...chartFacts };
   if (inputFacts.confirmed_gi_condition_codes?.includes("lactose_intolerance")) inputFacts.confirmed_lactose_intolerance = true;
   if (inputFacts.confirmed_gi_condition_codes?.includes("documented_gastroparesis")) inputFacts.confirmed_gastroparesis = true;
@@ -185,15 +200,17 @@ function collectFacts() {
   inputFacts.food_first_willing_sources_present = inputFacts.food_first_requested;
   inputFacts.food_first_candidate_eligible = inputFacts.food_first_requested;
   inputFacts.fortified_food_candidate_eligible = inputFacts.food_first_requested;
-  inputFacts.any_gi_alarm = ["blood_visible", "black_tarry", "persistent_vomiting", "unable_to_retain_fluids", "severe_or_progressive_pain", "jaundice"].some((key) => inputFacts[key] === true);
+  inputFacts.any_gi_alarm = ["blood_visible", "black_tarry", "bloody_or_coffee_ground_vomit", "persistent_vomiting", "unable_to_retain_fluids", "severe_or_progressive_pain", "chest_pain", "fever", "jaundice", "syncope_or_shock_symptoms"].some((key) => inputFacts[key] === true);
   return {
     patientRef: PATIENT_ID,
-    schemaVersion: "1.3.1",
-    questionnaireVersion: "1.3.0",
+    schemaVersion: "1.4.0",
+    questionnaireVersion: "1.4.0",
     sourceModel: "questionnaire-reflects-real-life_chart-reflects-physiology_intelligence-reconciles-both",
     patientReported,
     chartFacts,
     inputFacts,
+    intakeProfile: questionnaire.intakeProfile,
+    questionnaireResponses: questionnaire.questionnaireResponses,
     provenance: {
       patientReported: { sourceType: "clinician-entered-patient-report", sourceApplication: "BHW Clinical Intelligence", reliability: "reported" },
       chart: { sourceType: "Health Core chart reconciliation", sourceApplication: "BHW Clinical Intelligence", reliability: "clinician-reviewed-before-approval" },
@@ -218,6 +235,7 @@ function setElementValue(element, value) {
 function populateForm(content = {}) {
   const facts = content.inputFacts || { ...(content.patientReported || {}), ...(content.chartFacts || {}) };
   for (const element of document.querySelectorAll("[data-fact]")) setElementValue(element, facts[element.dataset.fact]);
+  if (questionnaireContract) populateNutritionQuestionnaire($("patient-questionnaire"), questionnaireContract, content);
   syncConvenienceMeasurements();
   formDirty = false;
 }
@@ -352,7 +370,12 @@ async function loadWorkspace({ populate = true } = {}) {
     showVerifiedPatientContext(patientContext);
     const body = await client.patientNutritionIntelligence(PATIENT_ID);
     workspace = body.workspace || null;
-    $("questionnaire-version").textContent = `Questionnaire v${body.questionnaire?.version || "1.3"} · ${body.questionnaire?.fields?.length || 0} fields`;
+    questionnaireContract = body.questionnaire || null;
+    if (!questionnaireContract?.questions?.length) throw new Error("The Nutrition Intelligence questionnaire contract is unavailable.");
+    $("patient-questionnaire").classList.remove("questionnaire-loading");
+    $("patient-questionnaire").innerHTML = renderNutritionQuestionnaire(questionnaireContract);
+    updateNutritionQuestionnaireVisibility($("patient-questionnaire"), questionnaireContract);
+    $("questionnaire-version").textContent = `Questionnaire v${questionnaireContract.version || "1.4"} · ${questionnaireContract.questions.length} questions`;
     if (populate && workspace?.draft?.content) populateForm(workspace.draft.content);
     const current = workspace?.approved?.evaluation || workspace?.draft?.evaluation || null;
     if (current?.rulesetVersion) renderEvaluation(current, workspace?.published ? `Published v${workspace.published.version}` : workspace?.approved ? `Approved v${workspace.approved.version}` : `Saved draft r${workspace.draft.revision}`);
@@ -471,10 +494,17 @@ function wire() {
   wireMeasurementConverters();
   $("nutrition-form").addEventListener("input", (event) => {
     if (!["review-attestation", "publication-allowed", "publish-attestation"].includes(event.target.id)) {
+      if (questionnaireContract && $("patient-questionnaire").contains(event.target)) updateNutritionQuestionnaireVisibility($("patient-questionnaire"), questionnaireContract);
       formDirty = true;
       setSaveState("Not saved", "not-saved", "This screen has changes that are not saved to BHW Cloud.");
       updateWorkflowControls();
     }
+  });
+  $("patient-questionnaire").addEventListener("click", (event) => {
+    if (!questionnaireContract || !handleNutritionQuestionnaireAction(event, $("patient-questionnaire"), questionnaireContract)) return;
+    formDirty = true;
+    setSaveState("Not saved", "not-saved", "This screen has changes that are not saved to BHW Cloud.");
+    updateWorkflowControls();
   });
   setFactControlsDisabled(true);
   updateWorkflowControls();
