@@ -6,7 +6,7 @@ Patient Registry is the authoritative patient-selection front door for the real-
 
 From an active Patient Registry record, staff may request a destination-specific launch for:
 
-1. BHW Whole-Person Clinical Map
+1. BHW Provider 360
 2. Body-System Atlas
 3. Patient Operations / Patient Worklist
 
@@ -44,15 +44,17 @@ After successful redemption, CrewHQ retains a 15-minute tab-scoped context in `s
 - presents the workspace choices; and
 - remains the route back when context expires.
 
-### Whole-Person Clinical Map
+### Provider 360
 
 - provides PSCM longitudinal synthesis and the connected body-system, timeline, mechanism, context, reserve, and feasible-plan views;
 - reads the patient already selected in Patient Registry; and
 - does not become a second canonical chart.
 
+The technical destination key `clinical-map`, scope `clinical-map.read`, and `patient-360*.html` routes remain compatibility identifiers. Their user-facing label is Provider 360.
+
 ### Body-System Atlas
 
-- uses the same tab context as the Clinical Map;
+- uses the same tab context as Provider 360;
 - retains its existing draft and provider-approval workflow; and
 - does not accept a visible real BHW Patient ID as authorization.
 
