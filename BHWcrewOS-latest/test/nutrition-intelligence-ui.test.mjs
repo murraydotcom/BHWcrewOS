@@ -59,6 +59,11 @@ test("Nutrition Intelligence preserves the real-life, physiology, and reconcilia
   assert.match(html, /Waist circumference \(in\)/);
   assert.match(html, /Hip circumference \(cm\)/);
   assert.match(html, /Context only—no automatic diagnosis or weight-loss recommendation/);
+  assert.match(html, /Health Core chart suggestions/);
+  assert.match(html, /Fill blank chart fields/);
+  assert.match(app, /renderNutritionChartPrefill\(chartPrefillContract\)/);
+  assert.match(app, /applyNutritionChartPrefill\(\$\("nutrition-form"\), chartPrefillContract\)/);
+  assert.match(app, /matchingNutritionChartProvenance\(chartFacts, chartPrefillContract/);
 });
 
 test("measurement converters preserve canonical kg and cm values", () => {

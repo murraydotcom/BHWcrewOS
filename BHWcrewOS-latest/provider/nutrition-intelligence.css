@@ -99,6 +99,18 @@ body[data-p360-view="nutrition"]{
 .patient-evidence .eyebrow{color:var(--nutrition-opal-blue)}
 .chart-evidence .eyebrow{color:var(--nutrition-opal-violet)}
 
+.chart-prefill{display:grid;gap:10px;padding:13px;border:1px solid color-mix(in srgb,var(--nutrition-opal-violet) 36%,var(--line));border-left:4px solid var(--nutrition-opal-violet);border-radius:10px;background:linear-gradient(145deg,var(--card),color-mix(in srgb,var(--card) 70%,var(--nutrition-opal-violet-soft)))}
+.chart-prefill-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.chart-prefill-head>div{display:grid;gap:3px}
+.chart-prefill-head b{font-size:var(--text-sm)}
+.chart-prefill-head span,.chart-prefill-feedback,.chart-prefill-warning{margin:0;color:var(--muted);font-size:var(--text-xs);line-height:1.45}
+.chart-prefill-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:0;padding:0;list-style:none}
+.chart-prefill-list li{display:grid;grid-template-columns:1fr auto;gap:3px 9px;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+.chart-prefill-list li b,.chart-prefill-list li span{font-size:var(--text-xs)}
+.chart-prefill-list li span{font-weight:800;color:var(--nutrition-ironstone)}
+.chart-prefill-list li small{grid-column:1/-1;color:var(--muted);font-size:10px;line-height:1.4}
+.chart-prefill-warning{padding:8px 9px;border-radius:7px;background:var(--gold-soft);color:var(--nutrition-ironstone)}
+
 .nutrition-fields{display:grid;gap:16px}
 .questionnaire-loading{padding:18px;border:1px dashed var(--line);border-radius:10px;color:var(--muted);background:var(--card-soft)}
 .questionnaire-runtime-note{display:grid;gap:3px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--nutrition-opal-blue) 34%,var(--line));border-left:4px solid var(--nutrition-opal-blue);border-radius:9px;background:color-mix(in srgb,var(--card) 75%,var(--nutrition-opal-blue-soft));font-size:var(--text-xs)}
@@ -234,6 +246,7 @@ body[data-p360-view="nutrition"]{
 }
 @media(max-width:760px){
   .nutrition-hero{grid-template-columns:1fr}
+  .chart-prefill-head{align-items:stretch;flex-direction:column}.chart-prefill-head .btn{width:100%}.chart-prefill-list{grid-template-columns:1fr}
   .evidence-model,.result-grid{grid-template-columns:1fr}
   .nutrition-fields fieldset{grid-template-columns:1fr}
   .question-choice-grid,.paired-control,.repeatable-item{grid-template-columns:1fr}

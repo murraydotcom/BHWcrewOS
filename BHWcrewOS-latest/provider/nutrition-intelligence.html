@@ -71,6 +71,7 @@
         <section class="panel evidence-column chart-evidence">
           <div class="panel-head"><div><span class="eyebrow">Clinician/chart reconciliation</span><h3>Physiology and orders</h3><span class="panel-subtitle">Confirm against the authoritative record before approval.</span></div><span class="badge warning">Source review required</span></div>
           <div class="panel-body nutrition-fields">
+            <div id="chart-prefill" class="chart-prefill" data-state="loading"><div class="chart-prefill-head"><div><b>Health Core chart suggestions</b><span>Checking for current supported chart values…</span></div><button class="btn" type="button" id="apply-chart-prefill" disabled>Fill blank chart fields</button></div></div>
             <fieldset><legend>Measurements and function</legend>
               <label><span>Age</span><input type="number" min="0" max="120" data-fact="age_years" data-source="chart"></label>
               <label><span>Equation sex</span><select data-fact="sex_for_equation" data-source="chart"><option value="">Not selected</option><option value="female">Female</option><option value="male">Male</option></select></label>
