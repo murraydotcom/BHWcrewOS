@@ -29,6 +29,7 @@ test("Nutrition Intelligence preserves the real-life, physiology, and reconcilia
   assert.match(html, /not just weight/);
   assert.match(html, /Questionnaire v1\.4/);
   assert.match(html, /id="patient-questionnaire"/);
+  assert.match(html, /id="nutrition-digestion-map"/);
   assert.match(html, /Food-first and natural-source preference/);
   assert.match(app, /renderNutritionQuestionnaire\(questionnaireContract\)/);
   assert.match(app, /collectNutritionQuestionnaire\(\$\("patient-questionnaire"\), questionnaireContract\)/);
@@ -38,6 +39,11 @@ test("Nutrition Intelligence preserves the real-life, physiology, and reconcilia
   assert.match(questionnaire, /structured_bowel_pattern/);
   assert.match(questionnaire, /repeatable_beverage_grid/);
   assert.match(questionnaire, /multi_select_with_text/);
+  assert.match(questionnaire, /gi_pattern_matrix/);
+  assert.match(app, /mergeNutritionQuestionnaireModules\(baseQuestionnaire, giPatternScreenContract\)/);
+  assert.match(app, /renderNutritionDigestionMap\(digestionMapContract\)/);
+  assert.match(app, /Symptoms ≠ diagnosis/);
+  assert.match(app, /no total score calculated/);
   assert.match(html, /Kidney health and real-life food rules/);
   assert.match(html, /Familiar, cultural, religious, or safe foods to preserve/);
   assert.match(html, /Salt substitute\/electrolyte product/);

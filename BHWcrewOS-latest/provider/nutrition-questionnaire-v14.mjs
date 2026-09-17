@@ -4,6 +4,24 @@ const list = (value) => Array.isArray(value) ? value : value == null || value ==
 const present = (value) => value !== undefined && value !== null && value !== "" && (!Array.isArray(value) || value.length > 0);
 const safeId = (value) => String(value || "").replace(/[^a-zA-Z0-9_-]/g, "-");
 
+export function mergeNutritionQuestionnaireModules(questionnaire = {}, ...modules) {
+  const merged = JSON.parse(JSON.stringify(questionnaire || {}));
+  merged.sections = list(merged.sections);
+  merged.questions = list(merged.questions);
+  merged.option_sets = { ...(merged.option_sets || {}) };
+  merged.module_versions = { ...(merged.module_versions || {}) };
+  for (const module of modules.filter(Boolean)) {
+    const sections = list(module.sections);
+    const insertionId = module.insertion_after_section || "gi_allergy";
+    const insertionIndex = Math.max(0, merged.sections.findIndex((section) => section.id === insertionId) + 1);
+    merged.sections.splice(insertionIndex, 0, ...sections);
+    merged.questions.push(...list(module.questions));
+    Object.assign(merged.option_sets, module.option_sets || {});
+    if (module.module_id) merged.module_versions[module.module_id] = module.version || null;
+  }
+  return merged;
+}
+
 const MEAL_COMPLETION_PCT = Object.freeze({
   none_to_quarter: 12.5,
   quarter_to_half: 38,
@@ -57,6 +75,12 @@ function renderFrequencyGrid(question, questionnaire) {
   return `<div class="question-table-wrap"><table class="question-grid-table"><thead><tr><th>Food</th><th>How often</th></tr></thead><tbody>${list(question.answer?.labels?.rows).map((row) => `<tr><th>${esc(row.label)}</th><td><select data-grid-key="${esc(row.value)}">${selectOptions(choices)}</select></td></tr>`).join("")}</tbody></table></div>`;
 }
 
+function renderGiPatternMatrix(question) {
+  const scale = list(question.answer?.labels?.scale);
+  const groups = list(question.answer?.labels?.groups);
+  return `<div class="gi-pattern-matrix" data-q-role="gi-pattern-matrix">${groups.map((group) => `<section class="gi-pattern-group" aria-labelledby="gi-group-${safeId(group.code)}"><h4 id="gi-group-${safeId(group.code)}">${esc(group.label)}</h4><div class="gi-pattern-scale" aria-hidden="true">${scale.map((item) => `<span>${esc(item.label)}</span>`).join("")}</div>${list(group.rows).map((row) => `<fieldset class="gi-pattern-row" data-gi-code="${esc(row.code)}"><legend>${esc(row.label)}</legend><div class="gi-pattern-options">${scale.map((item) => `<label><input type="radio" name="gi-pattern-${safeId(row.code)}" value="${esc(item.value)}"><span><b>${esc(item.value)}</b><small>${esc(item.label)}</small></span></label>`).join("")}</div></fieldset>`).join("")}</section>`).join("")}</div>`;
+}
+
 function renderQuestionControl(question, questionnaire) {
   const answer = question.answer || {};
   const type = answer.type;
@@ -70,6 +94,7 @@ function renderQuestionControl(question, questionnaire) {
   if (type === "time_or_relative") return `<input type="text" data-q-role="value" placeholder="e.g., 8:00 AM or about 2 hours after waking">`;
   if (type === "quantity_with_unit") return `<div class="paired-control"><label><span>Amount</span><input type="number" min="0" step="0.1" data-q-role="amount"></label><label><span>Unit</span><select data-q-role="unit">${selectOptions(answer.labels?.units || [], { blank: false })}</select></label></div>`;
   if (type === "frequency_grid") return renderFrequencyGrid(question, questionnaire);
+  if (type === "gi_pattern_matrix") return renderGiPatternMatrix(question);
   if (type === "repeatable_beverage_grid") return renderBeverageGrid(question, questionnaire);
   if (["meal_choice_with_text", "multi_select_with_text"].includes(type)) return `${multiChoiceControl(question, questionnaire)}<label class="question-detail"><span>Details or another answer</span><input type="text" data-q-role="detail" maxlength="1000"></label>`;
   if (type === "compound_boolean_unknown") return `<div class="paired-control">${list(answer.labels?.subquestions).map((item, index) => `<label><span>${esc(item.label)}</span><select data-q-role="boolean" data-path-index="${index}"><option value="">Not answered</option><option value="yes">Yes</option><option value="no">No</option><option value="unsure">Unsure</option><option value="declined">Prefer not to answer</option></select></label>`).join("")}</div>`;
@@ -178,6 +203,13 @@ function readQuestion(card, question, questionnaire) {
     const value = Object.fromEntries([...card.querySelectorAll("[data-grid-key]")].filter((item) => item.value).map((item) => [item.dataset.gridKey, item.value]));
     return direct(Object.keys(value).length ? value : undefined);
   }
+  if (type === "gi_pattern_matrix") {
+    const value = Object.fromEntries([...card.querySelectorAll("[data-gi-code]")].flatMap((row) => {
+      const selected = row.querySelector('input[type="radio"]:checked');
+      return selected ? [[row.dataset.giCode, Number(selected.value)]] : [];
+    }));
+    return direct(Object.keys(value).length ? value : undefined);
+  }
   if (type === "repeatable_beverage_grid") {
     const value = [...card.querySelectorAll("[data-beverage-type]")].map((row) => {
       const amount = fieldValue(row.querySelector('[data-beverage-field="amount"]'));
@@ -231,6 +263,9 @@ function flattenQuestionnaireFacts(intakeProfile) {
   facts.access_barriers = intakeProfile.sdoh?.access_barriers;
   facts.pattern_interest = intakeProfile.pattern_history?.interested_patterns;
   facts.gi_symptoms = intakeProfile.gi_allergy?.gi_symptoms;
+  facts.gi_pattern_symptom_frequency = intakeProfile.gi_profile?.pattern_screen?.symptom_frequency;
+  facts.gi_pattern_context = intakeProfile.gi_profile?.pattern_screen?.context;
+  facts.gluten_testing_status = intakeProfile.gi_profile?.pattern_screen?.gluten_testing_status;
   facts.unintentional_loss_reported = intakeProfile.weight_history?.trajectory_direction === "lost" && intakeProfile.weight_history?.intentionality === "unintentional";
   const beverages = list(intakeProfile.beverages?.items);
   facts.sweetened_beverage_ml_day = beverages.filter((item) => item.sweetened === true).reduce((sum, item) => sum + (Number(item.amount_ml_day) || 0), 0);
@@ -318,6 +353,12 @@ export function populateNutritionQuestionnaire(container, questionnaire = {}, co
       if (unit) unit.value = typeof raw === "object" ? raw.unit || unit.value : "mL";
     } else if (type === "frequency_grid" && raw && typeof raw === "object") {
       for (const control of card.querySelectorAll("[data-grid-key]")) control.value = raw[control.dataset.gridKey] || "";
+    } else if (type === "gi_pattern_matrix" && raw && typeof raw === "object") {
+      for (const row of card.querySelectorAll("[data-gi-code]")) {
+        const value = raw[row.dataset.giCode];
+        const control = value === undefined || value === null ? null : [...row.querySelectorAll('input[type="radio"]')].find((item) => Number(item.value) === Number(value));
+        if (control) control.checked = true;
+      }
     } else if (["meal_choice_with_text", "multi_select_with_text"].includes(type) && raw && typeof raw === "object") {
       for (const control of card.querySelectorAll('[data-q-role="choice"]')) control.checked = list(raw.choices).includes(control.value);
       const detail = card.querySelector('[data-q-role="detail"]');

@@ -4,10 +4,12 @@ import { normalizeBhwPatientId, verifiedNutritionPatientContext } from "./nutrit
 import {
   collectNutritionQuestionnaire,
   handleNutritionQuestionnaireAction,
+  mergeNutritionQuestionnaireModules,
   populateNutritionQuestionnaire,
   renderNutritionQuestionnaire,
   updateNutritionQuestionnaireVisibility,
 } from "./nutrition-questionnaire-v14.mjs";
+import { renderNutritionDigestionMap } from "./nutrition-digestion-map.mjs";
 import {
   applyNutritionChartPrefill,
   matchingNutritionChartProvenance,
@@ -28,6 +30,8 @@ let activeEvaluation = null;
 let formDirty = false;
 let patientContextVerified = false;
 let questionnaireContract = null;
+let giPatternScreenContract = null;
+let digestionMapContract = null;
 let chartPrefillContract = null;
 let appliedChartPrefillFacts = new Set();
 
@@ -45,7 +49,7 @@ function preservePatientNavigation() {
 }
 
 function setFactControlsDisabled(disabled) {
-  for (const element of document.querySelectorAll("#nutrition-form [data-fact], #nutrition-form [data-q-role], #nutrition-form [data-grid-key], #nutrition-form [data-beverage-field], #nutrition-form [data-repeatable-field], #nutrition-form [data-question-action]")) {
+  for (const element of document.querySelectorAll("#nutrition-form [data-fact], #nutrition-form [data-q-role], #nutrition-form [data-grid-key], #nutrition-form [data-beverage-field], #nutrition-form [data-repeatable-field], #nutrition-form [data-question-action], #nutrition-form .gi-pattern-matrix input")) {
     if (!disabled && element.closest(".question-card[hidden]")) continue;
     element.disabled = disabled;
   }
@@ -346,7 +350,7 @@ function renderEvaluation(evaluation, sourceStatus = "Preview only") {
       <section class="panel"><div class="panel-head"><h3>Safety gates</h3><span class="badge ${gates.length ? "warning" : "neutral"}">Runs first</span></div><div class="panel-body result-list">${gateList(gates)}</div></section>
       <section class="panel"><div class="panel-head"><h3>Phenotypes—not diagnoses</h3><span class="badge neutral">Evidence-linked</span></div><div class="panel-body">${chips(evaluation.phenotypeCodes)}</div></section>
       ${kidneyPanel(evaluation.kidney)}
-      <section class="panel"><div class="panel-head"><h3>GI and BHW 5R</h3><span class="badge neutral">Existing Blueprint model</span></div><div class="panel-body result-list"><div class="result-item"><b>Presentation profiles</b>${chips(evaluation.gi?.presentationProfiles)}</div><div class="result-item"><b>Confirmed chart conditions</b>${chips(evaluation.gi?.confirmedConditions)}</div><div class="result-item"><b>Eligible GI actions</b>${chips(evaluation.gi?.eligibleInterventions)}</div><div class="result-item"><b>5R candidates</b>${chips(evaluation.gi?.fiveR?.candidates)}<small>Steps are optional clinical lenses—not a universal sequence or diagnosis.</small></div></div></section>
+      <section class="panel"><div class="panel-head"><h3>GI patterns and BHW 5R</h3><span class="badge neutral">Symptoms ≠ diagnosis</span></div><div class="panel-body result-list"><div class="result-item"><b>Pattern screen</b><p>${esc(evaluation.gi?.patternScreen?.answeredSymptomCount || 0)} symptom frequencies answered · no total score calculated</p><small>The screen organizes presentation patterns; it does not diagnose low stomach acid, SIBO, intestinal permeability, celiac disease, gallbladder disease, or pancreatic disease.</small></div><div class="result-item"><b>Presentation profiles</b>${chips(evaluation.gi?.presentationProfiles)}</div><div class="result-item"><b>Diagnostic-review candidates</b>${chips(list(evaluation.gi?.diagnosticReviewCandidates).map((item) => item.code))}<small>These are prompts for history, medication, chart, examination, lab, imaging, or specialist reconciliation—not diagnoses.</small></div><div class="result-item"><b>Confirmed chart conditions</b>${chips(evaluation.gi?.confirmedConditions)}</div><div class="result-item"><b>Eligible GI actions</b>${chips(evaluation.gi?.eligibleInterventions)}</div><div class="result-item"><b>5R candidates</b>${chips(evaluation.gi?.fiveR?.candidates)}<small>Steps are optional clinical lenses—not a universal sequence or diagnosis.</small></div></div></section>
       <section class="panel"><div class="panel-head"><h3>Dietary pattern and targets</h3><span class="badge neutral">Clinician review</span></div><div class="panel-body result-list"><div class="result-item"><b>Overlays and modifiers</b>${chips(evaluation.dietaryPattern?.overlays)}</div><div class="result-item"><b>Energy</b><p>${esc(targetText(evaluation.targets?.energy))}</p></div><div class="result-item"><b>Protein</b><p>${esc(targetText(evaluation.targets?.protein))}</p></div><div class="result-item"><b>Carbohydrate</b><p>${esc(targetText(evaluation.targets?.carbohydrate))}</p></div><div class="result-item"><b>Fat</b><p>${esc(targetText(evaluation.targets?.fat))}</p></div><div class="result-item"><b>Fiber</b><p>${esc(targetText(evaluation.targets?.fiber))}</p></div><div class="result-item"><b>Hydration</b><p>${esc(targetText(evaluation.targets?.hydration))}</p></div></div></section>
       <section class="panel"><div class="panel-head"><h3>Natural and food-first sources</h3><span class="badge neutral">Filter, then rank</span></div><div class="panel-body result-list">${foodSources(evaluation.foodFirst)}</div></section>
       <section class="panel"><div class="panel-head"><h3>Supplement and shake escalation</h3><span class="badge warning">No automatic product</span></div><div class="panel-body"><div class="result-item"><b>${esc(label(evaluation.supplementEscalation?.status))}</b>${chips(evaluation.supplementEscalation?.sequence)}<small>Exact product, dose, interactions, contraindications, duration, outcome, and stop rules require review.</small></div></div></section>
@@ -399,16 +403,20 @@ async function loadWorkspace({ populate = true } = {}) {
     showVerifiedPatientContext(patientContext);
     const body = await client.patientNutritionIntelligence(PATIENT_ID);
     workspace = body.workspace || null;
-    questionnaireContract = body.questionnaire || null;
+    const baseQuestionnaire = body.questionnaire || null;
+    giPatternScreenContract = body.giPatternScreen || null;
+    digestionMapContract = body.digestionMap || null;
+    questionnaireContract = baseQuestionnaire ? mergeNutritionQuestionnaireModules(baseQuestionnaire, giPatternScreenContract) : null;
     chartPrefillContract = body.chartPrefill || { facts: {}, provenance: {}, warnings: [] };
     appliedChartPrefillFacts = new Set();
     if (!questionnaireContract?.questions?.length) throw new Error("The Nutrition Intelligence questionnaire contract is unavailable.");
     $("patient-questionnaire").classList.remove("questionnaire-loading");
     $("patient-questionnaire").innerHTML = renderNutritionQuestionnaire(questionnaireContract);
+    $("nutrition-digestion-map").innerHTML = renderNutritionDigestionMap(digestionMapContract);
     $("chart-prefill").dataset.state = chartPrefillContract.status || "unavailable";
     $("chart-prefill").innerHTML = renderNutritionChartPrefill(chartPrefillContract);
     updateNutritionQuestionnaireVisibility($("patient-questionnaire"), questionnaireContract);
-    $("questionnaire-version").textContent = `Questionnaire v${questionnaireContract.version || "1.4"} · ${questionnaireContract.questions.length} questions`;
+    $("questionnaire-version").textContent = `Questionnaire v${questionnaireContract.version || "1.4"} · ${baseQuestionnaire.questions.length} core + GI pattern screen v${giPatternScreenContract?.version || "1.0"}`;
     if (populate && workspace?.draft?.content) populateForm(workspace.draft.content);
     const current = workspace?.approved?.evaluation || workspace?.draft?.evaluation || null;
     if (current?.rulesetVersion) renderEvaluation(current, workspace?.published ? `Published v${workspace.published.version}` : workspace?.approved ? `Approved v${workspace.approved.version}` : `Saved draft r${workspace.draft.revision}`);
