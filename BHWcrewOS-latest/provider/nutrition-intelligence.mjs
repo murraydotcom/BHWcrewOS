@@ -412,7 +412,14 @@ async function loadWorkspace({ populate = true } = {}) {
     if (!questionnaireContract?.questions?.length) throw new Error("The Nutrition Intelligence questionnaire contract is unavailable.");
     $("patient-questionnaire").classList.remove("questionnaire-loading");
     $("patient-questionnaire").innerHTML = renderNutritionQuestionnaire(questionnaireContract);
-    $("nutrition-digestion-map").innerHTML = renderNutritionDigestionMap(digestionMapContract);
+    const digestiveQuestionList = $("patient-questionnaire").querySelector('[data-section-id="gi_allergy"] .questionnaire-question-list');
+    if (!digestiveQuestionList) throw new Error("The digestive questionnaire section is unavailable.");
+    const digestionMap = document.createElement("div");
+    digestionMap.id = "nutrition-digestion-map";
+    digestionMap.className = "questionnaire-section-support";
+    digestionMap.setAttribute("aria-live", "polite");
+    digestionMap.innerHTML = renderNutritionDigestionMap(digestionMapContract);
+    digestiveQuestionList.append(digestionMap);
     $("chart-prefill").dataset.state = chartPrefillContract.status || "unavailable";
     $("chart-prefill").innerHTML = renderNutritionChartPrefill(chartPrefillContract);
     updateNutritionQuestionnaireVisibility($("patient-questionnaire"), questionnaireContract);
