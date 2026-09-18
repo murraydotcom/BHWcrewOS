@@ -75,6 +75,9 @@ test("GI pattern module merges after the core GI section and renders an accessib
   const html = renderNutritionQuestionnaire(merged);
   assert.match(html, /data-q-role="gi-pattern-matrix"/);
   assert.match(html, /data-gi-code="reflux_burning"/);
+  assert.match(html, /data-questionnaire-empty-state/);
+  assert.match(html, /Select digestive symptoms first/);
+  assert.match(html, /data-questionnaire-section-target="gi_allergy"/);
   assert.match(html, /Never or rarely/);
   assert.match(html, /Most days/);
 });

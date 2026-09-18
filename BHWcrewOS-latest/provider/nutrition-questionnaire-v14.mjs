@@ -123,7 +123,10 @@ export function renderNutritionQuestionnaire(questionnaire = {}) {
   const map = questionsById(questionnaire);
   return `<div class="questionnaire-runtime-note"><b>Adaptive questionnaire v${esc(questionnaire.version || "1.4")}</b><span>Only relevant follow-up questions open. Patient report remains separate from chart physiology.</span></div>${list(questionnaire.sections).map((section, index) => {
     const questions = list(section.question_ids).map((id) => map.get(id)).filter(Boolean);
-    return `<details class="questionnaire-section" data-section-id="${esc(section.id)}" ${index < 2 ? "open" : ""}><summary><span class="section-number">${index + 1}</span><span><b>${esc(section.title)}</b><small>${esc(section.intro || "")}</small></span><span class="section-count">${questions.length}</span></summary><div class="questionnaire-question-list">${questions.map((question) => renderQuestion(question, questionnaire)).join("")}</div></details>`;
+    const emptyState = section.id === "gi_pattern_detail"
+      ? '<div class="questionnaire-branch-note" data-questionnaire-empty-state role="status" hidden><b>Select digestive symptoms first</b><span>Choose at least one symptom in section 10. The detailed frequency and context questions will then appear here.</span><button type="button" class="button secondary compact" data-questionnaire-section-target="gi_allergy">Open digestive symptoms</button></div>'
+      : "";
+    return `<details class="questionnaire-section" data-section-id="${esc(section.id)}" ${index < 2 ? "open" : ""}><summary><span class="section-number">${index + 1}</span><span><b>${esc(section.title)}</b><small>${esc(section.intro || "")}</small></span><span class="section-count">${questions.length}</span></summary><div class="questionnaire-question-list">${emptyState}${questions.map((question) => renderQuestion(question, questionnaire)).join("")}</div></details>`;
   }).join("")}`;
 }
 
@@ -312,6 +315,12 @@ export function updateNutritionQuestionnaireVisibility(container, questionnaire 
     card.setAttribute("aria-hidden", String(!visible));
     for (const control of card.querySelectorAll("input,select,textarea,button")) control.disabled = !visible;
   }
+  for (const emptyState of container.querySelectorAll("[data-questionnaire-empty-state]")) {
+    const section = emptyState.closest(".questionnaire-section");
+    const hasVisibleQuestion = [...section.querySelectorAll(".question-card")].some((card) => !card.hidden);
+    emptyState.hidden = hasVisibleQuestion;
+    emptyState.setAttribute("aria-hidden", String(hasVisibleQuestion));
+  }
 }
 
 function writeSimple(card, question, raw) {
@@ -401,6 +410,17 @@ export function populateNutritionQuestionnaire(container, questionnaire = {}, co
 }
 
 export function handleNutritionQuestionnaireAction(event, container, questionnaire = {}) {
+  const sectionButton = event.target.closest("[data-questionnaire-section-target]");
+  if (sectionButton && container.contains(sectionButton)) {
+    const targetId = sectionButton.dataset.questionnaireSectionTarget;
+    const targetSection = [...container.querySelectorAll(".questionnaire-section")].find((section) => section.dataset.sectionId === targetId);
+    if (targetSection) {
+      targetSection.open = true;
+      targetSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      targetSection.querySelector("summary")?.focus({ preventScroll: true });
+    }
+    return false;
+  }
   const button = event.target.closest("[data-question-action]");
   if (!button || !container.contains(button)) return false;
   const card = button.closest(".question-card");
