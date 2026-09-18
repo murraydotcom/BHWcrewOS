@@ -30,6 +30,9 @@ test("Nutrition Intelligence preserves the real-life, physiology, and reconcilia
   assert.match(html, /Questionnaire v1\.4/);
   assert.match(html, /id="patient-questionnaire"/);
   assert.doesNotMatch(html, /id="nutrition-digestion-map"/);
+  assert.match(html, /data-bhw-system-navigation/);
+  assert.match(html, /← Patient 360/);
+  assert.match(html, /⌂ CrewOS Home/);
   assert.match(html, /Food-first and natural-source preference/);
   assert.match(app, /renderNutritionQuestionnaire\(questionnaireContract\)/);
   assert.match(app, /collectNutritionQuestionnaire\(\$\("patient-questionnaire"\), questionnaireContract\)/);
@@ -40,6 +43,9 @@ test("Nutrition Intelligence preserves the real-life, physiology, and reconcilia
   assert.match(questionnaire, /repeatable_beverage_grid/);
   assert.match(questionnaire, /multi_select_with_text/);
   assert.match(questionnaire, /gi_pattern_matrix/);
+  assert.match(questionnaire, /data-questionnaire-empty-state/);
+  assert.match(questionnaire, /Select digestive symptoms first/);
+  assert.match(questionnaire, /hasVisibleQuestion/);
   assert.match(app, /mergeNutritionQuestionnaireModules\(baseQuestionnaire, giPatternScreenContract\)/);
   assert.match(app, /\[data-section-id="gi_allergy"\] \.questionnaire-question-list/);
   assert.match(app, /digestionMap\.id = "nutrition-digestion-map"/);
