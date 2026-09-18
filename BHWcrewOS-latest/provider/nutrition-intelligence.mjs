@@ -416,7 +416,9 @@ async function loadWorkspace({ populate = true } = {}) {
     $("chart-prefill").dataset.state = chartPrefillContract.status || "unavailable";
     $("chart-prefill").innerHTML = renderNutritionChartPrefill(chartPrefillContract);
     updateNutritionQuestionnaireVisibility($("patient-questionnaire"), questionnaireContract);
-    $("questionnaire-version").textContent = `Questionnaire v${questionnaireContract.version || "1.4"} · ${baseQuestionnaire.questions.length} core + GI pattern screen v${giPatternScreenContract?.version || "1.0"}`;
+    $("questionnaire-version").textContent = giPatternScreenContract?.version
+      ? `Questionnaire v${questionnaireContract.version || "1.4"} · ${baseQuestionnaire.questions.length} core + GI pattern screen v${giPatternScreenContract.version}`
+      : `Questionnaire v${questionnaireContract.version || "1.4"} · ${baseQuestionnaire.questions.length} core · GI pattern screen awaiting Health Core`;
     if (populate && workspace?.draft?.content) populateForm(workspace.draft.content);
     const current = workspace?.approved?.evaluation || workspace?.draft?.evaluation || null;
     if (current?.rulesetVersion) renderEvaluation(current, workspace?.published ? `Published v${workspace.published.version}` : workspace?.approved ? `Approved v${workspace.approved.version}` : `Saved draft r${workspace.draft.revision}`);

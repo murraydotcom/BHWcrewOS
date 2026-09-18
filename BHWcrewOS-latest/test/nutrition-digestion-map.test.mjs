@@ -19,3 +19,12 @@ test("BHW digestion map is original, accessible, and driven by the clinical cont
   assert.match(html, /Symptoms help localize a presentation/);
   assert.doesNotMatch(html, /Figure 2\.4/);
 });
+
+test("BHW digestion map fails open for an older Health Core contract", () => {
+  for (const contract of [null, undefined, {}, { regions: null }]) {
+    const html = renderNutritionDigestionMap(contract);
+    assert.match(html, /GI orientation temporarily unavailable/);
+    assert.match(html, /rest of Nutrition Intelligence remains available/);
+    assert.match(html, /Awaiting Health Core/);
+  }
+});
