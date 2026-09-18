@@ -42,6 +42,7 @@ test("Nutrition Intelligence preserves the real-life, physiology, and reconcilia
   assert.match(questionnaire, /gi_pattern_matrix/);
   assert.match(app, /mergeNutritionQuestionnaireModules\(baseQuestionnaire, giPatternScreenContract\)/);
   assert.match(app, /renderNutritionDigestionMap\(digestionMapContract\)/);
+  assert.match(app, /GI pattern screen awaiting Health Core/);
   assert.match(app, /Symptoms ≠ diagnosis/);
   assert.match(app, /no total score calculated/);
   assert.match(html, /Kidney health and real-life food rules/);
