@@ -141,6 +141,11 @@ body[data-p360-view="nutrition"]{
 
 .nutrition-fields{display:grid;gap:16px}
 .questionnaire-loading{padding:18px;border:1px dashed var(--line);border-radius:10px;color:var(--muted);background:var(--card-soft)}
+.questionnaire-unavailable{padding:0}
+.questionnaire-unavailable>div{display:grid;gap:8px;padding:14px;border:1px solid color-mix(in srgb,var(--gold) 42%,var(--line));border-left:4px solid var(--gold);border-radius:10px;background:color-mix(in srgb,var(--card) 78%,var(--gold-soft))}
+.questionnaire-unavailable b{color:var(--ink);font-size:var(--text-sm)}
+.questionnaire-unavailable p,.questionnaire-unavailable small{margin:0;color:var(--muted);font-size:var(--text-xs);line-height:1.5}
+.questionnaire-unavailable .btn{justify-self:start}
 .questionnaire-runtime-note{display:grid;gap:3px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--nutrition-opal-blue) 34%,var(--line));border-left:4px solid var(--nutrition-opal-blue);border-radius:9px;background:color-mix(in srgb,var(--card) 75%,var(--nutrition-opal-blue-soft));font-size:var(--text-xs)}
 .questionnaire-runtime-note span{color:var(--muted);font-weight:500}
 .questionnaire-section{border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb,var(--card) 88%,var(--nutrition-opal-sage-soft));overflow:hidden}

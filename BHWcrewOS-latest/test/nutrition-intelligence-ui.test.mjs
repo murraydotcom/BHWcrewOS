@@ -17,10 +17,11 @@ import {
 const provider = (path) => readFile(new URL(`../provider/${path}`, import.meta.url), "utf8");
 
 test("Nutrition Intelligence preserves the real-life, physiology, and reconciliation model", async () => {
-  const [html, app, questionnaire] = await Promise.all([
+  const [html, app, questionnaire, css] = await Promise.all([
     provider("nutrition-intelligence.html"),
     provider("nutrition-intelligence.mjs"),
     provider("nutrition-questionnaire-v14.mjs"),
+    provider("nutrition-intelligence.css"),
   ]);
 
   assert.match(html, /Questionnaire reflects real life/);
@@ -54,6 +55,11 @@ test("Nutrition Intelligence preserves the real-life, physiology, and reconcilia
   assert.match(app, /GI pattern screen awaiting Health Core/);
   assert.match(app, /Symptoms ≠ diagnosis/);
   assert.match(app, /no total score calculated/);
+  assert.match(app, /Questionnaire temporarily unavailable/);
+  assert.match(app, /It is not still loading/);
+  assert.match(app, /data-questionnaire-retry/);
+  assert.match(app, /No patient information was loaded or saved/);
+  assert.match(css, /\.questionnaire-unavailable/);
   assert.match(html, /Kidney health and real-life food rules/);
   assert.match(html, /Familiar, cultural, religious, or safe foods to preserve/);
   assert.match(html, /Salt substitute\/electrolyte product/);

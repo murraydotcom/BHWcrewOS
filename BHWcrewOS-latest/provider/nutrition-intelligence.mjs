@@ -390,11 +390,34 @@ function updateWorkflowControls() {
   $("record-status").className = `badge ${published ? "complete" : approved ? "neutral" : draft ? "warning" : "neutral"}`;
 }
 
+function showQuestionnaireLoading() {
+  const questionnaire = $("patient-questionnaire");
+  questionnaire.classList.add("questionnaire-loading");
+  questionnaire.classList.remove("questionnaire-unavailable");
+  questionnaire.innerHTML = "Loading the adaptive real-life questionnaire…";
+  $("questionnaire-version").textContent = "Questionnaire v1.4";
+}
+
+function showQuestionnaireUnavailable(error) {
+  const questionnaire = $("patient-questionnaire");
+  const deployPreview = /^deploy-preview-\d+--bhwcrewos\.netlify\.app$/i.test(location.hostname);
+  const detail = deployPreview && /failed to fetch/i.test(String(error?.message || ""))
+    ? "This deploy preview is not authorized to connect to protected Health Core. It is not still loading. Review the layout here, then test the protected questionnaire in signed-in CrewHQ after the change is merged."
+    : "Health Core could not provide the questionnaire. It is not still loading. Check the connection and try again.";
+  questionnaire.classList.remove("questionnaire-loading");
+  questionnaire.classList.add("questionnaire-unavailable");
+  questionnaire.innerHTML = `<div role="alert"><b>Questionnaire temporarily unavailable</b><p>${esc(detail)}</p><button class="btn" type="button" data-questionnaire-retry>Retry Health Core</button><small>No patient information was loaded or saved.</small></div>`;
+  $("questionnaire-version").textContent = "Questionnaire unavailable";
+  $("chart-prefill").dataset.state = "unavailable";
+  $("chart-prefill").innerHTML = '<div class="chart-prefill-head"><div><b>Health Core chart suggestions unavailable</b><span>The protected connection did not complete. No chart values were loaded.</span></div></div>';
+}
+
 async function loadWorkspace({ populate = true } = {}) {
   patientContextVerified = false;
   setFactControlsDisabled(true);
   updateWorkflowControls();
   setConnection("Connecting...", "warning");
+  showQuestionnaireLoading();
   try {
     if (!client) client = await createEncounterCloudClient();
     if (!client) throw new Error("The protected Clinical Intelligence connection is not configured.");
@@ -445,6 +468,7 @@ async function loadWorkspace({ populate = true } = {}) {
     $("patient-context-detail").textContent = error.message || "Health Core could not verify this patient.";
     setConnection("Unavailable", "warning");
     setSaveState("Not saved", "error", error.message || "Nutrition Intelligence could not be loaded.");
+    showQuestionnaireUnavailable(error);
     if (error?.code === CREW_SESSION_EXPIRED) location.href = `/crewos?next=${encodeURIComponent(`/provider/nutrition-intelligence.html?patient=${PATIENT_ID}`)}`;
     updateWorkflowControls();
   }
@@ -551,6 +575,10 @@ function wire() {
     }
   });
   $("patient-questionnaire").addEventListener("click", (event) => {
+    if (event.target.closest("[data-questionnaire-retry]")) {
+      loadWorkspace();
+      return;
+    }
     if (!questionnaireContract || !handleNutritionQuestionnaireAction(event, $("patient-questionnaire"), questionnaireContract)) return;
     formDirty = true;
     setSaveState("Not saved", "not-saved", "This screen has changes that are not saved to BHW Cloud.");
