@@ -92,6 +92,8 @@ body[data-p360-view="nutrition"]{
 .evidence-model p{margin:5px 0 0;color:var(--muted);font-size:var(--text-xs);line-height:1.5}
 
 .digestion-map{margin:16px 0;padding:20px;border:1px solid color-mix(in srgb,var(--nutrition-opal-blue) 34%,var(--line));border-top:3px solid var(--nutrition-opal-blue);border-radius:12px;background:linear-gradient(135deg,color-mix(in srgb,var(--card) 82%,var(--nutrition-opal-blue-soft)),var(--card) 48%,color-mix(in srgb,var(--card) 84%,var(--nutrition-opal-sage-soft)));box-shadow:0 14px 34px -30px color-mix(in srgb,var(--nutrition-ironstone) 70%,transparent)}
+.questionnaire-section-support{margin-top:8px}
+.questionnaire-section-support .digestion-map{margin-bottom:0}
 .digestion-map-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px}
 .digestion-map-heading h3{margin:4px 0 5px;font-size:clamp(20px,2vw,28px)}
 .digestion-map-heading p{margin:0;color:var(--muted);font-size:var(--text-sm);line-height:1.5}
