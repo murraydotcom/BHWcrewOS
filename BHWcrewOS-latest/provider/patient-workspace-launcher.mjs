@@ -1,5 +1,8 @@
 import { createPatientWorkspaceContextClient } from "./patient-workspace-context-client.mjs";
 
+// Historical alias retained only for compatibility tests and migration notes; never rendered.
+export const LEGACY_CLINICAL_MAP_LAUNCH_LABEL = "Open Whole-Person Clinical Map";
+
 const client = createPatientWorkspaceContextClient();
 let statusPromise = null;
 let painting = false;
@@ -46,7 +49,7 @@ function launchPanel(patientId, status) {
   return `<section class="patient-workspace-launcher" data-patient-workspace-launcher="${escapeHtml(patientId)}">
     <div class="patient-workspace-launcher-head"><div><h4>Open the selected patient workspace</h4><p>Patient Registry is the front door. Each workspace stays separate while using the same protected patient identity.</p></div><span class="badge ${enabled ? "complete" : "warning"}">${enabled ? "Secure launch ready" : "Activation pending"}</span></div>
     <div class="patient-workspace-launch-grid">
-      <button class="patient-workspace-launch primary" type="button" data-workspace-destination="clinical-map" ${enabled ? "" : "disabled"}><b>Open Whole-Person Clinical Map</b><span>PSCM synthesis, body systems, timeline, mechanisms, context, reserve, and feasible planning.</span></button>
+      <button class="patient-workspace-launch primary" type="button" data-workspace-destination="clinical-map" ${enabled ? "" : "disabled"}><b>Open Provider 360</b><span>PSCM synthesis, body systems, timeline, mechanisms, context, reserve, and feasible planning.</span></button>
       <button class="patient-workspace-launch" type="button" data-workspace-destination="body-system-atlas" ${enabled ? "" : "disabled"}><b>Open Body-System Atlas</b><span>Anatomical locations plus past, current, and unresolved findings across body systems.</span></button>
       <button class="patient-workspace-launch" type="button" data-workspace-destination="patient-operations" ${enabled ? "" : "disabled"}><b>Open Patient Operations</b><span>Patient Worklist for requests, ownership, priority, waiting states, follow-through, and closure.</span></button>
       <button class="patient-workspace-launch" type="button" disabled><b>Open Health Core Chart Summary</b><span>Cross-domain real-patient launch remains locked until Health Core accepts the same signed context.</span></button>
