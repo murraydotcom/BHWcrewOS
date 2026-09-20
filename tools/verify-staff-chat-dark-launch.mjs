@@ -13,7 +13,7 @@ const base = new URL(state.candidateUrl);
 assert.match(base.hostname, /^staff-chat-[a-z0-9-]+---bhw-operations-api-awknhudemq-uk\.a\.run\.app$/);
 assert.equal(base.protocol, "https:");
 assert.match(state.secretName, /^[A-Za-z0-9_-]+$/); assert.match(state.secretVersion, /^[A-Za-z0-9_-]+$/);
-const gcloudToken = execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", "gcloud auth print-access-token"], { encoding: "utf8", windowsHide: true }).trim();
+const gcloudToken = execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", "gcloud.cmd auth print-access-token"], { encoding: "utf8", windowsHide: true }).trim();
 async function fetchJson(url, options = {}) {
   const response = await fetch(url, { redirect: "error", signal: AbortSignal.timeout(60000), ...options });
   const value = await response.json().catch(() => ({}));

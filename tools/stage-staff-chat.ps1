@@ -8,10 +8,10 @@ param(
 $ErrorActionPreference='Stop'
 $project='constant-land-504517-i9'
 $region='us-east4'
+. (Join-Path $PSScriptRoot 'cloud-release-http.ps1')
 function Read-CloudJson([string[]]$CloudArgs) {
-  $raw = & gcloud @CloudArgs --project=$project --region=$region --format=json
-  if($LASTEXITCODE -ne 0){ throw 'Google Cloud command failed; no traffic was changed by this script.' }
-  return ($raw | ConvertFrom-Json -Depth 100)
+  if($CloudArgs[0] -ne 'run' -or $CloudArgs[2] -ne 'describe'){throw 'Unsupported read.'}
+  return Invoke-CloudReleaseRequest -Url "https://$region-run.googleapis.com/apis/serving.knative.dev/v1/namespaces/$project/$($CloudArgs[1])/$($CloudArgs[3])"
 }
 $current=Read-CloudJson @('run','services','describe',$Service)
 $live=@($current.status.traffic | Where-Object { $_.percent -gt 0 })
@@ -24,8 +24,20 @@ if($Promote){
   if($proof.revision -ne $newRevision -or -not $proof.completedAt -or $proof.syntheticOnly -ne $true){throw 'Verification receipt is incomplete or belongs to a different revision.'}
   $candidate=Read-CloudJson @('run','revisions','describe',$newRevision)
   if(-not ($candidate.status.conditions | Where-Object { $_.type -eq 'Ready' -and $_.status -eq 'True' })){throw 'Candidate is not ready.'}
-  & gcloud run services update-traffic $Service --to-revisions="$newRevision=100" --project=$project --region=$region --quiet
-  if($LASTEXITCODE -ne 0){throw 'Traffic update failed; inspect current traffic before retrying.'}
+  if($candidate.spec.containers[0].image -ne $Image){throw 'Candidate image changed; verify the exact image before promotion.'}
+  $current.spec.traffic=@($current.status.traffic | ForEach-Object {
+    $target=@{revisionName=$_.revisionName;percent=0}
+    if($_.tag){$target.tag=$_.tag}
+    if($_.revisionName -eq $newRevision){$target.percent=100}
+    $target
+  })
+  if(-not ($current.spec.traffic | Where-Object {$_.percent -eq 100})){throw 'Verified revision has no staged traffic target.'}
+  $promotePath=Join-Path ([IO.Path]::GetTempPath()) ('bhw-chat-promote-'+[guid]::NewGuid().ToString('N')+'.json')
+  try {
+    @{apiVersion=$current.apiVersion;kind=$current.kind;metadata=@{name=$Service;namespace=$current.metadata.namespace;resourceVersion=$current.metadata.resourceVersion;annotations=$current.metadata.annotations;labels=$current.metadata.labels};spec=$current.spec} | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $promotePath -Encoding utf8
+    $null=Invoke-CloudReleaseRequest -Url "https://$region-run.googleapis.com/apis/serving.knative.dev/v1/namespaces/$project/services/$Service" -Method PUT -BodyPath $promotePath
+    Write-Output "Promotion requested for verified revision $newRevision. Confirm serving traffic before claiming live."
+  } finally {if(Test-Path -LiteralPath $promotePath){Remove-Item -LiteralPath $promotePath}}
   exit 0
 }
 if(-not $Image.StartsWith("us-east4-docker.pkg.dev/$project/cloud-run-source-deploy/$Service")){throw 'Unexpected image registry or service.'}
@@ -40,11 +52,11 @@ $pod.containers[0].env=@($oldEnv)+@([pscustomobject]@{name=$gate;value='true'})
 # secrets, service account, limits, volumes, probes and IAM boundary are preserved.
 $templateAnnotations=@{}
 foreach($property in $production.metadata.annotations.psobject.Properties){
-  if($property.Name -notin @('run.googleapis.com/operation-id','run.googleapis.com/client-name','run.googleapis.com/client-version')){$templateAnnotations[$property.Name]=$property.Value}
+  if($property.Name -notmatch '^run.googleapis.com/(operation-id|client-name|client-version|build.*|source-location)$' -and $property.Name -notmatch '^serving.knative.dev/(creator|lastModifier)$'){$templateAnnotations[$property.Name]=$property.Value}
 }
 $serviceAnnotations=@{}
 foreach($property in $current.metadata.annotations.psobject.Properties){
-  if($property.Name -notin @('run.googleapis.com/operation-id','run.googleapis.com/urls','serving.knative.dev/creator','serving.knative.dev/lastModifier')){$serviceAnnotations[$property.Name]=$property.Value}
+  if($property.Name -notmatch '^run.googleapis.com/(operation-id|urls|build.*|source-location)$' -and $property.Name -notmatch '^serving.knative.dev/(creator|lastModifier)$'){$serviceAnnotations[$property.Name]=$property.Value}
 }
 $traffic=@($current.status.traffic | Where-Object { $_.tag -ne "staff-chat-$Suffix" } | ForEach-Object {
   $target=@{revisionName=$_.revisionName}
@@ -64,8 +76,7 @@ $null=New-Item -ItemType Directory -Path $privateDirectory
 $privatePath=Join-Path $privateDirectory 'service.json'
 try {
   $release | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $privatePath -Encoding utf8
-  & gcloud run services replace $privatePath --project=$project --region=$region --async --quiet --format='value(status.latestCreatedRevisionName)'
-  if($LASTEXITCODE -ne 0){throw 'Staging failed; do not promote.'}
+  $null=Invoke-CloudReleaseRequest -Url "https://$region-run.googleapis.com/apis/serving.knative.dev/v1/namespaces/$project/services/$Service" -Method PUT -BodyPath $privatePath
   $stateDirectory=Join-Path $PSScriptRoot '../staff-chat-verification'
   $null=New-Item -ItemType Directory -Path $stateDirectory -Force
   $secretBinding=($oldEnv | Where-Object {$_.name -eq 'CREWOS_OPERATIONS_TOKEN_SECRET'}).valueFrom.secretKeyRef
