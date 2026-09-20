@@ -17,6 +17,7 @@ test("BHW digestion map is original, accessible, and driven by the clinical cont
   assert.match(html, /Where digestion and absorption happen/);
   assert.match(html, /Absorbs vitamin B12/);
   assert.match(html, /Symptoms help localize a presentation/);
+  assert.doesNotMatch(html, /Functions overlap and this is not diagnostic/);
   assert.doesNotMatch(html, /Figure 2\.4/);
 });
 

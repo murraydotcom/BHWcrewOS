@@ -28,7 +28,10 @@ test("Nutrition Intelligence preserves the real-life, physiology, and reconcilia
   assert.match(html, /Chart reflects physiology/);
   assert.match(html, /Nutrition Intelligence reconciles both/);
   assert.match(html, /not just weight/);
-  assert.match(html, /Questionnaire v1\.4/);
+  assert.doesNotMatch(html, /Clinical boundary:/);
+  assert.doesNotMatch(html, /Questionnaire v1\.4/);
+  assert.doesNotMatch(html, /questionnaire-version/);
+  assert.doesNotMatch(app, /questionnaire-version/);
   assert.match(html, /id="patient-questionnaire"/);
   assert.doesNotMatch(html, /id="nutrition-digestion-map"/);
   assert.match(html, /data-bhw-system-navigation/);
@@ -52,7 +55,6 @@ test("Nutrition Intelligence preserves the real-life, physiology, and reconcilia
   assert.match(app, /digestionMap\.id = "nutrition-digestion-map"/);
   assert.match(app, /digestiveQuestionList\.append\(digestionMap\)/);
   assert.match(app, /renderNutritionDigestionMap\(digestionMapContract\)/);
-  assert.match(app, /GI pattern screen awaiting Health Core/);
   assert.match(app, /Symptoms ≠ diagnosis/);
   assert.match(app, /no total score calculated/);
   assert.match(app, /Questionnaire temporarily unavailable/);
@@ -60,6 +62,9 @@ test("Nutrition Intelligence preserves the real-life, physiology, and reconcilia
   assert.match(app, /data-questionnaire-retry/);
   assert.match(app, /No patient information was loaded or saved/);
   assert.match(css, /\.questionnaire-unavailable/);
+  assert.match(css, /--nutrition-ironstone:var\(--nutrition-opal-blue\)/);
+  assert.match(css, /body\[data-p360-view="nutrition"\] \.sidebar\{background:var\(--nutrition-opal-blue\)/);
+  assert.match(css, /body\[data-p360-view="nutrition"\] \.top/);
   assert.match(html, /Kidney health and real-life food rules/);
   assert.match(html, /Familiar, cultural, religious, or safe foods to preserve/);
   assert.match(html, /Salt substitute\/electrolyte product/);
@@ -208,19 +213,19 @@ test("Nutrition Intelligence uses the protected cloud client and exact review li
   assert.doesNotMatch(app, /localStorage\.(?:setItem|getItem)\([^)]*(?:nutrition|patient|assessment)/i);
 });
 
-test("preview and publication copy keep prohibited autonomous actions explicit", async () => {
+test("preview and publication safeguards remain enforced without the long boundary paragraph", async () => {
   const [html, app] = await Promise.all([
     provider("nutrition-intelligence.html"),
     provider("nutrition-intelligence.mjs"),
   ]);
 
-  assert.match(html, /previews create no diagnosis, order, medication change, supplement order, message, CrewOS task, or patient-facing Blueprint/i);
-  assert.match(html, /existing Personal Health Blueprint still requires its own review/);
+  assert.doesNotMatch(html, /previews create no diagnosis, order, medication change, supplement order, message, CrewOS task, or patient-facing Blueprint/i);
+  assert.doesNotMatch(html, /existing Personal Health Blueprint still requires its own review/);
   assert.match(app, /No diagnosis, order, task, message, or patient projection was created/);
   assert.match(app, /no Care Connect delivery, order, medication change, or message was created/);
 });
 
-test("Nutrition Intelligence uses the shared Opal and Ironstone visual system", async () => {
+test("Nutrition Intelligence uses the shared Opal visual system without the deep navy accent", async () => {
   const [html, css, app] = await Promise.all([
     provider("nutrition-intelligence.html"),
     provider("nutrition-intelligence.css"),
@@ -228,7 +233,7 @@ test("Nutrition Intelligence uses the shared Opal and Ironstone visual system", 
   ]);
 
   assert.match(css, /background:var\(--opal-stone\)/);
-  assert.match(css, /--nutrition-ironstone:var\(--sidebar\)/);
+  assert.match(css, /--nutrition-ironstone:var\(--nutrition-opal-blue\)/);
   for (const token of ["--teal", "--green", "--purple", "--gold"]) {
     assert.match(css, new RegExp(`var\\(${token}\\)`));
   }
