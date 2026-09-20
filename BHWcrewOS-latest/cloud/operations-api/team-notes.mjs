@@ -49,6 +49,7 @@ export function sanitizeTeamNote(input = {}, { requestId = "", user = {}, now = 
     createdAt,
     updatedAt: createdAt,
     idempotencyKeyHash: crypto.createHash("sha256").update(idempotencyKey).digest("hex"),
+    contentHash: crypto.createHash("sha256").update(JSON.stringify({ content, mentions })).digest("hex"),
   };
 }
 
@@ -59,9 +60,9 @@ export function noteIsUnread(note = {}, lastReadAt = "", user = {}) {
 }
 
 export function teamNoteIndicator(request = {}, state = {}, user = {}) {
-  const lastAt = String(request.teamNoteLastAt || "");
   const readerId = actorId(user.sub || user.staffId);
-  const unread = Boolean(lastAt && request.teamNoteLastAuthorId !== readerId && (!state.lastReadAt || lastAt > state.lastReadAt));
+  const lastAt = String(request.teamNoteLastAuthorId === readerId ? request.teamNotePreviousOtherAt || "" : request.teamNoteLastAt || "");
+  const unread = Boolean(lastAt && (!state.lastReadAt || lastAt > state.lastReadAt));
   return {
     teamNoteUnread: unread,
     teamNoteMentioned: Boolean(unread && state.lastMentionAt && (!state.lastReadAt || state.lastMentionAt > state.lastReadAt)),

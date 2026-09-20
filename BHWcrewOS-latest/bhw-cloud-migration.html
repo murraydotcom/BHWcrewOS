@@ -83,5 +83,6 @@ $("results").addEventListener("click",async event=>{
   }catch(error){button.textContent=row?.blockedCount?`Apply ${row.readyCount} verified only`:"Apply section";const partial=verifiedCount?`${verifiedCount} of ${row?.readyCount||0} read back · `:"";setState("error",`Not fully saved · ${partial}${error.message}`);syncButtons()}
 });
 </script>
+<script src="/staff-chat-launcher.js" defer></script>
 </body>
 </html>

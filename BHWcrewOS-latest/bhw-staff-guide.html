@@ -51,7 +51,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
 <header>
   <img src="/assets/bhw-medical-logo.png" alt="BHW Medical" onerror="this.style.display='none'">
   <div><h1>Staff Guide — Where Everything Is</h1><div class="sub">BHW Medical Group · BHWcrewOS</div></div>
-  <div class="updated">Updated September 10, 2026<br>Patient Requests + Team Notes + Website Content + BHW Capture</div>
+  <div class="updated">Updated September 20, 2026<br>Patient Requests + Team Notes + Staff Chat + Website Content + BHW Capture</div>
 </header>
 
 <button class="print" onclick="window.print()">Print this guide</button>
@@ -212,9 +212,24 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
     <li>Write the coordination update and select one or more teammates under <b>Mention teammates</b> when their attention is needed.</li>
     <li>Choose <b>Add team note</b> and wait for <b>Saved to BHW Cloud</b>. The author and timestamp are recorded automatically.</li>
     <li>A <b>New team note</b> marker appears for unread discussion. An explicitly mentioned provider can receive a <b>Mentioned in team note</b> CrewOS alert without changing routine provider alert routing.</li>
+    <li>Choose <b>Mark notes read</b> after reviewing. Use <b>Load older notes</b> for earlier history. A reply does not automatically mark other notes read.</li>
+    <li>If a save is not confirmed, use <b>Retry save</b> without retyping it. The same send key prevents a duplicate. Drafts remain only in the open page; save before leaving.</li>
   </ol>
   <div class="tip"><b>Separate channels:</b> Team Notes never send an SMS, update a Google Chat card, or appear in Communications and delivery. Use Notify patient for approved patient outreach.</div>
   <div class="rule"><b>Team Notes are not the legal medical record.</b> Keep content limited to what coworkers need for this request. Document diagnoses, treatment decisions, orders, and other required clinical content in CharmHealth.</div>
+</div>
+
+<div class="sec" data-k="staff chat internal direct message teammate ecosystem notifications mute">
+  <h3>Staff Chat — across signed-in staff pages <span class="who">CrewOS staff identity</span></h3>
+  <ol>
+    <li>Choose the floating <b>Staff Chat</b> button on a signed-in staff page. If prompted, sign in with your existing CrewOS account in the separate sign-in window.</li>
+    <li>Use <b>BHW Team</b> for general staff coordination or <b>Message a teammate</b> for a direct conversation. A teammate appears after opening Staff Chat once.</li>
+    <li>Confirm the message contains no patient or confidential personnel information, choose <b>Send</b>, and wait for <b>Saved to BHW Cloud</b>. This confirms storage, not that a teammate has read it.</li>
+    <li>Messages and your selected conversation follow you between staff pages. Unsaved drafts do not; send them before navigating. Reopen the button when switching sites.</li>
+    <li>The unread badge is optional and off initially. Enable <b>Show unread badge across staff pages</b> if you want it. The preference follows your account. No sounds, pop-up alerts, or browser push notifications are requested.</li>
+    <li>Choose <b>Mark read</b> after reviewing. The open panel checks for updates about every 12 seconds; closed panels check less often. This is not an emergency or urgent-clinical channel.</li>
+  </ol>
+  <div class="rule"><b>Separate purposes:</b> patient-specific coordination belongs in Patient Requests → Team Notes; confidential personnel matters stay in HR. Staff Chat does not send SMS, post to Google Chat, or change a request's status. Each app keeps its existing access restrictions. New staff still need an approved CrewOS account.</div>
 </div>
 
 <div class="sec" data-k="patient request responsibility raci accountable responsible consulted informed handoff">
@@ -559,4 +574,5 @@ function filter(){
 }
 </script>
 <script type="module" src="/bhw-alert-center.mjs"></script>
+<script src="/staff-chat-launcher.js" defer></script>
 </body></html>

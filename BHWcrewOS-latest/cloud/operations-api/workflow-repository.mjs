@@ -62,6 +62,7 @@ function toWorkflowRequest(raw = {}) {
   request.statusHistory = Array.isArray(source.statusHistory) ? source.statusHistory : request.statusHistory;
   request.chatMessageName = source.chatMessageName || "";
   request.chatSpace = source.chatSpace || "";
+  Object.assign(request, Object.fromEntries(Object.entries(source).filter(([key]) => key.startsWith("teamNote"))));
   return request;
 }
 
@@ -174,7 +175,8 @@ export class FirestoreWorkflowRepository extends FirestoreOperationsRepository {
       const current = toWorkflowRequest(existing.data());
       if ((current.processedActionKeys || []).includes(actionHash)) return { request: current, duplicate: true };
       if (Number(current.version) !== Number(previousVersion)) throw Object.assign(new Error("request changed; refresh before applying this action"), { status: 409 });
-      transaction.set(ref, { ...request, patientRequestId: request.id }, { merge: true });
+      const savedRequest = { ...request, ...Object.fromEntries(Object.entries(current).filter(([key]) => key.startsWith("teamNote"))), patientRequestId: request.id };
+      transaction.set(ref, savedRequest, { merge: true });
       transaction.set(taskRef, {
         taskId: `patient-request:${request.id}`,
         patientRequestId: request.id,
@@ -192,7 +194,7 @@ export class FirestoreWorkflowRepository extends FirestoreOperationsRepository {
         updatedBy: user.sub,
         ...(request.resolvedAt ? { completedAt: request.resolvedAt } : {}),
       }, { merge: true });
-      return { request, duplicate: false };
+      return { request: savedRequest, duplicate: false };
     });
   }
 
@@ -200,45 +202,42 @@ export class FirestoreWorkflowRepository extends FirestoreOperationsRepository {
     const request = await this.getPatientRequest(requestId);
     if (!request) return null;
     const updated = {
-      ...request,
       chatMessageName: clean(delivery.messageName, 400),
       chatSpace: clean(delivery.space, 200),
       chatSyncedAt: new Date().toISOString(),
     };
     await this.patientRequests.doc(requestId).set(updated, { merge: true });
-    return updated;
+    return { ...request, ...updated };
   }
 
   async createRequestTeamNote(note, user = {}) {
     const requestRef = this.patientRequests.doc(note.requestId);
     const noteRef = this.patientRequestTeamNotes.doc(note.id);
-    const readRef = this.patientRequestTeamNoteReads.doc(keyFor(`${note.requestId}:${note.authorId}`));
     const auditRef = this.auditEvents.doc(crypto.randomUUID());
-    return this.db.runTransaction(async (transaction) => {
+    const result = await this.db.runTransaction(async (transaction) => {
       const [requestDoc, existingNote] = await transaction.getAll(requestRef, noteRef);
       if (!requestDoc.exists) throw Object.assign(new Error("request was not found"), { status: 404 });
-      if (existingNote.exists) return { note: clone(existingNote.data()), replayed: true };
+      if (existingNote.exists) {
+        if (existingNote.data().contentHash !== note.contentHash) throw Object.assign(new Error("send key belongs to a different team note"), { status: 409 });
+        return { note: clone(existingNote.data()), replayed: true };
+      }
       const request = toWorkflowRequest(requestDoc.data());
-      transaction.create(noteRef, note);
+      const committedAt = new Date(Math.max(Date.parse(note.createdAt), (Date.parse(request.teamNoteLastAt) || 0) + 1)).toISOString();
+      const savedNote = { ...note, createdAt: committedAt, updatedAt: committedAt };
+      transaction.create(noteRef, savedNote);
       transaction.set(requestRef, {
         teamNoteCount: Math.max(0, Number(request.teamNoteCount) || 0) + 1,
-        teamNoteLastAt: note.createdAt,
+        teamNoteLastAt: committedAt,
+        teamNotePreviousOtherAt: request.teamNoteLastAuthorId === note.authorId ? request.teamNotePreviousOtherAt || "" : request.teamNoteLastAt || "",
         teamNoteLastAuthorId: note.authorId,
         teamNoteLastAuthorName: note.authorName,
-        updatedAt: request.updatedAt,
-      }, { merge: true });
-      transaction.set(readRef, {
-        requestId: note.requestId,
-        actorReference: keyFor(note.authorId),
-        lastReadAt: note.createdAt,
-        updatedAt: note.createdAt,
       }, { merge: true });
       for (const mention of note.mentions) {
         const mentionRef = this.patientRequestTeamNoteMentions.doc(keyFor(`${note.requestId}:${mention.actorId}`));
         transaction.set(mentionRef, {
           requestId: note.requestId,
           actorReference: keyFor(mention.actorId),
-          lastMentionAt: note.createdAt,
+          lastMentionAt: committedAt,
           lastNoteId: note.id,
           updatedAt: note.createdAt,
         }, { merge: true });
@@ -256,20 +255,26 @@ export class FirestoreWorkflowRepository extends FirestoreOperationsRepository {
         },
         occurredAt: note.createdAt,
       });
-      return { note: clone(note), replayed: false };
+      return { note: clone(savedNote), replayed: false };
     });
+    const readBack = (await noteRef.get()).data();
+    if (!readBack || readBack.contentHash !== note.contentHash) throw Object.assign(new Error("team note save confirmation unavailable; retry the same note"), { status: 503 });
+    return { ...result, note: clone(readBack) };
   }
 
-  async listRequestTeamNotes(requestId, actorId) {
+  async listRequestTeamNotes(requestId, actorId, before = "") {
     const id = clean(requestId, 100);
+    let query = this.patientRequestTeamNotes.where("requestId", "==", id).orderBy("createdAt", "desc");
+    if (before) query = query.startAfter(before);
     const [notesSnapshot, readSnapshot] = await Promise.all([
-      this.patientRequestTeamNotes.where("requestId", "==", id).limit(200).get(),
+      query.limit(201).get(),
       this.patientRequestTeamNoteReads.doc(keyFor(`${id}:${actorId}`)).get(),
     ]);
-    const notes = notesSnapshot.docs.map((doc) => clone(doc.data()))
+    const notes = notesSnapshot.docs.slice(0, 200).map((doc) => clone(doc.data()))
       .sort((left, right) => String(left.createdAt).localeCompare(String(right.createdAt)));
     return {
       notes,
+      nextBefore: notesSnapshot.docs.length > 200 ? notes[0].createdAt : null,
       lastReadAt: readSnapshot.exists ? clean(readSnapshot.data()?.lastReadAt, 40) : "",
     };
   }

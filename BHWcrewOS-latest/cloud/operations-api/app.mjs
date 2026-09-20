@@ -504,7 +504,7 @@ export function createOperationsApp({
         if (!workflow) throw apiError(503, "workflow_not_configured", "team notes are not configured");
         const requestId = decodeURIComponent(requestTeamNotesMatch[1]);
         if (request.method === "GET") {
-          return json(200, { ok: true, ...(await workflow.listTeamNotes(requestId, workflowActor(actor))) }, cors);
+          return json(200, { ok: true, ...(await workflow.listTeamNotes(requestId, workflowActor(actor), url.searchParams.get("before") || "")) }, cors);
         }
         const result = await workflow.createTeamNote(requestId, await readJson(request), workflowActor(actor));
         return json(result.replayed ? 200 : 201, { ok: true, ...result }, cors);

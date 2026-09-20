@@ -85,7 +85,7 @@ function isCompleted(request) {
 }
 
 export function alertKey(request) {
-  return [clean(request.id, 240), Number(request.version) || 1, normalized(request.status || request.statusCategory)].join(":");
+  return [clean(request.id, 240), Number(request.version) || 1, normalized(request.status || request.statusCategory), clean(request.teamNoteLastAt, 40)].filter(Boolean).join(":");
 }
 
 export function safeAlertForRequest(request, actor = {}, now = Date.now()) {

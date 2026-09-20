@@ -786,16 +786,18 @@ export function createWorkflowService(repository, {
     });
   }
 
-  async function listTeamNotes(requestId, user = {}) {
+  async function listTeamNotes(requestId, user = {}, before = "") {
     const patientRequest = await requireReadableRequest(requestId, user);
     if (typeof repository.listRequestTeamNotes !== "function") {
       throw Object.assign(new Error("team notes are not configured"), { status: 503 });
     }
-    const result = await repository.listRequestTeamNotes(patientRequest.id, user.sub);
+    if (before && (!Number.isFinite(Date.parse(before)) || new Date(before).toISOString() !== before)) throw Object.assign(new Error("valid note history cursor required"), { status: 400 });
+    const result = await repository.listRequestTeamNotes(patientRequest.id, user.sub, before);
     const notes = Array.isArray(result?.notes) ? result.notes : [];
     const lastReadAt = cleanText(result?.lastReadAt, 40);
     return {
       notes: notes.map(presentTeamNote),
+      nextBefore: result.nextBefore || null,
       unreadCount: notes.filter((note) => noteIsUnread(note, lastReadAt, user)).length,
       lastReadAt,
       lastNoteAt: cleanText(notes.at(-1)?.createdAt, 40),

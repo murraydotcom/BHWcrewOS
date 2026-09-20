@@ -79,5 +79,6 @@ $("discardBtn").onclick=()=>{preview=null;$("previewCard").classList.add("hidden
 
 $("syntheticBtn").onclick=()=>{const headers=["BHW Patient ID","First Name","Last Name","Date of Birth","Preventive Services Category","Preventive Services Code","Preventive Services Description","Preventive Services Results","Preventive Services Test Name","Preventive Services Data Source","Preventive Services Document Evidence Date","Preventive Services Event Date","Preventive Services Facility Name"];const values=["BHW0000","Synthetic","Patient","1986-01-01","Breast cancer screening","SYNTHETIC-BREAST-SCREEN","SYNTHETIC completed screening","","","CCD",new Date().toISOString().slice(0,10),"2026-08-15","Synthetic Maryland Facility"];const csv=[headers,values].map((row)=>row.map((value)=>`"${String(value).replaceAll('"','""')}"`).join(",")).join("\r\n");const link=document.createElement("a");link.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));link.download="BHW0000-CRISP-Preventive-Services-SYNTHETIC.csv";link.click();setTimeout(()=>URL.revokeObjectURL(link.href),0)};
 </script>
+<script src="/staff-chat-launcher.js" defer></script>
 </body>
 </html>

@@ -5,7 +5,9 @@ import test from "node:test";
 test("staff guide teaches the current Patient Requests and alert workflow", async () => {
   const html = await readFile(new URL("../bhw-staff-guide.html", import.meta.url), "utf8");
 
-  assert.match(html, /Updated September 10, 2026/);
+  assert.match(html, /Updated September 20, 2026/);
+  assert.match(html, /Staff Chat — across signed-in staff pages/);
+  assert.match(html, /unread badge is optional and off initially/);
   assert.match(html, /crewhq\.bhwmedical\.org\/crewos/);
   assert.match(html, /id="patient-requests-training"/);
   assert.match(html, /Patient Requests is the one queue/);

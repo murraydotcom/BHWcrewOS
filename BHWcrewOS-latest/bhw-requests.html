@@ -523,9 +523,19 @@ function teamNoteMentionPicker(){
   if(!ROSTER.length)return '<span>No staff roster available for mentions.</span>';
   return `<details class="mentionpicker"><summary>Mention teammates (optional)</summary><div class="mentiongrid">${ROSTER.map(person=>`<label><input type="checkbox" name="teamNoteMention" value="${esc(person.id)}" data-name="${esc(person.name)}">@${esc(person.name)}</label>`).join('')}</div></details>`;
 }
+const TEAM_NOTE_DRAFTS=new Map(), TEAM_NOTE_HISTORY=new Map();
+let TEAM_NOTE_SAVING=false;
+function saveTeamNoteDraft(panel){
+  const form=panel.querySelector('.teamnote-compose'),id=panel.dataset.requestId;if(!form||!id)return;
+  const prior=TEAM_NOTE_DRAFTS.get(id)||{};
+  TEAM_NOTE_DRAFTS.set(id,{...prior,text:form.elements.teamNoteText.value,mentions:[...form.querySelectorAll('input[name="teamNoteMention"]:checked')].map(input=>({staffId:input.value,name:input.dataset.name}))});
+}
 function renderDetail(){
   const panel=document.getElementById('detailPanel');
   const it=ITEMS.find(item=>item.id===SELECTED);
+  saveTeamNoteDraft(panel);
+  if(panel.dataset.requestId===it?.id&&(TEAM_NOTE_SAVING||document.activeElement?.closest('.teamnote-compose')))return;
+  panel.dataset.requestId=it?.id||'';
   if(!it){panel.innerHTML='<div class="detail-empty"><div><b>Select a request</b>Actions, status history, and communication records stay together here.</div></div>';return;}
   const st=stageOf(it.status,it.statusCategory), faxUrl=/fax/i.test(it.source||'')?safeHttpsUrl(it.sourceUrl):'';
   const faxButton=faxUrl?`<button class="btn view-fax" type="button" data-fax-url="${esc(faxUrl)}" data-fax-name="${esc((it.name||'Patient')+' — incoming fax')}">View fax PDF</button>`:'';
@@ -545,6 +555,7 @@ function renderDetail(){
       <div class="teamnotes-head"><h3>Team Notes</h3><span class="count" id="teamNoteCount">Loading…</span></div>
       <div class="teamnotes-privacy">Internal staff discussion for this request. Notes stay in protected CrewOS and are never sent by SMS or copied to Google Chat. Include only information needed to coordinate care.</div>
       <div class="teamnotes-list" id="teamNotes"><div class="empty">Loading team notes…</div></div>
+      <div class="teamnote-compose-foot"><button type="button" class="btn" id="teamNotesOlder" hidden>Load older notes</button><button type="button" class="btn" id="teamNotesMarkRead" hidden>Mark notes read</button></div>
       <form class="teamnote-compose" onsubmit="addTeamNote(event,decodeURIComponent('${encodeURIComponent(String(it.id))}'))">
         <textarea name="teamNoteText" maxlength="2000" required placeholder="Add an internal note for the team…" aria-label="New internal team note"></textarea>
         <div class="teamnote-compose-foot">${teamNoteMentionPicker()}<button class="btn p" type="submit">Add team note</button></div>
@@ -552,6 +563,9 @@ function renderDetail(){
       </form>
     </section>
     <div class="detailreply" id="detailReply"></div>`;
+  const draft=TEAM_NOTE_DRAFTS.get(it.id),form=panel.querySelector('.teamnote-compose');
+  if(draft){form.elements.teamNoteText.value=draft.text||'';form.elements.teamNoteText.readOnly=Boolean(draft.pending);form.querySelectorAll('input[name="teamNoteMention"]').forEach(input=>{input.checked=(draft.mentions||[]).some(person=>person.staffId===input.value);input.disabled=Boolean(draft.pending);});if(draft.pending)form.querySelector('button[type="submit"]').textContent='Retry save';}
+  form.addEventListener('input',()=>saveTeamNoteDraft(panel));
   loadSelectedCommunications(it.id);
   loadSelectedTeamNotes(it.id);
 }
@@ -589,22 +603,29 @@ function teamNotesHTML(rows){
     return `<article class="teamnote"><div class="notehead"><b>${esc(note.authorName||'CrewOS staff')}</b><span class="noterole">${esc(note.authorRole||'staff')}</span><time class="notetime">${esc(note.createdAt?new Date(note.createdAt).toLocaleString():'')}</time></div><div class="notebody">${esc(note.content)}</div>${mentions}</article>`;
   }).join('');
 }
-async function loadSelectedTeamNotes(id){
+async function loadSelectedTeamNotes(id,before=''){
   const sequence=++TEAM_NOTE_LOAD;
   try{
-    const result=await (await cloudClient()).listPatientRequestTeamNotes(id);
+    const result=await (await cloudClient()).listPatientRequestTeamNotes(id,before);
     if(sequence!==TEAM_NOTE_LOAD||id!==SELECTED)return;
-    const rows=Array.isArray(result.notes)?result.notes:[];
+    const newRows=Array.isArray(result.notes)?result.notes:[];
+    const rows=before?[...newRows,...(TEAM_NOTE_HISTORY.get(id)?.rows||[])]:newRows;
+    TEAM_NOTE_HISTORY.set(id,{rows,nextBefore:result.nextBefore});
     const list=document.getElementById('teamNotes');if(list)list.innerHTML=teamNotesHTML(rows);
     const count=document.getElementById('teamNoteCount');if(count)count.textContent=`${rows.length} note${rows.length===1?'':'s'}${result.unreadCount?` · ${result.unreadCount} new`:''}`;
-    if(result.unreadCount&&result.lastNoteAt){
+    const older=document.getElementById('teamNotesOlder');older.hidden=!result.nextBefore;older.onclick=()=>loadSelectedTeamNotes(id,result.nextBefore);
+    const mark=document.getElementById('teamNotesMarkRead');mark.hidden=!rows.length;
+    mark.onclick=async()=>{
+      if(document.visibilityState!=='visible'||SELECTED!==id)return;
+      mark.disabled=true;
       try{
-        await (await cloudClient()).markPatientRequestTeamNotesRead(id,result.lastNoteAt);
+        await (await cloudClient()).markPatientRequestTeamNotesRead(id,rows.at(-1).createdAt);
         const item=ITEMS.find(row=>row.id===id);if(item){item.teamNoteUnread=false;item.teamNoteMentioned=false;}
         document.querySelectorAll('.requestrow').forEach(row=>{if(row.dataset.requestId===id)row.querySelector('.teamnote-unread')?.remove();});
         if(count)count.textContent=`${rows.length} note${rows.length===1?'':'s'}`;
-      }catch(_){ /* the notes remain visible and will stay unread until the marker can be saved */ }
-    }
+        mark.hidden=true;
+      }catch(_){mark.textContent='Retry marking read';}finally{mark.disabled=false;}
+    };
   }catch(e){
     if(sequence!==TEAM_NOTE_LOAD||id!==SELECTED)return;
     const list=document.getElementById('teamNotes');if(list)list.innerHTML='<div class="empty">Team notes are unavailable right now.</div>';
@@ -615,15 +636,22 @@ async function addTeamNote(event,id){
   const form=event.currentTarget,textarea=form.elements.teamNoteText,button=form.querySelector('button[type="submit"]'),status=form.querySelector('.teamnote-status');
   const content=textarea.value.trim();if(!content)return;
   const mentions=[...form.querySelectorAll('input[name="teamNoteMention"]:checked')].map(input=>({staffId:input.value,name:input.dataset.name}));
-  button.disabled=true;button.textContent='Saving…';status.textContent='';
+  saveTeamNoteDraft(document.getElementById('detailPanel'));
+  const draft=TEAM_NOTE_DRAFTS.get(id);
+  if(!draft.pending)draft.pending={content,mentions,idempotencyKey:crypto.randomUUID()};
+  TEAM_NOTE_SAVING=true;textarea.readOnly=true;button.disabled=true;button.textContent='Saving…';status.textContent='Saving to BHW Cloud…';
   try{
-    const result=await (await cloudClient()).addPatientRequestTeamNote(id,content,mentions);
-    textarea.value='';form.querySelectorAll('input[name="teamNoteMention"]:checked').forEach(input=>{input.checked=false;});
+    const result=await (await cloudClient()).addPatientRequestTeamNote(id,draft.pending.content,draft.pending.mentions,{idempotencyKey:draft.pending.idempotencyKey});
+    if(result.note?.content!==draft.pending.content||result.note?.requestId!==id)throw new Error('Save confirmation did not match. Retry the same note.');
+    TEAM_NOTE_DRAFTS.delete(id);textarea.value='';textarea.readOnly=false;form.querySelectorAll('input[name="teamNoteMention"]').forEach(input=>{input.checked=false;input.disabled=false;});
     const item=ITEMS.find(row=>row.id===id);if(item&&!result.replayed){item.teamNoteCount=Math.max(0,Number(item.teamNoteCount)||0)+1;item.teamNoteLastAt=result.note?.createdAt||item.teamNoteLastAt;}
-    status.textContent=`Saved to BHW Cloud · ${new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}. Not sent externally.`;
+    status.textContent=`Saved to BHW Cloud · ${new Date(result.note.createdAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}. Not sent externally.`;
     button.disabled=false;button.textContent='Add team note';
     await loadSelectedTeamNotes(id);
-  }catch(e){status.textContent=String(e.message||'The team note could not be saved.');button.disabled=false;button.textContent='Add team note';}
+  }catch(e){
+    if(e.status>=400&&e.status<500&&e.status!==409){draft.pending=null;textarea.readOnly=false;}
+    status.textContent=draft.pending?'Save not confirmed. Retry save to verify without creating a duplicate.':String(e.message||'Not saved.');button.disabled=false;button.textContent=draft.pending?'Retry save':'Add team note';
+  }finally{TEAM_NOTE_SAVING=false;}
 }
 
 // ---- reply (text back via Dialpad; fax back when the request came in by fax) ----
@@ -771,5 +799,6 @@ document.getElementById('faxPdfModal').addEventListener('click',e=>{if(e.target.
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.getElementById('faxPdfModal').hidden)closeFaxPdf();});
 </script>
 <script type="module" src="/bhw-alert-center.mjs"></script>
+<script src="/staff-chat-launcher.js" defer></script>
 </body>
 </html>

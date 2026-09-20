@@ -5,13 +5,15 @@ import { ClinicalContextWorkflowRepository } from "./clinical-context-repository
 import { createDialpadService } from "./dialpad-service.mjs";
 import { createGoogleChatService } from "./google-chat-service.mjs";
 import { createWorkflowService } from "./workflow-service.mjs";
+import { StaffChatRepository } from "./staff-chat.mjs";
+import { createStaffChatApp } from "./staff-chat-app.mjs";
 
 const repository = new ClinicalContextWorkflowRepository();
 const dialpad = createDialpadService();
 const chat = createGoogleChatService();
 const workflow = createWorkflowService(repository, { dialpad, chat });
 const baseApp = createOperationsApp({ repository, workflow });
-const app = createClinicalContextApp({ baseApp, repository });
+const app = createStaffChatApp({ baseApp: createClinicalContextApp({ baseApp, repository }), chat: new StaffChatRepository(repository.db) });
 const port = Number(process.env.PORT || 8080);
 
 const server = http.createServer(async (incoming, outgoing) => {
