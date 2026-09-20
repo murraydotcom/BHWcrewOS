@@ -83,6 +83,14 @@ test("completed work disappears and each workflow version has a distinct alert k
   assert.notEqual(alertKey(synthetic({ version: 1 })), alertKey(synthetic({ version: 2 })));
 });
 
+test("team-note alerts reach all staff, but providers only when explicitly mentioned", () => {
+  const staffAlert = safeAlertForRequest(synthetic({ teamNoteUnread: true }), { staffId: "synthetic-ma", role: "Medical Assistant" });
+  assert.equal(staffAlert.reason, "New team note");
+  const provider = { staffId: "synthetic-provider", role: "CRNP" };
+  assert.equal(safeAlertForRequest(synthetic({ teamNoteUnread: true }), provider), null);
+  assert.equal(safeAlertForRequest(synthetic({ teamNoteUnread: true, teamNoteMentioned: true }), provider).reason, "Mentioned in team note");
+});
+
 test("the installed alert module never requests browser notifications", async () => {
   const source = await readFile(new URL("../bhw-alert-center.mjs", import.meta.url), "utf8");
   assert.doesNotMatch(source, /Notification\.requestPermission|new Notification/);

@@ -19,6 +19,9 @@ HR data.
 - WelcomeToBHW is HR-only and is not called by this service.
 - Google Chat is a no-PHI mirror with role/service-line routing, actionable
   cards, and CrewOS deep links. CrewOS/Firestore remains authoritative.
+- Team Notes are immutable, request-linked internal staff coordination records
+  with @mentions, per-person read markers, and metadata-only audit events. They
+  never dispatch to Google Chat, Dialpad, or the patient-facing app.
 - Patient SMS uses Dialpad only. State-specific templates avoid equating PA
   submission with approval or referral transmission with scheduling.
 - Automation fails closed when disabled or unconfigured, and applies consent,
@@ -96,6 +99,8 @@ collections. Do not put either secret or a service-account key in the repo.
 | `POST /v1/patient-requests/:id/notify` | CrewOS | Apply the current safe template through the approved channel |
 | `POST /v1/patient-requests/:id/messages` | CrewOS | Send an attested no-PHI manual SMS through Dialpad |
 | `GET /v1/patient-requests/:id/communications` | CrewOS | Read inbound/outbound delivery and suppression history |
+| `GET/POST /v1/patient-requests/:id/team-notes` | CrewOS | Read or add protected, request-linked internal staff notes; never dispatches externally |
+| `POST /v1/patient-requests/:id/team-notes/read` | CrewOS | Advance the signed-in staff member's per-request unread marker |
 | `PATCH /v1/patient-requests/:id/status` | CrewOS | Validated state transition and timestamp/audit update |
 | `POST /v1/patient-requests/:id/tasks` | CrewOS | Add a linked task |
 | `GET /v1/tasks` | CrewOS | Filter by status, team, or request |

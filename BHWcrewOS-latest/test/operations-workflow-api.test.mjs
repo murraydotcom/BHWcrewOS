@@ -39,6 +39,9 @@ test("Operations API owns the authenticated request/action/communication contrac
     async listRequests(filters, user) { calls.push(["list", filters, user]); return [patientRequest]; },
     async action(id, input, user) { calls.push(["action", id, input, user]); return { request: { ...patientRequest, status: "completed", statusCategory: "completed" } }; },
     async listCommunications(id, user) { calls.push(["communications", id, user]); return [{ id: "comm-1", requestId: id, status: "sent" }]; },
+    async listTeamNotes(id, user) { calls.push(["team-notes", id, user]); return { notes: [{ id: "NOTE-1", requestId: id, content: "Synthetic internal note" }], unreadCount: 1 }; },
+    async createTeamNote(id, input, user) { calls.push(["team-note-create", id, input, user]); return { note: { id: "NOTE-2", requestId: id, content: input.content }, replayed: false }; },
+    async markTeamNotesRead(id, input, user) { calls.push(["team-notes-read", id, input, user]); return { requestId: id, lastReadAt: input.readThroughAt }; },
   };
   const app = createOperationsApp({ repository: {}, workflow, environment: {
     ALLOWED_ORIGINS: "https://crewhq.bhwmedical.org", CREWOS_OPERATIONS_TOKEN_SECRET: SECRET,
@@ -57,7 +60,23 @@ test("Operations API owns the authenticated request/action/communication contrac
   response = await app(request(`/v1/patient-requests/${patientRequest.id}/communications`));
   assert.equal(response.status, 200);
   assert.equal((await response.json()).communications[0].id, "comm-1");
-  assert.deepEqual(calls.map((call) => call[0]), ["list", "action", "communications"]);
+
+  response = await app(request(`/v1/patient-requests/${patientRequest.id}/team-notes`));
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).notes[0].content, "Synthetic internal note");
+
+  response = await app(request(`/v1/patient-requests/${patientRequest.id}/team-notes`, {
+    method: "POST", body: { content: "Synthetic follow-up", idempotencyKey: "synthetic-note-key" },
+  }));
+  assert.equal(response.status, 201);
+  assert.equal((await response.json()).note.content, "Synthetic follow-up");
+
+  response = await app(request(`/v1/patient-requests/${patientRequest.id}/team-notes/read`, {
+    method: "POST", body: { readThroughAt: NOW.toISOString() },
+  }));
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).readState.lastReadAt, NOW.toISOString());
+  assert.deepEqual(calls.map((call) => call[0]), ["list", "action", "communications", "team-notes", "team-note-create", "team-notes-read"]);
 });
 
 test("Chat and Dialpad callbacks delegate verification to fail-closed workflow services", async () => {

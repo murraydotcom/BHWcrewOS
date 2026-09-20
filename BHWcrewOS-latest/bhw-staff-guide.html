@@ -51,7 +51,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
 <header>
   <img src="/assets/bhw-medical-logo.png" alt="BHW Medical" onerror="this.style.display='none'">
   <div><h1>Staff Guide — Where Everything Is</h1><div class="sub">BHW Medical Group · BHWcrewOS</div></div>
-  <div class="updated">Updated September 9, 2026<br>Patient Requests + Website Content + BHW Capture</div>
+  <div class="updated">Updated September 20, 2026<br>Patient Requests + Team Notes + Staff Chat + Website Content + BHW Capture</div>
 </header>
 
 <button class="print" onclick="window.print()">Print this guide</button>
@@ -150,6 +150,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
     <tr><td>Explain which system is authoritative</td><td><b>Patient Requests in CrewOS</b> is the one work queue. Google Chat is a no-PHI alert/action mirror, not a second queue.</td></tr>
     <tr><td>Work only appropriate requests</td><td>Use the request's routed service line and the staff member's authorized role. Escalate instead of working beyond role or license.</td></tr>
     <tr><td>Record the real milestone</td><td>Assign, Start, and select the exact outcome that actually occurred—never skip from submitted/sent to approved/scheduled.</td></tr>
+    <tr><td>Coordinate with coworkers</td><td>Use request-linked <b>Team Notes</b> and optional @mentions. The note stays in protected CrewOS and is never sent to the patient or copied to Google Chat.</td></tr>
     <tr><td>Handle patient communication safely</td><td>Use only approved no-PHI wording, confirm delivery status, and never describe suppressed, queued, failed, or gated messages as delivered.</td></tr>
   </table>
   <div class="tip"><b>System boundaries:</b> Google Cloud/Firestore stores the patient roster and workflow record; CrewOS is where staff work it; RCM receives billing work as a downstream specialist system; WelcomeToBHW remains HR/onboarding only; retired Notion patient records are read-only migration history.</div>
@@ -162,10 +163,10 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
     <tr><td><b>0–3 min</b></td><td>Open the alert bell, explain role routing, then open the exact request.</td><td>States why opening an alert does not resolve the request.</td></tr>
     <tr><td><b>3–7 min</b></td><td>Review the request-type totals and filter, request history, routed team, current owner, and communications.</td><td>Finds one unclaimed synthetic request and identifies the correct category and service line.</td></tr>
     <tr><td><b>7–11 min</b></td><td>Use Assign to me, Start, an exact milestone, and Escalate.</td><td>Completes the same sequence on a different synthetic request.</td></tr>
-    <tr><td><b>11–15 min</b></td><td>Show Notify patient eligibility and communications/delivery results.</td><td>Explains no-PHI, suppression, quiet-hours, duplicate-send, and automation-gate rules.</td></tr>
+    <tr><td><b>11–15 min</b></td><td>Add a Team Note, @mention the synthetic teammate, then show Notify patient and communications/delivery.</td><td>Explains internal versus patient communication, unread markers, no-PHI SMS, suppression, quiet-hours, duplicate-send, and automation-gate rules.</td></tr>
   </table>
   <div class="tip"><b>Process flow:</b> Alert or intake → open the record → confirm route and urgency → assign → start → do the work → record the exact milestone → notify only if eligible → verify delivery → resolve or escalate.</div>
-  <div class="tip"><b>Current release:</b> the CrewOS queue, optional alert bell, and Google Chat mirror are available. Non-provider staff can receive alerts across request types; providers receive triage/provider-question, assigned-provider, urgent, safety, waiting-on-clinician, and escalated alerts. Automated patient SMS is gated off. A patient message counts only when Notify patient is available, the send is accepted, and the communications record shows the resulting delivery state.</div>
+  <div class="tip"><b>Current release:</b> the CrewOS queue, request-linked Team Notes, optional alert bell, and Google Chat mirror are available. Non-provider staff can receive alerts across request types; providers receive triage/provider-question, assigned-provider, urgent, safety, waiting-on-clinician, escalated, and explicit @mention alerts. Automated patient SMS is gated off. A patient message counts only when Notify patient is available, the send is accepted, and the communications record shows the resulting delivery state.</div>
   <div class="rule"><b>Training data only:</b> use synthetic/de-identified records labeled <b>BHW0000</b>. Never create, display, text, or test with a real patient's name, phone number, date of birth, diagnosis, medication, payer, or appointment.</div>
 </div>
 
@@ -202,6 +203,33 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
     <tr><td><b>General</b></td><td>Received → in progress → waiting or completed</td><td>Routed service line</td></tr>
   </table>
   <div class="rule"><b>If the category is wrong:</b> do not work it under a misleading referral, authorization, billing, or medication status. An operations administrator can use <b>Correct category</b> while the request is Received or In progress. The correction resets ownership, reroutes the Chat mirror, writes an audit event, and does not send a patient text. A waiting or completed request must first be moved back to an active state so its nuanced milestone is not silently rewritten.</div>
+</div>
+
+<div class="sec" data-k="team notes internal staff comments mentions unread audit patient requests">
+  <h3>Team Notes — internal staff coordination <span class="who">Signed-in staff</span></h3>
+  <ol>
+    <li>Open the request and use <b>Team Notes</b> below its status and patient-communication sections.</li>
+    <li>Write the coordination update and select one or more teammates under <b>Mention teammates</b> when their attention is needed.</li>
+    <li>Choose <b>Add team note</b> and wait for <b>Saved to BHW Cloud</b>. The author and timestamp are recorded automatically.</li>
+    <li>A <b>New team note</b> marker appears for unread discussion. An explicitly mentioned provider can receive a <b>Mentioned in team note</b> CrewOS alert without changing routine provider alert routing.</li>
+    <li>Choose <b>Mark notes read</b> after reviewing. Use <b>Load older notes</b> for earlier history. A reply does not automatically mark other notes read.</li>
+    <li>If a save is not confirmed, use <b>Retry save</b> without retyping it. The same send key prevents a duplicate. Drafts remain only in the open page; save before leaving.</li>
+  </ol>
+  <div class="tip"><b>Separate channels:</b> Team Notes never send an SMS, update a Google Chat card, or appear in Communications and delivery. Use Notify patient for approved patient outreach.</div>
+  <div class="rule"><b>Team Notes are not the legal medical record.</b> Keep content limited to what coworkers need for this request. Document diagnoses, treatment decisions, orders, and other required clinical content in CharmHealth.</div>
+</div>
+
+<div class="sec" data-k="staff chat internal direct message teammate ecosystem notifications mute">
+  <h3>Staff Chat — across signed-in staff pages <span class="who">CrewOS staff identity</span></h3>
+  <ol>
+    <li>Choose the floating <b>Staff Chat</b> button on a signed-in staff page. On your first visit to each staff site, or after switching staff accounts, sign in with your existing CrewOS account in the separate window. Later pages on that site reuse the chat sign-in.</li>
+    <li>Use <b>BHW Team</b> for general staff coordination or <b>Message a teammate</b> for a direct conversation. A teammate appears after opening Staff Chat once.</li>
+    <li>Confirm the message contains no patient or confidential personnel information, choose <b>Send</b>, and wait for <b>Saved to BHW Cloud</b>. This confirms storage, not that a teammate has read it.</li>
+    <li>Messages and your selected conversation follow you between staff pages. Unsaved drafts do not; send them before navigating. Reopen the button when switching sites.</li>
+    <li>The unread badge is optional and off initially. Enable <b>Show unread badge across staff pages</b> if you want it. The preference follows your account. No sounds, pop-up alerts, or browser push notifications are requested.</li>
+    <li>Choose <b>Mark read</b> after reviewing. The open panel checks for updates about every 12 seconds; closed panels check less often. This is not an emergency or urgent-clinical channel.</li>
+  </ol>
+  <div class="rule"><b>Separate purposes:</b> patient-specific coordination belongs in Patient Requests → Team Notes; confidential personnel matters stay in HR. Staff Chat does not send SMS, post to Google Chat, or change a request's status. Each app keeps its existing access restrictions. New staff still need an approved CrewOS account.</div>
 </div>
 
 <div class="sec" data-k="patient request responsibility raci accountable responsible consulted informed handoff">
@@ -487,7 +515,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
   <table>
     <tr><th>System</th><th>What lives there</th></tr>
     <tr><td><b>CharmHealth</b></td><td>The medical record. Always the source of truth for anything clinical.</td></tr>
-    <tr><td><b>Google Cloud / Firestore</b></td><td>The operational source of truth for Patient Requests, task state, communications, notification rules, suppression, and audit events.</td></tr>
+    <tr><td><b>Google Cloud / Firestore</b></td><td>The operational source of truth for Patient Requests, request-linked Team Notes and read markers, task state, communications, notification rules, suppression, and audit events.</td></tr>
     <tr><td><b>BHWcrewOS</b></td><td>The primary staff interface—Patient Requests, alerts, referrals, handoffs, tools, dashboards, and deep links into the appropriate specialist system.</td></tr>
     <tr><td><b>Google Chat</b></td><td>A no-PHI staff alert and quick-action mirror. It is not a second queue; verify the final state in CrewOS.</td></tr>
     <tr><td><b>Dialpad</b></td><td>The approved patient call/SMS channel on (443) 762-5343. Consent, STOP suppression, quiet hours, safety holds, and delivery status are checked and recorded by the Google workflow.</td></tr>
@@ -546,4 +574,5 @@ function filter(){
 }
 </script>
 <script type="module" src="/bhw-alert-center.mjs"></script>
+<script src="/staff-chat-launcher.js" defer></script>
 </body></html>

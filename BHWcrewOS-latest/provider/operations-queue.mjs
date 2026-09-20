@@ -74,6 +74,10 @@ export async function createOperationsCloudClient(fetchImpl = fetch) {
 
   return {
     apiBase: config.apiBase,
+    async staffChat(path, body) {
+      if (!/^[a-z0-9/?=&._-]+$/i.test(path)) throw new Error("Invalid chat action");
+      return request(`/v1/staff-chat/${path}`, body === undefined ? {} : { method: "POST", body: JSON.stringify(body) });
+    },
     get currentRole() { return currentRole; },
     async patientRequestCapabilities() {
       const body = await request("/v1/contracts/communication-foundation");
@@ -117,6 +121,25 @@ export async function createOperationsCloudClient(fetchImpl = fetch) {
     async listPatientRequestCommunications(id) {
       const body = await request(`/v1/patient-requests/${encodeURIComponent(id)}/communications`);
       return Array.isArray(body.communications) ? body.communications : [];
+    },
+    async listPatientRequestTeamNotes(id, before = "") {
+      return request(`/v1/patient-requests/${encodeURIComponent(id)}/team-notes${before ? `?before=${encodeURIComponent(before)}` : ""}`);
+    },
+    async addPatientRequestTeamNote(id, content, mentions = [], details = {}) {
+      return request(`/v1/patient-requests/${encodeURIComponent(id)}/team-notes`, {
+        method: "POST",
+        body: JSON.stringify({
+          content,
+          mentions,
+          idempotencyKey: details.idempotencyKey || idempotencyKey(),
+        }),
+      });
+    },
+    async markPatientRequestTeamNotesRead(id, readThroughAt) {
+      return request(`/v1/patient-requests/${encodeURIComponent(id)}/team-notes/read`, {
+        method: "POST",
+        body: JSON.stringify({ readThroughAt }),
+      });
     },
     async listWebsiteContent({ siteId = "care-connect", status = "", limit = 100 } = {}) {
       const params = new URLSearchParams({ siteId, limit: String(Math.max(1, Math.min(250, Number(limit) || 100))) });

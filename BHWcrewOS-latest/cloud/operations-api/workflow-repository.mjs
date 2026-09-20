@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { FirestoreOperationsRepository } from "./firestore-repository.mjs";
 import { normalizePhone } from "./dialpad-service.mjs";
+import { COLLECTIONS } from "./schema.mjs";
 import { sanitizePatientRequest, WORKFLOW_DEFINITIONS } from "./workflow-automation.mjs";
 
 const clean = (value, max = 4000) => String(value ?? "").trim().slice(0, max);
@@ -61,6 +62,7 @@ function toWorkflowRequest(raw = {}) {
   request.statusHistory = Array.isArray(source.statusHistory) ? source.statusHistory : request.statusHistory;
   request.chatMessageName = source.chatMessageName || "";
   request.chatSpace = source.chatSpace || "";
+  Object.assign(request, Object.fromEntries(Object.entries(source).filter(([key]) => key.startsWith("teamNote"))));
   return request;
 }
 
@@ -84,6 +86,9 @@ export class FirestoreWorkflowRepository extends FirestoreOperationsRepository {
     this.communicationConsents = this.db.collection("communicationConsents");
     this.smsSuppressions = this.db.collection("smsSuppressions");
     this.notificationRules = this.db.collection("notificationRules");
+    this.patientRequestTeamNotes = this.db.collection(COLLECTIONS.patientRequestTeamNotes);
+    this.patientRequestTeamNoteReads = this.db.collection(COLLECTIONS.patientRequestTeamNoteReads);
+    this.patientRequestTeamNoteMentions = this.db.collection(COLLECTIONS.patientRequestTeamNoteMentions);
   }
 
   async createPatientRequest(value, metadata = {}) {
@@ -170,7 +175,8 @@ export class FirestoreWorkflowRepository extends FirestoreOperationsRepository {
       const current = toWorkflowRequest(existing.data());
       if ((current.processedActionKeys || []).includes(actionHash)) return { request: current, duplicate: true };
       if (Number(current.version) !== Number(previousVersion)) throw Object.assign(new Error("request changed; refresh before applying this action"), { status: 409 });
-      transaction.set(ref, { ...request, patientRequestId: request.id }, { merge: true });
+      const savedRequest = { ...request, ...Object.fromEntries(Object.entries(current).filter(([key]) => key.startsWith("teamNote"))), patientRequestId: request.id };
+      transaction.set(ref, savedRequest, { merge: true });
       transaction.set(taskRef, {
         taskId: `patient-request:${request.id}`,
         patientRequestId: request.id,
@@ -188,7 +194,7 @@ export class FirestoreWorkflowRepository extends FirestoreOperationsRepository {
         updatedBy: user.sub,
         ...(request.resolvedAt ? { completedAt: request.resolvedAt } : {}),
       }, { merge: true });
-      return { request, duplicate: false };
+      return { request: savedRequest, duplicate: false };
     });
   }
 
@@ -196,13 +202,120 @@ export class FirestoreWorkflowRepository extends FirestoreOperationsRepository {
     const request = await this.getPatientRequest(requestId);
     if (!request) return null;
     const updated = {
-      ...request,
       chatMessageName: clean(delivery.messageName, 400),
       chatSpace: clean(delivery.space, 200),
       chatSyncedAt: new Date().toISOString(),
     };
     await this.patientRequests.doc(requestId).set(updated, { merge: true });
-    return updated;
+    return { ...request, ...updated };
+  }
+
+  async createRequestTeamNote(note, user = {}) {
+    const requestRef = this.patientRequests.doc(note.requestId);
+    const noteRef = this.patientRequestTeamNotes.doc(note.id);
+    const auditRef = this.auditEvents.doc(crypto.randomUUID());
+    const result = await this.db.runTransaction(async (transaction) => {
+      const [requestDoc, existingNote] = await transaction.getAll(requestRef, noteRef);
+      if (!requestDoc.exists) throw Object.assign(new Error("request was not found"), { status: 404 });
+      if (existingNote.exists) {
+        if (existingNote.data().contentHash !== note.contentHash) throw Object.assign(new Error("send key belongs to a different team note"), { status: 409 });
+        return { note: clone(existingNote.data()), replayed: true };
+      }
+      const request = toWorkflowRequest(requestDoc.data());
+      const committedAt = new Date(Math.max(Date.parse(note.createdAt), (Date.parse(request.teamNoteLastAt) || 0) + 1)).toISOString();
+      const savedNote = { ...note, createdAt: committedAt, updatedAt: committedAt };
+      transaction.create(noteRef, savedNote);
+      transaction.set(requestRef, {
+        teamNoteCount: Math.max(0, Number(request.teamNoteCount) || 0) + 1,
+        teamNoteLastAt: committedAt,
+        teamNotePreviousOtherAt: request.teamNoteLastAuthorId === note.authorId ? request.teamNotePreviousOtherAt || "" : request.teamNoteLastAt || "",
+        teamNoteLastAuthorId: note.authorId,
+        teamNoteLastAuthorName: note.authorName,
+      }, { merge: true });
+      for (const mention of note.mentions) {
+        const mentionRef = this.patientRequestTeamNoteMentions.doc(keyFor(`${note.requestId}:${mention.actorId}`));
+        transaction.set(mentionRef, {
+          requestId: note.requestId,
+          actorReference: keyFor(mention.actorId),
+          lastMentionAt: committedAt,
+          lastNoteId: note.id,
+          updatedAt: note.createdAt,
+        }, { merge: true });
+      }
+      transaction.create(auditRef, {
+        eventType: "patient-request.team-note-created",
+        requestId: note.requestId,
+        ...(request.bhwPatientId ? { patientReference: keyFor(request.bhwPatientId) } : {}),
+        actor: note.authorId,
+        actorRole: clean(user.role || note.authorRole || "staff", 80),
+        metadata: {
+          noteId: note.id,
+          characterCount: note.content.length,
+          mentionCount: note.mentions.length,
+        },
+        occurredAt: note.createdAt,
+      });
+      return { note: clone(savedNote), replayed: false };
+    });
+    const readBack = (await noteRef.get()).data();
+    if (!readBack || readBack.contentHash !== note.contentHash) throw Object.assign(new Error("team note save confirmation unavailable; retry the same note"), { status: 503 });
+    return { ...result, note: clone(readBack) };
+  }
+
+  async listRequestTeamNotes(requestId, actorId, before = "") {
+    const id = clean(requestId, 100);
+    let query = this.patientRequestTeamNotes.where("requestId", "==", id).orderBy("createdAt", "desc");
+    if (before) query = query.startAfter(before);
+    const [notesSnapshot, readSnapshot] = await Promise.all([
+      query.limit(201).get(),
+      this.patientRequestTeamNoteReads.doc(keyFor(`${id}:${actorId}`)).get(),
+    ]);
+    const notes = notesSnapshot.docs.slice(0, 200).map((doc) => clone(doc.data()))
+      .sort((left, right) => String(left.createdAt).localeCompare(String(right.createdAt)));
+    return {
+      notes,
+      nextBefore: notesSnapshot.docs.length > 200 ? notes[0].createdAt : null,
+      lastReadAt: readSnapshot.exists ? clean(readSnapshot.data()?.lastReadAt, 40) : "",
+    };
+  }
+
+  async markRequestTeamNotesRead(requestId, actorId, readThroughAt, now) {
+    const id = clean(requestId, 100);
+    const ref = this.patientRequestTeamNoteReads.doc(keyFor(`${id}:${actorId}`));
+    return this.db.runTransaction(async (transaction) => {
+      const current = await transaction.get(ref);
+      const prior = current.exists ? clean(current.data()?.lastReadAt, 40) : "";
+      const lastReadAt = prior && prior > readThroughAt ? prior : readThroughAt;
+      transaction.set(ref, {
+        requestId: id,
+        actorReference: keyFor(actorId),
+        lastReadAt,
+        updatedAt: now,
+      }, { merge: true });
+      return { requestId: id, lastReadAt };
+    });
+  }
+
+  async getTeamNoteReadStates(actorId, requestIds = []) {
+    const allowed = new Set(requestIds.map((value) => clean(value, 100)).filter(Boolean));
+    if (!allowed.size) return {};
+    const ids = [...allowed];
+    const [reads, mentions] = await Promise.all([
+      this.db.getAll(...ids.map((id) => this.patientRequestTeamNoteReads.doc(keyFor(`${id}:${actorId}`)))),
+      this.db.getAll(...ids.map((id) => this.patientRequestTeamNoteMentions.doc(keyFor(`${id}:${actorId}`)))),
+    ]);
+    const states = {};
+    for (const doc of reads) {
+      if (!doc.exists) continue;
+      const value = doc.data();
+      if (allowed.has(value.requestId)) states[value.requestId] = { ...(states[value.requestId] || {}), lastReadAt: clean(value.lastReadAt, 40) };
+    }
+    for (const doc of mentions) {
+      if (!doc.exists) continue;
+      const value = doc.data();
+      if (allowed.has(value.requestId)) states[value.requestId] = { ...(states[value.requestId] || {}), lastMentionAt: clean(value.lastMentionAt, 40) };
+    }
+    return states;
   }
 
   async getPatientMessagingContext(bhwPatientId) {
