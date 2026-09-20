@@ -30,6 +30,8 @@ test("patient viewer loads the assigned document and material-specific questions
   assert.match(patientPage, /assignment\.questions/);
   assert.match(patientPage, /content-submissions/);
   assert.match(patientPage, /noindex,nofollow,noarchive/);
+  assert.match(patientPage, /id="ogTitle"/);
+  assert.match(patientPage, /pageTitle/);
 });
 
 test("CrewHQ has a direct patient materials tile", () => {
@@ -59,6 +61,9 @@ test("staff page records sent communication, supports revocation, and offers lon
   assert.match(staffPage, /value="2160">3 months/);
   assert.match(staffPage, /value="4320">6 months/);
   assert.match(staffPage, /Carrier delivery is not yet confirmed/);
+  assert.match(staffPage, /id="patientMessage"/);
+  assert.match(staffPage, /buildPatientMessage/);
+  assert.match(staffPage, /Copy message with link/);
 });
 
 test("Patient 360 displays Education and Interactive Communication history", () => {

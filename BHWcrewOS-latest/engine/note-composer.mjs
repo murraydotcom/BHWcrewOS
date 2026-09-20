@@ -118,7 +118,6 @@ export function composeEncounterNote(input = {}) {
   const sections = [];
   const transcript = clean(input.transcript || input.note || input.clinicalNarrative);
   const transcriptReviewed = Boolean(input.transcriptReviewed || input.noteReviewed);
-  const reviewedTranscript = transcriptReviewed ? transcript : "";
 
   addSection(sections, "Encounter", [
     input.bhwPatientId ? `BHW Patient ID: ${clean(input.bhwPatientId)}` : "",
@@ -129,15 +128,25 @@ export function composeEncounterNote(input = {}) {
     plan.modules.length ? `Additional modules: ${plan.modules.map((id) => NOTE_MODULES[id].label).join(", ")}` : "",
   ].filter(Boolean));
   addSection(sections, "Chief Concern / Reason for Visit", input.chiefConcern, { required: true, missing });
-  addSection(sections, "History of Present Illness", reviewedTranscript || input.hpi, { required: true, missing });
+  addSection(sections, "History of Present Illness", input.hpi, { required: true, missing });
   if (transcript && !transcriptReviewed) missing.push("Provider review of transcription");
 
   addSection(sections, "Relevant Medical, Family, and Social History", input.relevantHistory);
-  addSection(sections, "Medications Reconciled", reviewedValues(snapshot, "medications"));
-  addSection(sections, "Allergies Reconciled", reviewedValues(snapshot, "allergies"));
+  addSection(sections, "Reviewed Medication Context", reviewedValues(snapshot, "medications"));
+  addSection(sections, "Reviewed Allergy Context", reviewedValues(snapshot, "allergies"));
   addSection(sections, "Active Problems Reviewed", reviewedValues(snapshot, "problemList"));
   addSection(sections, "Relevant Review of Systems", input.ros);
   addSection(sections, "Objective / Examination", input.exam);
+
+  if (plan.primaryTemplate === "transitional_care") {
+    addSection(sections, "TCM — Inpatient Facility and Admission / Discharge Dates", input.transitionalCare?.inpatientFacilityAndDates, { required: true, missing });
+    addSection(sections, "TCM — Interactive Contact Within 2 Business Days", input.transitionalCare?.interactiveContact, { required: true, missing });
+    addSection(sections, "TCM — Discharge Information Reviewed", input.transitionalCare?.dischargeInformationReview, { required: true, missing });
+    addSection(sections, "TCM — Medication Reconciliation and Management", input.transitionalCare?.medicationReconciliation, { required: true, missing });
+    addSection(sections, "TCM — Face-to-Face Visit Timing", input.transitionalCare?.faceToFaceVisit, { required: true, missing });
+    addSection(sections, "TCM — Transition Needs and Non-Face-to-Face Services", input.transitionalCare?.transitionServices, { required: true, missing });
+    addSection(sections, "TCM — Provider MDM Attestation", input.transitionalCare?.mdmAttestation, { required: true, missing });
+  }
 
   if (plan.primaryTemplate === "annual_wellness") {
     addSection(sections, "Annual Wellness Visit Type", plan.awvType ? `${plan.awvType === "initial" ? "Initial" : "Subsequent"} AWV` : "", { required: true, missing });
@@ -155,7 +164,10 @@ export function composeEncounterNote(input = {}) {
   if (plan.modules.includes("condition_management")) {
     addSection(sections, "Condition Management — Status and Interval Change", input.conditionManagement?.status, { required: true, missing });
     addSection(sections, "Condition Management — Objective Monitoring", input.conditionManagement?.objective || reviewedValues(snapshot, "labs"), { required: true, missing });
+    addSection(sections, "Condition Management — Problems, Goals, and Expected Outcomes", input.conditionManagement?.problemsGoals, { required: true, missing });
+    addSection(sections, "Condition Management — Planned Interventions and Medical Management", input.conditionManagement?.interventions, { required: true, missing });
     addSection(sections, "Condition Management — Treatment and Response", input.conditionManagement?.treatmentResponse, { required: true, missing });
+    addSection(sections, "Condition Management — Monitoring and Care Coordination", input.conditionManagement?.monitoringCoordination, { required: true, missing });
   }
 
   if (plan.modules.includes("preventive_care")) {

@@ -1,7 +1,23 @@
 import { CREW_SESSION_EXPIRED, createEncounterCloudClient } from "./cloud-queue.mjs";
+import { bodyMassIndex, centimetersToInches, inchesToCentimeters, kilogramsToPounds, poundsToKilograms, waistToHipRatio } from "./nutrition-unit-conversions.mjs";
+import { normalizeBhwPatientId, verifiedNutritionPatientContext } from "./nutrition-patient-context.mjs";
+import {
+  collectNutritionQuestionnaire,
+  handleNutritionQuestionnaireAction,
+  mergeNutritionQuestionnaireModules,
+  populateNutritionQuestionnaire,
+  renderNutritionQuestionnaire,
+  updateNutritionQuestionnaireVisibility,
+} from "./nutrition-questionnaire-v14.mjs";
+import { renderNutritionDigestionMap } from "./nutrition-digestion-map.mjs";
+import {
+  applyNutritionChartPrefill,
+  matchingNutritionChartProvenance,
+  renderNutritionChartPrefill,
+} from "./nutrition-chart-prefill.mjs";
 
 const requestedPatientId = new URLSearchParams(location.search).get("patient") || "";
-const PATIENT_ID = /^BHW\d{4}$/.test(requestedPatientId) ? requestedPatientId : "BHW0000";
+const PATIENT_ID = normalizeBhwPatientId(requestedPatientId);
 const THEME_KEY = "bhw_provider_theme_v1";
 const $ = (id) => document.getElementById(id);
 const esc = (value) => String(value ?? "").replace(/[&<>\"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[character]));
@@ -12,6 +28,106 @@ let client = null;
 let workspace = null;
 let activeEvaluation = null;
 let formDirty = false;
+let patientContextVerified = false;
+let questionnaireContract = null;
+let giPatternScreenContract = null;
+let digestionMapContract = null;
+let chartPrefillContract = null;
+let appliedChartPrefillFacts = new Set();
+
+function patientScopedPath(path) {
+  if (!PATIENT_ID) return path;
+  const url = new URL(path, location.href);
+  url.searchParams.set("patient", PATIENT_ID);
+  return `${url.pathname.split("/").pop()}${url.search}${url.hash}`;
+}
+
+function preservePatientNavigation() {
+  for (const anchor of document.querySelectorAll('a[href^="patient-360.html"], a[href^="nutrition-intelligence.html"]')) {
+    if (PATIENT_ID) anchor.href = patientScopedPath(anchor.getAttribute("href"));
+  }
+}
+
+function setFactControlsDisabled(disabled) {
+  for (const element of document.querySelectorAll("#nutrition-form [data-fact], #nutrition-form [data-q-role], #nutrition-form [data-grid-key], #nutrition-form [data-beverage-field], #nutrition-form [data-repeatable-field], #nutrition-form [data-question-action], #nutrition-form .gi-pattern-matrix input")) {
+    if (!disabled && element.closest(".question-card[hidden]")) continue;
+    element.disabled = disabled;
+  }
+  const prefillButton = $("apply-chart-prefill");
+  if (prefillButton) prefillButton.disabled = disabled || !Object.keys(chartPrefillContract?.facts || {}).length;
+}
+
+function showVerifiedPatientContext(context) {
+  const identity = $("patient-context");
+  identity.dataset.state = "verified";
+  $("patient-name").textContent = context.displayName;
+  $("patient-id").textContent = context.bhwPatientId;
+  $("patient-context-detail").textContent = context.synthetic
+    ? "Reserved synthetic record · verified against Health Core"
+    : `${context.birthDate ? `DOB ${context.birthDate} · ` : ""}verified against Health Core`;
+  $("patient-context-action").textContent = "Back to Patient 360";
+  $("patient-context-action").href = patientScopedPath("patient-360.html");
+}
+
+function blockUnscopedPatient() {
+  patientContextVerified = false;
+  setFactControlsDisabled(true);
+  $("patient-context").dataset.state = "blocked";
+  $("patient-name").textContent = "Patient selection required";
+  $("patient-id").textContent = "No BHW Patient ID";
+  $("patient-context-detail").textContent = "Open Nutrition Intelligence from a selected Patient 360 record.";
+  $("patient-context-action").textContent = "Choose in Patient Registry";
+  $("patient-context-action").href = "patient-registry.html";
+  setConnection("Patient required", "warning");
+  setSaveState("Not saved", "error", "No patient workspace was opened or queried.");
+  $("results").innerHTML = '<div class="panel"><div class="panel-body"><div class="empty-note">Choose a patient in the Patient Registry, open Patient 360, then select Nutrition. Evaluation and saving remain locked until Health Core verifies that patient.</div></div></div>';
+  updateWorkflowControls();
+}
+
+function setNumericValue(id, value) {
+  const element = $(id);
+  if (element) element.value = value === null ? "" : String(value);
+}
+
+function updateWaistHipRatio() {
+  setNumericValue("waist-hip-ratio", waistToHipRatio($("waist-cm")?.value, $("hip-cm")?.value));
+}
+
+function updateBodyMassIndex() {
+  setNumericValue("body-mass-index", bodyMassIndex($("current-weight-kg")?.value, $("height-cm")?.value));
+}
+
+function syncConvertedInput(sourceId, targetId, converter, after = null) {
+  const source = $(sourceId);
+  if (!source) return;
+  source.addEventListener("input", () => {
+    setNumericValue(targetId, converter(source.value));
+    if (after) after();
+  });
+}
+
+function syncConvenienceMeasurements() {
+  setNumericValue("height-in", centimetersToInches($("height-cm")?.value));
+  setNumericValue("current-weight-lb", kilogramsToPounds($("current-weight-kg")?.value));
+  setNumericValue("calculation-weight-lb", kilogramsToPounds($("calculation-weight-kg")?.value));
+  setNumericValue("waist-in", centimetersToInches($("waist-cm")?.value));
+  setNumericValue("hip-in", centimetersToInches($("hip-cm")?.value));
+  updateBodyMassIndex();
+  updateWaistHipRatio();
+}
+
+function wireMeasurementConverters() {
+  syncConvertedInput("height-in", "height-cm", inchesToCentimeters, updateBodyMassIndex);
+  syncConvertedInput("height-cm", "height-in", centimetersToInches, updateBodyMassIndex);
+  syncConvertedInput("current-weight-lb", "current-weight-kg", poundsToKilograms, updateBodyMassIndex);
+  syncConvertedInput("current-weight-kg", "current-weight-lb", kilogramsToPounds, updateBodyMassIndex);
+  syncConvertedInput("calculation-weight-lb", "calculation-weight-kg", poundsToKilograms);
+  syncConvertedInput("calculation-weight-kg", "calculation-weight-lb", kilogramsToPounds);
+  syncConvertedInput("waist-in", "waist-cm", inchesToCentimeters, updateWaistHipRatio);
+  syncConvertedInput("waist-cm", "waist-in", centimetersToInches, updateWaistHipRatio);
+  syncConvertedInput("hip-in", "hip-cm", inchesToCentimeters, updateWaistHipRatio);
+  syncConvertedInput("hip-cm", "hip-in", centimetersToInches, updateWaistHipRatio);
+}
 
 function setTheme(theme) {
   document.documentElement.dataset.theme = theme;
@@ -85,6 +201,11 @@ function collectFacts() {
     const value = readElement(element);
     if (value !== undefined) target[key] = value;
   }
+  const questionnaire = questionnaireContract
+    ? collectNutritionQuestionnaire($("patient-questionnaire"), questionnaireContract)
+    : { intakeProfile: {}, questionnaireResponses: {}, flatFacts: {} };
+  Object.assign(patientReported, questionnaire.flatFacts);
+  const chartFactSources = matchingNutritionChartProvenance(chartFacts, chartPrefillContract || {}, appliedChartPrefillFacts);
   const inputFacts = { ...patientReported, ...chartFacts };
   if (inputFacts.confirmed_gi_condition_codes?.includes("lactose_intolerance")) inputFacts.confirmed_lactose_intolerance = true;
   if (inputFacts.confirmed_gi_condition_codes?.includes("documented_gastroparesis")) inputFacts.confirmed_gastroparesis = true;
@@ -93,18 +214,20 @@ function collectFacts() {
   inputFacts.food_first_willing_sources_present = inputFacts.food_first_requested;
   inputFacts.food_first_candidate_eligible = inputFacts.food_first_requested;
   inputFacts.fortified_food_candidate_eligible = inputFacts.food_first_requested;
-  inputFacts.any_gi_alarm = ["blood_visible", "black_tarry", "persistent_vomiting", "unable_to_retain_fluids", "severe_or_progressive_pain", "jaundice"].some((key) => inputFacts[key] === true);
+  inputFacts.any_gi_alarm = ["blood_visible", "black_tarry", "bloody_or_coffee_ground_vomit", "persistent_vomiting", "unable_to_retain_fluids", "severe_or_progressive_pain", "chest_pain", "fever", "jaundice", "syncope_or_shock_symptoms"].some((key) => inputFacts[key] === true);
   return {
     patientRef: PATIENT_ID,
-    schemaVersion: "1.2.0",
-    questionnaireVersion: "1.2.0",
+    schemaVersion: "1.4.0",
+    questionnaireVersion: "1.4.0",
     sourceModel: "questionnaire-reflects-real-life_chart-reflects-physiology_intelligence-reconciles-both",
     patientReported,
     chartFacts,
     inputFacts,
+    intakeProfile: questionnaire.intakeProfile,
+    questionnaireResponses: questionnaire.questionnaireResponses,
     provenance: {
       patientReported: { sourceType: "clinician-entered-patient-report", sourceApplication: "BHW Clinical Intelligence", reliability: "reported" },
-      chart: { sourceType: "Health Core chart reconciliation", sourceApplication: "BHW Clinical Intelligence", reliability: "clinician-reviewed-before-approval" },
+      chart: { sourceType: "Health Core chart reconciliation", sourceApplication: "BHW Clinical Intelligence", reliability: "clinician-reviewed-before-approval", factSources: chartFactSources },
     },
   };
 }
@@ -125,8 +248,29 @@ function setElementValue(element, value) {
 
 function populateForm(content = {}) {
   const facts = content.inputFacts || { ...(content.patientReported || {}), ...(content.chartFacts || {}) };
+  appliedChartPrefillFacts = new Set(Object.keys(content.provenance?.chart?.factSources || {}));
   for (const element of document.querySelectorAll("[data-fact]")) setElementValue(element, facts[element.dataset.fact]);
+  if (questionnaireContract) populateNutritionQuestionnaire($("patient-questionnaire"), questionnaireContract, content);
+  syncConvenienceMeasurements();
   formDirty = false;
+}
+
+function applyChartPrefill() {
+  if (!patientContextVerified || !chartPrefillContract) return;
+  const result = applyNutritionChartPrefill($("nutrition-form"), chartPrefillContract);
+  for (const fact of result.applied) appliedChartPrefillFacts.add(fact);
+  const feedback = $("chart-prefill-feedback");
+  if (!result.applied.length) {
+    feedback.textContent = result.preserved.length
+      ? `No fields changed. ${result.preserved.length} existing value${result.preserved.length === 1 ? " was" : "s were"} preserved.`
+      : "No supported blank chart field is available to fill.";
+    return;
+  }
+  syncConvenienceMeasurements();
+  formDirty = true;
+  feedback.textContent = `${result.applied.length} blank chart field${result.applied.length === 1 ? " was" : "s were"} filled for clinician review. ${result.preserved.length} existing value${result.preserved.length === 1 ? " was" : "s were"} preserved.`;
+  setSaveState("Not saved", "not-saved", "Health Core chart suggestions were added to blank fields. Review them before saving to BHW Cloud.");
+  updateWorkflowControls();
 }
 
 function targetText(target = {}) {
@@ -154,6 +298,44 @@ function taskItems(tasks = []) {
   return tasks.length ? tasks.map((item) => `<div class="result-item warning"><b>${esc(label(item.taskType))}</b><p>${esc(label(item.priority))} priority · due within ${esc(item.dueWithinHours)} hour(s) after approval · proposal only</p><small>${esc(item.reasonCodes.map(label).join(", "))}</small></div>`).join("") : '<div class="empty-note">No operational task proposal from the current inputs.</div>';
 }
 
+function kidneyDecisionText(decision = {}) {
+  if (decision.status === "blocked") return `${label(decision.direction || "blocked")} · no target released`;
+  if (decision.status === "follow-existing-plan" && decision.target != null) return `${label(decision.direction)} · ${Number(decision.target).toLocaleString()} ${decision.unit || ""}`.trim();
+  const anchor = decision.referenceAnchor != null ? ` · review anchor ${Number(decision.referenceAnchor).toLocaleString()} ${decision.unit || ""}` : "";
+  return `${label(decision.direction || decision.status)}${anchor}`;
+}
+
+function kidneyEducationCards(candidates = []) {
+  if (!candidates.length) return '<div class="empty-note">No kidney education topic was selected from the current chart pathway.</div>';
+  return candidates.map((item) => `<article class="food-source kidney-education-card">
+    <div class="panel-head"><h4>${esc(label(item.code))}</h4><span class="badge warning">Candidate only</span></div>
+    <p>${esc(item.patientLanguageCandidate)}</p>
+    <b class="field-label">Natural food and preparation options to review</b>
+    <ul>${list(item.naturalSourceCandidates).map((source) => `<li>${esc(source)}</li>`).join("")}</ul>
+    <b class="field-label">Clinical guardrails</b>
+    <ul>${list(item.guardrails).map((guardrail) => `<li>${esc(guardrail)}</li>`).join("")}</ul>
+    <small>Sources: ${esc(list(item.sourceIds).join(" · "))}</small>
+  </article>`).join("");
+}
+
+function kidneyPanel(kidney = {}) {
+  if (!kidney || kidney.status === "not-applicable") {
+    return '<section class="panel kidney-result"><div class="panel-head"><h3>Kidney nutrition</h3><span class="badge neutral">Not applicable</span></div><div class="panel-body"><div class="empty-note">No chart-confirmed kidney pathway is active in this preview.</div></div></section>';
+  }
+  const decisions = kidney.nutrientDecisions || {};
+  const missing = kidney.dataCompleteness?.missingFacts || [];
+  return `<section class="panel kidney-result"><div class="panel-head"><div><h3>Kidney nutrition pathway</h3><span class="panel-subtitle">Module ${esc(kidney.moduleVersion || "1.1.0")} · chart physiology controls clinical decisions</span></div><span class="badge warning">Updated education review pending</span></div><div class="panel-body result-list">
+    <div class="kidney-summary"><div><span>Pathway</span><b>${esc(label(kidney.pathway))}</b></div><div><span>CKD stage</span><b>${esc(kidney.ckdStage || "Not applicable")}</b></div><div><span>Albuminuria</span><b>${esc(kidney.albuminuriaStatus || "Not assessed")}</b></div><div><span>Data readiness</span><b>${esc(label(kidney.dataCompleteness?.status))}</b></div></div>
+    ${missing.length ? `<div class="gate-block"><b>Kidney plan needs current chart context</b><p>${esc(missing.map(label).join(", "))}</p></div>` : ""}
+    <div class="kidney-decisions">${["energy", "protein", "sodium", "potassium", "phosphorus", "fluid"].map((code) => `<div class="result-item"><b>${esc(label(code))}</b><p>${esc(kidneyDecisionText(decisions[code]))}</p><small>${esc(list(decisions[code]?.rationaleCodes).map(label).join(" · "))}</small></div>`).join("")}</div>
+    <div class="result-item"><b>Food-first and natural-source strategies</b>${chips(kidney.foodStrategyCodes)}<small>Suggestions must preserve culture, sensory-safe foods, affordability, GI tolerance, and adequacy. Normal potassium or phosphorus does not justify a blanket restriction.</small></div>
+    <div class="result-item"><b>Supplement and shake safety</b>${chips(kidney.supplementSafetyCodes)}<small>No product is automatically selected or called kidney safe.</small></div>
+    <div class="result-item"><b>Monitoring</b>${chips(kidney.monitoringCodes)}</div>
+    <div class="result-item"><b>Clinician-only education candidates</b><p>These drafts reconcile the selected kidney pathway with current physiology. They are not approved patient handouts or prescriptions.</p><div class="food-source-grid">${kidneyEducationCards(kidney.educationCandidates)}</div></div>
+    <div class="natural-disclosure"><b>Publication boundary:</b> This kidney plan and its education candidates are clinician-only synthetic review material. They cannot enter Patient 360, the Personal Health Blueprint, or printable education until the exact content has BHW clinical-owner and external renal-RDN approval.</div>
+  </div></section>`;
+}
+
 function renderEvaluation(evaluation, sourceStatus = "Preview only") {
   activeEvaluation = evaluation;
   setReviewReadiness(evaluation);
@@ -167,7 +349,8 @@ function renderEvaluation(evaluation, sourceStatus = "Preview only") {
     <div class="result-grid">
       <section class="panel"><div class="panel-head"><h3>Safety gates</h3><span class="badge ${gates.length ? "warning" : "neutral"}">Runs first</span></div><div class="panel-body result-list">${gateList(gates)}</div></section>
       <section class="panel"><div class="panel-head"><h3>Phenotypes—not diagnoses</h3><span class="badge neutral">Evidence-linked</span></div><div class="panel-body">${chips(evaluation.phenotypeCodes)}</div></section>
-      <section class="panel"><div class="panel-head"><h3>GI and BHW 5R</h3><span class="badge neutral">Existing Blueprint model</span></div><div class="panel-body result-list"><div class="result-item"><b>Presentation profiles</b>${chips(evaluation.gi?.presentationProfiles)}</div><div class="result-item"><b>Confirmed chart conditions</b>${chips(evaluation.gi?.confirmedConditions)}</div><div class="result-item"><b>Eligible GI actions</b>${chips(evaluation.gi?.eligibleInterventions)}</div><div class="result-item"><b>5R candidates</b>${chips(evaluation.gi?.fiveR?.candidates)}<small>Steps are optional clinical lenses—not a universal sequence or diagnosis.</small></div></div></section>
+      ${kidneyPanel(evaluation.kidney)}
+      <section class="panel"><div class="panel-head"><h3>GI patterns and BHW 5R</h3><span class="badge neutral">Symptoms ≠ diagnosis</span></div><div class="panel-body result-list"><div class="result-item"><b>Pattern screen</b><p>${esc(evaluation.gi?.patternScreen?.answeredSymptomCount || 0)} symptom frequencies answered · no total score calculated</p><small>The screen organizes presentation patterns; it does not diagnose low stomach acid, SIBO, intestinal permeability, celiac disease, gallbladder disease, or pancreatic disease.</small></div><div class="result-item"><b>Presentation profiles</b>${chips(evaluation.gi?.presentationProfiles)}</div><div class="result-item"><b>Diagnostic-review candidates</b>${chips(list(evaluation.gi?.diagnosticReviewCandidates).map((item) => item.code))}<small>These are prompts for history, medication, chart, examination, lab, imaging, or specialist reconciliation—not diagnoses.</small></div><div class="result-item"><b>Confirmed chart conditions</b>${chips(evaluation.gi?.confirmedConditions)}</div><div class="result-item"><b>Eligible GI actions</b>${chips(evaluation.gi?.eligibleInterventions)}</div><div class="result-item"><b>5R candidates</b>${chips(evaluation.gi?.fiveR?.candidates)}<small>Steps are optional clinical lenses—not a universal sequence or diagnosis.</small></div></div></section>
       <section class="panel"><div class="panel-head"><h3>Dietary pattern and targets</h3><span class="badge neutral">Clinician review</span></div><div class="panel-body result-list"><div class="result-item"><b>Overlays and modifiers</b>${chips(evaluation.dietaryPattern?.overlays)}</div><div class="result-item"><b>Energy</b><p>${esc(targetText(evaluation.targets?.energy))}</p></div><div class="result-item"><b>Protein</b><p>${esc(targetText(evaluation.targets?.protein))}</p></div><div class="result-item"><b>Carbohydrate</b><p>${esc(targetText(evaluation.targets?.carbohydrate))}</p></div><div class="result-item"><b>Fat</b><p>${esc(targetText(evaluation.targets?.fat))}</p></div><div class="result-item"><b>Fiber</b><p>${esc(targetText(evaluation.targets?.fiber))}</p></div><div class="result-item"><b>Hydration</b><p>${esc(targetText(evaluation.targets?.hydration))}</p></div></div></section>
       <section class="panel"><div class="panel-head"><h3>Natural and food-first sources</h3><span class="badge neutral">Filter, then rank</span></div><div class="panel-body result-list">${foodSources(evaluation.foodFirst)}</div></section>
       <section class="panel"><div class="panel-head"><h3>Supplement and shake escalation</h3><span class="badge warning">No automatic product</span></div><div class="panel-body"><div class="result-item"><b>${esc(label(evaluation.supplementEscalation?.status))}</b>${chips(evaluation.supplementEscalation?.sequence)}<small>Exact product, dose, interactions, contraindications, duration, outcome, and stop rules require review.</small></div></div></section>
@@ -176,28 +359,96 @@ function renderEvaluation(evaluation, sourceStatus = "Preview only") {
       <section class="panel"><div class="panel-head"><h3>Patient 360 and Blueprint output</h3><span class="badge ${blueprint.status === "blocked" ? "warning" : "neutral"}">${esc(label(blueprint.status))}</span></div><div class="panel-body result-list"><div class="result-item"><b>Patient 360</b><p>Only a separately published provider-approved version becomes visible.</p></div><div class="result-item"><b>Personal Health Blueprint</b><p>Nutrition, hydration, food-first, supplement, GI/5R, and monitoring sections are sent as source material to the existing Blueprint review. Blueprint approval is never automatic.</p></div><div class="result-item"><b>Printable education</b><p>Generated from the same approved version, with food-safety and natural-source disclosures.</p></div></div></section>
       <section class="panel"><div class="panel-head"><h3>Explicit safeguards</h3><span class="badge neutral">Must not occur</span></div><div class="panel-body">${chips(evaluation.prohibited)}</div></section>
     </div>`;
+  updateWorkflowControls();
 }
 
 function updateWorkflowControls() {
   const draft = workspace?.draft || null;
   const approved = workspace?.approved || null;
   const published = workspace?.published || null;
+  const patientReady = Boolean(PATIENT_ID && patientContextVerified && client);
   const approvalReady = draft?.evaluation?.reviewReadiness?.approvalReady === true;
-  $("approve").disabled = !draft || !approvalReady || !$("review-attestation").checked || formDirty;
-  $("publish").disabled = !approved || !approved.publicationAllowed || !$("publish-attestation").checked;
-  $("print").disabled = !published;
-  $("record-status").textContent = published ? `Published v${published.version}` : approved ? `Approved v${approved.version}` : draft ? `Draft r${draft.revision}` : "No saved assessment";
+  const kidneyPending = activeEvaluation?.kidney?.status && activeEvaluation.kidney.status !== "not-applicable" && activeEvaluation.kidney.patientPublicationAllowed !== true;
+  $("evaluate").disabled = !patientReady;
+  $("save-draft").disabled = !patientReady;
+  $("review-attestation").disabled = !patientReady || !draft;
+  $("publish-attestation").disabled = !patientReady || !approved;
+  if (!patientReady || kidneyPending) {
+    $("publication-allowed").checked = false;
+    $("publication-allowed").disabled = true;
+    $("publication-allowed").closest("label").title = !patientReady
+      ? "Health Core must verify the selected patient before publication controls are available."
+      : "Kidney patient outputs require BHW clinical-owner and renal-RDN content approval first.";
+  } else {
+    $("publication-allowed").disabled = !draft;
+    $("publication-allowed").closest("label").title = "";
+  }
+  $("approve").disabled = !patientReady || !draft || !approvalReady || !$("review-attestation").checked || formDirty;
+  $("publish").disabled = !patientReady || !approved || !approved.publicationAllowed || !$("publish-attestation").checked;
+  $("print").disabled = !patientReady || !published;
+  $("record-status").textContent = !PATIENT_ID ? "No patient selected" : !patientReady ? "Patient verification required" : published ? `Published v${published.version}` : approved ? `Approved v${approved.version}` : draft ? `Draft r${draft.revision}` : "No saved assessment";
   $("record-status").className = `badge ${published ? "complete" : approved ? "neutral" : draft ? "warning" : "neutral"}`;
 }
 
+function showQuestionnaireLoading() {
+  const questionnaire = $("patient-questionnaire");
+  questionnaire.classList.add("questionnaire-loading");
+  questionnaire.classList.remove("questionnaire-unavailable");
+  questionnaire.innerHTML = "Loading the adaptive real-life questionnaire…";
+  $("questionnaire-version").textContent = "Questionnaire v1.4";
+}
+
+function showQuestionnaireUnavailable(error) {
+  const questionnaire = $("patient-questionnaire");
+  const deployPreview = /^deploy-preview-\d+--bhwcrewos\.netlify\.app$/i.test(location.hostname);
+  const detail = deployPreview && /failed to fetch/i.test(String(error?.message || ""))
+    ? "This deploy preview is not authorized to connect to protected Health Core. It is not still loading. Review the layout here, then test the protected questionnaire in signed-in CrewHQ after the change is merged."
+    : "Health Core could not provide the questionnaire. It is not still loading. Check the connection and try again.";
+  questionnaire.classList.remove("questionnaire-loading");
+  questionnaire.classList.add("questionnaire-unavailable");
+  questionnaire.innerHTML = `<div role="alert"><b>Questionnaire temporarily unavailable</b><p>${esc(detail)}</p><button class="btn" type="button" data-questionnaire-retry>Retry Health Core</button><small>No patient information was loaded or saved.</small></div>`;
+  $("questionnaire-version").textContent = "Questionnaire unavailable";
+  $("chart-prefill").dataset.state = "unavailable";
+  $("chart-prefill").innerHTML = '<div class="chart-prefill-head"><div><b>Health Core chart suggestions unavailable</b><span>The protected connection did not complete. No chart values were loaded.</span></div></div>';
+}
+
 async function loadWorkspace({ populate = true } = {}) {
+  patientContextVerified = false;
+  setFactControlsDisabled(true);
+  updateWorkflowControls();
   setConnection("Connecting...", "warning");
+  showQuestionnaireLoading();
   try {
     if (!client) client = await createEncounterCloudClient();
     if (!client) throw new Error("The protected Clinical Intelligence connection is not configured.");
+    const healthRecordBody = await client.healthRecord(PATIENT_ID);
+    const patientContext = verifiedNutritionPatientContext(healthRecordBody?.healthRecord, PATIENT_ID);
+    showVerifiedPatientContext(patientContext);
     const body = await client.patientNutritionIntelligence(PATIENT_ID);
     workspace = body.workspace || null;
-    $("questionnaire-version").textContent = `Questionnaire v${body.questionnaire?.version || "1.2"} · ${body.questionnaire?.fields?.length || 0} fields`;
+    const baseQuestionnaire = body.questionnaire || null;
+    giPatternScreenContract = body.giPatternScreen || null;
+    digestionMapContract = body.digestionMap || null;
+    questionnaireContract = baseQuestionnaire ? mergeNutritionQuestionnaireModules(baseQuestionnaire, giPatternScreenContract) : null;
+    chartPrefillContract = body.chartPrefill || { facts: {}, provenance: {}, warnings: [] };
+    appliedChartPrefillFacts = new Set();
+    if (!questionnaireContract?.questions?.length) throw new Error("The Nutrition Intelligence questionnaire contract is unavailable.");
+    $("patient-questionnaire").classList.remove("questionnaire-loading");
+    $("patient-questionnaire").innerHTML = renderNutritionQuestionnaire(questionnaireContract);
+    const digestiveQuestionList = $("patient-questionnaire").querySelector('[data-section-id="gi_allergy"] .questionnaire-question-list');
+    if (!digestiveQuestionList) throw new Error("The digestive questionnaire section is unavailable.");
+    const digestionMap = document.createElement("div");
+    digestionMap.id = "nutrition-digestion-map";
+    digestionMap.className = "questionnaire-section-support";
+    digestionMap.setAttribute("aria-live", "polite");
+    digestionMap.innerHTML = renderNutritionDigestionMap(digestionMapContract);
+    digestiveQuestionList.append(digestionMap);
+    $("chart-prefill").dataset.state = chartPrefillContract.status || "unavailable";
+    $("chart-prefill").innerHTML = renderNutritionChartPrefill(chartPrefillContract);
+    updateNutritionQuestionnaireVisibility($("patient-questionnaire"), questionnaireContract);
+    $("questionnaire-version").textContent = giPatternScreenContract?.version
+      ? `Questionnaire v${questionnaireContract.version || "1.4"} · ${baseQuestionnaire.questions.length} core + GI pattern screen v${giPatternScreenContract.version}`
+      : `Questionnaire v${questionnaireContract.version || "1.4"} · ${baseQuestionnaire.questions.length} core · GI pattern screen awaiting Health Core`;
     if (populate && workspace?.draft?.content) populateForm(workspace.draft.content);
     const current = workspace?.approved?.evaluation || workspace?.draft?.evaluation || null;
     if (current?.rulesetVersion) renderEvaluation(current, workspace?.published ? `Published v${workspace.published.version}` : workspace?.approved ? `Approved v${workspace.approved.version}` : `Saved draft r${workspace.draft.revision}`);
@@ -206,17 +457,25 @@ async function loadWorkspace({ populate = true } = {}) {
       setSaveState("Not saved", "not-saved", "No Nutrition Intelligence record has been saved.");
       setReviewReadiness(null);
     }
+    patientContextVerified = true;
+    setFactControlsDisabled(false);
     setConnection("Health Core connected", "complete");
     updateWorkflowControls();
   } catch (error) {
+    patientContextVerified = false;
+    setFactControlsDisabled(true);
+    $("patient-context").dataset.state = "blocked";
+    $("patient-context-detail").textContent = error.message || "Health Core could not verify this patient.";
     setConnection("Unavailable", "warning");
     setSaveState("Not saved", "error", error.message || "Nutrition Intelligence could not be loaded.");
+    showQuestionnaireUnavailable(error);
     if (error?.code === CREW_SESSION_EXPIRED) location.href = `/crewos?next=${encodeURIComponent(`/provider/nutrition-intelligence.html?patient=${PATIENT_ID}`)}`;
+    updateWorkflowControls();
   }
 }
 
 async function evaluatePreview() {
-  if (!client) return;
+  if (!client || !patientContextVerified) return;
   setSaveState(formDirty || !workspace?.draft ? "Not saved" : `Saved to BHW Cloud · ${new Date(workspace.updatedAt).toLocaleString()}`, formDirty || !workspace?.draft ? "not-saved" : "saved", "Evaluating without creating side effects...");
   try {
     const body = await client.savePatientNutritionIntelligence(PATIENT_ID, { action: "evaluate", content: collectFacts() });
@@ -228,7 +487,7 @@ async function evaluatePreview() {
 }
 
 async function saveDraft() {
-  if (!client) return;
+  if (!client || !patientContextVerified) return;
   setSaveState("Saving…", "saving", "Writing the clinical draft to the protected Health Core workspace.");
   try {
     const body = await client.savePatientNutritionIntelligence(PATIENT_ID, { action: "save-draft", content: collectFacts() });
@@ -246,7 +505,7 @@ async function saveDraft() {
 
 async function approveDraft() {
   const draft = workspace?.draft;
-  if (!draft || formDirty) return;
+  if (!patientContextVerified || !draft || formDirty) return;
   setSaveState("Saving…", "saving", "Locking provider review to the exact saved revision.");
   try {
     const body = await client.savePatientNutritionIntelligence(PATIENT_ID, {
@@ -269,7 +528,7 @@ async function approveDraft() {
 
 async function publishProjections() {
   const approved = workspace?.approved;
-  if (!approved) return;
+  if (!patientContextVerified || !approved) return;
   setSaveState("Saving…", "saving", "Publishing bounded source projections. Blueprint review and patient-release gates remain.");
   try {
     const body = await client.savePatientNutritionIntelligence(PATIENT_ID, {
@@ -288,9 +547,15 @@ async function publishProjections() {
 }
 
 function wire() {
-  $("patient-id").textContent = PATIENT_ID;
   setTheme(initialTheme());
   $("theme").addEventListener("click", () => setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
+  preservePatientNavigation();
+  if (!PATIENT_ID) {
+    blockUnscopedPatient();
+    return;
+  }
+  $("patient-id").textContent = PATIENT_ID;
+  $("patient-context-detail").textContent = "Health Core verification is required before evaluation or saving.";
   $("refresh").addEventListener("click", () => loadWorkspace());
   $("evaluate").addEventListener("click", evaluatePreview);
   $("save-draft").addEventListener("click", saveDraft);
@@ -300,13 +565,30 @@ function wire() {
   $("review-attestation").addEventListener("change", updateWorkflowControls);
   $("publication-allowed").addEventListener("change", updateWorkflowControls);
   $("publish-attestation").addEventListener("change", updateWorkflowControls);
+  wireMeasurementConverters();
   $("nutrition-form").addEventListener("input", (event) => {
     if (!["review-attestation", "publication-allowed", "publish-attestation"].includes(event.target.id)) {
+      if (questionnaireContract && $("patient-questionnaire").contains(event.target)) updateNutritionQuestionnaireVisibility($("patient-questionnaire"), questionnaireContract);
       formDirty = true;
       setSaveState("Not saved", "not-saved", "This screen has changes that are not saved to BHW Cloud.");
       updateWorkflowControls();
     }
   });
+  $("patient-questionnaire").addEventListener("click", (event) => {
+    if (event.target.closest("[data-questionnaire-retry]")) {
+      loadWorkspace();
+      return;
+    }
+    if (!questionnaireContract || !handleNutritionQuestionnaireAction(event, $("patient-questionnaire"), questionnaireContract)) return;
+    formDirty = true;
+    setSaveState("Not saved", "not-saved", "This screen has changes that are not saved to BHW Cloud.");
+    updateWorkflowControls();
+  });
+  $("chart-prefill").addEventListener("click", (event) => {
+    if (event.target.closest("#apply-chart-prefill")) applyChartPrefill();
+  });
+  setFactControlsDisabled(true);
+  updateWorkflowControls();
   loadWorkspace();
 }
 

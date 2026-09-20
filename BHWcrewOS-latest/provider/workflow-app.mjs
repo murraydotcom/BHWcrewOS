@@ -317,9 +317,23 @@ function builderInputFromDetail(row) {
     exam: value("nbExam", current.exam),
     assessment: value("nbAssessment", current.assessment),
     plan: value("nbPlan", current.plan),
+    orders: value("nbOrders", current.orders),
+    referrals: value("nbReferrals", current.referrals),
+    patientInstructions: value("nbPatientInstructions", current.patientInstructions),
+    returnPrecautions: value("nbReturnPrecautions", current.returnPrecautions),
     followUp: value("nbFollowUp", current.followUp),
     timeMdm: value("nbTimeMdm", current.timeMdm),
     transcriptReviewed: $("nbTranscriptReviewed") ? $("nbTranscriptReviewed").checked : Boolean(current.transcriptReviewed),
+    transitionalCare: {
+      ...current.transitionalCare,
+      inpatientFacilityAndDates: value("nbTcmFacilityDates", current.transitionalCare?.inpatientFacilityAndDates),
+      interactiveContact: value("nbTcmContact", current.transitionalCare?.interactiveContact),
+      dischargeInformationReview: value("nbTcmDischargeReview", current.transitionalCare?.dischargeInformationReview),
+      medicationReconciliation: value("nbTcmMedicationReconciliation", current.transitionalCare?.medicationReconciliation),
+      faceToFaceVisit: value("nbTcmFaceToFace", current.transitionalCare?.faceToFaceVisit),
+      transitionServices: value("nbTcmTransitionServices", current.transitionalCare?.transitionServices),
+      mdmAttestation: value("nbTcmMdm", current.transitionalCare?.mdmAttestation),
+    },
     awv: {
       ...current.awv,
       historyUpdate: value("nbAwvHistory", current.awv?.historyUpdate),
@@ -335,7 +349,10 @@ function builderInputFromDetail(row) {
       ...current.conditionManagement,
       status: value("nbConditionStatus", current.conditionManagement?.status),
       objective: value("nbConditionObjective", current.conditionManagement?.objective),
+      problemsGoals: value("nbConditionGoals", current.conditionManagement?.problemsGoals),
+      interventions: value("nbConditionInterventions", current.conditionManagement?.interventions),
       treatmentResponse: value("nbConditionTreatment", current.conditionManagement?.treatmentResponse),
+      monitoringCoordination: value("nbConditionCoordination", current.conditionManagement?.monitoringCoordination),
     },
     preventiveCare: {
       ...current.preventiveCare,
@@ -479,9 +496,10 @@ function noteField(id, label, value = "", rows = 3) {
 }
 
 function renderModuleBuilderFields(input = {}) {
-  return `<details style="margin-top:10px"><summary>Core clinical details</summary><div class="formgrid" style="margin-top:10px">${noteField("nbRelevantHistory", "Relevant history", input.relevantHistory)}${noteField("nbRos", "Relevant ROS", input.ros)}${noteField("nbExam", "Objective / examination", input.exam)}${noteField("nbTimeMdm", "Time / MDM attestation", input.timeMdm)}</div></details>
+  return `<details open style="margin-top:10px"><summary>Core clinical details</summary><div class="formgrid" style="margin-top:10px">${noteField("nbHpi", "History of present illness", input.hpi, 6)}${noteField("nbRelevantHistory", "Relevant history", input.relevantHistory)}${noteField("nbRos", "Relevant ROS", input.ros)}${noteField("nbExam", "Objective / examination", input.exam)}${noteField("nbOrders", "Orders", input.orders)}${noteField("nbReferrals", "Referrals / care coordination", input.referrals)}${noteField("nbPatientInstructions", "Patient instructions", input.patientInstructions)}${noteField("nbReturnPrecautions", "Return precautions", input.returnPrecautions)}${noteField("nbTimeMdm", "Time / MDM attestation", input.timeMdm)}</div></details>
+  <details style="margin-top:10px"><summary>Transitional Care Management</summary><div class="formgrid" style="margin-top:10px">${noteField("nbTcmFacilityDates", "Inpatient facility and admission/discharge dates", input.transitionalCare?.inpatientFacilityAndDates)}${noteField("nbTcmContact", "Interactive contact within 2 business days", input.transitionalCare?.interactiveContact)}${noteField("nbTcmDischargeReview", "Discharge information reviewed", input.transitionalCare?.dischargeInformationReview)}${noteField("nbTcmMedicationReconciliation", "Medication reconciliation and management", input.transitionalCare?.medicationReconciliation)}${noteField("nbTcmFaceToFace", "Face-to-face visit timing", input.transitionalCare?.faceToFaceVisit)}${noteField("nbTcmTransitionServices", "Transition needs and non-face-to-face services", input.transitionalCare?.transitionServices)}${noteField("nbTcmMdm", "Provider-confirmed MDM attestation", input.transitionalCare?.mdmAttestation)}</div><div class="privacy">The system organizes documented facts only. It does not select 99495, 99496, or an MDM level.</div></details>
   <details style="margin-top:10px"><summary>Annual Wellness Visit cascade</summary><div class="formgrid" style="margin-top:10px">${noteField("nbAwvHistory", "Medical and family history update", input.awv?.historyUpdate)}${noteField("nbAwvProviders", "Providers and suppliers", input.awv?.providers)}${noteField("nbAwvMeasurements", "Measurements", input.awv?.measurements)}${noteField("nbAwvCognition", "Cognitive assessment", input.awv?.cognition)}${noteField("nbAwvFunction", "Function and safety", input.awv?.functionSafety)}${noteField("nbAwvPrevention", "Screening/prevention schedule", input.awv?.preventionSchedule)}${noteField("nbAwvSubstance", "Opioid and substance-use review", input.awv?.opioidSudReview)}${noteField("nbAwvPlan", "Personalized prevention plan", input.awv?.personalizedPlan)}</div></details>
-  <details style="margin-top:10px"><summary>Condition Management and Preventive Care</summary><div class="formgrid" style="margin-top:10px">${noteField("nbConditionStatus", "Condition status / interval change", input.conditionManagement?.status)}${noteField("nbConditionObjective", "Objective monitoring", input.conditionManagement?.objective)}${noteField("nbConditionTreatment", "Treatment and response", input.conditionManagement?.treatmentResponse)}${noteField("nbPreventiveScreenings", "Preventive screenings", input.preventiveCare?.screenings)}${noteField("nbPreventivePlan", "Preventive counseling and plan", input.preventiveCare?.counselingPlan)}</div></details>
+  <details style="margin-top:10px"><summary>Condition Management and Preventive Care</summary><div class="formgrid" style="margin-top:10px">${noteField("nbConditionStatus", "Condition status / interval change", input.conditionManagement?.status)}${noteField("nbConditionObjective", "Objective monitoring", input.conditionManagement?.objective)}${noteField("nbConditionGoals", "Problems, goals, and expected outcomes", input.conditionManagement?.problemsGoals)}${noteField("nbConditionInterventions", "Planned interventions and medical management", input.conditionManagement?.interventions)}${noteField("nbConditionTreatment", "Treatment and response", input.conditionManagement?.treatmentResponse)}${noteField("nbConditionCoordination", "Monitoring and care coordination", input.conditionManagement?.monitoringCoordination)}${noteField("nbPreventiveScreenings", "Preventive screenings", input.preventiveCare?.screenings)}${noteField("nbPreventivePlan", "Preventive counseling and plan", input.preventiveCare?.counselingPlan)}</div></details>
   <details style="margin-top:10px"><summary>Controlled Medication Monitoring</summary><div class="formgrid" style="margin-top:10px">${noteField("nbControlledClinical", "Indication, adherence, effect, adverse effects", input.controlledMedication?.clinicalReview)}${noteField("nbControlledPdmp", "PDMP review", input.controlledMedication?.pdmp)}${noteField("nbControlledAgreement", "Agreement / consent", input.controlledMedication?.agreementConsent)}${noteField("nbControlledSample", "Sample obtained / monitoring", input.controlledMedication?.sampleMonitoring)}${noteField("nbControlledSafety", "Safety counseling", input.controlledMedication?.safetyCounseling)}${noteField("nbControlledFollowUp", "Controlled-medication follow-up", input.controlledMedication?.followUp)}</div></details>
   <details style="margin-top:10px"><summary>Behavioral Health</summary><div class="formgrid" style="margin-top:10px">${noteField("nbBehavioralMse", "Mental status examination", input.behavioralHealth?.mse)}${noteField("nbBehavioralRisk", "Safety / risk assessment", input.behavioralHealth?.risk)}${noteField("nbBehavioralInterventions", "Interventions, response, and progress", input.behavioralHealth?.interventionsResponse)}</div></details>
   <details style="margin-top:10px"><summary>CharmEd Minds</summary><div class="formgrid" style="margin-top:10px">${noteField("nbCharmedConcern", "Functional concern and context", input.charmedMinds?.functionalConcern)}${noteField("nbCharmedScreening", "Standardized screening and cognitive profile", input.charmedMinds?.screeningProfile)}${noteField("nbCharmedGoals", "Goals, transfer, and support plan", input.charmedMinds?.goalsPlan)}</div></details>`;
@@ -491,15 +509,20 @@ function renderNoteBuilder(row) {
   const notePlan = normalizeNotePlan(row.notePlan);
   const input = row.noteBuilderInput || {};
   const missing = row.noteDraftMeta?.missing || [];
+  const warnings = row.noteDraftMeta?.warnings || [];
+  const sourceEvidence = row.noteDraftMeta?.sourceEvidence || [];
+  const warningsResolved = Boolean(row.noteDraftMeta?.warningsResolved);
+  const structuring = structuringId === row.id;
   return `<details open><summary><b>Encounter Note Builder</b> — one primary template plus applicable modules</summary>
     <div class="formgrid" style="margin-top:12px"><div class="field"><label>Primary note template</label><select id="dPrimaryTemplate">${templateOptions(notePlan.primaryTemplate)}</select></div><div class="field"><label>AWV type, when applicable</label><select id="dAwvType"><option value="">Not applicable / select</option><option value="initial" ${notePlan.awvType === "initial" ? "selected" : ""}>Initial AWV</option><option value="subsequent" ${notePlan.awvType === "subsequent" ? "selected" : ""}>Subsequent AWV</option></select></div><div class="field"><label>Chief concern / reason</label><input id="nbChiefConcern" value="${esc(input.chiefConcern || "")}" placeholder="Patient-stated reason for visit"></div></div>
     <div class="field"><label>Additional modules</label><div class="module-grid" id="dModuleGrid">${moduleOptions(notePlan.modules)}</div><div class="privacy">Condition Management covers clinical condition follow-up. Medication content appears only when addressed. CCM is excluded.</div></div>
-    ${noteField("nbHpi", "History of present illness", input.hpi, 5)}
     <div class="formgrid" style="margin-top:12px"><div class="field"><label>Assessment</label><textarea id="nbAssessment" rows="4">${esc(input.assessment || "")}</textarea></div><div class="field"><label>Plan</label><textarea id="nbPlan" rows="4">${esc(input.plan || "")}</textarea></div><div class="field"><label>Follow-up</label><textarea id="nbFollowUp" rows="4">${esc(input.followUp || "")}</textarea></div></div>
     ${renderModuleBuilderFields(input)}
     <label class="module-option"><input type="checkbox" id="nbTranscriptReviewed" ${input.transcriptReviewed ? "checked" : ""}><span>I reviewed the source transcription and confirm it may be used to draft this note.</span></label>
+    ${warnings.length ? `<div class="notice"><b>${warnings.length} source conflict or missing-information warning${warnings.length === 1 ? "" : "s"} require provider review.</b><ul>${warnings.map((warning) => `<li>${esc(warning)}</li>`).join("")}</ul><label class="module-option"><input type="checkbox" id="nbWarningsResolved" ${warningsResolved ? "checked" : ""}><span>I reviewed these warnings and corrected or addressed them in the note.</span></label></div>` : ""}
+    ${sourceEvidence.length ? `<details style="margin-top:10px"><summary>Source evidence used by the organizer</summary><ul>${sourceEvidence.map((item) => `<li>${esc(item)}</li>`).join("")}</ul></details>` : ""}
     ${missing.length ? `<div class="notice"><b>${missing.length} required element${missing.length === 1 ? "" : "s"} still need documentation.</b><br>${missing.map(esc).join(" · ")}</div>` : ""}
-    <div class="actions"><button class="btn bronze" id="structureSource" ${structuringId === row.id ? "disabled" : ""}>${structuringId === row.id ? "Organizing source…" : "Organize Freed draft into fields"}</button><button class="btn primary" id="generateNote">Generate structured note draft</button></div>
+    <div class="actions"><button class="btn primary" id="generateNote" ${structuring ? "disabled" : ""}>${structuring ? "Organizing source into note…" : "Structure source and generate draft"}</button><button class="btn" id="rebuildNote" ${structuring ? "disabled" : ""}>Rebuild from reviewed fields</button></div>
   </details><details style="margin-top:12px"><summary><b>Imported patient and pre-visit context</b></summary><div style="margin-top:12px">${renderEncounterContext(row)}</div></details>`;
 }
 
@@ -770,6 +793,39 @@ async function runEncounterAnalysis(row) {
   }
 }
 
+function composeReviewedNote(row, metadata = {}) {
+  const input = row.noteBuilderInput || {};
+  const result = composeEncounterNote({
+    ...row,
+    ...input,
+    transcript: row.sourceTranscript,
+    transcriptReviewed: Boolean(input.transcriptReviewed),
+    notePlan: row.notePlan,
+    encounterSnapshot: row.encounterSnapshot,
+    orders: input.orders || row.orders,
+    referrals: input.referrals || row.referrals,
+    patientInstructions: input.patientInstructions || row.patientInstructions,
+    returnPrecautions: input.returnPrecautions || row.returnPrecautions,
+    followUp: input.followUp || row.followUp,
+  });
+  row.note = result.note;
+  row.notePlan = result.notePlan;
+  row.noteDraftMeta = {
+    ...(row.noteDraftMeta || {}),
+    ...metadata,
+    generatedAt: result.generatedAt,
+    generator: metadata.generator || row.noteDraftMeta?.generator || "BHW Encounter Note Builder",
+    missing: result.missing,
+  };
+  row.providerApproved = false;
+  row.charmDraftSaved = false;
+  row.clinicalAudit = normalizeClinicalAudit(null);
+  row.status = WORKFLOW_STATUS.DRAFT_RECEIVED;
+  reports.delete(row.id);
+  refreshEncounterIntelligence(row);
+  return result;
+}
+
 function wireDetail(row) {
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.onclick = () => {
@@ -855,62 +911,18 @@ function wireDetail(row) {
     if (noteEditingIds.has(row.id)) autosaveNote();
   };
 
-  $("structureSource").onclick = async () => {
-    row.notePlan = notePlanFromDetail(row);
-    row.noteBuilderInput = builderInputFromDetail(row);
-    row.sourceTranscript = $("dTranscript").value.trim();
-    if (!row.sourceTranscript) {
-      showToast("Paste or enter the Freed draft or transcription first.");
-      $("dTranscript").focus();
-      return;
-    }
-    if (!cloudClient) {
-      showToast("The protected Google Cloud note organizer is not connected yet.");
-      return;
-    }
-    structuringId = row.id;
+  if ($("nbWarningsResolved")) $("nbWarningsResolved").onchange = () => {
+    row.noteDraftMeta = { ...(row.noteDraftMeta || {}), warningsResolved: $("nbWarningsResolved").checked };
+    row.providerApproved = false;
+    row.charmDraftSaved = false;
+    log(row, $("nbWarningsResolved").checked
+      ? "Provider confirmed structured-note warnings were reviewed and addressed"
+      : "Structured-note warning review confirmation was removed");
+    persist();
     render();
-    try {
-      const result = await cloudClient.structureNote(row);
-      const extracted = result.noteBuilderInput || {};
-      const merged = { ...row.noteBuilderInput };
-      for (const [key, value] of Object.entries(extracted)) {
-        if (["awv", "conditionManagement", "preventiveCare", "controlledMedication", "behavioralHealth", "charmedMinds"].includes(key)) continue;
-        if (key !== "transcriptReviewed" && String(value || "").trim()) merged[key] = value;
-      }
-      for (const group of ["awv", "conditionManagement", "preventiveCare", "controlledMedication", "behavioralHealth", "charmedMinds"]) {
-        merged[group] = { ...(row.noteBuilderInput?.[group] || {}) };
-        for (const [key, value] of Object.entries(extracted[group] || {})) {
-          if (String(value || "").trim()) merged[group][key] = value;
-        }
-      }
-      merged.transcriptReviewed = false;
-      row.noteBuilderInput = merged;
-      if (merged.orders) row.orders = lineValues(merged.orders);
-      if (merged.referrals) row.referrals = lineValues(merged.referrals);
-      if (merged.patientInstructions) row.patientInstructions = lineValues(merged.patientInstructions);
-      if (merged.returnPrecautions) row.returnPrecautions = lineValues(merged.returnPrecautions);
-      if (merged.followUp) row.followUp = lineValues(merged.followUp);
-      row.providerApproved = false;
-      row.charmDraftSaved = false;
-      row.status = WORKFLOW_STATUS.DRAFT_RECEIVED;
-      log(row, `Protected source draft organized into editable note fields with ${result.model || "Vertex AI"}; provider review remains required`);
-      if (Array.isArray(result.warnings) && result.warnings.length) {
-        log(row, `${result.warnings.length} source gap${result.warnings.length === 1 ? "" : "s"} flagged for provider review`);
-      }
-      persist();
-      showToast(result.warnings?.length
-        ? `Draft organized. Review the populated fields and ${result.warnings.length} source gap${result.warnings.length === 1 ? "" : "s"}, then confirm the source.`
-        : "Draft organized into editable fields. Review them, confirm the source, then generate the structured note.");
-    } catch (error) {
-      showToast(error.message || "The protected note organizer could not process this source draft.");
-    } finally {
-      structuringId = "";
-      render();
-    }
   };
 
-  $("generateNote").onclick = () => {
+  $("generateNote").onclick = async () => {
     row.notePlan = notePlanFromDetail(row);
     row.noteBuilderInput = builderInputFromDetail(row);
     row.sourceTranscript = $("dTranscript").value.trim();
@@ -924,38 +936,61 @@ function wireDetail(row) {
       $("nbTranscriptReviewed").focus();
       return;
     }
-    const result = composeEncounterNote({
-      ...row,
-      ...row.noteBuilderInput,
-      transcript: row.sourceTranscript,
-      transcriptReviewed: true,
-      notePlan: row.notePlan,
-      encounterSnapshot: row.encounterSnapshot,
-      orders: row.orders,
-      referrals: row.referrals,
-      patientInstructions: row.patientInstructions,
-      returnPrecautions: row.returnPrecautions,
-      followUp: row.noteBuilderInput.followUp || row.followUp,
-    });
-    row.note = result.note;
-    row.notePlan = result.notePlan;
-    row.noteDraftMeta = {
-      generatedAt: result.generatedAt,
-      generator: "BHW Encounter Note Builder",
-      missing: result.missing,
-    };
-    row.providerApproved = false;
-    row.charmDraftSaved = false;
-    row.clinicalAudit = normalizeClinicalAudit(null);
-    row.status = WORKFLOW_STATUS.DRAFT_RECEIVED;
-    reports.delete(row.id);
-    refreshEncounterIntelligence(row);
-    log(row, `Structured note draft generated from ${PRIMARY_NOTE_TEMPLATES[row.notePlan.primaryTemplate].label} with ${row.notePlan.modules.length} additional module${row.notePlan.modules.length === 1 ? "" : "s"}`);
+    if (!cloudClient) {
+      showToast("The protected Google Cloud note organizer is not connected. Wait for Google Cloud synced, then try again.");
+      return;
+    }
+    structuringId = row.id;
+    render();
+    try {
+      const extraction = await cloudClient.structureNote(row);
+      row.noteBuilderInput = {
+        ...(extraction.noteBuilderInput || {}),
+        transcriptReviewed: true,
+      };
+      const warnings = Array.isArray(extraction.warnings) ? extraction.warnings : [];
+      const result = composeReviewedNote(row, {
+        generator: "BHW Protected Structured Note Organizer",
+        extractedAt: extraction.extractedAt || new Date().toISOString(),
+        model: extraction.model || "",
+        sourceNoteHash: extraction.sourceNoteHash || "",
+        warnings,
+        sourceEvidence: Array.isArray(extraction.sourceEvidence) ? extraction.sourceEvidence : [],
+        warningsResolved: false,
+      });
+      log(row, `Protected source organized into a ${PRIMARY_NOTE_TEMPLATES[row.notePlan.primaryTemplate].label} draft; ${warnings.length} warning${warnings.length === 1 ? "" : "s"} require provider review`);
+      persist();
+      showToast(warnings.length
+        ? `Structured draft created. Review and resolve ${warnings.length} source warning${warnings.length === 1 ? "" : "s"} before approval.`
+        : result.missing.length
+          ? `Structured draft created. ${result.missing.length} required element${result.missing.length === 1 ? "" : "s"} still need provider documentation.`
+          : "Structured draft created. Review it, then run the full clinical audit.");
+    } catch (error) {
+      log(row, "Protected structured-note generation did not complete; no note was replaced");
+      showToast(error.message || "The protected note organizer could not complete. No note was replaced.", 9000);
+    } finally {
+      structuringId = "";
+      persist();
+      render();
+    }
+  };
+
+  $("rebuildNote").onclick = () => {
+    row.notePlan = notePlanFromDetail(row);
+    row.noteBuilderInput = builderInputFromDetail(row);
+    row.sourceTranscript = $("dTranscript").value.trim();
+    if (!row.noteBuilderInput.transcriptReviewed) {
+      showToast("Review the source transcription before rebuilding the note.");
+      $("nbTranscriptReviewed").focus();
+      return;
+    }
+    const result = composeReviewedNote(row);
+    log(row, "Structured note draft rebuilt from provider-reviewed fields without rerunning source extraction");
     persist();
     render();
     showToast(result.missing.length
-      ? `Structured draft created. ${result.missing.length} required element${result.missing.length === 1 ? "" : "s"} still need provider documentation before approval.`
-      : "Structured draft created. Run the documentation, coding, HCC, Z-code, and clinical audit next.");
+      ? `Draft rebuilt. ${result.missing.length} required element${result.missing.length === 1 ? "" : "s"} still need documentation.`
+      : "Draft rebuilt from the reviewed fields. Run the full clinical audit next.");
   };
 
   $("pasteFreed").onclick = async () => {
@@ -1269,7 +1304,11 @@ function wireDetail(row) {
   $("providerApproved").onchange = () => {
     sync(row, { invalidateApproval: false });
     const auditSummary = clinicalAuditSummary(row.clinicalAudit);
-    if ($("providerApproved").checked && auditSummary.status === "not_run") {
+    const unresolvedSourceWarnings = (row.noteDraftMeta?.warnings || []).length && !row.noteDraftMeta?.warningsResolved;
+    if ($("providerApproved").checked && unresolvedSourceWarnings) {
+      row.providerApproved = false;
+      showToast("Review and address every structured-note source warning before approving Charm entry.");
+    } else if ($("providerApproved").checked && auditSummary.status === "not_run") {
       row.providerApproved = false;
       showToast("Run the Required Changes clinical audit before approving Charm entry.");
     } else if ($("providerApproved").checked && auditSummary.blocking) {

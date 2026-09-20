@@ -1,15 +1,17 @@
 import http from "node:http";
 import { createOperationsApp } from "./app.mjs";
-import { FirestoreWorkflowRepository } from "./workflow-repository.mjs";
+import { createClinicalContextApp } from "./clinical-context-app.mjs";
+import { ClinicalContextWorkflowRepository } from "./clinical-context-repository.mjs";
 import { createDialpadService } from "./dialpad-service.mjs";
 import { createGoogleChatService } from "./google-chat-service.mjs";
 import { createWorkflowService } from "./workflow-service.mjs";
 
-const repository = new FirestoreWorkflowRepository();
+const repository = new ClinicalContextWorkflowRepository();
 const dialpad = createDialpadService();
 const chat = createGoogleChatService();
 const workflow = createWorkflowService(repository, { dialpad, chat });
-const app = createOperationsApp({ repository, workflow });
+const baseApp = createOperationsApp({ repository, workflow });
+const app = createClinicalContextApp({ baseApp, repository });
 const port = Number(process.env.PORT || 8080);
 
 const server = http.createServer(async (incoming, outgoing) => {

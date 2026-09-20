@@ -55,6 +55,13 @@ input[type=text],input[type=date],select,textarea{width:100%;padding:9px 11px;bo
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue)}
 textarea{resize:vertical;min-height:60px;line-height:1.5}
 .hint{font-size:11px;color:var(--ink-soft)}
+#marylandStudio label{display:block;font-size:12px;letter-spacing:0;text-transform:none;margin:9px 0}
+#marylandStudio input[type=number]{width:100%;padding:9px 11px;border:1.5px solid var(--line);border-radius:9px;background:#fff}
+#marylandStudio fieldset{border:1px solid var(--line);border-radius:9px;padding:10px}
+#marylandStudio p{margin:9px 0;overflow-wrap:anywhere}
+#marylandStudio details{margin:12px 0}
+#marylandStudio .grid2>*{min-width:0}
+@media(max-width:600px){#marylandStudio .grid2{grid-template-columns:1fr}}
 
 .subhead{display:flex;align-items:center;gap:10px;margin:18px 0 10px}
 .subhead h3{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--deep)}
@@ -177,7 +184,7 @@ textarea{resize:vertical;min-height:60px;line-height:1.5}
         </div>
       </div>
 
-      <div id="fmlaStudio" class="prefill" hidden></div><div id="disabilityStudio" class="prefill" hidden></div><div class="grid2" id="reqFields"></div>
+      <div id="marylandStudio" class="prefill" hidden></div><div id="fmlaStudio" class="prefill" hidden></div><div id="disabilityStudio" class="prefill" hidden></div><div class="grid2" id="reqFields"></div>
     </div>
 
     <div class="panel" style="margin-top:16px">
@@ -298,6 +305,8 @@ const F = {
 
 // ---- packet types ----
 const PACKETS = [
+  {id:"asthma",name:"Maryland Asthma",blurb:"State asthma action plan + medication authorization",color:"var(--sage)",fields:[],bodyTitle:"Asthma plan",checkTitle:"Clinician review",checkLede:"",checklist:[],doc:()=>""},
+  {id:"medicationAuth",name:"Medication Authorization",blurb:"Maryland child-care and school forms with dose review",color:"var(--teal)",fields:[],bodyTitle:"Medication authorization",checkTitle:"Clinician review",checkLede:"",checklist:[],doc:()=>""},
   {
     id:"chart", name:"Chart Pull / Records", blurb:"Records request for insurers, disability, audits", color:"var(--blue)",
     fields:["patient","dob","mrn","requester","refno","payer","dateFrom","dateTo","sentTo","method"],
@@ -395,12 +404,14 @@ $("types").addEventListener("click", e => {
 
 /* ---------- render: request fields ---------- */
 function buildForm(){
+  $("marylandStudio").hidden=!["asthma","medicationAuth"].includes(state.packet);
+  if(["asthma","medicationAuth"].includes(state.packet)) marylandReady.then(studio=>studio.setType(state.packet==="asthma"?"asthma":"medication"));
   $("fmlaStudio").hidden=state.packet!=="fmla";
   $("disabilityStudio").hidden=state.packet!=="disability";
-  $("reqFields").hidden=["fmla","disability"].includes(state.packet);
-  $("faxBtn").disabled=["fmla","disability"].includes(state.packet);
-  $("printBtn").disabled=["fmla","disability"].includes(state.packet);
-  for(const id of ["icdInput","bodyText","checklist"]) $(id).closest('.panel').hidden=["fmla","disability"].includes(state.packet);
+  $("reqFields").hidden=["fmla","disability","asthma","medicationAuth"].includes(state.packet);
+  $("faxBtn").disabled=["fmla","disability","asthma","medicationAuth"].includes(state.packet);
+  $("printBtn").disabled=["fmla","disability","asthma","medicationAuth"].includes(state.packet);
+  for(const id of ["icdInput","bodyText","checklist"]) $(id).closest('.panel').hidden=["fmla","disability","asthma","medicationAuth"].includes(state.packet);
   $("officialBtn").textContent=state.packet==="fmla"?"Download reviewed FMLA draft":"Fill official form";
   const p = packet();
   document.querySelectorAll(".type").forEach(t => t.classList.toggle("active", t.dataset.id===p.id));
@@ -454,6 +465,7 @@ function renderIcds(){
 
 /* ---------- smart prefill (local regex, no upload) ---------- */
 function localScan(){
+  if(["asthma","medicationAuth"].includes(state.packet)){ marylandReady.then(studio=>studio.review()); return; }
   if(state.packet==="disability"){ $("prefillNote").textContent="Use the disability packet review below to connect functional opinions to evidence."; return; }
   if(state.packet==="fmla"){ $("prefillNote").textContent="Use the FMLA evidence review below. Dates in a note are not automatically certified leave dates."; return; }
   const t = $("noteText").value; if(!t.trim()){ return; }
@@ -478,6 +490,8 @@ $("prefillBtn").addEventListener("click", localScan);
 let TOKEN = sessionStorage.getItem("crewos_token") || "";
 let PATIENTS = [];
 let requestedLeavePatient=new URLSearchParams(location.search).get("patient") || "";
+let marylandStudio=null;
+const marylandReady=import("/assets/maryland-medication-studio.mjs").then(({createMarylandStudio})=>{marylandStudio=createMarylandStudio({root:$("marylandStudio"),session:()=>TOKEN,loadPdfLib});return marylandStudio;});
 let fmlaStudio=null;
 const fmlaReady=import("/assets/fmla-studio.mjs").then(({createFmlaStudio})=>{fmlaStudio=createFmlaStudio({root:$("fmlaStudio"),session:()=>TOKEN,notes:$("noteText"),loadPdfLib});return fmlaStudio;});
 let disabilityStudio=null;
@@ -493,6 +507,7 @@ async function post(fn, body){
 function payerMatch(v){ if(!v) return ""; const s=String(v).toLowerCase(); const hit=F.payer.options.find(o=>o && (o.toLowerCase().includes(s)||s.includes(o.toLowerCase()))); return hit || "Other"; }
 
 function setConnected(name){
+  if(!TOKEN && marylandStudio) marylandStudio.disconnect();
   if(!TOKEN && fmlaStudio) fmlaStudio.disconnect();
   if(!TOKEN && disabilityStudio) disabilityStudio.disconnect();
   const b=$("connBtn");
@@ -544,9 +559,10 @@ $("patientPickBtn").addEventListener("click", ()=>{
   const q=raw.split(" — ")[0].split(" (")[0].toLowerCase();
   const exactMatches=PATIENTS.filter(x=>patientChoice(x)===raw || x.name.toLowerCase()===q);
   const p = id ? PATIENTS.find(x=>(x.bhwId||x.bhwPatientId)===id) : exactMatches.length===1 ? exactMatches[0] : null;
-  if(!p){ fmlaReady.then(studio=>studio.disconnect()); disabilityReady.then(studio=>studio.disconnect()); $("patientHint").textContent="No unique Registry match — select the exact patient."; return; }
-  if(p.selectable===false){ fmlaReady.then(studio=>studio.disconnect()); disabilityReady.then(studio=>studio.disconnect()); $("patientHint").textContent=`${p.name} (${p.bhwId}) is ${p.status}; new paperwork cannot be started from this list.`; return; }
+  if(!p){ marylandReady.then(studio=>studio.disconnect()); fmlaReady.then(studio=>studio.disconnect()); disabilityReady.then(studio=>studio.disconnect()); $("patientHint").textContent="No unique Registry match — select the exact patient."; return; }
+  if(p.selectable===false){ marylandReady.then(studio=>studio.disconnect()); fmlaReady.then(studio=>studio.disconnect()); disabilityReady.then(studio=>studio.disconnect()); $("patientHint").textContent=`${p.name} (${p.bhwId}) is ${p.status}; new paperwork cannot be started from this list.`; return; }
   state.fields={patient:p.name}; state.icds=[]; state.bodyOverride=""; state.checks={};
+  marylandReady.then(studio=>studio.setPatient(p));
   fmlaReady.then(studio=>studio.setPatient(p));
   disabilityReady.then(studio=>studio.setPatient(p));
   if(p.dob) state.fields.dob=p.dob;
@@ -562,6 +578,7 @@ $("patientPickBtn").addEventListener("click", ()=>{
 
 $("aiBtn").addEventListener("click", aiExtract);
 async function aiExtract(){
+  if(["asthma","medicationAuth"].includes(state.packet)) return (await marylandReady).review();
   if(state.packet==="disability") return (await disabilityReady).analyze();
   if(state.packet==="fmla") return (await fmlaReady).analyze();
   const t=$("noteText").value.trim(); if(!t) return;
@@ -582,6 +599,7 @@ function applyExtract(fields, icds){
 
 /* ---------- status ---------- */
 function renderStatus(){
+  if(["asthma","medicationAuth"].includes(state.packet)) {$("status").className="status no";$("statusText").textContent="Unsigned draft - complete the medication review in the Maryland panel.";return;}
   const p = packet(); const total=p.checklist.length;
   const done = p.checklist.filter((_,i)=>state.checks[i]).length;
   const ready = done===total && val("auditor");
@@ -678,7 +696,7 @@ $("auditor").addEventListener("input", e => { state.fields.auditor = e.target.va
 $("auditDate").addEventListener("input", e => { state.fields.auditDate = e.target.value; renderDoc(); });
 $("printBtn").addEventListener("click", () => window.print());
 
-function renderDoc(){ if(state.packet==="disability"){ $("doc").innerHTML="<h2>Disability packet draft</h2><p>Upload the actual packet in the disability panel, review applicable guidelines and source evidence, and complete the visit questions. Use the panel’s download button for the original packet with reviewed text fields and a narrative addendum. Complete remaining fields, signatures, and authorization before submission.</p>"; return; } $("doc").innerHTML = state.packet==="fmla" ? '<h2>Official FMLA certification draft</h2><p>Select WH-380-E for the employee’s condition or WH-380-F for family caregiving in the intake panel.</p><p>Review patient answers, upload relevant notes, and accept or edit evidence-backed suggestions in the certification fields. Then download the reviewed official PDF.</p><p>The PDF is an editable draft. Complete all applicable sections, signatures, and release authorization before delivering the final certification.</p>' : packet().doc(); }
+function renderDoc(){ if(["asthma","medicationAuth"].includes(state.packet)) {$("doc").innerHTML="<h2>Maryland official authorization draft</h2><p>Complete the Maryland panel, review the selected medications and dose checks, then download the official PDF with its required instruction attachment.</p><p>Registry name and DOB are prefilled. Prescriber, guardian, and staff signatures and approvals remain to be completed.</p>";return;} if(state.packet==="disability"){ $("doc").innerHTML="<h2>Disability packet draft</h2><p>Upload the actual packet in the disability panel, review applicable guidelines and source evidence, and complete the visit questions. Use the panel’s download button for the original packet with reviewed text fields and a narrative addendum. Complete remaining fields, signatures, and authorization before submission.</p>"; return; } $("doc").innerHTML = state.packet==="fmla" ? '<h2>Official FMLA certification draft</h2><p>Select WH-380-E for the employee’s condition or WH-380-F for family caregiving in the intake panel.</p><p>Review patient answers, upload relevant notes, and accept or edit evidence-backed suggestions in the certification fields. Then download the reviewed official PDF.</p><p>The PDF is an editable draft. Complete all applicable sections, signatures, and release authorization before delivering the final certification.</p>' : packet().doc(); }
 function renderAll(){ renderIcds(); renderStatus(); renderDoc(); }
 
 /* ============================================================

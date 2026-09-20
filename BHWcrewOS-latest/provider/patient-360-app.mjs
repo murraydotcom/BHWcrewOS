@@ -501,7 +501,7 @@ function safeNotice(context) {
 }
 
 function preservePatientLinks(root = document) {
-  root.querySelectorAll('a[href^="patient-360"]').forEach((anchor) => {
+  root.querySelectorAll('a[href^="patient-360"], a[href^="nutrition-intelligence.html"]').forEach((anchor) => {
     const url = new URL(anchor.getAttribute("href"), location.href);
     url.searchParams.set("patient", PATIENT_ID);
     anchor.setAttribute("href", `${url.pathname.split("/").pop()}${url.search}${url.hash}`);
