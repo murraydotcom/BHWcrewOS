@@ -56,7 +56,7 @@ async function syntheticContext(id) {
     const request = route.request(), url = new URL(request.url()); networkHosts.add(url.hostname);
     if (!approvedHosts.has(url.hostname)) { await route.abort(); return; }
     if (url.pathname.startsWith("/synthetic-")) {
-      await route.fulfill({ contentType: "text/html", body: '<!doctype html><html><body><h1>Synthetic signed-in staff page</h1><p>No patient or real staff data.</p><script src="/staff-chat-launcher.js"></script><script>BHWStaffChat.mount()</script></body></html>' }); return;
+      await route.fulfill({ contentType: "text/html", body: `<!doctype html><html><body><h1>Synthetic signed-in staff page</h1><p>No patient or real staff data.</p><script src="/staff-chat-launcher.js"></script><script>BHWStaffChat.mount({sessionKey:${JSON.stringify(id)}})</script></body></html>` }); return;
     }
     if (url.pathname === "/crewos") {
       await route.fulfill({ contentType: "text/html", body: `<!doctype html><button id="synthetic-login">Sign in synthetic ${id}</button><script>document.getElementById('synthetic-login').onclick=()=>{sessionStorage.setItem('crewos_token',${JSON.stringify(id)});location.href='/staff-chat-signin.html'}</script>` }); return;
@@ -91,6 +91,9 @@ try {
   await alpha.panel.getByText("Notification preference saved to BHW Cloud.").waitFor();
   await alpha.page.goto("https://onboarding.bhwmedical.org/synthetic-two");
   await alpha.page.getByRole("button", { name: "Open or close internal staff chat" }).click();
+  const firstHrSignIn = alpha.context.waitForEvent("page");
+  await alpha.panel.getByRole("button", { name: "Sign in with CrewOS" }).click();
+  await (await firstHrSignIn).locator("#synthetic-login").click();
   await alpha.panel.locator("#identity").waitFor();
   await alpha.panel.getByText("Synthetic team check: <script>never executes</script>", { exact: true }).waitFor();
   assert.equal(await alpha.panel.locator("#show-badge").isChecked(), true, "preference follows account between sites");
@@ -116,6 +119,11 @@ try {
   await alpha.page.setViewportSize({ width: 390, height: 844 });
   await alpha.page.screenshot({ path: resolve(output, "staff-chat-mobile.png"), fullPage: true });
   const frameBox = await alpha.page.locator("iframe").boundingBox(); assert.ok(frameBox.x >= 0 && frameBox.x + frameBox.width <= 390);
+  await alpha.page.evaluate(() => window.BHWStaffChat.unmount());
+  await alpha.page.locator("iframe").waitFor({ state: "detached" });
+  await alpha.page.evaluate(() => window.BHWStaffChat.mount({ sessionKey: "synthetic-other-staff" }));
+  await alpha.panel.getByRole("button", { name: "Sign in with CrewOS" }).waitFor();
+  assert.equal(await alpha.panel.locator("#identity").count(), 0, "a different host staff account cannot inherit the prior chat identity");
   assert.deepEqual(browserErrors, []);
   assert.ok([...networkHosts].every((host) => approvedHosts.has(host)));
   console.log("PASS: two synthetic staff; actual backend HTTP; popup sign-in; cross-site/page continuity; persisted opt-in; XSS-safe rendering; ambiguous-send retry; DM delivery; explicit read; desktop/mobile layout. No production requests.");

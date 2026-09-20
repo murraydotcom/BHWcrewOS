@@ -1,11 +1,14 @@
 /* Shared, local-copy launcher. No identity, patient context, or message content crosses origins. */
 (function () {
   if (window !== window.top || window.BHWStaffChat) return;
-  let host, frame, button, opened = false, ready = false;
+  let host, frame, button, opened = false, ready = false, hostSession = "", mountGeneration = 0;
   const crewOrigin = "https://crewhq.bhwmedical.org";
   const localCrew = location.hostname === "localhost" || location.hostname === "127.0.0.1" || location.hostname === "crewhq.bhwmedical.org" || location.hostname.endsWith("--bhwcrewos.netlify.app");
   const origin = localCrew ? location.origin : crewOrigin;
-  const postState = () => { if (ready) frame.contentWindow.postMessage({ type: "bhw-chat-view", visible: opened && document.visibilityState === "visible" }, origin); };
+  const postState = () => { if (ready) {
+    if (hostSession) frame.contentWindow.postMessage({ type: "bhw-chat-host-session", key: hostSession }, origin);
+    frame.contentWindow.postMessage({ type: "bhw-chat-view", visible: opened && document.visibilityState === "visible" }, origin);
+  } };
   function toggle(value) {
     opened = value;
     frame.hidden = !opened;
@@ -24,8 +27,15 @@
       button.textContent = count && event.data.enabled === true ? `Staff Chat · ${count} new` : "Staff Chat";
     }
   }
-  function mount() {
+  function mount(options = {}) {
     if (host || !document.body) return;
+    if (!localCrew && !options.sessionKey) return;
+    const generation = ++mountGeneration;
+    if (!localCrew) crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${location.origin}\u001f${options.sessionKey}`)).then((bytes) => {
+      if (!host || generation !== mountGeneration) return;
+      hostSession = Array.from(new Uint8Array(bytes), (value) => value.toString(16).padStart(2, "0")).join("");
+      postState();
+    });
     host = document.createElement("div"); host.id = "bhw-staff-chat-launcher";
     const shadow = host.attachShadow({ mode: "open" });
     shadow.innerHTML = `<link rel="stylesheet" href="/staff-chat-launcher.css"><iframe title="BHW internal staff chat" hidden referrerpolicy="no-referrer"></iframe><button type="button" aria-expanded="false" aria-label="Open or close internal staff chat">Staff Chat</button>`;
@@ -38,8 +48,12 @@
     try { if (sessionStorage.getItem("bhw-staff-chat-open") === "true") toggle(true); } catch { /* optional UI preference */ }
   }
   function unmount() {
+    mountGeneration += 1;
+    const previousHost = host;
+    if (frame) frame.contentWindow.postMessage({ type: "bhw-chat-signout" }, origin);
+    if (previousHost) { previousHost.style.display = "none"; setTimeout(() => previousHost.remove(), 300); }
     window.removeEventListener("message", receive); document.removeEventListener("visibilitychange", postState);
-    host?.remove(); host = frame = button = null; ready = false; opened = false;
+    host = frame = button = null; ready = false; opened = false; hostSession = "";
   }
   window.BHWStaffChat = { mount, unmount };
   // CrewOS pages include this locally; other applications call mount only after their own auth gate succeeds.

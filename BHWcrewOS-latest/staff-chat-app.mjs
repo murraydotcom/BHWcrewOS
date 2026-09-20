@@ -3,6 +3,7 @@ import { createOperationsCloudClient } from "./provider/operations-queue.mjs";
 const root = document.getElementById("staff-chat");
 const embedded = window.parent !== window;
 const parentOrigin = new URL(location.href).searchParams.get("parentOrigin");
+let hostVerified = !embedded || parentOrigin === location.origin;
 let client, actor, popup, selected = "bhw-team", rooms = [], active = !embedded, busy = false, loading = false;
 let nextBefore = null, displayed = [], lastPoll = 0, generation = 0, lastDirectory = 0;
 const drafts = new Map(); // Never store message text in localStorage, sessionStorage or URLs.
@@ -90,6 +91,7 @@ async function poll(force = false) {
   finally { loading = false; }
 }
 async function start() {
+  if (!hostVerified) { root.textContent = "Verifying signed-in staff page…"; return; }
   if (!sessionStorage.getItem("crewos_token")) { showAuth(); return; }
   try {
     client = await createOperationsCloudClient();
@@ -157,10 +159,21 @@ async function start() {
   } catch (error) { showAuth(error.message || "Staff Chat is unavailable."); }
 }
 window.addEventListener("message", async (event) => {
+  if (embedded && event.source === window.parent && event.origin === parentOrigin) {
+    if (event.data?.type === "bhw-chat-signout") { sessionStorage.removeItem("crewos_token"); showAuth(); return; }
+    if (event.data?.type === "bhw-chat-host-session" && /^[a-f0-9]{64}$/.test(event.data.key || "")) {
+      const storageKey = `bhw-chat-host:${parentOrigin}`;
+      const prior = sessionStorage.getItem(storageKey);
+      if (hostVerified && prior === event.data.key) return;
+      // A host hint can only clear an old session; it can never authenticate staff.
+      if (prior !== event.data.key) sessionStorage.removeItem("crewos_token");
+      sessionStorage.setItem(storageKey, event.data.key); hostVerified = true; await start(); return;
+    }
+  }
   if (event.origin === location.origin && popup && event.source === popup && event.data?.type === "bhw-chat-signin" && typeof event.data.token === "string") {
     sessionStorage.setItem("crewos_token", event.data.token); popup = null; await start();
   }
-  if (embedded && event.source === window.parent && event.origin === parentOrigin && event.data?.type === "bhw-chat-view") { active = event.data.visible === true; if (active) poll(true); }
+  if (embedded && event.source === window.parent && event.origin === parentOrigin && event.data?.type === "bhw-chat-view") { active = event.data.visible === true; if (active && hostVerified) poll(true); }
 });
 window.addEventListener("beforeunload", (event) => { if ([...drafts.values()].some((value) => value.text || value.pending)) { event.preventDefault(); event.returnValue = ""; } });
 document.addEventListener("keydown", (event) => { if (event.key === "Escape" && embedded) parentMessage({ type: "bhw-chat-close" }); });
