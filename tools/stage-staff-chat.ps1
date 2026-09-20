@@ -18,6 +18,10 @@ $live=@($current.status.traffic | Where-Object { $_.percent -gt 0 })
 if($live.Count -ne 1 -or $live[0].revisionName -ne $ExpectedServingRevision -or $live[0].percent -ne 100){throw 'Serving traffic changed or is split. Review the new state before release.'}
 $newRevision="$Service-$Suffix"
 if($Promote){
+  $proofPath=Join-Path $PSScriptRoot "../staff-chat-verification/$newRevision.smoke.json"
+  if(-not (Test-Path -LiteralPath $proofPath)){throw 'Synthetic verification receipt is required before promotion.'}
+  $proof=Get-Content -LiteralPath $proofPath -Raw | ConvertFrom-Json
+  if($proof.revision -ne $newRevision -or -not $proof.completedAt -or $proof.syntheticOnly -ne $true){throw 'Verification receipt is incomplete or belongs to a different revision.'}
   $candidate=Read-CloudJson @('run','revisions','describe',$newRevision)
   if(-not ($candidate.status.conditions | Where-Object { $_.type -eq 'Ready' -and $_.status -eq 'True' })){throw 'Candidate is not ready.'}
   & gcloud run services update-traffic $Service --to-revisions="$newRevision=100" --project=$project --region=$region --quiet
@@ -62,6 +66,10 @@ try {
   $release | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $privatePath -Encoding utf8
   & gcloud run services replace $privatePath --project=$project --region=$region --async --quiet --format='value(status.latestCreatedRevisionName)'
   if($LASTEXITCODE -ne 0){throw 'Staging failed; do not promote.'}
+  $stateDirectory=Join-Path $PSScriptRoot '../staff-chat-verification'
+  $null=New-Item -ItemType Directory -Path $stateDirectory -Force
+  $secretBinding=($oldEnv | Where-Object {$_.name -eq 'CREWOS_OPERATIONS_TOKEN_SECRET'}).valueFrom.secretKeyRef
+  @{service=$Service;previous=$ExpectedServingRevision;revision=$newRevision;image=$Image;project=$project;region=$region;database=($oldEnv | Where-Object {$_.name -eq 'FIRESTORE_DATABASE'}).value;secretName=$secretBinding.name;secretVersion=$secretBinding.key;candidateUrl=($current.status.url -replace '^https://',"https://staff-chat-$Suffix---")} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $stateDirectory "$newRevision.json") -Encoding utf8
   Write-Output "Staged $newRevision with zero production traffic. Existing $ExpectedServingRevision remains at 100 percent."
 } finally {
   if(Test-Path -LiteralPath $privatePath){Remove-Item -LiteralPath $privatePath}
