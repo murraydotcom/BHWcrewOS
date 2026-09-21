@@ -34,7 +34,6 @@ let giPatternScreenContract = null;
 let digestionMapContract = null;
 let chartPrefillContract = null;
 let appliedChartPrefillFacts = new Set();
-let patientIntakeApplied = false;
 
 function patientScopedPath(path) {
   if (!PATIENT_ID) return path;
@@ -227,14 +226,7 @@ function collectFacts() {
     intakeProfile: questionnaire.intakeProfile,
     questionnaireResponses: questionnaire.questionnaireResponses,
     provenance: {
-      patientReported: patientIntakeApplied && workspace?.patientIntake ? {
-        sourceType: "patient-portal-questionnaire-reconciled-by-clinician",
-        sourceApplication: "BHW Care Connect → BHW Clinical Intelligence",
-        reliability: "patient-reported-clinician-reconciled",
-        sourceRevision: workspace.patientIntake.revision,
-        sourceContentHash: workspace.patientIntake.contentHash,
-        sourceSavedAt: workspace.patientIntake.savedAt,
-      } : { sourceType: "clinician-entered-patient-report", sourceApplication: "BHW Clinical Intelligence", reliability: "reported" },
+      patientReported: { sourceType: "clinician-entered-patient-report", sourceApplication: "BHW Clinical Intelligence", reliability: "reported" },
       chart: { sourceType: "Health Core chart reconciliation", sourceApplication: "BHW Clinical Intelligence", reliability: "clinician-reviewed-before-approval", factSources: chartFactSources },
     },
   };
@@ -261,77 +253,6 @@ function populateForm(content = {}) {
   if (questionnaireContract) populateNutritionQuestionnaire($("patient-questionnaire"), questionnaireContract, content);
   syncConvenienceMeasurements();
   formDirty = false;
-}
-
-function renderPatientIntakeHandoff() {
-  const panel = $("patient-intake-handoff");
-  const intake = workspace?.patientIntake;
-  if (!intake) {
-    panel.hidden = true;
-    panel.innerHTML = "";
-    patientIntakeApplied = false;
-    return;
-  }
-  const appliedRevision = Number(workspace?.draft?.content?.provenance?.patientReported?.sourceRevision) || 0;
-  const savedApplied = appliedRevision === Number(intake.revision);
-  patientIntakeApplied = patientIntakeApplied || savedApplied;
-  const locallyApplied = patientIntakeApplied && !savedApplied;
-  panel.hidden = false;
-  panel.dataset.state = patientIntakeApplied ? "applied" : "pending";
-  panel.innerHTML = `<div class="patient-intake-handoff-head"><div><span class="eyebrow">Care Connect patient report</span><h4>${savedApplied ? "Patient intake reconciled into the saved clinical draft" : locallyApplied ? "Patient intake loaded for review—not saved" : "Patient nutrition intake awaiting reconciliation"}</h4><p>${esc(intake.answerCount || 0)} answers · revision ${esc(intake.revision)} · ${esc(intake.reportedBy === "authorized-person" ? `reported by authorized ${intake.relationship || "representative"}` : "reported by patient")} · ${esc(new Date(intake.savedAt).toLocaleString())}</p></div><span class="badge ${savedApplied ? "complete" : "warning"}">${savedApplied ? "Reconciled in draft" : locallyApplied ? "Not saved" : label(intake.status)}</span></div><div class="patient-intake-handoff-actions"><small>Applying fills only blank patient-questionnaire answers. It does not change chart fields, create a diagnosis, or save automatically.</small><button class="btn" type="button" id="apply-patient-intake" ${patientIntakeApplied ? "disabled" : ""}>${patientIntakeApplied ? "Already loaded" : "Fill blank answers"}</button></div>`;
-}
-
-function setPatientFactIfBlank(fact, value) {
-  if (value === undefined || value === null || value === "") return false;
-  const controls = [...document.querySelectorAll(`[data-fact="${CSS.escape(fact)}"][data-source="patient"]`)];
-  if (!controls.length) return false;
-  if (controls.some((control) => control.dataset.array !== undefined)) {
-    const selected = controls.filter((control) => control.checked);
-    if (selected.length) return false;
-    controls.forEach((control) => { control.checked = list(value).includes(control.value); });
-    return controls.some((control) => control.checked);
-  }
-  const control = controls[0];
-  if (readElement(control) !== undefined) return false;
-  setElementValue(control, value);
-  return true;
-}
-
-function applyKidneyPatientResponses(responses = {}) {
-  let applied = 0;
-  const multiText = (id) => {
-    const raw = responses[id];
-    return raw && typeof raw === "object" && !Array.isArray(raw) ? raw : { choices: list(raw), detail: "" };
-  };
-  if (setPatientFactIfBlank("kidney_reported_state", responses["kidney.reported_state"])) applied += 1;
-  if (setPatientFactIfBlank("kidney_received_instructions", responses["kidney.received_instructions"])) applied += 1;
-  const fluid = multiText("kidney.fluid_instruction");
-  if (setPatientFactIfBlank("kidney_fluid_instruction_recall", fluid.choices?.[0])) applied += 1;
-  const salt = multiText("kidney.salt_substitute");
-  if (setPatientFactIfBlank("salt_substitute_use", salt.choices?.[0])) applied += 1;
-  if (setPatientFactIfBlank("salt_substitute_product_or_ingredients", salt.detail)) applied += 1;
-  if (setPatientFactIfBlank("kidney_eating_barriers", responses["kidney.eating_barriers"])) applied += 1;
-  if (setPatientFactIfBlank("kidney_foods_to_protect", responses["kidney.foods_to_protect"])) applied += 1;
-  if (setPatientFactIfBlank("kidney_plan_questions", responses["kidney.plan_questions"])) applied += 1;
-  return applied;
-}
-
-function applyPatientIntake() {
-  const intake = workspace?.patientIntake;
-  if (!intake || !questionnaireContract || patientIntakeApplied) return;
-  const current = collectNutritionQuestionnaire($("patient-questionnaire"), questionnaireContract);
-  const patientResponses = intake.questionnaireResponses || {};
-  const supportedQuestionIds = new Set(questionnaireContract.questions.map((question) => question.id));
-  const additions = Object.fromEntries(Object.entries(patientResponses).filter(([id]) => supportedQuestionIds.has(id) && current.questionnaireResponses[id] === undefined));
-  populateNutritionQuestionnaire($("patient-questionnaire"), questionnaireContract, {
-    questionnaireResponses: { ...additions, ...current.questionnaireResponses },
-  });
-  const kidneyApplied = applyKidneyPatientResponses(patientResponses);
-  patientIntakeApplied = true;
-  formDirty = true;
-  renderPatientIntakeHandoff();
-  setSaveState("Not saved", "not-saved", `${Object.keys(additions).length + kidneyApplied} blank patient-reported field${Object.keys(additions).length + kidneyApplied === 1 ? " was" : "s were"} filled from Care Connect revision ${intake.revision}. Review and save a clinical draft to record reconciliation.`);
-  updateWorkflowControls();
 }
 
 function applyChartPrefill() {
@@ -503,7 +424,6 @@ async function loadWorkspace({ populate = true } = {}) {
     showVerifiedPatientContext(patientContext);
     const body = await client.patientNutritionIntelligence(PATIENT_ID);
     workspace = body.workspace || null;
-    patientIntakeApplied = false;
     const baseQuestionnaire = body.questionnaire || null;
     giPatternScreenContract = body.giPatternScreen || null;
     digestionMapContract = body.digestionMap || null;
@@ -525,7 +445,6 @@ async function loadWorkspace({ populate = true } = {}) {
     $("chart-prefill").innerHTML = renderNutritionChartPrefill(chartPrefillContract);
     updateNutritionQuestionnaireVisibility($("patient-questionnaire"), questionnaireContract);
     if (populate && workspace?.draft?.content) populateForm(workspace.draft.content);
-    renderPatientIntakeHandoff();
     const current = workspace?.approved?.evaluation || workspace?.draft?.evaluation || null;
     if (current?.rulesetVersion) renderEvaluation(current, workspace?.published ? `Published v${workspace.published.version}` : workspace?.approved ? `Approved v${workspace.approved.version}` : `Saved draft r${workspace.draft.revision}`);
     if (workspace?.updatedAt) setSaveState(`Saved to BHW Cloud · ${new Date(workspace.updatedAt).toLocaleString()}`, "saved", "The protected nutrition workspace was read back from Health Core.");
@@ -569,7 +488,6 @@ async function saveDraft() {
     const body = await client.savePatientNutritionIntelligence(PATIENT_ID, { action: "save-draft", content: collectFacts() });
     workspace = body.workspace;
     formDirty = false;
-    renderPatientIntakeHandoff();
     renderEvaluation(workspace.draft.evaluation, `Saved draft r${workspace.draft.revision}`);
     const readiness = workspace.draft.evaluation?.reviewReadiness;
     const readinessDetail = readiness?.approvalReady ? "It is ready for clinician review." : "It remains incomplete and cannot be approved yet.";
@@ -663,9 +581,6 @@ function wire() {
   });
   $("chart-prefill").addEventListener("click", (event) => {
     if (event.target.closest("#apply-chart-prefill")) applyChartPrefill();
-  });
-  $("patient-intake-handoff").addEventListener("click", (event) => {
-    if (event.target.closest("#apply-patient-intake")) applyPatientIntake();
   });
   setFactControlsDisabled(true);
   updateWorkflowControls();
