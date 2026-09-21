@@ -39,10 +39,11 @@ test("all eight legacy Patient 360 routes present the formal Whole-Person Clinic
     assert.match(html, /◉ Clinical Map/);
     assert.match(html, /name="bhw-health-core-ehr-origin"/);
     assert.match(html, /whole-person-clinical-map-bridge\.css/);
-    assert.match(html, /patient-360-app\.mjs/);
-    assert.match(html, /whole-person-clinical-map-bridge\.mjs/);
+    assert.match(html, /clinical-map-entry\.mjs/);
     assert.match(html, /family=Montserrat/);
   }
+  const entry = fs.readFileSync(path.join(provider, "clinical-map-entry.mjs"), "utf8");
+  assert.match(entry, /import\("\.\/whole-person-clinical-map-bridge\.mjs"\)/);
 });
 
 test("existing Patient 360 filenames remain stable while display naming changes", () => {
@@ -55,6 +56,7 @@ test("Health Core destinations remain synthetic, source-specific, and open the c
   const destinations = healthCoreDestinations("https://bhw-health-core-ehr-awknhudemq-uk.a.run.app");
   assert.deepEqual(destinations.map((item) => item.id), [
     "chart-summary",
+    "nutrition",
     "encounter",
     "labs",
     "orders",
@@ -65,7 +67,22 @@ test("Health Core destinations remain synthetic, source-specific, and open the c
     assert.match(destination.href, /patient=BHW0000/);
   }
   assert.match(destinations.find((item) => item.id === "orders").href, /order-composer\.html/);
+  assert.match(destinations.find((item) => item.id === "nutrition").href, /nutrition-intelligence\.html/);
   assert.match(destinations.find((item) => item.id === "encounter").href, /clinical-documentation\.html.*#encounter-note/);
+});
+
+test("CrewOS Nutrition Intelligence is a safe handoff to the Health Core-owned workspace", () => {
+  const html = fs.readFileSync(path.join(provider, "nutrition-intelligence.html"), "utf8");
+  const handoff = fs.readFileSync(path.join(provider, "nutrition-health-core-handoff.mjs"), "utf8");
+  assert.match(html, /name="bhw-health-core-ehr-origin"/);
+  assert.match(html, /nutrition-health-core-handoff\.mjs/);
+  assert.match(html, /id="nutrition-health-core-static-handoff"/);
+  assert.match(html, /<form id="nutrition-form" novalidate hidden>/);
+  assert.doesNotMatch(html, /<script type="module" src="nutrition-intelligence\.mjs"/);
+  assert.match(handoff, /Care Connect nutrition answers are stored and reconciled.*Health Core/);
+  assert.match(handoff, /CrewOS receives only the minimum operational task metadata/);
+  assert.match(handoff, /No patient identifier transmitted/);
+  assert.doesNotMatch(handoff, /savePatientNutritionIntelligence/);
 });
 
 test("Health Core link validation accepts only trusted HTTPS service origins", () => {
