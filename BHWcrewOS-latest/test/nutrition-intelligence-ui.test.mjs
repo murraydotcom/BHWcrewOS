@@ -33,6 +33,7 @@ test("Nutrition Intelligence preserves the real-life, physiology, and reconcilia
   assert.doesNotMatch(html, /questionnaire-version/);
   assert.doesNotMatch(app, /questionnaire-version/);
   assert.match(html, /id="patient-questionnaire"/);
+  assert.match(html, /id="patient-intake-handoff"/);
   assert.doesNotMatch(html, /id="nutrition-digestion-map"/);
   assert.match(html, /data-bhw-system-navigation/);
   assert.match(html, /← Patient 360/);
@@ -91,6 +92,12 @@ test("Nutrition Intelligence preserves the real-life, physiology, and reconcilia
   assert.match(app, /renderNutritionChartPrefill\(chartPrefillContract\)/);
   assert.match(app, /applyNutritionChartPrefill\(\$\("nutrition-form"\), chartPrefillContract\)/);
   assert.match(app, /matchingNutritionChartProvenance\(chartFacts, chartPrefillContract/);
+  assert.match(app, /Patient nutrition intake awaiting reconciliation/);
+  assert.match(app, /Fill blank answers/);
+  assert.match(app, /patient-portal-questionnaire-reconciled-by-clinician/);
+  assert.match(app, /sourceRevision: workspace\.patientIntake\.revision/);
+  assert.match(app, /Applying fills only blank patient-questionnaire answers/);
+  assert.match(css, /\.patient-intake-handoff/);
 });
 
 test("measurement converters preserve canonical kg and cm values", () => {
