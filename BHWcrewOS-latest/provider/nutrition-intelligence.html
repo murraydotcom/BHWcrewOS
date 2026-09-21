@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <script src="/crew-provider-gate.js"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="bhw-health-core-ehr-origin" content="https://bhw-health-core-ehr-awknhudemq-uk.a.run.app">
 <title>BHW Clinical Intelligence - Nutrition Intelligence</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -30,18 +31,19 @@
 <main class="main">
   <header class="top"><div class="crumb">Clinical Intelligence · <b>Nutrition Intelligence</b></div><div class="tools"><nav class="bhw-system-navigation" data-bhw-system-navigation aria-label="Page navigation"><a class="btn" href="patient-360.html" data-system-nav="back">← Patient 360</a><a class="btn" href="/crewos" data-system-nav="home">⌂ CrewOS Home</a></nav><span class="badge warning" id="connection-status">Connecting...</span><button class="btn" id="refresh">Refresh</button><button class="btn" id="print" disabled>Print reviewed output</button><button class="btn" id="theme" type="button" aria-pressed="false" aria-label="Switch to Black Opal theme">Black Opal</button></div></header>
   <div class="content nutrition-content">
-    <section class="nutrition-hero">
+    <section class="panel" id="nutrition-health-core-static-handoff"><div class="panel-body"><h1>Nutrition reconciliation has moved to Health Core</h1><p>Care Connect nutrition answers and charted physiology are reconciled in the authoritative Health Core and Patient 360 workspace. CrewOS keeps only operational follow-through.</p><a class="btn primary" href="patient-registry.html">Return to Patient Registry</a></div></section>
+    <section class="nutrition-hero" hidden>
       <div><span class="eyebrow">Whole-person nutrition decision support</span><h1>Nutrition Intelligence</h1><p>Reconcile the person’s actual eating life with charted physiology. This workspace supports adequacy, function, GI tolerance, metabolism, hydration, culture, sensory needs, and food access—not just weight.</p></div>
       <div class="nutrition-identity" id="patient-context" data-state="pending"><span>Selected patient</span><b id="patient-name">Verifying patient context…</b><strong id="patient-id">Not selected</strong><small id="patient-context-detail">Health Core verification is required before evaluation or saving.</small><a class="btn" id="patient-context-action" href="patient-registry.html">Choose in Patient Registry</a></div>
     </section>
 
-    <section class="evidence-model" aria-label="Nutrition Intelligence evidence model">
+    <section class="evidence-model" aria-label="Nutrition Intelligence evidence model" hidden>
       <article><span class="model-number">1</span><div><b>Questionnaire reflects real life</b><p>Meals, appetite, symptoms, safe foods, sensory fit, culture, access, preparation, and goals.</p></div></article>
       <article><span class="model-number">2</span><div><b>Chart reflects physiology</b><p>Diagnoses, medications, labs, weight trajectory, renal/fluid orders, swallowing safety, pregnancy, and function.</p></div></article>
       <article><span class="model-number">3</span><div><b>Nutrition Intelligence reconciles both</b><p>Conflicts remain visible. Safety gates run before phenotypes, targets, food sources, supplements, GI/5R, or publication.</p></div></article>
     </section>
 
-    <form id="nutrition-form" novalidate>
+    <form id="nutrition-form" novalidate hidden>
       <div class="nutrition-columns">
         <section class="panel evidence-column patient-evidence">
           <div class="panel-head"><div><span class="eyebrow">Patient-reported</span><h3>Real-life intake</h3><span class="panel-subtitle">What eating and drinking actually look like.</span></div></div>
@@ -183,11 +185,11 @@
       </section>
     </form>
 
-    <section id="results" class="nutrition-results" aria-live="polite"><div class="panel"><div class="panel-body"><div class="empty-note">Complete the questionnaire and chart reconciliation, then run a preview. No recommendation will be published automatically.</div></div></div></section>
+    <section id="results" class="nutrition-results" aria-live="polite" hidden><div class="panel"><div class="panel-body"><div class="empty-note">Complete the questionnaire and chart reconciliation, then run a preview. No recommendation will be published automatically.</div></div></div></section>
   </div>
 </main>
 </div>
-<script type="module" src="nutrition-intelligence.mjs"></script>
+<script type="module" src="nutrition-health-core-handoff.mjs"></script>
 <script src="/staff-chat-launcher.js" defer></script>
 </body>
 </html>

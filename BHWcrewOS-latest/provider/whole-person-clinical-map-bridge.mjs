@@ -54,6 +54,12 @@ export function healthCoreDestinations(origin = DEFAULT_HEALTH_CORE_ORIGIN) {
       href: `${safeOrigin}/chart-summary.html?patient=${patient}`,
     }),
     Object.freeze({
+      id: "nutrition",
+      label: "Health Core Nutrition Intelligence",
+      description: "Reconcile Care Connect nutrition intake with charted physiology inside the authoritative Health Core workspace.",
+      href: `${safeOrigin}/nutrition-intelligence.html?patient=${patient}`,
+    }),
+    Object.freeze({
       id: "encounter",
       label: "Encounter Documentation",
       description: "Open the canonical encounter note, history verification, and encounter-linked artifacts.",
