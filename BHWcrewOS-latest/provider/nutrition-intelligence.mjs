@@ -395,7 +395,6 @@ function showQuestionnaireLoading() {
   questionnaire.classList.add("questionnaire-loading");
   questionnaire.classList.remove("questionnaire-unavailable");
   questionnaire.innerHTML = "Loading the adaptive real-life questionnaire…";
-  $("questionnaire-version").textContent = "Questionnaire v1.4";
 }
 
 function showQuestionnaireUnavailable(error) {
@@ -407,7 +406,6 @@ function showQuestionnaireUnavailable(error) {
   questionnaire.classList.remove("questionnaire-loading");
   questionnaire.classList.add("questionnaire-unavailable");
   questionnaire.innerHTML = `<div role="alert"><b>Questionnaire temporarily unavailable</b><p>${esc(detail)}</p><button class="btn" type="button" data-questionnaire-retry>Retry Health Core</button><small>No patient information was loaded or saved.</small></div>`;
-  $("questionnaire-version").textContent = "Questionnaire unavailable";
   $("chart-prefill").dataset.state = "unavailable";
   $("chart-prefill").innerHTML = '<div class="chart-prefill-head"><div><b>Health Core chart suggestions unavailable</b><span>The protected connection did not complete. No chart values were loaded.</span></div></div>';
 }
@@ -446,9 +444,6 @@ async function loadWorkspace({ populate = true } = {}) {
     $("chart-prefill").dataset.state = chartPrefillContract.status || "unavailable";
     $("chart-prefill").innerHTML = renderNutritionChartPrefill(chartPrefillContract);
     updateNutritionQuestionnaireVisibility($("patient-questionnaire"), questionnaireContract);
-    $("questionnaire-version").textContent = giPatternScreenContract?.version
-      ? `Questionnaire v${questionnaireContract.version || "1.4"} · ${baseQuestionnaire.questions.length} core + GI pattern screen v${giPatternScreenContract.version}`
-      : `Questionnaire v${questionnaireContract.version || "1.4"} · ${baseQuestionnaire.questions.length} core · GI pattern screen awaiting Health Core`;
     if (populate && workspace?.draft?.content) populateForm(workspace.draft.content);
     const current = workspace?.approved?.evaluation || workspace?.draft?.evaluation || null;
     if (current?.rulesetVersion) renderEvaluation(current, workspace?.published ? `Published v${workspace.published.version}` : workspace?.approved ? `Approved v${workspace.approved.version}` : `Saved draft r${workspace.draft.revision}`);

@@ -35,8 +35,6 @@
       <div class="nutrition-identity" id="patient-context" data-state="pending"><span>Selected patient</span><b id="patient-name">Verifying patient context…</b><strong id="patient-id">Not selected</strong><small id="patient-context-detail">Health Core verification is required before evaluation or saving.</small><a class="btn" id="patient-context-action" href="patient-registry.html">Choose in Patient Registry</a></div>
     </section>
 
-    <div class="safe-notice"><b>Clinical boundary:</b> a verified BHW Patient ID is required before evaluation or saving. Previews create no diagnosis, order, medication change, supplement order, message, CrewOS task, or patient-facing Blueprint. A provider must approve the exact saved revision, then separately publish its bounded projections. The existing Personal Health Blueprint still requires its own review.</div>
-
     <section class="evidence-model" aria-label="Nutrition Intelligence evidence model">
       <article><span class="model-number">1</span><div><b>Questionnaire reflects real life</b><p>Meals, appetite, symptoms, safe foods, sensory fit, culture, access, preparation, and goals.</p></div></article>
       <article><span class="model-number">2</span><div><b>Chart reflects physiology</b><p>Diagnoses, medications, labs, weight trajectory, renal/fluid orders, swallowing safety, pregnancy, and function.</p></div></article>
@@ -46,7 +44,7 @@
     <form id="nutrition-form" novalidate>
       <div class="nutrition-columns">
         <section class="panel evidence-column patient-evidence">
-          <div class="panel-head"><div><span class="eyebrow">Patient-reported</span><h3>Real-life intake</h3><span class="panel-subtitle">What eating and drinking actually look like.</span></div><span class="badge neutral" id="questionnaire-version">Questionnaire v1.4</span></div>
+          <div class="panel-head"><div><span class="eyebrow">Patient-reported</span><h3>Real-life intake</h3><span class="panel-subtitle">What eating and drinking actually look like.</span></div></div>
           <div class="panel-body nutrition-fields">
             <div id="patient-questionnaire" class="wide questionnaire-loading" aria-live="polite">Loading the adaptive real-life questionnaire…</div>
 
