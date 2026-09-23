@@ -34,7 +34,7 @@ function loadAction({ patients = [cloudPatient] } = {}) {
   require.cache[libPath] = {
     id: libPath, filename: libPath, loaded: true,
     exports: {
-      DB: {}, DIVISIONS: ["Primary Care", "Care Management"],
+      DB: {}, DIVISIONS: ["Primary Care", "Care Management"], normalizeDivision: (value) => value,
       queryDb: async (...args) => { notionReads.push(args); return []; },
       createPage: async (...args) => { notionWrites.push(["create", ...args]); return { id: "legacy-write" }; },
       updatePage: async (...args) => { notionWrites.push(["update", ...args]); return {}; },
@@ -140,6 +140,8 @@ test("a workflow submits the canonical Cloud Registry ID directly", async () => 
   assert.equal(operationCalls[0].path, "/v1/patient-requests");
   assert.equal(operationCalls[0].options.body.bhwPatientId, "BHW0613");
   assert.match(operationCalls[0].options.body.id, REQUEST_ID_PATTERN);
+  assert.equal(operationCalls[0].options.body.notificationMode, "manual");
+  assert.equal(operationCalls[0].options.body.manualNotifyOnly, true);
 });
 
 test("warm handoff creates a valid operations request ID for the synthetic patient", async () => {
@@ -162,6 +164,8 @@ test("warm handoff creates a valid operations request ID for the synthetic patie
   assert.equal(operationCalls[0].path, "/v1/patient-requests");
   assert.equal(operationCalls[0].options.body.bhwPatientId, "BHW0000");
   assert.match(operationCalls[0].options.body.id, REQUEST_ID_PATTERN);
+  assert.equal(operationCalls[0].options.body.notificationMode, "manual");
+  assert.equal(operationCalls[0].options.body.manualNotifyOnly, true);
 });
 
 test("new registrations receive a temporary Cloud ID and preserve a suffix", async () => {

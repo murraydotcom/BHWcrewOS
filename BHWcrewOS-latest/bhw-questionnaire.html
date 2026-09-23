@@ -246,8 +246,8 @@ const QUESTIONNAIRES = {
       if(r.indexOf("Memory or cognitive concerns")>-1) f.push("Cognitive screen");
       if(r.indexOf("Anxiety / depression")>-1) f.push("Mood screen — PHQ-9/GAD-7");
       return f; } },
-  "porter-lifeskills": { name:"The Porter House — Growth & Lifeskills Intake", program:"The Porter House", acc:"#8a6d5c", accGrad:"linear-gradient(100deg,#8a6d5c,#6d5445)", logo:"/assets/brand/bhw-wellness.png", who:"Self",
-    intro:"Welcome to The Porter House. This is the start of your 3-month growth journey — Stabilize & Assess, Build Skills, then Launch Prep. Share as much or as little as you're comfortable with; it helps your case lead build a plan around you.",
+  "elevated-wellness-lifeskills": { name:"Elevated Wellness — Growth & Lifeskills Intake", program:"Elevated Wellness", acc:"#8a6d5c", accGrad:"linear-gradient(100deg,#8a6d5c,#6d5445)", logo:"/assets/brand/bhw-wellness.png", who:"Self",
+    intro:"Welcome to Elevated Wellness. This is the start of your 3-month growth journey — Stabilize & Assess, Build Skills, then Launch Prep. Share as much or as little as you're comfortable with; it helps your case lead build a plan around you.",
     questions:[
       {type:"section",label:"Your goals"},
       {type:"multi",id:"areas",q:"Which life skills would you like to build here? (check all that apply)",options:["Cooking / meals","Budgeting / money","Transportation","Job or school","Health & medications","Social connections","Housing stability","Personal care","Time management","Other"]},
@@ -266,6 +266,8 @@ const QUESTIONNAIRES = {
       if(a.readiness==="Not yet") f.push("Early stage — Stabilize & Assess");
       return f; } }
 };
+// Keep previously issued Porter House links valid while all new UI uses Elevated Wellness.
+QUESTIONNAIRES["porter-lifeskills"] = QUESTIONNAIRES["elevated-wellness-lifeskills"];
 
 const qp = new URLSearchParams(location.search);
 const slug = (qp.get("q")||"").toLowerCase();
@@ -381,8 +383,9 @@ async function submit(){
     const d=await r.json().catch(()=>({}));
     if(!r.ok||!d.ok) throw new Error(d.error||"Something went wrong.");
     buildSummary({patientLabel, bhwId, pairs});
+    const savedAt=d.savedAt&&!Number.isNaN(new Date(d.savedAt).getTime())?new Date(d.savedAt).toLocaleString():"now";
     app.innerHTML='<div class="card"><div class="done"><div class="big">✅</div><h2>Thank you — your answers are in.</h2>'+
-      '<p class="lede">Your care team at BHW Medical Group will review them before your visit. You can print a copy for your records.</p>'+
+      '<p class="lede">Saved securely to BHW Cloud at '+esc(savedAt)+'. Your care team at BHW Medical Group will review them before your visit. You can print a copy for your records.</p>'+
       '<div class="btnrow"><button class="pbtn" onclick="window.print()">🖨️ Print my summary (PDF)</button></div></div></div>';
     document.getElementById("bar").style.width="100%"; window.scrollTo({top:0,behavior:"smooth"});
   }catch(e){ go.disabled=false; go.textContent="Submit my answers"; err.textContent=e.message||"Couldn't submit. Please try again."; }

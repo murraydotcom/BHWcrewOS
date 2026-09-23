@@ -15,7 +15,7 @@ function loadAction({ patients = [cloudPatient], assessments = [assessment] } = 
   require.cache[libPath] = {
     id: libPath, filename: libPath, loaded: true,
     exports: {
-      DB: {}, DIVISIONS: [],
+      DB: {}, DIVISIONS: [], normalizeDivision: (value) => value,
       httpJson: async () => ({ ok: true, status: 200, data: {} }),
       queryDb: async () => [], createPage: async () => ({ id: "unused" }), updatePage: async () => ({}),
       P: { title: () => "", date: () => "", text: () => "" },

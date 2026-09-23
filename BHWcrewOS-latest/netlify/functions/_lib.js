@@ -67,7 +67,11 @@ const DB = {
   careLog: "a839f769a04e461a8e1c495073a22b87", // Care Management Log — one row / patient / month (CCM/APCM) or episode (TCM)
 };
 
-const DIVISIONS = ["Primary Care", "CharmEd Minds", "Mind & Mood Recovery", "The Porter House", "Care Management", "Flow"];
+const LEGACY_DIVISION_ALIASES = Object.freeze({
+  "The Porter House": "Elevated Wellness",
+});
+const normalizeDivision = (value) => LEGACY_DIVISION_ALIASES[String(value || "").trim()] || String(value || "").trim();
+const DIVISIONS = ["Primary Care", "CharmEd Minds", "Mind & Mood Recovery", "Elevated Wellness", "Care Management", "Flow"];
 
 // ---------- Notion ----------
 async function queryDb(dbId, filter, sorts) {
@@ -163,5 +167,5 @@ function json(statusCode, body) {
   };
 }
  
-module.exports = { DB, DIVISIONS, httpJson, queryDb, createPage, updatePage, P, W, sign, verify, getSession, visibleDivisions, json };
+module.exports = { DB, DIVISIONS, LEGACY_DIVISION_ALIASES, normalizeDivision, httpJson, queryDb, createPage, updatePage, P, W, sign, verify, getSession, visibleDivisions, json };
  

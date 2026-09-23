@@ -19,7 +19,7 @@ The deployable app lives in **`BHWcrewOS-latest/`** (not the repo root). All pat
   - **`bhw-discharges.html`** — Hospital Discharges & TCM board (ported from RCM; reads `crisp` feed).
 - **Patient-facing forms** (public, no PIN, brand-styled, theme-aware, print a BHW-letterhead PDF summary, write to Notion):
   - **`screener.html?s=<slug>`** — condition screeners (PHQ-9/PHQ-A/PHQ-2, GAD-7/GAD-2, AUDIT-C/AUDIT, PCL-5 — all public-domain). Registry `SCREENERS`; POSTs to `screener-submit`.
-  - **`bhw-questionnaire.html?q=<slug>`** — intake questionnaires (`awv-hra` full HRA, `charmed-intake` peds, `charmed-adult`, `porter-lifeskills`). Mixed question types + auto-flags; POSTs to `questionnaire-submit`.
+  - **`bhw-questionnaire.html?q=<slug>`** — intake questionnaires (`awv-hra` full HRA, `charmed-intake` peds, `charmed-adult`, `elevated-wellness-lifeskills`; legacy `porter-lifeskills` links remain valid). Mixed question types + auto-flags; POSTs to `questionnaire-submit`.
 
 `assets/bhw-tokens.css` is the **single source of truth for brand colors**. New pages should `<link>` it rather than redefining colors. `welcome.html` was removed once the onboarding portal became its own repo — welcometoBHW is `murraydotcom/welcometobhw`, not a page here.
 

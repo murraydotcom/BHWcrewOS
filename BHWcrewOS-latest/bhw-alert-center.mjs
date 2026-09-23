@@ -16,6 +16,17 @@ const TYPE_LABELS = Object.freeze({
 
 const clean = (value, max = 160) => String(value ?? "").trim().slice(0, max);
 const normalized = (value) => clean(value).toLowerCase().replaceAll("-", "_");
+const divisionKey = (value) => {
+  const key = normalized(value).replaceAll("&", "and").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  return key === "the_porter_house" ? "elevated_wellness" : key;
+};
+const divisionName = (value) => clean(value).toLowerCase() === "the porter house" ? "Elevated Wellness" : clean(value);
+const divisionView = (value) => divisionName(value).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+
+function crewWorkflow(request = {}) {
+  const kind = normalized(request.workflowContext?.kind);
+  return kind === "handoff" || kind === "referral" ? kind : "";
+}
 
 export function isProviderActor(actor = {}) {
   const access = clean(actor.access).toLowerCase();
@@ -104,6 +115,11 @@ export function safeAlertForRequest(request, actor = {}, now = Date.now()) {
   const teamNoteMentioned = teamNoteUnread && request.teamNoteMentioned === true;
   const providerAttention = requiresProviderAlert(request, actor) || teamNoteMentioned;
   if (providerOnly && !providerAttention) return null;
+  const workflow = crewWorkflow(request);
+  const destination = divisionName(request.workflowContext?.toDivision);
+  const actorIsAdmin = roleRoutes(actor).includes("*") && /admin|administrator|executive|owner|office manager|director/i.test(`${clean(actor.role)} ${clean(actor.access)}`);
+  const actorDivisions = Array.isArray(actor.divisions) ? actor.divisions.map(divisionKey) : [];
+  if (workflow && destination && !actorIsAdmin && !assignedToMe && !actorDivisions.includes(divisionKey(destination))) return null;
 
   let reason = "";
   let severity = "routine";
@@ -114,6 +130,7 @@ export function safeAlertForRequest(request, actor = {}, now = Date.now()) {
   else if (overdue) { reason = "Overdue"; severity = "warning"; }
   else if (assignedToMe) { reason = "Assigned to you"; }
   else if (providerAttention) { reason = "Needs provider"; severity = "warning"; }
+  else if (workflow && unassigned && ["received", "new", ""].includes(category)) { reason = workflow === "handoff" ? "New warm handoff" : "New referral"; }
   else if (unassigned && ["received", "new", ""].includes(category)) { reason = "Needs an owner"; }
   else return null;
 
@@ -123,16 +140,20 @@ export function safeAlertForRequest(request, actor = {}, now = Date.now()) {
 
   const type = normalized(request.requestType || request.type || "general");
   const changedAt = clean(request.updatedAt || request.createdAt, 80);
+  const workflowLabel = workflow === "handoff" ? "Warm handoff" : workflow === "referral" ? "Referral" : "";
+  const href = workflow && destination
+    ? `/?view=${encodeURIComponent(divisionView(destination))}&request=${encodeURIComponent(clean(request.id, 240))}`
+    : `/bhw-requests.html?request=${encodeURIComponent(clean(request.id, 240))}`;
   return {
     id: clean(request.id, 240),
     key: alertKey(request),
-    label: TYPE_LABELS[type] || "Patient request",
+    label: workflowLabel || TYPE_LABELS[type] || "Patient request",
     reason,
     severity,
     route: route.replaceAll("_", "-"),
     status: clean(request.statusLabel || request.status || "Open", 100).replaceAll("_", " "),
     changedAt,
-    href: `/bhw-requests.html?request=${encodeURIComponent(clean(request.id, 240))}`,
+    href,
   };
 }
 
