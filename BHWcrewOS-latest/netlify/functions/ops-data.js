@@ -1,7 +1,7 @@
 // netlify/functions/ops-data.js — dashboard payload, division walls enforced HERE.
 // Returns only what the signed-in person's divisions permit. Admins see all.
  
-const { DB, queryDb, P, getSession, visibleDivisions, json } = require("./_lib");
+const { DB, normalizeDivision, queryDb, P, getSession, visibleDivisions, json } = require("./_lib");
 const { cloudRequest, listCloudPatients } = require("./lib/cloud-patients");
 const { buildPatientDirectory } = require("./lib/crew-patient-directory");
 const { operationsRequest } = require("./lib/operations-cloud");
@@ -9,12 +9,14 @@ const { operationsRequest } = require("./lib/operations-cloud");
 function shapeReferral(request) {
   const context = request.workflowContext || {};
   const terminal = request.statusCategory === "completed";
+  const fromDivision = normalizeDivision(context.fromDivision || "Primary Care");
+  const toDivision = normalizeDivision(context.toDivision || "Care Management");
   return {
     id: request.id || request.patientRequestId,
-    title: `${context.referralType || "Referral"} → ${context.toDivision || "Referral team"}`,
+    title: `${context.referralType || "Referral"} → ${toDivision || "Referral team"}`,
     patient: request.bhwPatientId,
-    from: context.fromDivision || "Primary Care",
-    to: context.toDivision || "Care Management",
+    from: fromDivision,
+    to: toDivision,
     sentBy: request.createdBy || "",
     type: context.referralType || "Division Referral",
     device: context.device || "",
@@ -24,18 +26,27 @@ function shapeReferral(request) {
     completionNote: context.completionNote || "",
     sentDate: String(context.historicalReceivedAt || request.createdAt || "").slice(0, 10),
     completedDate: terminal ? String(request.resolvedAt || request.updatedAt || "").slice(0, 10) : "",
+    updatedDate: String(request.updatedAt || request.createdAt || "").slice(0, 10),
+    statusHistory: Array.isArray(request.statusHistory) ? request.statusHistory.map((entry) => ({
+      action: entry.action || entry.status || "Updated",
+      status: entry.status || "",
+      at: entry.at || entry.createdAt || "",
+      by: entry.actorName || entry.createdBy || "",
+    })) : [],
     priority: request.priority === "urgent" ? "Urgent" : "Routine",
   };
 }
  
 function shapeHandoff(request) {
   const context = request.workflowContext || {};
+  const fromDivision = normalizeDivision(context.fromDivision || "Primary Care");
+  const toDivision = normalizeDivision(context.toDivision || "Front Desk");
   return {
     id: request.id || request.patientRequestId,
-    title: `${context.fromDivision || "BHW"} → ${context.toDivision || "Front Desk"}`,
+    title: `${fromDivision || "BHW"} → ${toDivision || "Front Desk"}`,
     patient: request.bhwPatientId,
-    from: context.fromDivision || "Primary Care",
-    to: context.toDivision || "Front Desk",
+    from: fromDivision,
+    to: toDivision,
     fromStaff: request.createdBy || "",
     summary: context.details || request.summary || "",
     needs: context.needs || [],
@@ -43,6 +54,15 @@ function shapeHandoff(request) {
     status: request.statusCategory === "completed" ? "Completed"
       : request.statusCategory === "waiting" ? "Scheduled"
         : request.statusCategory === "received" ? "New" : "Acknowledged",
+    createdDate: String(context.historicalReceivedAt || request.createdAt || "").slice(0, 10),
+    completedDate: request.statusCategory === "completed" ? String(request.resolvedAt || request.updatedAt || "").slice(0, 10) : "",
+    updatedDate: String(request.updatedAt || request.createdAt || "").slice(0, 10),
+    statusHistory: Array.isArray(request.statusHistory) ? request.statusHistory.map((entry) => ({
+      action: entry.action || entry.status || "Updated",
+      status: entry.status || "",
+      at: entry.at || entry.createdAt || "",
+      by: entry.actorName || entry.createdBy || "",
+    })) : [],
   };
 }
  
@@ -200,14 +220,14 @@ exports.handler = async (event) => {
     }
  
     let phPlans = null;
-    if (isAdmin || vis.includes("The Porter House")) {
-      phPlans = (programPlanRows.plans || []).filter((plan) => plan.program === "The Porter House").map((plan) => ({
+    if (isAdmin || vis.includes("Elevated Wellness")) {
+      phPlans = (programPlanRows.plans || []).filter((plan) => normalizeDivision(plan.program) === "Elevated Wellness").map((plan) => ({
         id: plan.id,
         patient: plan.bhwPatientId,
         moveIn: plan.moveInDate || "",
         stage: plan.stage || "",
-        basePct: plan.readinessBaselinePercent || 0,
-        latestPct: plan.readinessLatestPercent || 0,
+        basePct: plan.readinessBaselinePercent ?? null,
+        latestPct: plan.readinessLatestPercent ?? null,
         baseline: plan.readinessBaseline || null,
         latest: plan.readinessLatest || null,
         lrLatestDate: plan.readinessLatestDate || "",
@@ -217,6 +237,10 @@ exports.handler = async (event) => {
         gad: plan.latestGad7,
         screenDate: plan.latestScreenDate || "",
         goals: plan.growthGoals || [],
+        notes: plan.notes || "",
+        program: "Elevated Wellness",
+        createdAt: plan.createdAt || "",
+        updatedAt: plan.updatedAt || "",
       })).sort((a,b) => (a.moveIn||"").localeCompare(b.moveIn||""));
     }
  
@@ -237,12 +261,12 @@ exports.handler = async (event) => {
       }));
     }
  
-    // Admin Master stays admin-only. Porter House census opens to everyone naturally,
+    // Admin Master stays admin-only. Elevated Wellness census opens to everyone naturally,
     // via the "vis" division wall above (now unrestricted) — no special case needed here.
     let adminRollup = null;
     let porterhouse = null;
-    if (isAdmin || vis.includes("The Porter House")) {
-      porterhouse = (programPlanRows.plans || []).filter((plan) => plan.program === "The Porter House").map((plan) => ({
+    if (isAdmin || vis.includes("Elevated Wellness")) {
+      porterhouse = (programPlanRows.plans || []).filter((plan) => normalizeDivision(plan.program) === "Elevated Wellness").map((plan) => ({
         id: plan.id,
         resident: patientLabel[plan.bhwPatientId] || plan.bhwPatientId,
         phId: plan.programPatientId || "",

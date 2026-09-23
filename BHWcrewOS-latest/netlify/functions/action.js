@@ -10,7 +10,7 @@
 //   patient-select, patient-create (protected Cloud Registry only)
 
 const crypto = require("crypto");
-const { DB, DIVISIONS, queryDb, createPage, updatePage, P, W, getSession, visibleDivisions, json } = require("./_lib");
+const { DB, DIVISIONS, normalizeDivision, queryDb, createPage, updatePage, P, W, getSession, visibleDivisions, json } = require("./_lib");
 const { cloudRequest, listCloudPatients, parsePatientName } = require("./lib/cloud-patients");
 const { operationsRequest } = require("./lib/operations-cloud");
 
@@ -58,7 +58,7 @@ async function saveCloudCharmedAssessment(body, kind, session) {
       method: "PUT",
       body: payload,
     });
-    return result.assessment;
+    return verifyCloudCharmedAssessment(result.assessment, kind, session);
   }
   const bhwPatientId = String(body.patientId || "").trim().toUpperCase();
   if (!/^BHW\d{4}$/.test(bhwPatientId)) throw actionError(400, "Pick a patient from the protected Patient Registry.");
@@ -67,7 +67,23 @@ async function saveCloudCharmedAssessment(body, kind, session) {
     method: "POST",
     body: payload,
   });
-  return result.assessment;
+  return verifyCloudCharmedAssessment(result.assessment, kind, session);
+}
+
+async function verifyCloudCharmedAssessment(saved, kind, session) {
+  if (!saved?.id) throw actionError(502, "The assessment save did not return a record ID. Nothing is being shown as saved.");
+  const result = await cloudRequest(`/v1/charmed/assessments?kind=${encodeURIComponent(kind)}`, { actor: session });
+  const verified = (result.assessments || []).find((assessment) => assessment.id === saved.id);
+  if (!verified) throw actionError(502, "The assessment write could not be read back from BHW Cloud. Refresh before trying again.");
+  return verified;
+}
+
+async function verifyProgramCarePlan(saved, session) {
+  if (!saved?.id) throw actionError(502, "The readiness assessment save did not return a record ID. Nothing is being shown as saved.");
+  const result = await cloudRequest("/v1/program-care-plans", { actor: session });
+  const verified = (result.plans || []).find((plan) => plan.id === saved.id);
+  if (!verified) throw actionError(502, "The readiness assessment write could not be read back from BHW Cloud. Refresh before trying again.");
+  return verified;
 }
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -94,8 +110,10 @@ exports.handler = async (event) => {
     switch (b.action) {
       /* ---------------- Referrals ---------------- */
       case "referral-create": {
-        if (!b.to || !DIVISIONS.includes(b.to)) return json(400, { error: "Pick a receiving division" });
-        if (!b.from || !vis.includes(b.from)) return json(403, { error: "You can only send from your own division" });
+        const toDivision = normalizeDivision(b.to);
+        const fromDivision = normalizeDivision(b.from);
+        if (!toDivision || !DIVISIONS.includes(toDivision)) return json(400, { error: "Pick a receiving division" });
+        if (!fromDivision || !vis.includes(fromDivision)) return json(403, { error: "You can only send from your own division" });
         if (!b.patientId) return json(400, { error: "Pick a patient" });
         const patient = await requireCloudPatient(b.patientId, session);
         const result = await operationsRequest("/v1/patient-requests", {
@@ -108,13 +126,13 @@ exports.handler = async (event) => {
             priority: String(b.priority || "routine").toLowerCase() === "urgent" ? "urgent" : "routine",
             source: "crewos",
             sourceReference: "CrewOS division referral",
-            summary: `${b.type || "Referral"}: ${b.from} to ${b.to}${b.details ? ` — ${b.details}` : ""}`,
-            notificationMode: "none",
+            summary: `${b.type || "Referral"}: ${fromDivision} to ${toDivision}${b.details ? ` — ${b.details}` : ""}`,
+            notificationMode: "manual",
             manualNotifyOnly: true,
             workflowContext: {
               kind: "referral",
-              fromDivision: b.from,
-              toDivision: b.to,
+              fromDivision,
+              toDivision,
               referralType: b.type || "Division Referral",
               device: b.device || "",
               details: b.details || "",
@@ -157,12 +175,13 @@ exports.handler = async (event) => {
       }
       case "referral-template-save": {
         // Save the current referral wording as a reusable template in Notion.
-        if (!b.destination || !DIVISIONS.includes(b.destination)) return json(400, { error: "Pick a destination program" });
+        const destination = normalizeDivision(b.destination);
+        if (!destination || !DIVISIONS.includes(destination)) return json(400, { error: "Pick a destination program" });
         if (!b.name) return json(400, { error: "Give the template a short name" });
         if (!b.body) return json(400, { error: "The template needs some referral text" });
         const props = {
           "Name": W.title(b.name),
-          "Destination": W.sel(b.destination),
+          "Destination": W.sel(destination),
           "Body": W.text(b.body),
           "Active": W.check(true),
         };
@@ -175,8 +194,10 @@ exports.handler = async (event) => {
 
       /* ---------------- Warm handoffs ---------------- */
       case "handoff-create": {
-        if (!b.to || !DIVISIONS.includes(b.to)) return json(400, { error: "Pick a receiving division" });
-        if (!b.from || !vis.includes(b.from)) return json(403, { error: "You can only hand off from your own division" });
+        const toDivision = normalizeDivision(b.to);
+        const fromDivision = normalizeDivision(b.from);
+        if (!toDivision || !DIVISIONS.includes(toDivision)) return json(400, { error: "Pick a receiving division" });
+        if (!fromDivision || !vis.includes(fromDivision)) return json(403, { error: "You can only hand off from your own division" });
         if (!b.patientId) return json(400, { error: "Pick a patient" });
         if (!b.summary) return json(400, { error: "A warm handoff needs a summary" });
         const patient = await requireCloudPatient(b.patientId, session);
@@ -191,12 +212,12 @@ exports.handler = async (event) => {
             source: "crewos",
             sourceReference: "CrewOS warm handoff",
             summary: b.summary,
-            notificationMode: "none",
+            notificationMode: "manual",
             manualNotifyOnly: true,
             workflowContext: {
               kind: "handoff",
-              fromDivision: b.from,
-              toDivision: b.to,
+              fromDivision,
+              toDivision,
               details: b.summary,
               needs: b.needs || [],
               scheduledDate: b.scheduledDate || "",
@@ -546,7 +567,7 @@ exports.handler = async (event) => {
       }
 
       case "ph-plan-save": {
-        const payload = { program: "The Porter House" };
+        const payload = { program: "Elevated Wellness" };
         if (b.lrKind === "baseline" && b.lr) {
           payload.readinessBaseline = b.lr;
           payload.readinessBaselinePercent = b.lrPct;
@@ -573,7 +594,8 @@ exports.handler = async (event) => {
             method: "PUT",
             body: payload,
           });
-          return json(200, { ok: true, id: b.id, savedAt: result.plan.updatedAt, storage: "BHW Cloud" });
+          const verified = await verifyProgramCarePlan(result.plan, session);
+          return json(200, { ok: true, id: b.id, savedAt: verified.updatedAt, storage: "BHW Cloud" });
         }
         if (!b.patientId) return json(400, { error: "Pick a resident to start a growth plan" });
         const patient = await requireCloudPatient(b.patientId, session);
@@ -587,7 +609,8 @@ exports.handler = async (event) => {
             caseLead: session.name,
           },
         });
-        return json(200, { ok: true, id: result.plan.id, savedAt: result.plan.updatedAt, storage: "BHW Cloud" });
+        const verified = await verifyProgramCarePlan(result.plan, session);
+        return json(200, { ok: true, id: verified.id, savedAt: verified.updatedAt, storage: "BHW Cloud" });
       }
 
       case "cm-screening-link-patient": {

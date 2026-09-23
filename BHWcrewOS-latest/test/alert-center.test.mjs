@@ -78,6 +78,31 @@ test("alerts contain workflow metadata and a deep link but no patient details", 
   assert.doesNotMatch(JSON.stringify(alert), /BHW0000 Synthetic|Synthetic detail/);
 });
 
+test("CrewOS handoffs and referrals alert the receiving group and open that group page", () => {
+  const recipient = { staffId: "synthetic-recipient", name: "Synthetic Recipient", role: "Care Coordinator", divisions: ["Elevated Wellness"] };
+  const sender = { staffId: "synthetic-sender", name: "Synthetic Sender", role: "Medical Assistant", divisions: ["Primary Care"] };
+  const handoff = synthetic({
+    id: "crew-handoff-00000000-0000-4000-8000-000000000001",
+    workflowContext: { kind: "handoff", fromDivision: "Primary Care", toDivision: "Elevated Wellness" },
+  });
+  const alert = safeAlertForRequest(handoff, recipient);
+  assert.equal(alert.label, "Warm handoff");
+  assert.equal(alert.reason, "New warm handoff");
+  assert.equal(alert.href, "/?view=elevated-wellness&request=crew-handoff-00000000-0000-4000-8000-000000000001");
+  assert.equal(safeAlertForRequest(handoff, sender), null);
+  assert.equal(safeAlertForRequest(handoff, { ...recipient, divisions: ["the porter house"] }).label, "Warm handoff", "legacy staff division still routes to Elevated Wellness");
+
+  const referral = synthetic({
+    id: "crew-referral-00000000-0000-4000-8000-000000000002",
+    requestType: "referral",
+    workflowContext: { kind: "referral", fromDivision: "Primary Care", toDivision: "CharmEd Minds" },
+  });
+  const referralAlert = safeAlertForRequest(referral, { ...recipient, divisions: ["CharmEd Minds"] });
+  assert.equal(referralAlert.label, "Referral");
+  assert.equal(referralAlert.reason, "New referral");
+  assert.match(referralAlert.href, /^\/\?view=charmed-minds&request=/);
+});
+
 test("completed work disappears and each workflow version has a distinct alert key", () => {
   assert.equal(safeAlertForRequest(synthetic({ status: "completed", statusCategory: "completed" }), { role: "Office Manager" }), null);
   assert.notEqual(alertKey(synthetic({ version: 1 })), alertKey(synthetic({ version: 2 })));

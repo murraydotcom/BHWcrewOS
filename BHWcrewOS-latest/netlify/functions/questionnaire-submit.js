@@ -4,7 +4,7 @@
 
 const { json } = require("./_lib");
 
-const REG = new Set(["charmed-intake", "charmed-adult", "awv-hra", "porter-lifeskills"]);
+const REG = new Set(["charmed-intake", "charmed-adult", "awv-hra", "elevated-wellness-lifeskills", "porter-lifeskills"]);
 const WHO = new Set(["Self", "Parent/Caregiver", "Staff"]);
 
 function rcmApiBase() {
@@ -44,5 +44,8 @@ exports.handler = async (event) => {
   });
   const result = await response.json().catch(() => ({}));
   if (!response.ok) return json(response.status, { error: result.error || "Your answers could not be saved." });
-  return json(200, { ok: true, savedAt: result.savedAt, storage: "BHW Cloud" });
+  if (!result.responseId || !result.savedAt) {
+    return json(502, { error: "Your answers were sent, but the BHW Cloud save could not be verified. Please contact the office before submitting again." });
+  }
+  return json(200, { ok: true, responseId: result.responseId, savedAt: result.savedAt, storage: "BHW Cloud" });
 };

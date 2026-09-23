@@ -11,6 +11,7 @@ const PROGRAM_IDS = {
   "Mind & Mood Recovery": "m&m",
   "Care Management": "population-health",
   "Flow": "flow",
+  "Elevated Wellness": "other",
   "The Porter House": "other",
 };
 

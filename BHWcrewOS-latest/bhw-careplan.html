@@ -232,14 +232,14 @@ const PROGRAMS = {
       interventions:"• Regular therapy and/or medication support\n• A crisis and safety plan built with you\n• Coordination with your other providers",
       patientRole:"• Attend your sessions\n• Use your coping and safety plan\n• Tell us right away if things get harder",
       team:"Your Mind & Mood clinician · Prescriber (if applicable) · Your support person" } },
-  "The Porter House": { pc:"#8a6d5c", logo:"/assets/brand/bhw-wellness.png", mark:"PH", tagline:"Lifeskills for independent living.",
+  "Elevated Wellness": { pc:"#8a6d5c", logo:"/assets/brand/bhw-wellness.png", mark:"EW", tagline:"Lifeskills for independent living.",
     focusLabel:"What this plan focuses on",
     seed:{
       focus:"The daily-living skills and supports you want to work on.",
       goals:"• Build the daily-living skills I want\n• Move toward the independence that fits me\n• Feel supported and safe",
       interventions:"• A personalized lifeskills plan\n• Regular skill-building sessions and check-ins\n• Wraparound support and referrals as needed",
       patientRole:"• Take part in the skill-building sessions\n• Share your goals and preferences\n• Let the team know when you need help",
-      team:"Porter House support staff · Your case coordinator · Your chosen supports" } },
+      team:"Elevated Wellness support staff · Your case coordinator · Your chosen supports" } },
   "Flow": { pc:"#4f948f", logo:"/assets/brand/flow.png", mark:"FL", tagline:"Vascular stabilization.",
     focusLabel:"Vascular concerns this plan addresses",
     seed:{
@@ -410,7 +410,8 @@ $("saveBtn").addEventListener("click",async()=>{
 /* ---- boot ---- */
 renderProgs();
 $("f-date").value=todayISO(); $("f-review").value=plusYearISO(todayISO());
-const qProgram = new URLSearchParams(location.search).get("program");
+const requestedProgram = new URLSearchParams(location.search).get("program");
+const qProgram = requestedProgram === "The Porter House" ? "Elevated Wellness" : requestedProgram;
 selectProgram(PROG_KEYS.includes(qProgram) ? qProgram : "Care Management");
 wireInputs();
 setConnected(TOKEN?"":undefined);

@@ -243,14 +243,14 @@ let REF_TEMPLATES = null; // lazy-loaded cache of destination referral templates
 
 const DIV_COLORS = {
   "Primary Care":"var(--pc-primary)", "CharmEd Minds":"var(--pc-charmed)",
-  "Mind & Mood Recovery":"var(--pc-mind)", "The Porter House":"var(--pc-porter)",
+  "Mind & Mood Recovery":"var(--pc-mind)", "Elevated Wellness":"var(--pc-porter)",
   "Care Management":"var(--pc-chronic)", "Flow":"var(--pc-flow)", "Admin Master":"var(--pc-admin)"
 };
 const DIV_BLURBS = {
   "Primary Care":"Panel care, referrals out, and warm handoffs across BHW.",
   "CharmEd Minds":"Lifespan cognition and brain health — confidence through cognition and education.",
   "Mind & Mood Recovery":"Behavioral health and the Pathway to the Sunrise program.",
-  "The Porter House":"Behavioral health transition housing — 2nd floor residents and coordination.",
+  "Elevated Wellness":"Behavioral health transition housing, readiness, and resident coordination.",
   "Care Management":"APCM, CCM, RPM, BHI, CoCM, and care coordination.",
   "Flow":"Vascular stabilization referral pathway (Room 4).",
   "Admin Master":"Whole-circle view: every division, every referral, the full schedule."
@@ -267,13 +267,18 @@ let D = null; // data payload
 /* ---------- helpers ---------- */
 const esc = s => String(s??"").replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.style.display="block"; setTimeout(()=>t.style.display="none", 2600); }
+function savedStamp(result){
+  const when=result?.savedAt?new Date(result.savedAt):null;
+  return `Saved to BHW Cloud${when&&!Number.isNaN(when.getTime())?` · ${when.toLocaleString()}`:""}`;
+}
 function pill(text, cls){ return `<span class="pill ${cls}">${esc(text)}</span>`; }
 function statusPill(s){
-  const map={"Sent":"warn","Received":"info","In Progress":"warn","Completed":"ok","Declined/Redirect":"alert","New":"alert","Acknowledged":"warn","Scheduled":"info","Cancelled":"alert","Urgent":"alert","Routine":"gray"};
+  const map={"Sent":"warn","Received":"info","In Progress":"warn","Completed":"ok","Complete":"ok","Abandoned":"alert","Declined/Redirect":"alert","New":"alert","Acknowledged":"warn","Scheduled":"info","Cancelled":"alert","Urgent":"alert","Routine":"gray","Graduated — Independent":"ok","Discharged — Other":"gray","Extended Stay":"info"};
   return pill(s, map[s]||"gray");
 }
 const patLabel = id => (D && D.patientLabel[id]) || "—";
 const staffLabel = id => (D && D.staffName[id]) || "—";
+const patient360Link = (patientId) => /^BHW\d{4}$/.test(String(patientId||"")) ? `<a class="btn sec" href="/provider/patient-360.html?patient=${encodeURIComponent(patientId)}">Open Patient 360</a>` : "";
 
 const SAFE_STANDALONE_NEXT = /^\/bhw-(?:capture|requests|patient-monitor(?:-list)?|patient-materials)(?:\.html)?(?:\?[a-z0-9%&=._-]*)?$/i;
 function requestedNext(search = location.search){
@@ -358,7 +363,8 @@ async function refresh(){
   }
   buildRail();
   buildViews();
-  const start = document.querySelector(`.tab[data-view="${cssId(D.user.landing)}"]`) || document.querySelector(".tab");
+  const requestedView = new URLSearchParams(location.search).get("view") || "";
+  const start = document.querySelector(`.tab[data-view="${cssId(requestedView)}"]`) || document.querySelector(`.tab[data-view="${cssId(D.user.landing)}"]`) || document.querySelector(".tab");
   activate(start.dataset.view);
 }
 const cssId = s => s.toLowerCase().replace(/[^a-z0-9]+/g,"-");
@@ -388,7 +394,7 @@ function buildRail(){
     const c = p==="Admin Master" ? {rIn:D.referrals.filter(r=>!["Completed","Declined/Redirect"].includes(r.status)).length, hIn:D.handoffs.filter(h=>h.status!=="Completed").length} : counts(p);
     const sig = (p==="Primary Care"||p==="Admin Master") ? awvPending().length : 0;
     const rts = (p==="CharmEd Minds"||p==="Admin Master") && D.charmedProgram ? D.charmedProgram.filter(e=>!["Graduated","Withdrawn","Retest Complete"].includes(e.stage) && cpWeek(e.startDate)>=12).length : 0;
-    const lch = (p==="The Porter House"||p==="Admin Master") && D.phPlans ? D.phPlans.filter(x=>!["Graduated — Independent","Discharged — Other","Extended Stay"].includes(x.stage) && phWeek(x.moveIn)>=14).length : 0;
+    const lch = (p==="Elevated Wellness"||p==="Admin Master") && D.phPlans ? D.phPlans.filter(x=>!["Graduated — Independent","Discharged — Other","Extended Stay"].includes(x.stage) && phWeek(x.moveIn)>=14).length : 0;
     const badge = (c.rIn + c.hIn + sig + rts + lch) || "";
     html += `<button class="tab" data-view="${cssId(p)}" style="--spine:${DIV_COLORS[p]}">${esc(p)}<span class="badge">${badge}</span></button>`;
   }
@@ -418,6 +424,20 @@ function activate(viewId){
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.view===viewId));
   document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id==="view-"+viewId));
   window.scrollTo({top:0});
+  focusRequestedRecord();
+}
+
+function focusRequestedRecord(){
+  const requestId = new URLSearchParams(location.search).get("request") || "";
+  if(!requestId) return;
+  const record = [...document.querySelectorAll("[data-request-id]")].find(node=>node.dataset.requestId===requestId && node.closest(".view.active"));
+  if(!record) return;
+  setTimeout(()=>{
+    record.scrollIntoView({behavior:"smooth",block:"center"});
+    record.style.outline="3px solid var(--warn)";
+    record.style.outlineOffset="3px";
+    setTimeout(()=>{ record.style.outline=""; record.style.outlineOffset=""; },6000);
+  },80);
 }
 
 function buildViews(){
@@ -437,11 +457,14 @@ function divisionView(div){
   const id = cssId(div);
   const c = counts(div);
   const inbox = D.handoffs.filter(h=>h.to===div && h.status!=="Completed");
+  const sentHandoffs = D.handoffs.filter(h=>h.from===div).slice(-12).reverse();
   const queue = D.referrals.filter(r=>r.to===div && !["Completed","Declined/Redirect"].includes(r.status));
   const sent = D.referrals.filter(r=>r.from===div).slice(-12).reverse();
+  const closedReferrals = D.referrals.filter(r=>(r.from===div||r.to===div) && ["Completed","Declined/Redirect"].includes(r.status)).slice(-20).reverse();
+  const closedHandoffs = D.handoffs.filter(h=>(h.from===div||h.to===div) && h.status==="Completed").slice(-20).reverse();
   const todayStr = new Date().toISOString().slice(0,10);
   const sched = D.schedule.filter(b=>b.division===div && b.status==="Scheduled" && b.date>=todayStr).slice(0,10);
-  const isPorter = div==="The Porter House";
+  const isPorter = div==="Elevated Wellness";
 
   return `<section class="view" id="view-${id}" style="--pc:${DIV_COLORS[div]}">
     <div class="prog-head"><div class="bar"></div><div><h1>${esc(div)}</h1><p>${DIV_BLURBS[div]||""}</p></div>${div==="Primary Care"?`<img src="/assets/bhw-medical-logo.png" alt="BHW" style="height:84px;width:auto;margin-left:auto" onerror="this.style.display='none'">`:""}</div>
@@ -485,9 +508,17 @@ function divisionView(div){
     </div>
 
     <div class="card">
+      <h2>Warm handoffs we sent</h2>
+      <p class="lede">The sending and receiving groups see the same status, appointment date, and final record.</p>
+      <div class="tbl-wrap"><table><thead><tr><th>Patient</th><th>To</th><th>Sent</th><th>Status</th><th>Appointment</th><th>Review</th></tr></thead><tbody>
+      ${sentHandoffs.length ? sentHandoffs.map(h=>`<tr data-request-id="${esc(h.id)}"><td><b>${esc(patLabel(h.patient))}</b></td><td>${esc(h.to)}</td><td>${esc(h.createdDate)}</td><td>${statusPill(h.status)}</td><td>${esc(h.scheduledDate||"—")}</td><td><button class="btn sm sec" onclick="reviewHandoff('${h.id}')">Review</button></td></tr>`).join("") : `<tr><td colspan="6" class="empty">No handoffs sent yet.</td></tr>`}
+      </tbody></table></div>
+    </div>
+
+    <div class="card">
       <h2>Incoming referral queue <span class="grow"></span><button class="btn sm" onclick="openReferralForm('${esc(div)}')">+ New referral</button></h2>
       <div class="tbl-wrap"><table><thead><tr><th>Patient</th><th>From</th><th>Type</th><th>Details</th><th>Status</th><th>Action</th></tr></thead><tbody>
-      ${queue.length ? queue.map(r=>`<tr>
+      ${queue.length ? queue.map(r=>`<tr data-request-id="${esc(r.id)}">
         <td><b>${esc(patLabel(r.patient))}</b>${r.priority==="Urgent"?" "+statusPill("Urgent"):""}</td>
         <td>${esc(r.from)}</td><td>${esc(r.type)}${r.device?` · ${esc(r.device)}`:""}</td>
         <td style="max-width:260px">${esc(r.details)}</td><td>${statusPill(r.status)}</td>
@@ -498,8 +529,18 @@ function divisionView(div){
 
     <div class="card">
       <h2>Referrals we sent</h2>
-      <div class="tbl-wrap"><table><thead><tr><th>Patient</th><th>To</th><th>Type</th><th>Status</th><th>Confirmation</th></tr></thead><tbody>
-      ${sent.length ? sent.map(r=>`<tr><td><b>${esc(patLabel(r.patient))}</b></td><td>${esc(r.to)}</td><td>${esc(r.type)}</td><td>${statusPill(r.status)}</td><td style="max-width:280px">${esc(r.completionNote)}</td></tr>`).join("") : `<tr><td colspan="5" class="empty">Nothing sent yet.</td></tr>`}
+      <div class="tbl-wrap"><table><thead><tr><th>Patient</th><th>To</th><th>Type</th><th>Status</th><th>Confirmation</th><th>Review</th></tr></thead><tbody>
+      ${sent.length ? sent.map(r=>`<tr data-request-id="${esc(r.id)}"><td><b>${esc(patLabel(r.patient))}</b></td><td>${esc(r.to)}</td><td>${esc(r.type)}</td><td>${statusPill(r.status)}</td><td style="max-width:280px">${esc(r.completionNote)}</td><td><button class="btn sm sec" onclick="reviewReferral('${r.id}')">Review</button></td></tr>`).join("") : `<tr><td colspan="6" class="empty">Nothing sent yet.</td></tr>`}
+      </tbody></table></div>
+    </div>
+
+    <div class="card">
+      <h2>Closed coordination history</h2>
+      <p class="lede">Completed and closed records remain available to both groups for reference.</p>
+      <div class="tbl-wrap"><table><thead><tr><th>Patient</th><th>Record</th><th>Route</th><th>Closed</th><th>Status</th><th>Review</th></tr></thead><tbody>
+      ${closedReferrals.map(r=>`<tr data-request-id="${esc(r.id)}"><td><b>${esc(patLabel(r.patient))}</b></td><td>Referral · ${esc(r.type)}</td><td>${esc(r.from)} → ${esc(r.to)}</td><td>${esc(r.completedDate||r.updatedDate)}</td><td>${statusPill(r.status)}</td><td><button class="btn sm sec" onclick="reviewReferral('${r.id}')">Review</button></td></tr>`).join("")}
+      ${closedHandoffs.map(h=>`<tr data-request-id="${esc(h.id)}"><td><b>${esc(patLabel(h.patient))}</b></td><td>Warm handoff</td><td>${esc(h.from)} → ${esc(h.to)}</td><td>${esc(h.completedDate||h.updatedDate)}</td><td>${statusPill(h.status)}</td><td><button class="btn sm sec" onclick="reviewHandoff('${h.id}')">Review</button></td></tr>`).join("")}
+      ${!closedReferrals.length&&!closedHandoffs.length?`<tr><td colspan="6" class="empty">No closed coordination records yet.</td></tr>`:""}
       </tbody></table></div>
     </div>
 
@@ -567,7 +608,7 @@ function resourcesCard(div){
 
 function handoffCard(h){
   const cls = h.status==="Acknowledged"?"ack":(h.status==="Scheduled"?"sched":"");
-  return `<div class="hcard ${cls}">
+  return `<div class="hcard ${cls}" data-request-id="${esc(h.id)}">
     <div class="h-top"><b>${esc(patLabel(h.patient))}</b><span class="meta">from ${esc(h.from)} · ${esc(staffLabel(h.fromStaff))}</span>${statusPill(h.status)}${h.needs.map(n=>pill(n,"info")).join(" ")}</div>
     <div class="sum">${esc(h.summary)}</div>
     <div class="meta">${h.scheduledDate?`First visit: ${esc(h.scheduledDate)}`:"No visit scheduled yet"}</div>
@@ -582,7 +623,7 @@ function handoffCard(h){
 // appointment action, so the front desk can book & confirm across every division.
 function fdHandoffCard(h){
   const cls = h.status==="Acknowledged"?"ack":(h.status==="Scheduled"?"sched":"");
-  return `<div class="hcard ${cls}">
+  return `<div class="hcard ${cls}" data-request-id="${esc(h.id)}">
     <div class="h-top"><b>${esc(patLabel(h.patient))}</b><span class="meta">${esc(h.from)} → <b>${esc(h.to)}</b> · ${esc(staffLabel(h.fromStaff))}</span>${statusPill(h.status)}${h.needs.map(n=>pill(n,"info")).join(" ")}</div>
     <div class="sum">${esc(h.summary)}</div>
     <div class="meta">${h.scheduledDate?`Appt booked: ${esc(h.scheduledDate)}`:"No appointment booked yet"}</div>
@@ -600,8 +641,39 @@ function referralActions(r){
   return "";
 }
 
+function coordinationHistory(items){
+  const rows=(items||[]).filter(item=>item.at||item.status||item.action);
+  return rows.length?`<div class="tbl-wrap" style="margin-top:12px"><table><thead><tr><th>Date</th><th>Update</th><th>Status</th><th>By</th></tr></thead><tbody>${rows.map(item=>`<tr><td>${esc(item.at?new Date(item.at).toLocaleString():"—")}</td><td>${esc(item.action||"Updated")}</td><td>${esc(item.status||"—")}</td><td>${esc(item.by||"—")}</td></tr>`).join("")}</tbody></table></div>`:'<p class="lede">No separate status events were returned; the current saved status is shown above.</p>';
+}
+
+function reviewReferral(id){
+  const r=(D.referrals||[]).find(item=>item.id===id); if(!r) return;
+  openModal(`<h3>Referral record</h3><div class="msub">Saved in the shared BHW Operations queue and visible to ${esc(r.from)} and ${esc(r.to)}.</div>
+    <div class="f"><div class="awv-q"><div class="awv-l">Patient</div><b>${esc(patLabel(r.patient))}</b> · ${esc(r.patient)}</div>
+    <div class="row"><div><label>Route</label><div>${esc(r.from)} → ${esc(r.to)}</div></div><div><label>Status</label><div>${statusPill(r.status)}</div></div></div>
+    <div class="row"><div><label>Type</label><div>${esc(r.type)}</div></div><div><label>Priority</label><div>${esc(r.priority)}</div></div></div>
+    <label>Details</label><div class="awv-q">${esc(r.details||"No details entered.")}</div>
+    <label>Completion / redirect note</label><div class="awv-q">${esc(r.completionNote||"No completion note entered.")}</div>
+    <div class="row"><div><label>Sent</label><div>${esc(r.sentDate||"—")}</div></div><div><label>Closed</label><div>${esc(r.completedDate||"—")}</div></div></div>
+    ${coordinationHistory(r.statusHistory)}
+    <div class="macts">${patient360Link(r.patient)}<button class="btn sec" onclick="closeModal()">Close review</button></div></div>`);
+}
+
+function reviewHandoff(id){
+  const h=(D.handoffs||[]).find(item=>item.id===id); if(!h) return;
+  openModal(`<h3>Warm handoff record</h3><div class="msub">Saved in the shared BHW Operations queue and visible to ${esc(h.from)} and ${esc(h.to)}.</div>
+    <div class="f"><div class="awv-q"><div class="awv-l">Patient</div><b>${esc(patLabel(h.patient))}</b> · ${esc(h.patient)}</div>
+    <div class="row"><div><label>Route</label><div>${esc(h.from)} → ${esc(h.to)}</div></div><div><label>Status</label><div>${statusPill(h.status)}</div></div></div>
+    <label>Handoff summary</label><div class="awv-q">${esc(h.summary||"No summary entered.")}</div>
+    <label>Needs</label><div>${(h.needs||[]).map(n=>pill(n,"info")).join(" ")||"—"}</div>
+    <div class="row"><div><label>Sent</label><div>${esc(h.createdDate||"—")}</div></div><div><label>First visit</label><div>${esc(h.scheduledDate||"—")}</div></div></div>
+    <div class="row"><div><label>Last update</label><div>${esc(h.updatedDate||"—")}</div></div><div><label>Closed</label><div>${esc(h.completedDate||"—")}</div></div></div>
+    ${coordinationHistory(h.statusHistory)}
+    <div class="macts">${patient360Link(h.patient)}<button class="btn sec" onclick="closeModal()">Close review</button></div></div>`);
+}
+
 function porterCensus(){
-  return `<div class="card"><h2>Resident census — The Porter House</h2>
+  return `<div class="card"><h2>Resident census — Elevated Wellness</h2>
   <div class="tbl-wrap"><table><thead><tr><th>Resident</th><th>PH ID</th><th>Unit</th><th>Also receives</th><th>Status</th></tr></thead><tbody>
   ${D.porterhouse.length ? D.porterhouse.map(r=>`<tr><td><b>${esc(r.resident)}</b></td><td>${esc(r.phId)}</td><td>${esc(r.unit)}</td><td>${r.alsoReceives.map(a=>pill(a,"info")).join(" ")||"—"}</td><td>${statusPill(r.status)}</td></tr>`).join("") : `<tr><td colspan="5" class="empty">No residents entered yet.</td></tr>`}
   </tbody></table></div></div>`;
@@ -615,7 +687,7 @@ function adminView(){
   const upcoming = D.schedule.filter(b=>b.status==="Scheduled" && b.date>=todayStr).slice(0,20);
   const aging = openR.map(r=>({...r, days: r.sentDate? Math.floor((Date.now()-new Date(r.sentDate))/86400000):0})).sort((a,b)=>b.days-a.days);
   const rollup = D.adminRollup||{};
-  const divs = ["Primary Care","CharmEd Minds","Mind & Mood Recovery","The Porter House","Care Management","Flow"];
+  const divs = ["Primary Care","CharmEd Minds","Mind & Mood Recovery","Elevated Wellness","Care Management","Flow"];
   return `<section class="view" id="view-admin-master" style="--pc:var(--pc-admin)">
     <div class="prog-head"><div class="bar"></div><div><h1>Admin Master</h1><p>${DIV_BLURBS["Admin Master"]}</p></div></div>
     <div class="kpis">
@@ -1324,7 +1396,7 @@ const CM_AGE_SCREENERS = {
 // Remote delivery is limited to questionnaires with an active, approved
 // source in the protected Patient 360 screening catalog. Everything else
 // remains visible for clinical planning but cannot be selected for email.
-const CM_REMOTE_SCREENERS = new Set(["AQ-10", "RAADS-14", "ASRS", "PHQ-9", "GAD-7"]);
+const CM_REMOTE_SCREENERS = new Set(["CharmEd Minds — Pediatric Intake", "CharmEd Minds — Adult Intake", "AQ-10", "RAADS-14", "ASRS", "PHQ-9", "GAD-7"]);
 
 const CM_AGE_INPERSON = {
   "0-3 years": ["Hearing and vision status confirmation","Developmental / language / early-literacy observation (under 6)"],
@@ -1339,7 +1411,7 @@ let CM = null;
 function cmCard(){
   if(!D.charmed) return "";
   const open = D.charmed.filter(e=>!["Complete","Abandoned"].includes(e.status));
-  const done = D.charmed.filter(e=>e.status==="Complete").slice(0,5);
+  const done = D.charmed.filter(e=>["Complete","Abandoned"].includes(e.status)).slice(0,10);
   return `<div class="card">
     <h2>Peds assessment — guided flowsheet <span class="grow"></span><button class="btn sm" onclick="cmStart()">▶ Start new assessment</button></h2>
     <p class="lede">The CharmEd Minds flow separates what can be sent before the visit from supervised in-person screening: intake → school & attention → social & sensory → wellbeing → questionnaires & records → in-person screening → results & recommendations. Saves after every step.</p>
@@ -1347,10 +1419,32 @@ function cmCard(){
       ${open.map(e=>`<tr><td><b>${esc(patLabel(e.patient))}</b></td><td>${esc(e.ageGroup||"—")}</td>
         <td><span class="pill info">${esc(e.status)}</span>${(e.responses||[]).length?` <span class="pill ok">${e.responses.length} received</span>`:""}</td>
         <td>${e.steps.map((s,i)=>`<span class="pill ${s==="Complete"?"ok":s==="In Progress"?"warn":"gray"}">${i+1}</span>`).join(" ")}</td>
-        <td style="white-space:nowrap"><button class="btn sm" onclick="cmResume('${e.id}')">Resume</button>${(e.screeners||[]).length&&["Intake","Screeners Pending","In-Person Screening","In-Person Complete"].includes(e.status)?` <button class="btn sm sec" onclick="cmSendOpen('${e.id}','peds')">📤 Send</button>`:""}</td></tr>`).join("")}
+        <td style="white-space:nowrap"><button class="btn sm" onclick="cmResume('${e.id}')">Resume</button> <button class="btn sm sec" onclick="cmSendIntake('${e.id}','peds')">📤 Send intake</button>${(e.screeners||[]).length&&["Intake","Screeners Pending","In-Person Screening","In-Person Complete"].includes(e.status)?` <button class="btn sm sec" onclick="cmSendOpen('${e.id}','peds')">Send screeners</button>`:""}</td></tr>`).join("")}
     </tbody></table></div>` : `<div class="empty">No assessments in progress.</div>`}
-    ${done.length ? `<p class="lede" style="margin-top:12px">Recently completed: ${done.map(e=>esc(patLabel(e.patient))+" ("+esc(e.date)+")").join(" · ")}</p>` : ""}
+    ${done.length ? `<div class="tbl-wrap" style="margin-top:12px"><table><thead><tr><th>Closed assessment</th><th>Date</th><th>Status</th><th>Responses</th><th>Review</th></tr></thead><tbody>${done.map(e=>`<tr><td><b>${esc(patLabel(e.patient))}</b></td><td>${esc(e.date||"—")}</td><td>${statusPill(e.status)}</td><td>${(e.responses||[]).length}</td><td><button class="btn sm sec" onclick="reviewCharmedAssessment('${e.id}','peds')">Review record</button></td></tr>`).join("")}</tbody></table></div>` : ""}
   </div>`;
+}
+
+function assessmentValue(value){
+  if(Array.isArray(value)) return value.map(esc).join(" · ")||"—";
+  if(value&&typeof value==="object") return esc(JSON.stringify(value));
+  return esc(value??"—");
+}
+function assessmentLabel(key){ return String(key||"").replace(/([a-z])([A-Z])/g,"$1 $2").replaceAll("_"," ").replace(/^./,c=>c.toUpperCase()); }
+function reviewCharmedAssessment(id, kind){
+  const list=kind==="adult"?D.charmedAdult:D.charmed;
+  const e=(list||[]).find(item=>item.id===id); if(!e) return;
+  const flow=kind==="adult"?CMA_FLOW:CM_FLOW;
+  const steps=(e.answers||[]).map((answers,index)=>`<details ${index===0?"open":""} style="margin-top:9px"><summary><b>${index+1}. ${esc(flow[index]?.t||"Assessment step")}</b> · ${esc(e.steps?.[index]||"Not started")}</summary><div class="tbl-wrap" style="margin-top:8px"><table><tbody>${Object.entries(answers||{}).map(([key,value])=>`<tr><th style="width:32%">${esc(assessmentLabel(key))}</th><td>${assessmentValue(value)}</td></tr>`).join("")||'<tr><td class="empty">No answers saved for this step.</td></tr>'}</tbody></table></div></details>`).join("");
+  const responses=(e.responses||[]).map(response=>`<details style="margin-top:9px"><summary><b>${esc(response.screeningName||response.screeningId||"Patient response")}</b> · ${esc(response.submittedAt||response.createdAt||"")}</summary><div class="awv-q" style="margin-top:8px;white-space:pre-wrap">${esc(response.transcript||JSON.stringify(response.answers||{},null,2))}</div></details>`).join("");
+  openModal(`<h3>${kind==="adult"?"Adult":"Pediatric"} assessment record</h3><div class="msub">${esc(patLabel(e.patient))} · ${esc(e.patientBhwId||e.patient)} · saved in BHW Cloud</div><div class="f">
+    <div class="row"><div><label>Status</label><div>${statusPill(e.status)}</div></div><div><label>Date</label><div>${esc(e.date||"—")}</div></div></div>
+    <label>Flags</label><div>${(e.flags||[]).map(flag=>pill(flag,"warn")).join(" ")||"—"}</div>
+    <label>Assigned questionnaires</label><div>${(e.screeners||[]).map(item=>pill(item,"gray")).join(" ")||"—"}</div>
+    <div class="res-cat">Saved assessment steps</div>${steps}
+    <div class="res-cat">Patient / caregiver responses</div>${responses||'<div class="empty">No submitted patient or caregiver responses are linked yet.</div>'}
+    <div class="macts">${patient360Link(e.patientBhwId||e.patient)}<button class="btn sec" onclick="closeModal()">Close review</button></div></div>`);
+  const body=document.querySelector(".mcard"); if(body) body.style.maxWidth="780px";
 }
 
 function cmStart(){
@@ -1364,6 +1458,7 @@ async function cmBegin(){
   if(!pid){ document.getElementById("f-err").textContent="Pick a patient."; return; }
   try{
     const res = await api(API_ACT, {action:"cm-save", patientId:pid, step:1, stepStatus:"In Progress", answers:{}});
+    toast(savedStamp(res));
     CM = { id: res.id, patientId: pid, answers: [{},{},{},{},{},{},{}], stepStates:["In Progress","Not Started","Not Started","Not Started","Not Started","Not Started","Not Started"], step: 0 };
     cmRender();
   }catch(e){ document.getElementById("f-err").textContent = e.message; }
@@ -1529,7 +1624,8 @@ async function cmSave(stepStatus, advance){
   }
   if(advance && stepStatus==="Complete" && statusByStep[CM.step+1]) body.status = statusByStep[CM.step+1];
   try{
-    await api(API_ACT, body);
+    const saved = await api(API_ACT, body);
+    toast(savedStamp(saved));
     if(!advance){ closeModal(); refreshSoft(); return; }
     if(CM.step<6){ CM.step++; cmRender(); }
     else cmSummary();
@@ -1562,8 +1658,8 @@ function cmSummary(){
 }
 async function cmStage(status){
   try{
-    await api(API_ACT, {action:"cm-save", id:CM.id, status, flags:cmFlags()});
-    toast(`Assessment marked ${status}`); closeModal(); CM=null; refreshSoft();
+    const saved = await api(API_ACT, {action:"cm-save", id:CM.id, status, flags:cmFlags()});
+    toast(`${savedStamp(saved)} · assessment marked ${status}`); closeModal(); CM=null; refreshSoft();
   }catch(e){ toast("⚠ "+e.message); }
 }
 
@@ -1634,7 +1730,7 @@ let CMA = null;
 function cmaCard(){
   if(!D.charmedAdult) return "";
   const open = D.charmedAdult.filter(e=>!["Complete","Abandoned"].includes(e.status));
-  const done = D.charmedAdult.filter(e=>e.status==="Complete").slice(0,5);
+  const done = D.charmedAdult.filter(e=>["Complete","Abandoned"].includes(e.status)).slice(0,10);
   return `<div class="card">
     <h2>Adult assessment — guided flowsheet <span class="grow"></span><button class="btn sm" onclick="cmaStart()">▶ Start adult assessment</button></h2>
     <p class="lede">The Adult Assessment Hub intake as one guided flow: concerns → EF/social/sensory → mental health & cognition → substance/injury/trauma → vascular & sleep → screeners. Brain-based routing flags fire automatically, including Flow vascular candidates.</p>
@@ -1642,9 +1738,9 @@ function cmaCard(){
       ${open.map(e=>`<tr><td><b>${esc(patLabel(e.patient))}</b></td>
         <td><span class="pill info">${esc(e.status)}</span>${(e.responses||[]).length?` <span class="pill ok">${e.responses.length} received</span>`:""}</td>
         <td>${e.steps.map((s,i)=>`<span class="pill ${s==="Complete"?"ok":s==="In Progress"?"warn":"gray"}">${i+1}</span>`).join(" ")}</td>
-        <td style="white-space:nowrap"><button class="btn sm" onclick="cmaResume('${e.id}')">Resume</button>${(e.screeners||[]).length&&["Intake","Screeners Pending"].includes(e.status)?` <button class="btn sm sec" onclick="cmSendOpen('${e.id}','adult')">📤 Send</button>`:""}</td></tr>`).join("")}
+        <td style="white-space:nowrap"><button class="btn sm" onclick="cmaResume('${e.id}')">Resume</button> <button class="btn sm sec" onclick="cmSendIntake('${e.id}','adult')">📤 Send intake</button>${(e.screeners||[]).length&&["Intake","Screeners Pending"].includes(e.status)?` <button class="btn sm sec" onclick="cmSendOpen('${e.id}','adult')">Send screeners</button>`:""}</td></tr>`).join("")}
     </tbody></table></div>` : `<div class="empty">No adult assessments in progress.</div>`}
-    ${done.length ? `<p class="lede" style="margin-top:12px">Recently completed: ${done.map(e=>esc(patLabel(e.patient))+" ("+esc(e.date)+")").join(" · ")}</p>` : ""}
+    ${done.length ? `<div class="tbl-wrap" style="margin-top:12px"><table><thead><tr><th>Closed assessment</th><th>Date</th><th>Status</th><th>Responses</th><th>Review</th></tr></thead><tbody>${done.map(e=>`<tr><td><b>${esc(patLabel(e.patient))}</b></td><td>${esc(e.date||"—")}</td><td>${statusPill(e.status)}</td><td>${(e.responses||[]).length}</td><td><button class="btn sm sec" onclick="reviewCharmedAssessment('${e.id}','adult')">Review record</button></td></tr>`).join("")}</tbody></table></div>` : ""}
   </div>`;
 }
 
@@ -1659,6 +1755,7 @@ async function cmaBegin(){
   if(!pid){ document.getElementById("f-err").textContent="Pick a patient."; return; }
   try{
     const res = await api(API_ACT, {action:"cma-save", patientId:pid, step:1, stepStatus:"In Progress", answers:{}});
+    toast(savedStamp(res));
     CMA = { id: res.id, patientId: pid, answers: [{},{},{},{},{},{}], step: 0 };
     cmaRender();
   }catch(e){ document.getElementById("f-err").textContent = e.message; }
@@ -1768,7 +1865,8 @@ async function cmaSave(stepStatus, advance){
     screeners: CMA.answers[5].screeners || undefined };
   if(advance && stepStatus==="Complete" && [4,5].includes(CMA.step)) body.status = "Screeners Pending";
   try{
-    await api(API_ACT, body);
+    const saved = await api(API_ACT, body);
+    toast(savedStamp(saved));
     if(!advance){ closeModal(); refreshSoft(); return; }
     if(CMA.step<5){ CMA.step++; cmaRender(); }
     else cmaSummary();
@@ -1802,8 +1900,8 @@ function cmaSummary(){
 }
 async function cmaStage(status){
   try{
-    await api(API_ACT, {action:"cma-save", id:CMA.id, status, flags:cmaFlags()});
-    toast(`Assessment marked ${status}`); closeModal(); CMA=null; refreshSoft();
+    const saved = await api(API_ACT, {action:"cma-save", id:CMA.id, status, flags:cmaFlags()});
+    toast(`${savedStamp(saved)} · assessment marked ${status}`); closeModal(); CMA=null; refreshSoft();
   }catch(e){ toast("⚠ "+e.message); }
 }
 
@@ -1896,7 +1994,7 @@ function cpNote(id){
 
 /* ============ Patient registration (everyone) + duplicate guard ============ */
 const NP_INS = ["Medicare","Medicaid","Medicare + Medicaid","Aetna","CareFirst BCBS","Cigna","UnitedHealthcare","Johns Hopkins EHP","Tricare","Self-Pay","Other"];
-const NP_PROGS = ["Primary Care","CharmEd Minds","Mind & Mood Recovery","Care Management","Flow","The Porter House","BHI","RPM","12-Week Program"];
+const NP_PROGS = ["Primary Care","CharmEd Minds","Mind & Mood Recovery","Care Management","Flow","Elevated Wellness","BHI","RPM","12-Week Program"];
 
 function npEnsureOverlay(){
   if(document.getElementById("np-overlay")) return;
@@ -2055,7 +2153,7 @@ function npSelectInPicker(id, label){
   s.value = id;
 }
 
-/* ============ The Porter House — Life Readiness, BH Screening & Growth Plan ============ */
+/* ============ Elevated Wellness — Life Readiness, BH Screening & Growth Plan ============ */
 const PH_DOMAINS = [
  {d:"Home & Housing", skills:["Keeps living space clean","Does laundry independently","Basic upkeep / reports maintenance","Understands house rules & lease basics"]},
  {d:"Money & Finances", skills:["Has and manages a bank account","Builds & follows a weekly budget","Pays bills on time","Understands benefits (SNAP/SSI/etc.)"]},
@@ -2094,7 +2192,7 @@ function phDomainAvgs(lr){
 function phGrowthCard(){
   if(!D.phPlans) return "";
   const active = D.phPlans.filter(p=>!["Graduated — Independent","Discharged — Other"].includes(p.stage));
-  const grads = D.phPlans.filter(p=>p.stage==="Graduated — Independent").slice(-5);
+  const closed = D.phPlans.filter(p=>["Graduated — Independent","Discharged — Other"].includes(p.stage)).slice(-10).reverse();
   const launchDue = active.filter(p=>phWeek(p.moveIn)>=14 || phAutoStage(phWeek(p.moveIn), p.stage)==="Launch Review Due");
   return `<div class="card">
     <h2>Growth plans — life readiness <span class="grow"></span>${launchDue.length?`<span class="pill alert">⚠ ${launchDue.length} launch review${launchDue.length>1?"s":""} due</span>`:""}<button class="btn sm" onclick="phNewPlan()">+ New growth plan</button></h2>
@@ -2122,6 +2220,7 @@ function phGrowthCard(){
         ${p.drivers.length?`<div style="margin-bottom:8px">${p.drivers.map(d=>`<span class="pill gray">${esc(d)}</span>`).join(" ")}</div>`:""}
         ${p.goals.length?`<div style="font-size:12px;color:var(--ink-soft);margin-bottom:8px"><b>Goals:</b> ${p.goals.filter(g=>g.status!=="Done").length} active · ${p.goals.filter(g=>g.status==="Done").length} done</div>`:""}
         <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn sm sec" onclick="phReview('${p.id}')">Review saved readiness</button>
           ${!p.baseline?`<button class="btn sm" onclick="phLR('${p.id}','baseline')">Baseline assessment</button>`:`<button class="btn sm sec" onclick="phLR('${p.id}','latest')">Re-assess readiness</button>`}
           <button class="btn sm sec" onclick="phScreen('${p.id}')">Log BH screen</button>
           <button class="btn sm sec" onclick="phGoals('${p.id}')">Growth goals</button>
@@ -2132,8 +2231,25 @@ function phGrowthCard(){
         </div>
       </div>`;
     }).join("") : `<div class="empty">No active growth plans. Start one at move-in.</div>`}
-    ${grads.length ? `<p class="lede" style="margin-top:10px">Graduated to independence: ${grads.map(p=>esc(patLabel(p.patient))).join(" · ")} 🏠</p>` : ""}
+    ${closed.length ? `<div class="res-cat">Closed readiness records</div><div class="tbl-wrap"><table><thead><tr><th>Resident</th><th>Move-in</th><th>Final stage</th><th>Baseline</th><th>Latest</th><th>Review</th></tr></thead><tbody>${closed.map(p=>`<tr><td><b>${esc(patLabel(p.patient))}</b></td><td>${esc(p.moveIn||"—")}</td><td>${statusPill(p.stage)}</td><td>${p.basePct??"—"}%</td><td>${p.latestPct??"—"}%</td><td><button class="btn sm sec" onclick="phReview('${p.id}')">Review record</button></td></tr>`).join("")}</tbody></table></div>` : ""}
   </div>`;
+}
+
+function phReadinessRows(plan){
+  const baseline=phDomainAvgs(plan.baseline||{}), latest=phDomainAvgs(plan.latest||{});
+  return PH_DOMAINS.map((domain,index)=>`<tr><td><b>${esc(domain.d)}</b></td><td>${baseline[index].avg===null?"—":baseline[index].avg.toFixed(2)+" / 4"}</td><td>${latest[index].avg===null?"—":latest[index].avg.toFixed(2)+" / 4"}</td></tr>`).join("");
+}
+function phReview(id){
+  const p=(D.phPlans||[]).find(item=>item.id===id); if(!p) return;
+  openModal(`<h3>Elevated Wellness readiness record</h3><div class="msub">${esc(patLabel(p.patient))} · saved in BHW Cloud · linked by ${esc(p.patient)}</div><div class="f">
+    <div class="row"><div><label>Stage</label><div>${statusPill(p.stage||"—")}</div></div><div><label>Move-in</label><div>${esc(p.moveIn||"—")}</div></div></div>
+    <div class="row"><div><label>Baseline readiness</label><div><b>${p.basePct??"—"}%</b></div></div><div><label>Latest readiness</label><div><b>${p.latestPct??"—"}%</b> ${p.lrLatestDate?`· ${esc(p.lrLatestDate)}`:""}</div></div></div>
+    <div class="tbl-wrap"><table><thead><tr><th>Life-readiness domain</th><th>Baseline</th><th>Latest</th></tr></thead><tbody>${phReadinessRows(p)}</tbody></table></div>
+    <div class="res-cat">Behavioral health screen history</div>${p.screens.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>PHQ-9</th><th>GAD-7</th><th>AUDIT-C</th><th>C-SSRS</th><th>Notes</th></tr></thead><tbody>${p.screens.map(screen=>`<tr><td>${esc(screen.date||"—")}</td><td>${esc(screen.phq9??"—")}</td><td>${esc(screen.gad7??"—")}</td><td>${esc(screen.auditc??"—")}</td><td>${screen.cssrsConcern?"Concern":screen.cssrs?"Administered":"—"}</td><td>${esc(screen.notes||"")}</td></tr>`).join("")}</tbody></table></div>`:'<div class="empty">No BH screens saved.</div>'}
+    <div class="res-cat">Growth goals</div>${p.goals.length?`<div class="tbl-wrap"><table><thead><tr><th>Domain</th><th>Goal</th><th>Target</th><th>Status</th></tr></thead><tbody>${p.goals.map(goal=>`<tr><td>${esc(goal.domain||"")}</td><td>${esc(goal.goal||"")}</td><td>${esc(goal.month||"")}</td><td>${esc(goal.status||"")}</td></tr>`).join("")}</tbody></table></div>`:'<div class="empty">No growth goals saved.</div>'}
+    ${p.notes?`<label>Notes</label><div class="awv-q">${esc(p.notes)}</div>`:""}
+    <div class="macts">${patient360Link(p.patient)}<button class="btn sec" onclick="closeModal()">Close review</button></div></div>`);
+  const body=document.querySelector(".mcard"); if(body) body.style.maxWidth="820px";
 }
 
 function phNewPlan(){
@@ -2150,8 +2266,8 @@ function phNewPlan(){
 async function phNewSubmit(){
   const drivers=[...document.querySelectorAll("#f-drv .chip.on")].map(c=>c.dataset.d);
   try{
-    await api(API_ACT, {action:"ph-plan-save", patientId:val("f-pat"), moveIn:val("f-date"), drivers});
-    toast("Growth plan created — do the baseline assessment next"); closeModal(); refreshSoft();
+    const saved = await api(API_ACT, {action:"ph-plan-save", patientId:val("f-pat"), moveIn:val("f-date"), drivers});
+    toast(`${savedStamp(saved)} · growth plan created`); closeModal(); refreshSoft();
   }catch(e){ document.getElementById("f-err").textContent = e.message; }
 }
 
@@ -2191,8 +2307,8 @@ async function phLRSave(){
   const pct = phPct(clean);
   if(pct===null){ document.getElementById("f-err").textContent = "Score at least a few skills first."; return; }
   try{
-    await api(API_ACT, {action:"ph-plan-save", id:PHLR.id, lrKind:PHLR.kind, lr:clean, lrPct:pct});
-    toast(`${PHLR.kind==="baseline"?"Baseline":"Re-assessment"} saved — ${pct}% ready`); closeModal(); PHLR=null; refreshSoft();
+    const saved = await api(API_ACT, {action:"ph-plan-save", id:PHLR.id, lrKind:PHLR.kind, lr:clean, lrPct:pct});
+    toast(`${savedStamp(saved)} · ${PHLR.kind==="baseline"?"baseline":"re-assessment"} ${pct}%`); closeModal(); PHLR=null; refreshSoft();
   }catch(e){ document.getElementById("f-err").textContent = e.message; }
 }
 
@@ -2220,9 +2336,9 @@ async function phScreenSave(id){
   const entry = { date:val("f-date"), phq9:val("f-phq"), gad7:val("f-gad"), auditc:val("f-aud"), cssrs:cs.includes("done"), cssrsConcern:cs.includes("concern"), notes:val("f-note") };
   const screens = [...p.screens, entry];
   try{
-    await api(API_ACT, {action:"ph-plan-save", id, screens});
+    const saved = await api(API_ACT, {action:"ph-plan-save", id, screens});
     const hot = (+entry.phq9>=15)||(+entry.gad7>=15)||entry.cssrsConcern;
-    toast(hot ? "⚠ Screen saved — escalate to Amaris same-day and loop Mind & Mood" : "Screen saved");
+    toast(hot ? `⚠ ${savedStamp(saved)} · escalate to Amaris same-day and loop Mind & Mood` : savedStamp(saved));
     closeModal(); refreshSoft();
   }catch(e){ document.getElementById("f-err").textContent = e.message; }
 }
@@ -2273,8 +2389,8 @@ function phGoalsSuggest(id){
 }
 async function phGoalsSave(id){
   try{
-    await api(API_ACT, {action:"ph-plan-save", id, goals:window.__phGoals});
-    toast("Growth goals saved"); closeModal(); refreshSoft();
+    const saved = await api(API_ACT, {action:"ph-plan-save", id, goals:window.__phGoals});
+    toast(`${savedStamp(saved)} · growth goals`); closeModal(); refreshSoft();
   }catch(e){ document.getElementById("f-err").textContent = e.message; }
 }
 
@@ -2409,10 +2525,13 @@ function prevStartAwv(patientId){
 
 
 /* ============ Questionnaire sending (approved remote links only) ============ */
-function cmSendOpen(assessmentId, kind){
+function cmSendIntake(assessmentId, kind){
+  cmSendOpen(assessmentId, kind, [kind==="adult"?"CharmEd Minds — Adult Intake":"CharmEd Minds — Pediatric Intake"]);
+}
+function cmSendOpen(assessmentId, kind, requestedScreeners){
   const list = kind==="adult" ? D.charmedAdult : D.charmed;
   const e = (list||[]).find(x=>x.id===assessmentId); if(!e) return;
-  const screeners = e.screeners || [];
+  const screeners = requestedScreeners || e.screeners || [];
   const reasons = kind==="adult" ? cmaScreeningReasons(e.answers) : cmScreeningReasons(e.answers);
   const patient360Status = e.patientBhwId
     ? `<span class="pill ok" id="ss-p360">Patient 360 matched · ${esc(e.patientBhwId)}</span>`
@@ -2725,7 +2844,7 @@ function openReferralForm(from){
   <div class="f">
     <label>Patient</label><select id="f-pat"><option value="">Select patient…</option>${patientOptions()}</select>
     <div class="row"><div><label>From</label><select id="f-from">${divisionOptions(froms)}</select></div>
-    <div><label>To</label><select id="f-to">${divisionOptions(["Primary Care","CharmEd Minds","Mind & Mood Recovery","The Porter House","Care Management","Flow"])}</select></div></div>
+    <div><label>To</label><select id="f-to">${divisionOptions(["Primary Care","CharmEd Minds","Mind & Mood Recovery","Elevated Wellness","Care Management","Flow"])}</select></div></div>
     <label>Template <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink-soft)">— pre-written, filtered by destination</span></label>
     <select id="f-tpl"><option value="">— write my own —</option></select>
     <div class="row"><div><label>Type</label><select id="f-type"><option>Division Referral</option><option>SDH</option><option>Acute follow-up</option><option>Chronic follow-up</option><option>Specialist coordination</option><option>Care plan support</option><option>Visit spacing / more time</option><option>Monitoring equipment</option><option>Device Order</option><option>Flow Pathway</option><option>Lab/Imaging Follow-up</option><option>Other</option></select></div>
@@ -2794,7 +2913,7 @@ function openHandoffForm(from){
   <div class="f">
     <label>Patient</label><select id="f-pat"><option value="">Select patient…</option>${patientOptions()}</select>
     <div class="row"><div><label>From</label><select id="f-from">${divisionOptions(D.visibleDivisions)}</select></div>
-    <div><label>To</label><select id="f-to">${divisionOptions(["Primary Care","CharmEd Minds","Mind & Mood Recovery","The Porter House","Care Management","Flow"])}</select></div></div>
+    <div><label>To</label><select id="f-to">${divisionOptions(["Primary Care","CharmEd Minds","Mind & Mood Recovery","Elevated Wellness","Care Management","Flow"])}</select></div></div>
     <label>Warm handoff summary — reason, context, what they need to know</label><textarea id="f-sum"></textarea>
     <label>Needs</label><div class="needs" id="f-needs">${NEEDS.map(n=>`<button class="chip" type="button" onclick="this.classList.toggle('on')" data-n="${n}">${n}</button>`).join("")}</div>
     <label>First visit date (if known)</label><input type="date" id="f-date">
@@ -2835,7 +2954,7 @@ function openBookingForm(){
     <label>Room</label><select id="f-room" onchange="filterServices()"><option value="">Select room…</option>${D.rooms.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join("")}</select>
     <label>Service</label><select id="f-svc">${SERVICES.map(s=>`<option>${s}</option>`).join("")}</select>
     <label>Staff (hold Ctrl/Cmd for multiple)</label><select id="f-staff" multiple size="4">${D.staff.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join("")}</select>
-    <div class="row"><div><label>Date</label><input type="date" id="f-date"></div><div><label>Division</label><select id="f-div">${divisionOptions(["Primary Care","CharmEd Minds","Mind & Mood Recovery","The Porter House","Care Management","Flow","Shared"])}</select></div></div>
+    <div class="row"><div><label>Date</label><input type="date" id="f-date"></div><div><label>Division</label><select id="f-div">${divisionOptions(["Primary Care","CharmEd Minds","Mind & Mood Recovery","Elevated Wellness","Care Management","Flow","Shared"])}</select></div></div>
     <div class="row"><div><label>Start</label><input type="time" id="f-start"></div><div><label>End</label><input type="time" id="f-end"></div></div>
     <label>Notes (no patient identifiers needed)</label><input type="text" id="f-note">
     <div class="ferr" id="f-err"></div>
@@ -2872,9 +2991,10 @@ const val = id => document.getElementById(id)?.value?.trim?.() ?? document.getEl
 
 async function act(body, okMsg, rethrow){
   try{
-    await api(API_ACT, body);
-    toast(okMsg);
+    const result = await api(API_ACT, body);
+    toast(result?.storage==="BHW Cloud" ? `${okMsg} · ${savedStamp(result)}` : okMsg);
     await refreshSoft();
+    window.BHWAlerts?.refresh?.();
   }catch(e){
     if(rethrow) throw e;
     toast("⚠ " + e.message);
