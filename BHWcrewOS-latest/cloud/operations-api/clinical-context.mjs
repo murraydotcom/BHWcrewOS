@@ -8,7 +8,7 @@ export const PATIENT_WORKSPACE_SESSION_TTL_SECONDS = 15 * 60;
 export const PATIENT_WORKSPACE_DESTINATIONS = Object.freeze({
   "clinical-map": Object.freeze({
     launchPath: "/provider/patient-360.html",
-    label: "BHW Whole-Person Clinical Map",
+    label: "BHW Provider 360",
     requiredScope: "clinical-map.read",
   }),
   "body-system-atlas": Object.freeze({

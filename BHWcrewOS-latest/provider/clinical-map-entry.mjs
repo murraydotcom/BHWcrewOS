@@ -5,6 +5,10 @@ import {
   resolvePatientWorkspaceContext,
   temporaryPatientQuery,
 } from "./patient-workspace-context.mjs";
+import {
+  applyProvider360Naming,
+  observeProvider360Naming,
+} from "./provider-360-naming.mjs";
 
 const MAP_PATH = /\/provider\/patient-360(?:-[a-z]+)?\.html$/;
 const PATIENT_SCOPED_PATH = /\/(?:provider\/nutrition-intelligence|bhw-paperwork|bhw-patient-monitor-list)\.html$/;
@@ -74,7 +78,7 @@ function insertRegistryContextPanel(context) {
   const panel = document.createElement("section");
   panel.id = "patient-workspace-context-panel";
   panel.className = "panel patient-workspace-context-panel";
-  panel.innerHTML = `<div class="panel-body"><div><span class="eyebrow">Patient Registry verified</span><h3>Protected patient workspace context</h3><p>This tab is authorized for treatment-purpose read access to the Whole-Person Clinical Map, Body-System Atlas, and Patient Operations. Health Core remains the canonical record.</p><div class="patient-workspace-context-lock">The one-time launch token has been consumed and removed from the address. This tab context expires at ${escapeHtml(new Date(context.sessionExpiresAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }))}.</div></div><div class="patient-workspace-context-actions"><a class="btn primary" href="patient-operations.html">Open Patient Operations</a><a class="btn" href="patient-registry.html">Return to Patient Registry</a></div></div>`;
+  panel.innerHTML = `<div class="panel-body"><div><span class="eyebrow">Patient Registry verified</span><h3>Protected patient workspace context</h3><p>This tab is authorized for treatment-purpose read access to Provider 360, the Body-System Atlas, and Patient Operations. Health Core remains the canonical record.</p><div class="patient-workspace-context-lock">The one-time launch token has been consumed and removed from the address. This tab context expires at ${escapeHtml(new Date(context.sessionExpiresAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }))}.</div></div><div class="patient-workspace-context-actions"><a class="btn primary" href="patient-operations.html">Open Patient Operations</a><a class="btn" href="patient-registry.html">Return to Patient Registry</a></div></div>`;
   hero.insertAdjacentElement("afterend", panel);
 }
 
@@ -82,6 +86,7 @@ function watchRenderedContent(context) {
   const paint = () => {
     cleanInternalPatientLinks(context);
     insertRegistryContextPanel(context);
+    applyProvider360Naming();
   };
   paint();
   const observer = new MutationObserver(paint);
@@ -103,10 +108,14 @@ function renderBlocked(error) {
   }
   const content = document.getElementById("content");
   if (content) content.innerHTML = `<section class="panel"><div class="panel-head"><h3>Open this workspace from Patient Registry</h3><span class="badge restricted">Access blocked</span></div><div class="panel-body"><p>${escapeHtml(error?.message || "The patient workspace could not be verified.")}</p><a class="btn primary" href="patient-registry.html">Return to Patient Registry</a></div></section>`;
+  applyProvider360Naming();
 }
 
 async function start() {
   installContextStyles();
+  applyProvider360Naming();
+  observeProvider360Naming();
+
   const destination = destinationFromPath(location.pathname);
   const client = createPatientWorkspaceContextClient();
   const context = await resolvePatientWorkspaceContext({
@@ -125,6 +134,7 @@ async function start() {
 
   if (context.synthetic) {
     await import("./whole-person-clinical-map-bridge.mjs");
+    applyProvider360Naming();
   }
 }
 

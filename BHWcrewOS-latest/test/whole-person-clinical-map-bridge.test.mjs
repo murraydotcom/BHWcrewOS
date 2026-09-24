@@ -4,17 +4,24 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import {
-  CLINICAL_MAP_SUBTITLE,
-  CLINICAL_MAP_TITLE,
   healthCoreDestinations,
   loadClinicalMapConnections,
   SYNTHETIC_CLINICAL_MAP_PATIENT_ID,
   validateHealthCoreOrigin,
 } from "../provider/whole-person-clinical-map-bridge.mjs";
+import {
+  PROVIDER_360_LEGACY_ALIASES,
+  PROVIDER_360_SHORT_TITLE,
+  PROVIDER_360_SUBTITLE,
+  PROVIDER_360_TITLE,
+} from "../provider/provider-360-naming.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const provider = path.join(root, "provider");
 const moduleSource = fs.readFileSync(path.join(provider, "whole-person-clinical-map-bridge.mjs"), "utf8");
+const namingSource = fs.readFileSync(path.join(provider, "provider-360-naming.mjs"), "utf8");
+const entrySource = fs.readFileSync(path.join(provider, "clinical-map-entry.mjs"), "utf8");
+const launcherSource = fs.readFileSync(path.join(provider, "patient-workspace-launcher.mjs"), "utf8");
 const css = fs.readFileSync(path.join(provider, "whole-person-clinical-map-bridge.css"), "utf8");
 
 const pages = [
@@ -28,15 +35,20 @@ const pages = [
   "patient-360-sources.html",
 ];
 
-test("all eight legacy Patient 360 routes present the formal Whole-Person Clinical Map identity", () => {
-  assert.equal(CLINICAL_MAP_TITLE, "BHW Whole-Person Clinical Map");
-  assert.equal(CLINICAL_MAP_SUBTITLE, "PSCM longitudinal synthesis, body-system mapping, and feasible care planning");
+test("all eight legacy Patient 360 routes present the canonical Provider 360 identity", () => {
+  assert.equal(PROVIDER_360_TITLE, "BHW Provider 360");
+  assert.equal(PROVIDER_360_SHORT_TITLE, "Provider 360");
+  assert.equal(PROVIDER_360_SUBTITLE, "PSCM longitudinal synthesis, body-system mapping, and feasible care planning");
   assert.equal(SYNTHETIC_CLINICAL_MAP_PATIENT_ID, "BHW0000");
+  assert.ok(PROVIDER_360_LEGACY_ALIASES.includes("PSCM Complex Patient Navigator"));
+  assert.ok(PROVIDER_360_LEGACY_ALIASES.includes("BHW Whole-Person Clinical Map"));
+
   for (const page of pages) {
     const html = fs.readFileSync(path.join(provider, page), "utf8");
-    assert.match(html, /BHW Whole-Person Clinical Map/);
+    assert.match(html, /BHW Provider 360/);
     assert.match(html, /PSCM longitudinal synthesis/);
-    assert.match(html, /◉ Clinical Map/);
+    assert.match(html, /◉ Provider 360/);
+    assert.doesNotMatch(html, /BHW Whole-Person Clinical Map|PSCM Complex Patient Navigator/);
     assert.match(html, /name="bhw-health-core-ehr-origin"/);
     assert.match(html, /whole-person-clinical-map-bridge\.css/);
     assert.match(html, /clinical-map-entry\.mjs/);
@@ -46,10 +58,22 @@ test("all eight legacy Patient 360 routes present the formal Whole-Person Clinic
   assert.match(entry, /import\("\.\/whole-person-clinical-map-bridge\.mjs"\)/);
 });
 
-test("existing Patient 360 filenames remain stable while display naming changes", () => {
+test("existing Patient 360 filenames and clinical-map compatibility identifiers remain stable", () => {
   const discovered = fs.readdirSync(provider).filter((name) => /^patient-360(?:-[a-z]+)?\.html$/.test(name));
   assert.equal(discovered.length, 8);
   assert.deepEqual(new Set(discovered), new Set(pages));
+  assert.match(entrySource, /patient-360/);
+  assert.match(launcherSource, /data-workspace-destination="clinical-map"/);
+  assert.match(launcherSource, /Open Provider 360/);
+});
+
+test("Provider 360 naming layer supersedes historical display aliases without changing routes", () => {
+  assert.match(namingSource, /BHW Provider 360/);
+  assert.match(namingSource, /Whole-Person Clinical Map/);
+  assert.match(namingSource, /Complex Patient Navigator/);
+  assert.match(entrySource, /applyProvider360Naming/);
+  assert.match(entrySource, /observeProvider360Naming/);
+  assert.match(entrySource, /treatment-purpose read access to Provider 360/);
 });
 
 test("Health Core destinations remain synthetic, source-specific, and open the canonical workflows", () => {
@@ -102,7 +126,7 @@ test("Health Core link validation accepts only trusted HTTPS service origins", (
   }
 });
 
-test("Clinical Map reads the connected Health Core workspaces without creating a second record", async () => {
+test("Provider 360 reads connected Health Core workspaces without creating a second record", async () => {
   const client = {
     async healthRecord() {
       return { record: { entry: [
@@ -134,13 +158,13 @@ test("Clinical Map reads the connected Health Core workspaces without creating a
   assert.match(connections.find((item) => item.id === "nutrition-intelligence").detail, /Published Nutrition Intelligence v2/);
 });
 
-test("bridge remains read-only and names the application boundaries", () => {
-  assert.match(moduleSource, /Clinical Map is the synthesis workspace/);
+test("bridge remains read-only and the naming layer presents Provider 360 boundaries", () => {
   assert.match(moduleSource, /Health Core remains the canonical record/);
   assert.match(moduleSource, /CrewOS owns operational follow-through/);
   assert.match(moduleSource, /Care Connect receives only provider-approved patient-safe information/);
   assert.match(moduleSource, /opaque, short-lived, treatment-purpose context/);
   assert.match(moduleSource, /target="_blank" rel="noopener noreferrer"/);
+  assert.match(namingSource, /Provider 360 is the synthesis workspace/);
   assert.doesNotMatch(moduleSource, /\.savePatientAtlas\(/);
   assert.doesNotMatch(moduleSource, /\.savePatientClinicalEvent\(/);
   assert.doesNotMatch(moduleSource, /\.savePatientNutritionIntelligence\(/);
