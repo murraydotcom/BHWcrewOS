@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>BHW Panel Performance</title>
+<title>BHW Population Health</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -19,7 +19,7 @@ html{-webkit-text-size-adjust:100%}
 body{font-family:'Montserrat',system-ui,-apple-system,sans-serif;background:var(--paper);color:var(--ink);font-size:15px;line-height:1.5;padding-bottom:84px}
 button{font-family:inherit;cursor:pointer}
 button:disabled{opacity:.55;cursor:wait}
-input,select{font-family:inherit;font-size:15px}
+input,select,textarea{font-family:inherit;font-size:15px}
 
 /* ---------- Header ---------- */
 header{background:var(--ink);color:var(--opal);padding:18px 16px 14px;position:relative;overflow:hidden}
@@ -76,8 +76,9 @@ h2{font-size:15px;font-weight:700;margin-bottom:10px}
 
 /* ---------- Forms ---------- */
 label.f{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--charcoal);margin:10px 0 4px}
-input[type=text],input[type=date],input[type=number],input[type=password],select{width:100%;padding:11px 12px;border:1.5px solid var(--limestone);border-radius:10px;background:#fff;color:var(--ink)}
-input:focus,select:focus,button:focus-visible{outline:2.5px solid var(--seaglass);outline-offset:1px}
+input[type=text],input[type=date],input[type=datetime-local],input[type=number],input[type=password],select,textarea{width:100%;padding:11px 12px;border:1.5px solid var(--limestone);border-radius:10px;background:#fff;color:var(--ink)}
+textarea{min-height:88px;resize:vertical}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2.5px solid var(--seaglass);outline-offset:1px}
 .btn{display:block;width:100%;padding:13px;border:none;border-radius:11px;background:var(--ink);color:#fff;font-size:14px;font-weight:700;margin-top:14px}
 .btn.sea{background:var(--seaglass)}
 .btn.ghost{background:var(--limestone);color:var(--ink)}
@@ -199,8 +200,8 @@ input:focus,select:focus,button:focus-visible{outline:2.5px solid var(--seaglass
       <ellipse cx="22" cy="20" rx="12" ry="17" fill="url(#opalGloss)"/>
     </svg>
     <div>
-      <h1>BHW Panel Performance</h1>
-      <div class="sub">Utilization &amp; Quality Evidence</div>
+      <h1>BHW Population Health</h1>
+      <div class="sub">CRISP · TCM · Care Programs · Quality Evidence</div>
     </div>
     <span class="storage-pill" id="storagePill">connecting…</span>
   </div>
@@ -266,8 +267,11 @@ input:focus,select:focus,button:focus-visible{outline:2.5px solid var(--seaglass
     <label class="f" for="pProgram">Program</label>
     <select id="pProgram">
       <option value="CCM">CCM — chronic care management</option>
-      <option value="PCM">PCM — principal care management</option>
+      <option value="APCM">APCM — advanced primary care management</option>
+      <option value="RPM">RPM — remote patient monitoring</option>
+      <option value="RTM">RTM — remote therapeutic monitoring</option>
       <option value="BHI">BHI — behavioral health integration</option>
+      <option value="CoCM">CoCM — collaborative care</option>
       <option value="none">Not enrolled (comparison group)</option>
     </select>
     <label class="f" for="pEnroll">Care plan enrollment date</label>
@@ -310,8 +314,9 @@ input:focus,select:focus,button:focus-visible{outline:2.5px solid var(--seaglass
   <div class="card">
     <div class="eyebrow">Daily hospital check</div>
     <h2>Log a utilization event</h2>
-    <label class="f req" for="ePatient">Patient</label>
+    <label class="f req" for="ePatient">Patient Registry patient</label>
     <select id="ePatient"></select>
+    <p class="muted" style="margin-top:5px">Every current Registry patient can be selected here; a separate Population Health profile is not required.</p>
     <label class="f req" for="eType">Event type</label>
     <select id="eType">
       <option value="ed">ED visit</option>
@@ -330,13 +335,28 @@ input:focus,select:focus,button:focus-visible{outline:2.5px solid var(--seaglass
     <input type="text" id="eReason" placeholder="e.g. CHF exacerbation">
     <label class="check"><input type="checkbox" id="eDischarge">Discharge information uploaded into the patient's chart</label>
     <label class="check"><input type="checkbox" id="eHistorical">Historical backfill — pre-enrollment event from CRISP/records (no outreach needed)</label>
-    <label class="f req">Date BHW Crew reached out</label>
+    <label class="f req">Outreach dates</label>
     <div class="grid3">
       <input type="date" id="eOut1" aria-label="First outreach date">
       <input type="date" id="eOut2" aria-label="Second outreach date (optional)">
       <input type="date" id="eOut3" aria-label="Third outreach date (optional)">
     </div>
-    <p class="muted" style="margin-top:4px">First box required · second and third optional</p>
+    <p class="muted" style="margin-top:4px">First box required unless this is historical · second and third optional</p>
+    <div class="note"><b>BHW 24-hour outreach target.</b> Record the first attempt and what was learned. TCM billing still uses the separate interactive-contact deadline of 2 business days.</div>
+    <label class="f" for="eContactAt">First contact date and time</label>
+    <input type="datetime-local" id="eContactAt">
+    <div class="gridd">
+      <div><label class="f" for="eContactMethod">Method</label><select id="eContactMethod"><option value="">Not recorded</option><option>Phone</option><option>Text</option><option>Patient portal</option><option>Video</option><option>Caregiver</option><option>Other</option></select></div>
+      <div><label class="f" for="eContactOutcome">Outcome</label><select id="eContactOutcome"><option value="">Not recorded</option><option>Reached patient</option><option>Reached caregiver</option><option>Voicemail left</option><option>No answer</option><option>Wrong number</option><option>Patient declined</option><option>Escalated to clinician</option></select></div>
+    </div>
+    <label class="f" for="eDischargeDetails">Discharge / visit details obtained</label>
+    <textarea id="eDischargeDetails" placeholder="Reason for visit, diagnoses, discharge instructions, services, DME, pending results, or details still needed"></textarea>
+    <label class="f" for="eMedicationAccess">Medication changes and access</label>
+    <input type="text" id="eMedicationAccess" placeholder="New/stopped medicines, access problems, reconciliation still needed">
+    <label class="f" for="eFollowUpNeeds">Follow-up needs and barriers</label>
+    <input type="text" id="eFollowUpNeeds" placeholder="PCP/specialist visit, home health, transportation, red flags, barriers">
+    <label class="f" for="eContactNotes">Contact note / actions taken</label>
+    <textarea id="eContactNotes" placeholder="Questions answered, education, escalation, tasks assigned, and next outreach"></textarea>
     <label class="f" for="eAppt">Date of appointment (optional)</label>
     <input type="text" id="eAppt" placeholder="e.g. 7/22 2:30pm with Amaris — blank keeps it in the queue">
     <button class="btn" id="addEvent">Log event</button>
@@ -429,7 +449,34 @@ async function api(action,payload){
   if(data.savedAt)setPill('Saved to BHW Cloud · '+new Date(data.savedAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}),false);
   return data;
 }
-function patientDisplay(patient){return patient?.registryName||patient?.label||'Unknown';}
+function patientDisplay(patient){return patient?.registryName||patient?.name||patient?.label||patient?.bhwPatientId||'Unknown';}
+function patientForId(id){return state.patients.find(patient=>patient.id===id||patient.bhwPatientId===id)
+  ||(state.registryPatients||[]).find(patient=>patient.bhwPatientId===id||patient.id===id);}
+function normalizedName(value){return String(value||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
+function rowName(row){return row['Patient Label']||[row['Last Name'],row['First Name']].filter(Boolean).join(', ')||'';}
+function registryMatchForRow(row){
+  const registry=state.registryPatients||[];
+  const suppliedId=String(row['BHW Patient ID']||'').trim().toUpperCase();
+  if(/^BHW\d{4}$/.test(suppliedId)){
+    const byId=registry.find(patient=>patient.bhwPatientId===suppliedId);
+    if(byId)return byId;
+  }
+  const dob=String(row['Date of Birth']||'').slice(0,10);
+  const first=normalizedName(row['First Name']),last=normalizedName(row['Last Name']);
+  if(first&&last&&dob){
+    const exact=registry.filter(patient=>normalizedName(patient.legalFirstName)===first
+      &&normalizedName(patient.legalLastName)===last&&String(patient.dob||'').slice(0,10)===dob);
+    if(exact.length===1)return exact[0];
+  }
+  const name=normalizedName(rowName(row));
+  if(!name)return null;
+  const matches=registry.filter(patient=>{
+    const forward=normalizedName(patient.name);
+    const reverse=normalizedName([patient.legalLastName,patient.legalFirstName].filter(Boolean).join(' '));
+    return (name===forward||name===reverse)&&(!dob||String(patient.dob||'').slice(0,10)===dob);
+  });
+  return matches.length===1?matches[0]:null;
+}
 function registryChoice(patient){return `${patient.name} — ${patient.bhwPatientId}${patient.dob?` · DOB ${patient.dob}`:''}${patient.mrn?` · MRN ${patient.mrn}`:''}`;}
 function applyRegistryChoice(){
   const id=((($('pRegistrySearch').value||'').match(/\bBHW\d{4}\b/i)||[])[0]||'').toUpperCase();
@@ -487,42 +534,66 @@ function cloudType(row){
   if(/observation/.test(encounter))return'obs';
   return'admit';
 }
-function cloudPatientLabel(row){
-  return row['Patient Label']||[row['Last Name'],row['First Name']].filter(Boolean).join(', ')||row['BHW Patient ID']||'Unknown patient';
-}
+function cloudPatientLabel(row){return rowName(row)||row['BHW Patient ID']||'Unknown patient';}
 function mergeCloudRows(rows){
-  const patientByLabel=new Map(state.patients.map(p=>[String(p.label||'').trim().toLowerCase(),p]));
-  const eventKeys=new Set(state.events.map(ev=>{
-    const patient=state.patients.find(p=>p.id===ev.patientId);
-    return [patient?.label,ev.type,ev.date,ev.dateTo||ev.date,ev.facility].map(v=>String(v||'').trim().toLowerCase()).join('|');
-  }));
+  const patientById=new Map(state.patients.filter(patient=>patient.id).map(patient=>[patient.id,patient]));
+  const unmatchedPatients=new Map();
+  const eventByKey=new Map(state.events.map(ev=>[
+    [ev.patientId,ev.type,ev.date,ev.dateTo||ev.date,ev.facility].map(v=>String(v||'').trim().toLowerCase()).join('|'),ev,
+  ]));
   rows.forEach((row,index)=>{
-    const label=cloudPatientLabel(row),labelKey=label.toLowerCase();
-    let patient=patientByLabel.get(labelKey);
+    const registryPatient=registryMatchForRow(row);
+    const label=registryPatient?.name||cloudPatientLabel(row);
+    let patient=registryPatient?patientById.get(registryPatient.bhwPatientId):null;
+    if(registryPatient&&!patient){
+      patient={...registryPatient,id:registryPatient.bhwPatientId,registryName:registryPatient.name,cloudOnly:true,registryOnly:true,hedis:{}};
+      state.patients.push(patient);patientById.set(patient.id,patient);
+    }
     if(!patient){
-      patient={id:`cloud-patient:${row['BHW Patient ID']||row['BHW Event ID']||index}`,label,payer:'Other',program:'none',enrollDate:null,hedis:{},cloudOnly:true};
-      state.patients.push(patient);patientByLabel.set(labelKey,patient);
+      const personKey=[normalizedName(label),String(row['Date of Birth']||'').slice(0,10)].join('|');
+      patient=unmatchedPatients.get(personKey);
+      if(!patient){
+        patient={id:`unlinked:${encodeURIComponent(personKey||index)}`,label,payer:'Other',program:'none',enrollDate:null,hedis:{},cloudOnly:true,registryOnly:false};
+        state.patients.push(patient);unmatchedPatients.set(personKey,patient);
+      }
     }
     const type=cloudType(row),admit=String(row['Admit Date / Time']||'').slice(0,10),discharge=String(row['Discharge Date / Time']||'').slice(0,10);
     const date=admit||discharge,dateTo=discharge||admit,facility=row.Facility||row.Location||'';
-    const key=[label,type,date,dateTo,facility].map(v=>String(v||'').trim().toLowerCase()).join('|');
-    if(!date||eventKeys.has(key))return;
-    eventKeys.add(key);
-    state.events.push({id:`cloud:${row['BHW Event ID']||row['Source Event ID']||index}`,patientId:patient.id,type,date,dateTo,facility,
+    const key=[patient.id,type,date,dateTo,facility].map(v=>String(v||'').trim().toLowerCase()).join('|');
+    if(!date)return;
+    const existingEvent=eventByKey.get(key),priorDetails=existingEvent?.details||{};
+    const cloudFields={
       reason:row['Patient Complaint']||row['Primary Diagnosis Description']||row['Primary Diagnosis Codes']||'',
-      discharge:truthy(row['Discharge Info in Chart']),outreach1:row['Outreach 1']||null,outreach2:row['Outreach 2']||null,outreach3:row['Outreach 3']||null,
-      appointment:row['Follow-Up Appointment']||'',historical:truthy(row['Historical Backfill']),cloudOnly:true,sourceRow:row});
+      discharge:truthy(row['Discharge Info in Chart'])||Boolean(existingEvent?.discharge),outreach1:row['Outreach 1']||existingEvent?.outreach1||null,
+      outreach2:row['Outreach 2']||existingEvent?.outreach2||null,outreach3:row['Outreach 3']||existingEvent?.outreach3||null,
+      appointment:row['Follow-Up Appointment']||existingEvent?.appointment||'',historical:truthy(row['Historical Backfill'])||Boolean(existingEvent?.historical),sourceRow:row,
+      admitAt:row['Admit Date / Time']||existingEvent?.admitAt||'',dischargeAt:row['Discharge Date / Time']||existingEvent?.dischargeAt||'',
+      details:{firstContactAt:row['First Contact At']||priorDetails.firstContactAt||'',contactMethod:row['First Contact Method']||priorDetails.contactMethod||'',
+        contactOutcome:row['First Contact Outcome']||priorDetails.contactOutcome||'',dischargeDetails:row['Discharge Details Obtained']||priorDetails.dischargeDetails||'',
+        medicationAccess:row['Medication Access']||priorDetails.medicationAccess||'',followUpNeeds:row['Follow-Up Needs']||priorDetails.followUpNeeds||'',
+        contactNotes:row['Contact Notes']||priorDetails.contactNotes||''},
+      tcmLogId:row['TCM Log ID']||existingEvent?.tcmLogId||'',tcmStatus:row['TCM Status']||existingEvent?.tcmStatus||''};
+    if(existingEvent){Object.assign(existingEvent,cloudFields);return;}
+    const event={id:`cloud:${row['BHW Event ID']||row['Source Event ID']||index}`,patientId:patient.id,type,date,dateTo,facility,
+      ...cloudFields,cloudOnly:true};
+    state.events.push(event);eventByKey.set(key,event);
   });
 }
 function panelEventToCloudRow(patient,payload,sourceEventId,extra={}){
   const encounter=payload.type==='ed'?'Emergency':payload.type==='uc'?'Urgent Care':payload.type==='obs'?'Observation':'Inpatient';
-  return {'Patient Label':patient.label,'BHW Patient ID':patient.bhwPatientId||'','Source Event ID':sourceEventId||'',
-    'Source System':'CrewHQ Panel and Discharges','Encounter Type':encounter,'Admit Date / Time':payload.date||'',
+  const details=payload.details||{};
+  return {'Patient Label':patientDisplay(patient),'BHW Patient ID':patient.bhwPatientId||patient.id||'','First Name':patient.legalFirstName||'',
+    'Last Name':patient.legalLastName||'','Date of Birth':patient.dob||'','Source Event ID':sourceEventId||'',
+    'Source System':'CrewHQ Population Health','Encounter Type':encounter,'Admit Date / Time':payload.date||'',
     'Discharge Date / Time':payload.type==='ed'||payload.type==='uc'||payload.type==='obs'||payload.discharge?(payload.dateTo||payload.date||''):'',
     'Discharge Disposition':extra.disposition||'',Facility:payload.facility||'','Patient Complaint':extra.complaint||payload.reason||'',
     'Primary Diagnosis Codes':extra.dxCodes||'','Primary Diagnosis Description':extra.dxDesc||'',
     'Discharge Info in Chart':payload.discharge?'true':'false','Outreach 1':payload.outreach1||'','Outreach 2':payload.outreach2||'',
-    'Outreach 3':payload.outreach3||'','Follow-Up Appointment':payload.appointment||'','Historical Backfill':payload.historical?'true':'false'};
+    'Outreach 3':payload.outreach3||'','Follow-Up Appointment':payload.appointment||'',
+    'First Contact At':details.firstContactAt||'','First Contact Method':details.contactMethod||'','First Contact Outcome':details.contactOutcome||'',
+    'Discharge Details Obtained':details.dischargeDetails||'','Medication Access':details.medicationAccess||'',
+    'Follow-Up Needs':details.followUpNeeds||'','Contact Notes':details.contactNotes||'',
+    'TCM Log ID':payload.tcmLogId||'','TCM Status':payload.tcmStatus||'','Historical Backfill':payload.historical?'true':'false'};
 }
 async function initCloud(){
   try{const module=await import('./provider/cloud-queue.mjs');CLOUD=await module.createEncounterCloudClient();}
@@ -649,7 +720,7 @@ function renderOverview(){
   $('enrolledCt').textContent=enrolled.length;
   const panelCount=state.patients.filter(p=>!p.cloudOnly).length,sharedCount=state.patients.length-panelCount;
   $('panelCt').textContent=`of ${panelCount} panel patients${sharedCount?` · ${sharedCount} from hospital feed`:''}`;
-  const allIds=new Set(state.patients.map(p=>p.id));
+  const allIds=new Set(state.events.map(event=>event.patientId));
   const evCt=countEvents(allIds,['ed','uc','admit','readmit','obs'],start,end);
   const adCt=countEvents(allIds,['admit','readmit'],start,end);
   $('eventCt').textContent=evCt;
@@ -666,11 +737,11 @@ function renderPatients(){
     <div class="row tap" data-open="${p.id}">
       <div class="grow"><div class="t">${esc(patientDisplay(p))}</div>
       <div class="s">${esc(p.payer)}${p.enrollDate?' · enrolled '+p.enrollDate:''}</div></div>
-      ${p.cloudOnly?'<span class="chip obs">Hospital feed</span>':!p.rosterLinked?'<span class="chip warn">Registry link required</span>':programChip(p.program)}
+      ${p.cloudOnly?(p.registryOnly?'<span class="chip obs">Registry · hospital feed</span>':'<span class="chip warn">Registry match needed</span>'):!p.rosterLinked?'<span class="chip warn">Registry link required</span>':programChip(p.program)}
     </div>`).join('')
     :'<div class="empty">No patients yet. Add your CCM panel above — include a few non-enrolled patients as a comparison group.</div>';
-  $('ePatient').innerHTML=state.patients.filter(p=>!p.cloudOnly&&p.rosterLinked).sort((a,b)=>patientDisplay(a).localeCompare(patientDisplay(b)))
-    .map(p=>`<option value="${p.id}">${esc(patientDisplay(p))} — ${esc(p.bhwPatientId)} · ${esc(p.payer)}</option>`).join('');
+  $('ePatient').innerHTML=(state.registryPatients||[]).filter(p=>p.rosterLinked!==false).sort((a,b)=>patientDisplay(a).localeCompare(patientDisplay(b)))
+    .map(p=>`<option value="${p.bhwPatientId}">${esc(patientDisplay(p))} — ${esc(p.bhwPatientId)} · ${esc(p.payer||'')}</option>`).join('');
 }
 
 /* ============ Render: events ============ */
@@ -681,7 +752,7 @@ function renderEvents(){
   /* follow-up queue: anything without an appointment */
   const queue=state.events.filter(ev=>!ev.appointment&&!ev.historical).sort(byDate);
   $('queueList').innerHTML=queue.length?queue.map(ev=>{
-    const p=state.patients.find(x=>x.id===ev.patientId);
+    const p=patientForId(ev.patientId);
     const tries=[ev.outreach1,ev.outreach2,ev.outreach3].filter(Boolean).length;
     return `<div class="row tap" data-open-event="${ev.id}">
       <div class="grow"><div class="t">${esc(patientDisplay(p))}</div>
@@ -692,7 +763,7 @@ function renderEvents(){
   /* recent list */
   const list=state.events.slice().sort(byDate).slice(0,60);
   $('eventList').innerHTML=list.length?list.map(ev=>{
-    const p=state.patients.find(x=>x.id===ev.patientId);
+    const p=patientForId(ev.patientId);
     return `<div class="row tap" data-open-event="${ev.id}">
       <div class="grow"><div class="t">${esc(patientDisplay(p))}</div>
       <div class="s">${evDates(ev)} · ${esc(ev.facility)} · ${esc(ev.reason)}</div></div>
@@ -732,7 +803,7 @@ function openSheet(id){
       <div class="eyebrow">Edit</div>
       <label class="f">Program</label>
       <select id="dProgram">
-        ${['CCM','PCM','BHI','none'].map(v=>`<option value="${v}" ${p.program===v?'selected':''}>${v==='none'?'Not enrolled':v}</option>`).join('')}
+        ${['CCM','APCM','RPM','RTM','BHI','CoCM','none'].map(v=>`<option value="${v}" ${p.program===v?'selected':''}>${v==='none'?'Not enrolled':v}</option>`).join('')}
       </select>
       <label class="f">Enrollment date</label>
       <input type="date" id="dEnroll" value="${p.enrollDate||''}">
@@ -759,7 +830,9 @@ function openSheet(id){
 
   if(p.cloudOnly){
     const card=$('dSave')?.closest('.card');
-    if(card)card.innerHTML='<div class="eyebrow">Shared hospital feed</div><p class="muted">This patient came from the retained Hospital Visits feed. Add them as a Panel patient to manage payer, program, enrollment, and HEDIS fields.</p>';
+    if(card)card.innerHTML=p.registryOnly
+      ?'<div class="eyebrow">Patient Registry connected</div><p class="muted">This hospital history is attached to the existing Patient Registry patient. Add a Population Health profile only if program, enrollment, or HEDIS tracking is needed.</p>'
+      :'<div class="eyebrow">Registry match needed</div><p class="muted">This CRISP identity is not safely linked yet. Match it to the existing Patient Registry record from Hospital Visits before adding operational follow-up.</p>';
     return;
   }
 
@@ -772,7 +845,7 @@ function openSheet(id){
     });
   };
   $('dDelete').onclick=e=>{ if(!guardOnline())return;
-    if(!confirm('Remove this quality profile from Panel Performance? The Patient Registry record stays active and the archived profile is recoverable.'))return;
+    if(!confirm('Remove this quality profile from Population Health? The Patient Registry record stays active and the archived profile is recoverable.'))return;
     busy(e.target,async()=>{
       await api('deletePatient',{id});
       state.patients=state.patients.filter(x=>x.id!==id);
@@ -799,7 +872,12 @@ $('sheetBg').onclick=closeSheet; $('sheetClose').onclick=closeSheet;
 /* ============ Event detail sheet ============ */
 function openEventSheet(id){
   const ev=state.events.find(x=>x.id===id); if(!ev)return;
-  const p=state.patients.find(x=>x.id===ev.patientId);
+  const p=patientForId(ev.patientId);
+  const details=ev.details||{};
+  const firstContactAt=String(details.firstContactAt||'').slice(0,16);
+  const dischargeAt=ev.dischargeAt||ev.dateTo||ev.date;
+  const contactHours=firstContactAt&&dischargeAt?(new Date(firstContactAt)-new Date(dischargeAt.length>10?dischargeAt:dischargeAt+'T00:00:00'))/3600000:null;
+  const contactTarget=contactHours===null?'24-hour outreach not recorded':contactHours>=0&&contactHours<=24?'BHW 24-hour target met':'Outside BHW 24-hour target';
   $('sheetBody').innerHTML=`
     <div class="eyebrow">Utilization event</div>
     <h2 style="font-size:19px">${esc(patientDisplay(p))} <span class="chip ${ev.type}">${TYPE_LABEL[ev.type]}</span></h2>
@@ -815,8 +893,24 @@ function openEventSheet(id){
         <input type="date" id="xOut2" value="${ev.outreach2||''}">
         <input type="date" id="xOut3" value="${ev.outreach3||''}">
       </div>
+      <div class="note"><b>${esc(contactTarget)}</b> · TCM interactive contact still follows the separate 2-business-day requirement.</div>
+      <label class="f" for="xContactAt">First contact date and time</label>
+      <input type="datetime-local" id="xContactAt" value="${esc(firstContactAt)}">
+      <div class="gridd">
+        <div><label class="f" for="xContactMethod">Method</label><select id="xContactMethod">${['','Phone','Text','Patient portal','Video','Caregiver','Other'].map(value=>`<option value="${esc(value)}" ${details.contactMethod===value?'selected':''}>${value||'Not recorded'}</option>`).join('')}</select></div>
+        <div><label class="f" for="xContactOutcome">Outcome</label><select id="xContactOutcome">${['','Reached patient','Reached caregiver','Voicemail left','No answer','Wrong number','Patient declined','Escalated to clinician'].map(value=>`<option value="${esc(value)}" ${details.contactOutcome===value?'selected':''}>${value||'Not recorded'}</option>`).join('')}</select></div>
+      </div>
+      <label class="f" for="xDischargeDetails">Discharge / visit details obtained</label>
+      <textarea id="xDischargeDetails">${esc(details.dischargeDetails||'')}</textarea>
+      <label class="f" for="xMedicationAccess">Medication changes and access</label>
+      <input type="text" id="xMedicationAccess" value="${esc(details.medicationAccess||'')}">
+      <label class="f" for="xFollowUpNeeds">Follow-up needs and barriers</label>
+      <input type="text" id="xFollowUpNeeds" value="${esc(details.followUpNeeds||'')}">
+      <label class="f" for="xContactNotes">Contact note / actions taken</label>
+      <textarea id="xContactNotes">${esc(details.contactNotes||'')}</textarea>
       <label class="f" for="xAppt">Date of appointment</label>
       <input type="text" id="xAppt" value="${esc(ev.appointment||'')}" placeholder="Blank keeps this in the follow-up queue">
+      ${ev.tcmLogId?`<p class="note"><b>TCM care log connected:</b> ${esc(ev.tcmStatus||'Open')} · ${esc(ev.tcmLogId)}</p>`:''}
       <button class="btn" id="xSave">Save follow-up</button>
       <button class="btn danger" id="xDelete">Delete event</button>
     </div>`;
@@ -826,27 +920,36 @@ function openEventSheet(id){
     $('xDelete').disabled=true;$('xDelete').textContent='Managed in shared hospital feed';
     $('xSave').onclick=e=>busy(e.target,async()=>{
       if(!CLOUD)throw new Error('Shared hospital feed is unavailable');
-      const upd={discharge:$('xDischarge').checked,outreach1:$('xOut1').value||null,outreach2:$('xOut2').value||null,
-        outreach3:$('xOut3').value||null,appointment:$('xAppt').value.trim()};
+      const firstContactAt=$('xContactAt').value;
+      const upd={discharge:$('xDischarge').checked,outreach1:$('xOut1').value||firstContactAt.slice(0,10)||null,outreach2:$('xOut2').value||null,
+        outreach3:$('xOut3').value||null,appointment:$('xAppt').value.trim(),details:{firstContactAt,contactMethod:$('xContactMethod').value,
+          contactOutcome:$('xContactOutcome').value,dischargeDetails:$('xDischargeDetails').value.trim(),medicationAccess:$('xMedicationAccess').value.trim(),
+          followUpNeeds:$('xFollowUpNeeds').value.trim(),contactNotes:$('xContactNotes').value.trim()}};
       const row={...ev.sourceRow,'Discharge Info in Chart':upd.discharge?'true':'false','Outreach 1':upd.outreach1||'',
-        'Outreach 2':upd.outreach2||'','Outreach 3':upd.outreach3||'','Follow-Up Appointment':upd.appointment};
-      await CLOUD.importTcmEvents([row],{source:'CrewHQ Panel and Discharges',manual:true});
+        'Outreach 2':upd.outreach2||'','Outreach 3':upd.outreach3||'','Follow-Up Appointment':upd.appointment,
+        'First Contact At':upd.details.firstContactAt,'First Contact Method':upd.details.contactMethod,'First Contact Outcome':upd.details.contactOutcome,
+        'Discharge Details Obtained':upd.details.dischargeDetails,'Medication Access':upd.details.medicationAccess,
+        'Follow-Up Needs':upd.details.followUpNeeds,'Contact Notes':upd.details.contactNotes};
+      await CLOUD.importTcmEvents([row],{source:'CrewHQ Population Health',manual:true});
       Object.assign(ev,upd,{sourceRow:row});renderAll();closeSheet();
     });
     return;
   }
 
   $('xSave').onclick=e=>{ if(!guardOnline())return;
-    const out1=$('xOut1').value;
+    const firstContactAt=$('xContactAt').value;
+    const out1=$('xOut1').value||firstContactAt.slice(0,10);
     if(!out1&&!ev.historical){ alert('The first outreach date is required.'); return; }
     busy(e.target,async()=>{
       const upd={id,discharge:$('xDischarge').checked,outreach1:out1,
         outreach2:$('xOut2').value||null,outreach3:$('xOut3').value||null,
-        appointment:$('xAppt').value.trim()};
+        appointment:$('xAppt').value.trim(),details:{firstContactAt,contactMethod:$('xContactMethod').value,
+          contactOutcome:$('xContactOutcome').value,dischargeDetails:$('xDischargeDetails').value.trim(),medicationAccess:$('xMedicationAccess').value.trim(),
+          followUpNeeds:$('xFollowUpNeeds').value.trim(),contactNotes:$('xContactNotes').value.trim()}};
       await api('updateEvent',upd);
       Object.assign(ev,upd);
       if(CLOUD&&p){
-        try{await CLOUD.importTcmEvents([panelEventToCloudRow(p,ev,id)],{source:'CrewHQ Panel and Discharges',sourceFile:'Panel follow-up update',manual:true});}
+        try{await CLOUD.importTcmEvents([panelEventToCloudRow(p,ev,id)],{source:'CrewHQ Population Health',sourceFile:'Population Health follow-up update',manual:true});}
         catch(error){alert('Follow-up was saved to BHW Cloud, but the shared Hospital Visits feed could not be updated: '+error.message);}
       }
       renderAll(); closeSheet();
@@ -888,7 +991,7 @@ $('addPatient').onclick=e=>{
     const payload={bhwPatientId:registryPatient.bhwPatientId,payer:$('pPayer').value,program,
       enrollDate:program==='none'?null:($('pEnroll').value||null)};
     const res=await api('addPatient',payload);
-    const patient={...payload,...res,id:res.id,hedis:{},rosterLinked:true};state.patients.push(patient);
+    const patient={...registryPatient,...payload,...res,id:res.id,hedis:{},rosterLinked:true};state.patients.push(patient);
     if(addHospital){
       const stillAdmitted=hospitalType==='Inpatient-admit';
       const type=hospitalType==='Emergency'?'ed':hospitalType==='Observation'?'obs':'admit';
@@ -901,8 +1004,8 @@ $('addPatient').onclick=e=>{
       const row={...panelEventToCloudRow(patient,eventPayload,eventRes.id,{disposition:$('pDisposition').value.trim(),complaint,dxCodes,dxDesc}),
         'First Name':first,'Last Name':last,'Date of Birth':dob,'Encounter Type':stillAdmitted?'Inpatient':hospitalType,
         'Admit Date / Time':$('pAdmit').value||(stillAdmitted?eventDate:''),'Discharge Date / Time':stillAdmitted?'':eventDate};
-      try{await CLOUD.importTcmEvents([row],{source:'CrewHQ Panel and Discharges',sourceFile:'manual add patient',manual:true});}
-      catch(error){alert('The patient and Panel event were saved, but the shared Hospital Discharges row could not be retained: '+error.message);}
+      try{await CLOUD.importTcmEvents([row],{source:'CrewHQ Population Health',sourceFile:'manual Population Health event',manual:true});}
+      catch(error){alert('The patient and Population Health event were saved, but the shared Hospital Visits row could not be retained: '+error.message);}
     }
     $('pRegistrySearch').value=''; $('pRegistryOptions').innerHTML=''; $('pEnroll').value=''; registryPatientHits=[];
     ['pFirst','pLast','pDob','pAdmit','pDischarge','pFacility','pDisposition','pComplaint','pDx','pDxDesc'].forEach(id=>$(id).value='');
@@ -916,7 +1019,8 @@ $('addEvent').onclick=e=>{
   if(!pid){ alert('Add a patient first'); return; }
   const from=$('eDate').value, to=$('eDateTo').value||from;
   const facility=$('eFacility').value.trim(), reason=$('eReason').value.trim();
-  const out1=$('eOut1').value, historical=$('eHistorical').checked;
+  const firstContactAt=$('eContactAt').value;
+  const out1=$('eOut1').value||firstContactAt.slice(0,10), historical=$('eHistorical').checked;
   const missing=[];
   if(!from)missing.push('From date');
   if(!to)missing.push('To date');
@@ -930,16 +1034,20 @@ $('addEvent').onclick=e=>{
     const payload={patientId:pid,type:$('eType').value,date:from,dateTo:to,
       facility,reason,discharge:$('eDischarge').checked,historical,
       outreach1:out1||null,outreach2:$('eOut2').value||null,outreach3:$('eOut3').value||null,
-      appointment:$('eAppt').value.trim()};
+      appointment:$('eAppt').value.trim(),details:{firstContactAt,contactMethod:$('eContactMethod').value,
+        contactOutcome:$('eContactOutcome').value,dischargeDetails:$('eDischargeDetails').value.trim(),medicationAccess:$('eMedicationAccess').value.trim(),
+        followUpNeeds:$('eFollowUpNeeds').value.trim(),contactNotes:$('eContactNotes').value.trim()}};
     const res=await api('addEvent',payload);
     state.events.push({...payload,id:res.id});
-    const patient=state.patients.find(p=>p.id===pid);
+    const patient=patientForId(pid);
     if(CLOUD&&patient){
-      try{await CLOUD.importTcmEvents([panelEventToCloudRow(patient,payload,res.id)],{source:'CrewHQ Panel and Discharges',sourceFile:'Panel event log',manual:true});}
-      catch(error){alert('The Panel event was saved to BHW Cloud, but the shared Hospital Visits feed could not be updated: '+error.message);}
-    }else alert('The Panel event was saved to BHW Cloud, but the shared Hospital Visits feed is not connected.');
+      try{await CLOUD.importTcmEvents([panelEventToCloudRow(patient,payload,res.id)],{source:'CrewHQ Population Health',sourceFile:'Population Health event log',manual:true});}
+      catch(error){alert('The Population Health event was saved to BHW Cloud, but the shared Hospital Visits feed could not be updated: '+error.message);}
+    }else alert('The Population Health event was saved to BHW Cloud, but the shared Hospital Visits feed is not connected.');
     $('eFacility').value=''; $('eReason').value=''; $('eAppt').value='';
     $('eOut1').value=''; $('eOut2').value=''; $('eOut3').value='';
+    $('eContactAt').value='';$('eContactMethod').value='';$('eContactOutcome').value='';
+    $('eDischargeDetails').value='';$('eMedicationAccess').value='';$('eFollowUpNeeds').value='';$('eContactNotes').value='';
     $('eDischarge').checked=false; $('eHistorical').checked=false; $('eDateTo').value=$('eDate').value;
     renderAll();
     if(!payload.appointment&&!historical) alert('Logged — no appointment yet, so it\'s in the follow-up queue.');
@@ -1007,7 +1115,7 @@ $('copySummary').onclick=async()=>{
   let met=0,elig=0;
   for(const p of state.patients)for(const m of MEASURES){const s=p.hedis?.[m.k]||'na'; if(s!=='na'){elig++; if(s==='met')met++;}}
   const lines=[
-    `BHW Medical Group — Care Management Panel Performance (${period==='12'?'trailing 12 months':period==='ytd'?'year to date':'all time'})`,
+    `BHW Medical Group — Population Health (${period==='12'?'trailing 12 months':period==='ytd'?'year to date':'all time'})`,
     `Enrolled care-plan panel: ${enrolled.length} patients`,
     admitE!=null?`Inpatient admissions: ${fmt(admitE)} per 1,000 member-years (benchmark ${fmt(bench.admit)}; ${Math.round((bench.admit-admitE)/bench.admit*100)}% ${admitE<=bench.admit?'below':'above'})`:null,
     edE!=null?`ED visits: ${fmt(edE)} per 1,000 member-years (benchmark ${fmt(bench.ed)})`:null,

@@ -1,4 +1,4 @@
-// Protected Panel Performance bridge. This is a view over the authoritative
+// Protected Population Health bridge. This is a view over the authoritative
 // Google Cloud Patient Registry plus patient-linked quality/utilization records;
 // it does not maintain a separate patient list.
 
@@ -48,21 +48,27 @@ exports.handler = async (event) => {
       const byId = new Map(roster.map((patient) => [patient.bhwPatientId, patient]));
       const patients = (panel.profiles || []).map((profile) => panelPatient(profile, byId.get(profile.bhwPatientId)));
       const profileIds = new Set(patients.map((patient) => patient.bhwPatientId));
-      const events = (panel.events || []).filter((eventRecord) => profileIds.has(eventRecord.bhwPatientId)).map((eventRecord) => ({
-        ...eventRecord,
-        patientId: eventRecord.bhwPatientId,
-      }));
       const registryPatients = roster.filter((patient) => patient.selectable).map((patient) => ({
+        id: patient.bhwPatientId,
         bhwPatientId: patient.bhwPatientId,
         name: patient.name,
         legalFirstName: patient.legalFirstName || "",
         legalLastName: patient.legalLastName || "",
         dob: patient.dob,
+        mrn: patient.mrn || patient.chart || "",
         payer: patient.payer,
         program: patient.program,
+        programs: patient.programs || [],
+        rosterLinked: true,
+        registryOnly: !profileIds.has(patient.bhwPatientId),
         alreadyInPanel: profileIds.has(patient.bhwPatientId),
       }));
-      return json(200, { patients, events, registryPatients, rosterCount: roster.length, storage: "BHW Cloud" });
+      const registryIds = new Set(registryPatients.map((patient) => patient.bhwPatientId));
+      const connectedEvents = (panel.events || []).filter((eventRecord) => registryIds.has(eventRecord.bhwPatientId)).map((eventRecord) => ({
+        ...eventRecord,
+        patientId: eventRecord.bhwPatientId,
+      }));
+      return json(200, { patients, events: connectedEvents, registryPatients, rosterCount: roster.length, storage: "BHW Cloud" });
     }
 
     let input;
@@ -77,7 +83,7 @@ exports.handler = async (event) => {
       return json(200, { patients });
     }
     if (action === "addPatient") {
-      const registryPatient = await findCloudPatient(payload?.bhwPatientId);
+      const registryPatient = await findCloudPatient(payload?.bhwPatientId, session);
       if (!registryPatient || registryPatient.selectable === false) {
         return json(400, { error: "Select a current patient from the protected Patient Registry" });
       }

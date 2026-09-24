@@ -6,6 +6,7 @@ const { cloudRequest, listCloudPatients } = require("./lib/cloud-patients");
 const { operationsRequest } = require("./lib/operations-cloud");
 
 const iso = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+const MONTHLY_PROGRAMS = new Set(["CCM", "APCM", "PCM", "RPM", "RTM", "BHI", "COCM", "CHARMED MINDS"]);
 
 function patientRequestView(request = {}) {
   return {
@@ -20,6 +21,12 @@ function patientRequestView(request = {}) {
     name: request.patientLabel || request.patientName || request.bhwPatientId || "Protected patient",
     assigned: request.assignedTo || request.owner || "",
   };
+}
+
+function isFaxRequest(request = {}) {
+  return /(^|\b)(fax|ifax)(\b|$)/i.test([
+    request.requestType, request.type, request.source, request.sourceChannel,
+  ].filter(Boolean).join(" "));
 }
 
 exports.handler = async (event) => {
@@ -61,7 +68,7 @@ exports.handler = async (event) => {
       if (item.nextFollowUp && !done.has(item.status.toLowerCase()) && item.nextFollowUp <= endOfWeek) {
         item.bucket = item.nextFollowUp < today ? "overdue" : item.nextFollowUp === today ? "today" : "week";
         followups.push(item);
-      } else if (["CCM", "APCM"].includes(item.program)
+      } else if (MONTHLY_PROGRAMS.has(String(item.program || "").toUpperCase())
           && item.month.slice(0, 7) === month && !done.has(item.status.toLowerCase())
           && !item.nextFollowUp && !item.lastContact && !(item.minutes > 0)) {
         notStarted.push(item);
@@ -74,7 +81,7 @@ exports.handler = async (event) => {
 
     const requestRows = Array.isArray(requestResult.requests)
       ? requestResult.requests : Array.isArray(requestResult.patientRequests) ? requestResult.patientRequests : [];
-    const requests = requestRows.map(patientRequestView)
+    const requests = requestRows.filter((request) => !isFaxRequest(request)).map(patientRequestView)
       .filter((request) => !["done", "resolved", "closed"].includes(String(request.status).toLowerCase()))
       .sort((left, right) => String(right.received).localeCompare(String(left.received)));
 
@@ -97,3 +104,5 @@ exports.handler = async (event) => {
     return json(500, { error: String(error.message || error) });
   }
 };
+
+exports._test = { isFaxRequest, patientRequestView };

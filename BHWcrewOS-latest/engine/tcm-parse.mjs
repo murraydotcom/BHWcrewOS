@@ -42,6 +42,15 @@ const FIELD_HEADERS = {
 const INTERNAL_FIELD_HEADERS = {
   patientLabel: "Patient Label",
   bhwPatientId: "BHW Patient ID",
+  firstContactAt: "First Contact At",
+  contactMethod: "First Contact Method",
+  contactOutcome: "First Contact Outcome",
+  dischargeDetails: "Discharge Details Obtained",
+  medicationAccess: "Medication Access",
+  followUpNeeds: "Follow-Up Needs",
+  contactNotes: "Contact Notes",
+  tcmLogId: "TCM Log ID",
+  tcmStatus: "TCM Status",
 };
 const HEADER_TO_FIELD = Object.fromEntries(Object.entries({ ...FIELD_HEADERS, ...INTERNAL_FIELD_HEADERS })
   .map(([f, h]) => [key(h), f]));
@@ -90,7 +99,7 @@ export function normalizeRecord(raw) {
     const f = HEADER_TO_FIELD[key(k)];
     if (f) out[f] = v;
   }
-  for (const f of ["dischargeAt", "admitAt", "dob"]) out[f] = toISO(out[f]);
+  for (const f of ["dischargeAt", "admitAt", "dob", "firstContactAt"]) out[f] = toISO(out[f]);
   for (const f of Object.keys(FIELD_HEADERS)) if (out[f] == null) out[f] = out[f] ?? "";
   out.firstName = norm(out.firstName);
   out.lastName = norm(out.lastName);

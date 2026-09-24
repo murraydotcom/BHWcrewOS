@@ -5,13 +5,51 @@
 const { getSession, json } = require("./_lib");
 const { cloudRequest, listCloudPatients } = require("./lib/cloud-patients");
 
-function enrolledPrograms(patient) {
-  const values = Array.isArray(patient.programs) ? patient.programs : [];
-  const joined = values.join(" ");
-  const programs = [];
-  if (/\bCCM\b|chronic care management/i.test(joined)) programs.push("CCM");
-  if (/\bAPCM\b|advanced primary care management/i.test(joined)) programs.push("APCM");
-  return programs;
+const PROGRAM_PATTERNS = Object.freeze([
+  ["CCM", /\bCCM\b|chronic care management/i],
+  ["APCM", /\bAPCM\b|advanced primary care management/i],
+  ["PCM", /\bPCM\b|principal care management/i],
+  ["RPM", /\bRPM\b|remote patient monitoring/i],
+  ["RTM", /\bRTM\b|remote therapeutic monitoring/i],
+  ["BHI", /\bBHI\b|behavioral health integration/i],
+  ["COCM", /\bCOCM\b|collaborative care/i],
+  ["CHARMED MINDS", /charmed\s*minds/i],
+]);
+
+function normalizedPrograms(values) {
+  const joined = (Array.isArray(values) ? values : [values]).filter(Boolean).join(" ");
+  return PROGRAM_PATTERNS.filter(([, pattern]) => pattern.test(joined)).map(([program]) => program);
+}
+
+function monthDistance(currentMonth, earlierMonth) {
+  if (!/^\d{4}-\d{2}$/.test(currentMonth) || !/^\d{4}-\d{2}$/.test(earlierMonth)) return Infinity;
+  const [currentYear, currentValue] = currentMonth.split("-").map(Number);
+  const [earlierYear, earlierValue] = earlierMonth.split("-").map(Number);
+  return (currentYear * 12 + currentValue) - (earlierYear * 12 + earlierValue);
+}
+
+function recentPrograms(logs, month) {
+  const byPatient = new Map();
+  for (const log of Array.isArray(logs) ? logs : []) {
+    if (String(log.type || "Monthly").toLowerCase() !== "monthly") continue;
+    const logMonth = String(log.serviceMonth || "").slice(0, 7);
+    const distance = monthDistance(month, logMonth);
+    if (distance < 1 || distance > 2) continue;
+    const programs = normalizedPrograms(log.program);
+    if (!programs.length || !log.bhwPatientId) continue;
+    const set = byPatient.get(log.bhwPatientId) || new Set();
+    programs.forEach((program) => set.add(program));
+    byPatient.set(log.bhwPatientId, set);
+  }
+  return byPatient;
+}
+
+function enrolledPrograms(patient, profile, recent) {
+  return [...new Set([
+    ...normalizedPrograms(patient.programs),
+    ...normalizedPrograms(profile?.program),
+    ...[...(recent || [])],
+  ])];
 }
 
 exports.handler = async (event) => {
@@ -29,16 +67,24 @@ exports.handler = async (event) => {
   const serviceMonth = `${month}-01`;
 
   try {
-    const [roster, existingResult] = await Promise.all([
+    const [roster, existingResult, panelResult] = await Promise.all([
       listCloudPatients(actor),
-      cloudRequest(`/v1/care-management/logs?month=${encodeURIComponent(month)}`, { actor }),
+      cloudRequest("/v1/care-management/logs", { actor }),
+      cloudRequest("/v1/panel", { actor }).catch(() => ({ profiles: [] })),
     ]);
-    const existing = new Map((existingResult.logs || []).map((log) => [`${log.bhwPatientId}|${log.program}`, log]));
-    const summary = { month, created: 0, updated: 0, skipped: 0, patientRegistryCount: roster.length };
+    const allLogs = Array.isArray(existingResult.logs) ? existingResult.logs : [];
+    const existing = new Map(allLogs.filter((log) => String(log.serviceMonth || "").startsWith(month))
+      .map((log) => [`${log.bhwPatientId}|${log.program}`, log]));
+    const profiles = new Map((panelResult.profiles || []).map((profile) => [profile.bhwPatientId, profile]));
+    const history = recentPrograms(allLogs, month);
+    const summary = { month, created: 0, updated: 0, skipped: 0, recoveredPrograms: 0, patientRegistryCount: roster.length };
 
     for (const patient of roster) {
       if (!patient.selectable) continue;
-      for (const program of enrolledPrograms(patient)) {
+      const registryPrograms = new Set(normalizedPrograms(patient.programs));
+      const profilePrograms = new Set(normalizedPrograms(profiles.get(patient.bhwPatientId)?.program));
+      for (const program of enrolledPrograms(patient, profiles.get(patient.bhwPatientId), history.get(patient.bhwPatientId))) {
+        if (!registryPrograms.has(program) && !profilePrograms.has(program)) summary.recoveredPrograms += 1;
         const key = `${patient.bhwPatientId}|${program}`;
         const source = {
           entry: `${patient.name} — ${program} · ${month}`,
@@ -47,7 +93,11 @@ exports.handler = async (event) => {
           serviceMonth,
           memberId: patient.memberId || "",
           icd: (patient.icds || []).join(", "),
-          notes: [`Payer: ${patient.payer || "not recorded"}`, "source: BHW Cloud Patient Registry"].join(" · "),
+          notes: [
+            `Payer: ${patient.payer || "not recorded"}`,
+            registryPrograms.has(program) ? "source: BHW Cloud Patient Registry" : profilePrograms.has(program)
+              ? "source: Population Health enrollment" : "source: recent BHW Cloud care-log enrollment",
+          ].join(" · "),
         };
         const current = existing.get(key);
         if (current) {
@@ -73,3 +123,5 @@ exports.handler = async (event) => {
     return json(500, { error: String(error.message || error) });
   }
 };
+
+exports._test = { enrolledPrograms, monthDistance, normalizedPrograms, recentPrograms };

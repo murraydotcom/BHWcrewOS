@@ -168,6 +168,18 @@ export function collectSafeAlerts(requests, actor, now = Date.now()) {
     .slice(0, MAX_ALERTS);
 }
 
+export function pageAlertExclusions(doc = globalThis.document) {
+  const value = doc?.querySelector?.('meta[name="bhw-alert-exclude"]')?.content || "";
+  return value.split(",").map(normalized).filter(Boolean);
+}
+
+export function isPageExcludedRequest(request = {}, exclusions = []) {
+  if (!exclusions.length) return false;
+  const values = [request.requestType, request.type, request.source, request.sourceChannel]
+    .map(normalized).filter(Boolean);
+  return exclusions.some((excluded) => values.some((value) => value === excluded || value.includes(excluded)));
+}
+
 function storageJson(key, fallback) {
   try { return JSON.parse(localStorage.getItem(key) || "") || fallback; } catch { return fallback; }
 }
@@ -261,6 +273,7 @@ function startAlertCenter(token) {
   let clientPromise;
   let toastTimer;
   let refreshing = false;
+  const exclusions = pageAlertExclusions(document);
 
   function seenMap() { return storageJson(seenKey, {}); }
   function unread() {
@@ -295,7 +308,8 @@ function startAlertCenter(token) {
   }
   function applyRequests(requests) {
     ui.root.hidden = false;
-    current = collectSafeAlerts(requests, actor);
+    current = collectSafeAlerts((Array.isArray(requests) ? requests : [])
+      .filter((request) => !isPageExcludedRequest(request, exclusions)), actor);
     const known = storageJson(knownKey, []);
     const knownSet = new Set(Array.isArray(known) ? known : []);
     const newAlerts = current.filter((alert) => !knownSet.has(alert.key));

@@ -280,7 +280,7 @@ async function loadFile(file) {
     if (CLOUD) {
       $("parseNote").textContent = `Retaining ${partition.valid.length} complete CRISP event rows in secure batches${partition.skipped.length ? `; ${partition.skipped.length} incomplete rows will be skipped` : ""}…`;
       const saved = await CLOUD.importTcmEvents(partition.valid, {
-        source: "CrewHQ Panel and Discharges",
+        source: "CrewHQ Population Health",
         sourceFile: file.name,
         // This file was selected by a signed-in CrewHQ user. The cloud uses
         // this provenance flag to distinguish it from an automated feed.
@@ -535,7 +535,7 @@ function renderTable() {
   $("tableWrap").innerHTML = `<div class="tblwrap"><table class="tbl">
     <thead><tr>
       <th>Patient</th>${showP ? "<th>Panel</th>" : ""}<th>Status</th><th>Discharge / Admit</th><th>Day</th>
-      <th>Call by</th><th>Visit window</th><th>Billable</th><th>Facility</th><th>Primary Dx</th><th>Chief Complaint</th><th>Notes</th>
+      <th>Call by</th><th>First contact</th><th>Visit window</th><th>Billable</th><th>Facility</th><th>Primary Dx</th><th>Chief Complaint</th><th>Notes</th>
     </tr></thead>
     <tbody>${rows.map((it) => {
       const dl = it.dl;
@@ -550,6 +550,7 @@ function renderTable() {
         <td>${whenHtml}</td>
         <td>${dl ? dl.daysSince : "—"}</td>
         <td>${callCell(dl)}</td>
+        <td>${it.firstContactAt?`${esc(fmtDate(it.firstContactAt))}<br><span class="mini">${esc([it.contactMethod,it.contactOutcome].filter(Boolean).join(" · "))}${it.tcmLogId?` · TCM ${esc(it.tcmStatus||"open")}`:""}</span>`:'<span class="mini">Not recorded</span>'}</td>
         <td>${visitCell(dl)}</td>
         <td>${dl ? esc(dl.billable) : "—"}</td>
         <td>${esc(it.facility || "—")}</td>
@@ -565,7 +566,8 @@ function fmtDate(iso) { return String(iso || "").slice(0, 10); }
 function toCSV() {
   const withPanel = !!RESULT.stats.rosterLoaded;
   const cols = ["name", "dob", "gender", "category", "encounterType", "facility", "dischargeAt", "disposition",
-    "daysSince", "callBy", "callState", "visitBy99496", "visitBy99495", "billable", "dxCodes", "dxDesc", "complaint", "flags"]
+    "daysSince", "callBy", "callState", "firstContactAt", "contactMethod", "contactOutcome", "dischargeDetails", "medicationAccess", "followUpNeeds", "contactNotes", "tcmLogId", "tcmStatus",
+    "visitBy99496", "visitBy99495", "billable", "dxCodes", "dxDesc", "complaint", "flags"]
     .concat(withPanel ? ["onPanel", "panelMatch", "mrn", "pcp", "program"] : []);
   const q = (v) => `"${String(v == null ? "" : v).replace(/"/g, '""')}"`;
   const dlKeys = ["daysSince", "callBy", "callState", "visitBy99496", "visitBy99495", "billable"];

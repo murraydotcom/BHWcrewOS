@@ -51,18 +51,21 @@ test("all Clinical Intelligence patient selectors refresh from the current Regis
   assert.match(transcription, /cloudClient\.listPatients\(\)/);
 });
 
-test("Panel Performance adds only an existing Registry patient and keeps names out of its offline cache", async () => {
+test("Population Health uses the Registry for profiles and direct hospital-event selection", async () => {
   const [service, html] = await Promise.all([
     read("netlify/functions/panel-data.js"),
     read("bhw-panel-performance.html"),
   ]);
 
   assert.match(service, /action === "searchRegistry"/);
-  assert.match(service, /findCloudPatient\(payload\?\.bhwPatientId\)/);
+  assert.match(service, /findCloudPatient\(payload\?\.bhwPatientId, session\)/);
   assert.match(service, /Select a current patient from the protected Patient Registry/);
   assert.match(html, /id="pRegistrySearch"/);
   assert.doesNotMatch(html, /id="pLabel"/);
-  assert.match(html, /filter\(p=>!p\.cloudOnly&&p\.rosterLinked\)/);
+  assert.match(html, /state\.registryPatients\|\|\[\]/);
+  assert.match(html, /Every current Registry patient can be selected here/);
+  assert.match(html, /registryMatchForRow/);
+  assert.match(html, /First contact date and time/);
   assert.match(html, /map\(\(\{registryName,\.\.\.patient\}\)=>patient\)/);
 });
 
