@@ -200,7 +200,7 @@ test("a failed CRISP batch reports how many rows were safely retained", async ()
 
 test("the CrewHQ TCM page labels a user-selected CRISP workbook with allowed provenance", async () => {
   const html = await readFile(new URL("../provider/tcm.html", import.meta.url), "utf8");
-  assert.match(html, /source: "CrewHQ Panel and Discharges",/);
+  assert.match(html, /source: "CrewHQ Population Health",/);
   assert.match(html, /sourceFile: file\.name,[\s\S]{0,240}manual: true,/);
 });
 

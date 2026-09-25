@@ -235,7 +235,7 @@ export async function createEncounterCloudClient(fetchImpl = fetch) {
       return Array.isArray(body.rows) ? body.rows : [];
     },
     async importTcmEvents(rows, {
-      source = "CrewHQ Panel and Discharges",
+      source = "CrewHQ Population Health",
       sourceFile = "",
       manual = true,
       onProgress = null,

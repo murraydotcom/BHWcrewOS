@@ -403,7 +403,7 @@ function buildRail(){
   html += `<button class="tab" data-view="front-desk" style="--spine:var(--blue)">Front Desk OS</button>`;
   html += `<div class="rail-label">Pages</div>`;
   html += `<button class="tab" data-view="pg-guide" style="--spine:var(--clay)">Staff Guide</button>`;
-  html += `<button class="tab" data-view="pg-panel" style="--spine:var(--teal)">Panel &amp; Discharges</button>`;
+  html += `<button class="tab" data-view="pg-panel" style="--spine:var(--teal)">Population Health</button>`;
   html += `<button class="tab" data-view="pg-caredue" style="--spine:var(--alert,#B4544B)">CM — Due This Week</button>`;
   html += `<button class="tab" data-view="pg-carelog" style="--spine:var(--ok,#1F6961)">Care Management Log</button>`;
   html += `<button class="tab" data-view="pg-hormone" style="--spine:var(--sand)">Hormone Analysis</button>`;
@@ -739,7 +739,7 @@ function frontDeskView(){
 
 const PAGE_EMBEDS = [
   {id:"pg-guide",    title:"Staff Guide",         src:"/bhw-staff-guide.html",              blurb:"Where everything is and how to use it — searchable, printable."},
-  {id:"pg-panel",    title:"Panel & Discharges",   src:"/bhw-panel-performance.html",        blurb:"Utilization, HEDIS scorecard, and hospital discharge tracking."},
+  {id:"pg-panel",    title:"Population Health",    src:"/bhw-panel-performance.html",        blurb:"One Registry-connected view of utilization, CRISP/TCM follow-up, care programs, and quality evidence."},
   {id:"pg-hormone",  title:"Hormone Analysis",     src:"/bhw-hormone-analysis.html",         blurb:"Lab-based hormone interpretation tool."},
   {id:"pg-ana",      title:"Positive ANA?",        src:"/bhw-positive-ana.html",             blurb:"Analyze a result, then immune patterns, cells, antibody mechanisms, 100 conditions, management protocols and integrative levers."},
   {id:"pg-hormref",  title:"Hormone Reference",    src:"/bhw-hormone-reference.html",        blurb:"Staff resource — hormone feedback systems explained."},

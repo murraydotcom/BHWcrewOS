@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
+<meta name="bhw-alert-exclude" content="fax,ifax">
 <title>Care Management · Due This Week · BHW crewOS</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -154,7 +155,7 @@ function render(){
   // inbound patient requests
   if(rq.length){
     body+='<section class="blk"><h2><span class="dot" style="--dc:var(--ok)"></span>Inbound patient requests <span class="ct">'+rq.length+'</span></h2>'+
-      '<div class="note">Open requests from calls, texts & faxes. Work these in <b>Front Desk OS</b> — this is a read-only view so nothing slips.</div>'+
+      '<div class="note">Open care-management requests from calls and texts. Fax notifications stay in the appropriate <b>Front Desk OS</b> worklists.</div>'+
       '<div class="tablewrap"><table><thead><tr><th>Patient</th><th>Type</th><th>Source</th><th>SLA</th><th>Summary</th></tr></thead><tbody>'+
       rq.map(function(r){ return '<tr><td class="pt">'+esc(r.name||"—")+(r.assigned?'<small>'+esc(r.assigned)+'</small>':'')+'</td>'+
         '<td>'+esc(r.type||"")+'</td><td>'+esc(r.source||"")+'</td>'+

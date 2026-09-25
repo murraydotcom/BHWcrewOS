@@ -106,6 +106,16 @@ td b{font-weight:700}
     </div>
   </details>
 
+  <details class="card" id="matchCard" hidden style="margin-top:16px">
+    <summary style="cursor:pointer;font-weight:800;font-size:.9rem;color:var(--deep,#2f4551)">Connect CRISP event to Patient Registry</summary>
+    <div class="note" style="margin-top:10px">Choose the existing protected Patient Registry record. This links the hospital event; it never creates a duplicate patient.</div>
+    <label class="span3" style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)">Patient Registry patient
+      <input id="matchSearch" list="matchOptions" autocomplete="off" placeholder="Search name or BHW ID" style="width:100%;margin-top:4px;padding:9px;border:1px solid var(--line);border-radius:8px">
+    </label>
+    <datalist id="matchOptions"></datalist>
+    <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:12px"><button class="btn" id="matchSave" type="button">Connect existing patient</button><span class="mini" id="matchNote"></span></div>
+  </details>
+
   <div class="card">
     <div class="card-head"><h3>ADT &amp; TCM Worklist</h3><span class="tag">CRISP CEND · TCM clock</span></div>
     <div class="tbl-wrap"><table>
@@ -121,6 +131,9 @@ const TCM_RATE = { high: 281, moderate: 209 };
 // a manual CSV/paste (loadPasted). No sample rows — an empty feed shows an empty state.
 let HOSP = [];
 let CLOUD = null;
+let REGISTRY = [];
+let MATCH_HITS = [];
+let MATCH_INDEX = -1;
 
 const startOfToday=()=>{const d=new Date();d.setHours(0,0,0,0);return d;};
 const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x;};
@@ -135,24 +148,33 @@ function render(){
   const rows = HOSP.map((h,i)=>{
     const dDate = h.date ? new Date(h.date) : addDays(today, -(h.daysAgo||0));
     let windowCell, actionCell, sortKey=50;
-    if(h.type==="admit"){ adm++; windowCell='<span class="mini">Inpatient — TCM clock starts at discharge</span>'; actionCell='<span class="badge b-mon">Monitor</span>'; sortKey=60; }
-    else if(h.type==="ed"){ if(daysBetween(dDate,today)<=7) ed7++; windowCell='<span class="mini">ED visit — 7-day PCP follow-up advised (not TCM-eligible)</span>'; actionCell='<span class="badge b-info">PCP follow-up</span>'; sortKey=daysBetween(dDate,today)<=7?8:55; }
+    const registryAction=/^BHW\d{4}$/.test(String(h.bhwPatientId||""))
+      ? '<span class="badge b-info">Registry connected</span>'
+      : ' <button class="btn ghost" onclick="openMatch('+i+')">Connect patient</button>';
+    if(h.type==="admit"){ adm++; windowCell='<span class="mini">Inpatient — TCM clock starts at discharge</span>'; actionCell='<span class="badge b-mon">Monitor</span> '+registryAction; sortKey=60; }
+    else if(h.type==="ed"){ if(daysBetween(dDate,today)<=7) ed7++; windowCell='<span class="mini">ED visit — 7-day PCP follow-up advised (not TCM-eligible)</span>'; actionCell='<span class="badge b-info">PCP follow-up</span> '+registryAction; sortKey=daysBetween(dDate,today)<=7?8:55; }
     else { // discharge
       if(daysBetween(dDate,today)<=7) disch7++;
       const isHigh=h.complexity==="high";
       const contactBy=addBusinessDays(dDate,2), visitBy=addDays(dDate,isHigh?7:14);
-      h._dISO=isoLocal(dDate); h._contactISO=isoLocal(contactBy);
+      h._dISO=isoLocal(dDate); h._contactISO=isoLocal(contactBy); h._target24ISO=isoLocal(addDays(dDate,1));
       const contactOpen=today<=contactBy, visitOpen=today<=visitBy;
       if(!visitOpen){ windowCell='<span class="overdue"><b>Window closed</b> — TCM not billable</span>'; sortKey=90; }
       else if(!contactOpen){ windowCell='<span class="overdue"><b>Contact overdue</b> · visit by '+md(visitBy)+'</span>'; open++; urgent++; sortKey=1; }
       else { const dleft=daysBetween(today,contactBy); if(dleft<=0)urgent++; const col=dleft<=1?"var(--alert)":"var(--blue-deep)"; windowCell='<span style="color:'+col+'">Contact by '+md(contactBy)+' <b>('+dleft+'d)</b> · visit by '+md(visitBy)+'</span>'; open++; sortKey=2+dleft; }
+      if(h.contactAt){
+        const dischargeAt=new Date(h.date||h._dISO+'T00:00:00'),contactAt=new Date(h.contactAt);
+        const hours=(contactAt-dischargeAt)/3600000,within24=Number.isFinite(hours)&&hours>=0&&hours<=24;
+        windowCell+='<br><span class="mini">First contact '+safeStatus(h.contactOutcome||'recorded')+(within24?' · BHW 24h target met':' · outside BHW 24h target')+'</span>';
+      }else windowCell+='<br><a class="mini" href="/?view=pg-panel" target="_top">Record 24-hour outreach in Population Health</a>';
       actionCell='<div class="cxtoggle" title="Set TCM complexity — clinical determination">'+
         '<button class="'+(!isHigh?"on":"")+'" onclick="setCx('+i+',&#39;moderate&#39;)">99495 · 14d</button>'+
         '<button class="'+(isHigh?"on":"")+'" onclick="setCx('+i+',&#39;high&#39;)">99496 · 7d</button>'+
         '</div> <span class="mini">~$'+TCM_RATE[isHigh?"high":"moderate"]+(visitOpen?"":" · missed")+'</span>'+
         (h._logged
-          ? ' <span class="badge b-info">✓ TCM logged</span>'
-          : ' <button class="btn ghost tcmbtn" title="Create a TCM episode in the Care Management Log" onclick="tcmLog('+i+',this)">＋ TCM log</button>');
+          ? ' <span class="badge b-info">✓ TCM '+safeStatus(h.tcmStatus||'logged')+'</span>'
+          : ' <button class="btn ghost tcmbtn" title="Create a TCM episode in the Care Management Log" onclick="tcmLog('+i+',this)">＋ TCM log</button>')+
+        ' '+registryAction;
     }
     return {h, dtxt:md(dDate), windowCell, actionCell, sortKey};
   }).sort((a,b)=>a.sortKey-b.sortKey);
@@ -162,13 +184,14 @@ function render(){
   set("k-adm",adm); set("k-disch",disch7); set("k-open",open); set("k-ed",ed7);
   updateUrgentAlert(urgent);
 }
+function safeStatus(value){return String(value||'').replace(/[^A-Za-z0-9 _-]/g,'').slice(0,40);}
 async function setCx(i,level){
   if(!HOSP[i])return;
   HOSP[i].complexity=level; render();
   if(CLOUD&&HOSP[i]._row){
     try{
       const row={...HOSP[i]._row,Complexity:level};
-      await CLOUD.importTcmEvents([row],{source:"CrewHQ Panel and Discharges",manual:true});
+      await CLOUD.importTcmEvents([row],{source:"CrewHQ Population Health",manual:true});
       HOSP[i]._row=row;
     }catch(error){console.warn("TCM complexity was not retained",error);}
   }
@@ -196,19 +219,32 @@ updateAlertsButton();
 async function tcmLog(i, btn){
   const h=HOSP[i]; if(!h) return;
   if(!CREW_TOKEN){ alert("Sign in to crewOS first — open this board from inside crewOS to log TCM."); return; }
-  if(!/^BHW\d{4}$/.test(String(h.bhwPatientId||""))){ alert("Match this hospital event to a patient in the protected Patient Registry before creating a TCM care log."); return; }
+  if(!/^BHW\d{4}$/.test(String(h.bhwPatientId||""))){ openMatch(i); return; }
   const isHigh=h.complexity==="high";
   const payload={ action:"care-log-create", program:"TCM", type:"Episode", name:h.patient,
     bhwPatientId:h.bhwPatientId,
-    episodeDate:h._dISO, nextFollowUp:h._contactISO, followUpStage:"4 days", status:"Open",
+    episodeDate:h._dISO, nextFollowUp:h._target24ISO, followUpStage:"1 day", status:"Open",
     notes:["TCM — "+(isHigh?"99496 · 7-day visit":"99495 · 14-day visit"),
       h.facility?("facility: "+h.facility):"", h.dispo?("dispo: "+h.dispo):"",
+      "BHW outreach target: 24 hours", "TCM interactive contact deadline: "+md(h._contactISO),
       "discharged "+md(h._dISO)].filter(Boolean).join(" · ") };
   const old=btn.textContent; btn.disabled=true; btn.textContent="…";
   try{
     const r=await fetch("/.netlify/functions/action",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+CREW_TOKEN},body:JSON.stringify(payload)});
     const d=await r.json().catch(()=>({}));
-    if(r.ok && d.ok){ h._logged=true; render(); }
+    if(r.ok && d.ok){
+      h._logged=true;h.tcmLogId=d.id||"";h.tcmStatus="Open";
+      if(CLOUD&&h._row){
+        const row={...h._row,"BHW Patient ID":h.bhwPatientId,"Patient Label":h.patient,"TCM Log ID":h.tcmLogId,"TCM Status":h.tcmStatus};
+        try{
+          await CLOUD.importTcmEvents([row],{source:"CrewHQ Population Health",sourceFile:"TCM care-log connection",manual:true});
+          const readBack=await CLOUD.listTcmEvents();
+          if(!readBack.some(item=>item["TCM Log ID"]===h.tcmLogId))throw new Error("the shared hospital row did not read back");
+          h._row=row;
+        }catch(error){alert("The TCM care log was saved, but its Population Health connection could not be verified: "+error.message);}
+      }
+      render();
+    }
     else if(r.status===401){ alert("Your crewOS session expired — sign in again."); btn.disabled=false; btn.textContent=old; }
     else { alert("Couldn't create the TCM log: "+(d.error||r.status)); btn.disabled=false; btn.textContent=old; }
   }catch(e){ alert("Network error creating the TCM log."); btn.disabled=false; btn.textContent=old; }
@@ -257,7 +293,7 @@ function hospitalToCloudRow(h,index=0){
   return {
     "First Name":first,"Last Name":last,"Date of Birth":h.dob||"","BHW Patient ID":h.bhwPatientId||"",
     "Patient Label":label,"Source Event ID":h.sourceEventId||"",
-    "Source System":"CrewHQ Panel and Discharges","Encounter Type":encounter,
+    "Source System":"CrewHQ Population Health","Encounter Type":encounter,
     "Admit Date / Time":h.admitDate||((h.type==="admit")?(h.date||""):""),
     "Discharge Date / Time":h.type==="admit"?"":(h.date||""),
     "Discharge Disposition":h.dispo||"",Facility:h.facility||"",
@@ -270,9 +306,11 @@ function cloudRowToHospital(row){
   const discharge=row["Discharge Date / Time"]||"",admit=row["Admit Date / Time"]||"";
   const type=/emergency|\bed\b/.test(encounter)?"ed":discharge?"discharge":"admit";
   const patient=row["Patient Label"]||[row["Last Name"],row["First Name"]].filter(Boolean).join(", ")||row["BHW Patient ID"]||"Unknown";
-  return {patient,bhwPatientId:row["BHW Patient ID"]||"",type,event:row["Encounter Type"]||type,facility:row.Facility||row.Location||"",date:discharge||admit,
+  return {patient,bhwPatientId:row["BHW Patient ID"]||"",dob:row["Date of Birth"]||"",type,event:row["Encounter Type"]||type,facility:row.Facility||row.Location||"",date:discharge||admit,
     dispo:row["Discharge Disposition"]||"",complexity:row.Complexity||("discharge"===type?"moderate":null),
-    complaint:row["Patient Complaint"]||"",dxCodes:row["Primary Diagnosis Codes"]||"",dxDesc:row["Primary Diagnosis Description"]||"",_row:row};
+    complaint:row["Patient Complaint"]||"",dxCodes:row["Primary Diagnosis Codes"]||"",dxDesc:row["Primary Diagnosis Description"]||"",
+    contactAt:row["First Contact At"]||"",contactOutcome:row["First Contact Outcome"]||"",tcmLogId:row["TCM Log ID"]||"",
+    tcmStatus:row["TCM Status"]||"",_logged:Boolean(row["TCM Log ID"]),_row:row};
 }
 async function loadPasted(){
   const rows=parseDischarges(document.getElementById("pasteBox").value);
@@ -280,7 +318,7 @@ async function loadPasted(){
   if(!rows.length){ note.textContent="Couldn't parse any rows — check the columns."; return; }
   if(!CLOUD){HOSP=rows;render();note.textContent=`Loaded ${rows.length} row(s) for this session; cloud retention is unavailable.`;return;}
   try{
-    const saved=await CLOUD.importTcmEvents(rows.map(hospitalToCloudRow),{source:"CrewHQ Panel and Discharges",sourceFile:"manual CSV or paste",manual:true});
+    const saved=await CLOUD.importTcmEvents(rows.map(hospitalToCloudRow),{source:"CrewHQ Population Health",sourceFile:"manual CSV or paste",manual:true});
     await loadSharedEvents();
     note.textContent=`Retained ${saved.retained} row(s): ${saved.created} new, ${saved.updated} updated. RCM can see them now.`;
   }catch(error){note.textContent="Couldn't retain these rows: "+error.message;}
@@ -293,12 +331,53 @@ function exportPanel(){ window.location.href="/provider/tcm.html#cend-roster"; }
 
 async function loadSharedEvents(){
   if(!CLOUD)return false;
-  const rows=await CLOUD.listTcmEvents();
+  await loadRegistry();
+  let rows=await CLOUD.listTcmEvents();
+  const linked=[];
+  rows=rows.map(row=>{
+    const match=registryMatch(row);
+    if(!match)return row;
+    const canonical={...row,"BHW Patient ID":match.bhwPatientId,"Patient Label":match.name};
+    if(row["BHW Patient ID"]!==match.bhwPatientId||row["Patient Label"]!==match.name)linked.push(canonical);
+    return canonical;
+  });
+  if(linked.length){
+    await CLOUD.importTcmEvents(linked,{source:"CrewHQ Population Health",sourceFile:"exact Patient Registry identity match",manual:true});
+    rows=await CLOUD.listTcmEvents();
+  }
   HOSP=rows.map(cloudRowToHospital);
   const mode=document.getElementById("mode");
   mode.className="pill live";mode.textContent=`● Shared with RCM · ${rows.length}`;
   render();
   return true;
+}
+
+function normalizedName(value){return String(value||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();}
+function registryMatch(row){
+  const id=String(row["BHW Patient ID"]||"").trim().toUpperCase();
+  if(/^BHW\d{4}$/.test(id)){
+    const byId=REGISTRY.find(patient=>patient.bhwPatientId===id);
+    if(byId)return byId;
+  }
+  const first=normalizedName(row["First Name"]),last=normalizedName(row["Last Name"]),dob=String(row["Date of Birth"]||"").slice(0,10);
+  if(first&&last&&dob){
+    const exact=REGISTRY.filter(patient=>normalizedName(patient.legalFirstName)===first&&normalizedName(patient.legalLastName)===last&&String(patient.dob||"").slice(0,10)===dob);
+    if(exact.length===1)return exact[0];
+  }
+  const label=normalizedName(row["Patient Label"]||[row["Last Name"],row["First Name"]].filter(Boolean).join(" "));
+  const matches=REGISTRY.filter(patient=>{
+    const forward=normalizedName(patient.name),reverse=normalizedName([patient.legalLastName,patient.legalFirstName].filter(Boolean).join(" "));
+    return (label===forward||label===reverse)&&(!dob||String(patient.dob||"").slice(0,10)===dob);
+  });
+  return matches.length===1?matches[0]:null;
+}
+async function loadRegistry(){
+  if(REGISTRY.length)return REGISTRY;
+  let token="";try{token=sessionStorage.getItem("crewos_token")||"";}catch(e){}
+  if(!token)return REGISTRY;
+  const response=await fetch("/.netlify/functions/panel-data",{headers:{Authorization:`Bearer ${token}`}});
+  if(!response.ok)return REGISTRY;
+  const data=await response.json();REGISTRY=Array.isArray(data.registryPatients)?data.registryPatients:[];return REGISTRY;
 }
 
 async function load(){
@@ -316,7 +395,7 @@ async function load(){
     if(d && !d.sampleMode && Array.isArray(d.rows) && d.rows.length){
       HOSP=d.rows.map(x=>({...x, complexity:x.complexity||"moderate"}));
       if(CLOUD){
-        await CLOUD.importTcmEvents(HOSP.map(hospitalToCloudRow),{source:"CrewHQ Panel and Discharges",sourceFile:"CRISP ADT feed migration",manual:true});
+        await CLOUD.importTcmEvents(HOSP.map(hospitalToCloudRow),{source:"CrewHQ Population Health",sourceFile:"CRISP ADT feed migration",manual:true});
         await loadSharedEvents();return;
       }
       mode.className="pill live"; mode.textContent="● CRISP · live";
@@ -335,6 +414,48 @@ window.addEventListener("message",event=>{
   if(event.source!==window.parent||event.origin!==location.origin||event.data?.type!=="BHW_CREW_OPEN_HOSPITAL_PATIENT")return;
   document.getElementById("addPatientToggle").click();
 });
+async function openMatch(index){
+  MATCH_INDEX=index;
+  const card=document.getElementById("matchCard"),search=document.getElementById("matchSearch"),note=document.getElementById("matchNote");
+  card.hidden=false;card.open=true;search.value=HOSP[index]?.patient||"";note.textContent="Loading Patient Registry…";
+  await loadRegistry();
+  updateMatchOptions();note.textContent=REGISTRY.length?"Choose the existing record, then connect it.":"Patient Registry is unavailable — sign in again and retry.";
+  card.scrollIntoView({behavior:"smooth",block:"start"});search.focus();
+}
+function registryOption(patient){return `${patient.name} — ${patient.bhwPatientId}${patient.dob?` · DOB ${patient.dob}`:""}${patient.mrn?` · MRN ${patient.mrn}`:""}`;}
+function updateMatchOptions(){
+  const query=normalizedName(document.getElementById("matchSearch").value);
+  const tokens=query.split(" ").filter(Boolean);
+  MATCH_HITS=REGISTRY.filter(patient=>{
+    const searchable=normalizedName(`${patient.name} ${patient.legalFirstName||""} ${patient.legalLastName||""} ${patient.bhwPatientId} ${patient.dob||""} ${patient.mrn||""}`);
+    return !tokens.length||tokens.every(token=>searchable.includes(token));
+  }).slice(0,30);
+  document.getElementById("matchOptions").innerHTML=MATCH_HITS.map(patient=>`<option value="${registryOption(patient).replace(/&/g,"&amp;").replace(/"/g,"&quot;")}"></option>`).join("");
+}
+document.getElementById("matchSearch").addEventListener("input",updateMatchOptions);
+document.getElementById("matchSave").addEventListener("click",async event=>{
+  const note=document.getElementById("matchNote"),button=event.currentTarget;
+  const id=(((document.getElementById("matchSearch").value||"").match(/\bBHW\d{4}\b/i)||[])[0]||"").toUpperCase();
+  const patient=REGISTRY.find(item=>item.bhwPatientId===id);
+  const hospital=HOSP[MATCH_INDEX];
+  if(!hospital||!patient){note.textContent="Choose one of the Patient Registry results.";return;}
+  if(!CLOUD){note.textContent="The shared hospital feed is unavailable.";return;}
+  const row={...(hospital._row||hospitalToCloudRow(hospital)),"BHW Patient ID":patient.bhwPatientId,"Patient Label":patient.name,
+    "First Name":patient.legalFirstName||"","Last Name":patient.legalLastName||"","Date of Birth":patient.dob||hospital.dob||""};
+  button.disabled=true;note.textContent="Connecting and verifying…";
+  try{
+    await CLOUD.importTcmEvents([row],{source:"CrewHQ Population Health",sourceFile:"staff-confirmed Patient Registry match",manual:true});
+    const readBack=await CLOUD.listTcmEvents();
+    if(!readBack.some(item=>item["BHW Patient ID"]===patient.bhwPatientId&&item["Patient Label"]===patient.name
+      &&String(item["Encounter Type"]||"")===String(row["Encounter Type"]||"")
+      &&String(item["Admit Date / Time"]||item["Discharge Date / Time"]||"")===String(row["Admit Date / Time"]||row["Discharge Date / Time"]||""))) {
+      throw new Error("the linked event did not read back from BHW Cloud");
+    }
+    note.textContent=`Connected to ${patient.name} (${patient.bhwPatientId}) and verified.`;
+    await loadSharedEvents();
+  }catch(error){note.textContent="Not connected: "+error.message;}
+  finally{button.disabled=false;}
+});
 document.getElementById("manualPatientSave").addEventListener("click",async e=>{
   const note=document.getElementById("manualPatientNote"),button=e.currentTarget;
   const first=document.getElementById("mFirst").value.trim(),last=document.getElementById("mLast").value.trim();
@@ -348,10 +469,10 @@ document.getElementById("manualPatientSave").addEventListener("click",async e=>{
     "Discharge Date / Time":stillAdmitted?"":discharge,"Discharge Disposition":document.getElementById("mDisposition").value.trim(),
     Facility:facility,"Patient Complaint":document.getElementById("mComplaint").value.trim(),
     "Primary Diagnosis Codes":document.getElementById("mDx").value.trim(),"Primary Diagnosis Description":document.getElementById("mDxDesc").value.trim(),
-    "Source Event ID":`manual-${cryptoRandomId()}`,"Source System":"CrewHQ Panel and Discharges",Complexity:stillAdmitted||kind==="Emergency"?"":"moderate"};
+    "Source Event ID":`manual-${cryptoRandomId()}`,"Source System":"CrewHQ Population Health",Complexity:stillAdmitted||kind==="Emergency"?"":"moderate"};
   button.disabled=true;note.textContent="Saving to the shared hospital list…";
   try{
-    await CLOUD.importTcmEvents([row],{source:"CrewHQ Panel and Discharges",sourceFile:"manual add patient",manual:true});
+    await CLOUD.importTcmEvents([row],{source:"CrewHQ Population Health",sourceFile:"manual add patient",manual:true});
     await loadSharedEvents();
     ["mFirst","mLast","mDob","mAdmit","mDischarge","mFacility","mDisposition","mComplaint","mDx","mDxDesc"].forEach(id=>document.getElementById(id).value="");
     note.textContent="Added. This patient event is now visible in CrewHQ and RCM Hospital Visits.";

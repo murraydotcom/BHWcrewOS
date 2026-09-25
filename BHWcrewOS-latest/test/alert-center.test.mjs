@@ -5,6 +5,8 @@ import {
   alertKey,
   collectSafeAlerts,
   decodeSession,
+  isPageExcludedRequest,
+  pageAlertExclusions,
   requiresProviderAlert,
   roleRoutes,
   safeAlertForRequest,
@@ -106,6 +108,15 @@ test("CrewOS handoffs and referrals alert the receiving group and open that grou
 test("completed work disappears and each workflow version has a distinct alert key", () => {
   assert.equal(safeAlertForRequest(synthetic({ status: "completed", statusCategory: "completed" }), { role: "Office Manager" }), null);
   assert.notEqual(alertKey(synthetic({ version: 1 })), alertKey(synthetic({ version: 2 })));
+});
+
+test("page-scoped fax exclusions leave Front Desk alerts available elsewhere", () => {
+  const careDueDocument = { querySelector: () => ({ content: "fax,ifax" }) };
+  const exclusions = pageAlertExclusions(careDueDocument);
+  assert.deepEqual(exclusions, ["fax", "ifax"]);
+  assert.equal(isPageExcludedRequest(synthetic({ requestType: "fax", source: "iFax" }), exclusions), true);
+  assert.equal(isPageExcludedRequest(synthetic({ requestType: "referral", source: "phone" }), exclusions), false);
+  assert.equal(isPageExcludedRequest(synthetic({ requestType: "fax", source: "iFax" }), []), false, "Front Desk has no page exclusion");
 });
 
 test("team-note alerts reach all staff, but providers only when explicitly mentioned", () => {

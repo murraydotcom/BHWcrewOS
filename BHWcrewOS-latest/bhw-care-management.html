@@ -58,13 +58,13 @@ td select{width:100%;min-width:90px}
   <div><h1>Care Management Log</h1><div class="sub">CCM · APCM · TCM — time, activities, referrals & follow-up</div></div>
   <div class="controls" id="controls" style="display:none">
     <select id="program" onchange="load()">
-      <option>All</option><option>CCM</option><option>APCM</option><option>TCM</option>
+      <option>All</option><option>CCM</option><option>APCM</option><option>PCM</option><option>TCM</option>
       <option>RPM</option><option>RTM</option><option>BHI</option><option>CoCM</option><option>CharmEd Minds</option>
     </select>
     <input type="month" id="month" onchange="load()">
     <input type="text" id="q" placeholder="Search name / Ctl / ICD…" oninput="render()">
     <button class="btn sec sm" onclick="load()">↻ Refresh</button>
-    <button class="btn sm" id="importBtn" onclick="importNow()" title="Pull this month's CCM + APCM lists and enrich from the eligibility tracker">⟳ Run monthly import</button>
+    <button class="btn sm" id="importBtn" onclick="importNow()" title="Prepare this month's enrolled CCM, APCM, PCM, RPM, RTM, BHI, CoCM, and CharmEd Minds patients">⟳ Run monthly import</button>
   </div>
 </header>
 
@@ -187,7 +187,7 @@ async function save(btn){
 }
 
 async function importNow(){
-  if(!confirm("Prepare this month's CCM + APCM rows from the protected Patient Registry?\n\nSafe to re-run — it won't duplicate rows or overwrite time, activities, referrals, or follow-up you've entered.")) return;
+  if(!confirm("Prepare this month's enrolled care-management rows from the protected Patient Registry and Population Health?\n\nThis includes CCM, APCM, PCM, RPM, RTM, BHI, CoCM, and CharmEd Minds. Recent Cloud care-log enrollment is used for up to two months when an enrollment field has not caught up yet. Safe to re-run — it won't duplicate rows or overwrite time, activities, referrals, or follow-up you've entered.")) return;
   var btn = document.getElementById("importBtn");
   btn.disabled = true; btn.textContent = "Importing…";
   var res = await api("care-log-import", { confirm:true });
@@ -196,7 +196,8 @@ async function importNow(){
   if(res.ok && res.d.ok){
     var s = res.d.summary || {};
     alert("BHW Cloud preparation complete for "+(res.d.month||"")+":\n"+
-      (s.created||0)+" created · "+(s.updated||0)+" refreshed from "+(s.patientRegistryCount||0)+" Registry records");
+      (s.created||0)+" created · "+(s.updated||0)+" refreshed from "+(s.patientRegistryCount||0)+" Registry records"+
+      ((s.recoveredPrograms||0)?" · "+s.recoveredPrograms+" recent enrollment"+(s.recoveredPrograms===1?"":"s")+" recovered":""));
     load();
   } else {
     alert("Import failed: " + (res.d.error || res.status));
