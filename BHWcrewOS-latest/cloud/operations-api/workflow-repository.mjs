@@ -151,12 +151,11 @@ export class FirestoreWorkflowRepository extends FirestoreOperationsRepository {
     // query prevents thousands of open faxes from crowding completed records
     // out before the requested page is assembled.
     if (source && requestedStatus === "completed") query = query.where("statusCategory", "==", "completed");
+    else if (source && requestedStatus === "open") query = query.where("statusCategory", "in", ["received", "in_progress", "waiting", "escalated"]);
     query = query.orderBy("updatedAt", "desc");
     if (source) query = query.orderBy(FieldPath.documentId(), "desc");
     if (before) query = source && beforeId ? query.startAfter(before, beforeId) : query.startAfter(before);
-    const fetchLimit = source && requestedStatus !== "completed"
-      ? Math.min(500, Math.max(requestedLimit, requestedLimit * 3))
-      : source ? requestedLimit : 500;
+    const fetchLimit = source ? requestedLimit : 500;
     const snapshot = await query.limit(fetchLimit).get();
     let rows = snapshot.docs.map((doc) => toWorkflowRequest(doc.data()));
     const status = requestedStatus;

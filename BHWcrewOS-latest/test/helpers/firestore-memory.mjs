@@ -38,7 +38,7 @@ class Query {
   async get() {
     let rows = [...this.db.records].filter(([path]) => path.startsWith(`${this.path}/`) && path.split("/").length === this.path.split("/").length + 1);
     for (const [field, op, value] of this.spec.wheres || []) {
-      rows = rows.filter(([, data]) => op === "==" ? data[field] === value : data[field]?.includes(value));
+      rows = rows.filter(([, data]) => op === "==" ? data[field] === value : op === "in" ? value.includes(data[field]) : data[field]?.includes(value));
     }
     if (this.spec.orders?.length) {
       const valueAt = ([path, data], field) => field === "__name__" ? path.split("/").at(-1) : data[field];
