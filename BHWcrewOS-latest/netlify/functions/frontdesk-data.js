@@ -44,6 +44,7 @@ const actionKey = (prefix) => `${prefix}:${crypto.randomUUID()}`;
 const requestRows = (result) => result.requests || result.patientRequests || [];
 const shapeRequest = (request) => ({
   id: request.id || request.patientRequestId,
+  cursorId: request.cursorDocumentId || request.id || request.patientRequestId,
   type: request.requestType || 'general',
   source: request.source || 'crewos',
   priority: request.priority || 'routine',
@@ -247,7 +248,7 @@ exports.handler = async (event) => {
       return {
         statusCode: 200,
         headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-        body: JSON.stringify({ faxItems, faxMode, faxNextBefore: faxItems.length === 25 ? faxItems.at(-1).updatedAt : '', faxNextBeforeId: faxItems.length === 25 ? faxItems.at(-1).id : '' }),
+        body: JSON.stringify({ faxItems, faxMode, faxNextBefore: faxItems.length === 25 ? faxItems.at(-1).updatedAt : '', faxNextBeforeId: faxItems.length === 25 ? faxItems.at(-1).cursorId : '' }),
       };
     }
 
@@ -262,7 +263,7 @@ exports.handler = async (event) => {
       return {
         statusCode: 200,
         headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-        body: JSON.stringify({ items, faxItems, faxMode: 'open', faxNextBefore: faxItems.length === 25 ? faxItems.at(-1).updatedAt : '', faxNextBeforeId: faxItems.length === 25 ? faxItems.at(-1).id : '' }),
+        body: JSON.stringify({ items, faxItems, faxMode: 'open', faxNextBefore: faxItems.length === 25 ? faxItems.at(-1).updatedAt : '', faxNextBeforeId: faxItems.length === 25 ? faxItems.at(-1).cursorId : '' }),
       };
     }
 

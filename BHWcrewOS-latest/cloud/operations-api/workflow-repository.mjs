@@ -157,7 +157,7 @@ export class FirestoreWorkflowRepository extends FirestoreOperationsRepository {
     if (before) query = source && beforeId ? query.startAfter(before, beforeId) : query.startAfter(before);
     const fetchLimit = source ? requestedLimit : 500;
     const snapshot = await query.limit(fetchLimit).get();
-    let rows = snapshot.docs.map((doc) => toWorkflowRequest(doc.data()));
+    let rows = snapshot.docs.map((doc) => ({ ...toWorkflowRequest(doc.data()), cursorDocumentId: doc.id }));
     const status = requestedStatus;
     const serviceLine = clean(filters.serviceLine, 80).toLowerCase();
     const assignedTo = clean(filters.assignedTo, 200);

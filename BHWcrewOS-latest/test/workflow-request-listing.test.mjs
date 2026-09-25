@@ -65,7 +65,7 @@ test("source-filtered CrewOS work and paged completed fax history are not crowde
   assert.deepEqual(history.map((row) => row.id), [completedFax.id]);
 
   const firstPage = await repository.listPatientRequests({ source: "fax", status: "open", limit: 5 });
-  const secondPage = await repository.listPatientRequests({ source: "fax", status: "open", before: firstPage.at(-1).updatedAt, beforeId: firstPage.at(-1).id, limit: 5 });
+  const secondPage = await repository.listPatientRequests({ source: "fax", status: "open", before: firstPage.at(-1).updatedAt, beforeId: firstPage.at(-1).cursorDocumentId, limit: 5 });
   assert.equal(secondPage.length, 5);
   assert.equal(secondPage.some((row) => firstPage.some((first) => first.id === row.id)), false);
 });
