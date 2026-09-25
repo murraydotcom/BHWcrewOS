@@ -31,13 +31,15 @@ class Ref {
 class Query {
   constructor(db, path, spec = {}) { Object.assign(this, { db, path, spec }); }
   doc(id) { return new Ref(this.db, `${this.path}/${id}`); }
-  where(field, op, value) { return new Query(this.db, this.path, { ...this.spec, where: [field, op, value] }); }
+  where(field, op, value) { return new Query(this.db, this.path, { ...this.spec, wheres: [...(this.spec.wheres || []), [field, op, value]] }); }
   orderBy(field, direction = "asc") { return new Query(this.db, this.path, { ...this.spec, order: [field, direction] }); }
   limit(count) { return new Query(this.db, this.path, { ...this.spec, limit: count }); }
   startAfter(value) { return new Query(this.db, this.path, { ...this.spec, after: value }); }
   async get() {
     let rows = [...this.db.records].filter(([path]) => path.startsWith(`${this.path}/`) && path.split("/").length === this.path.split("/").length + 1);
-    if (this.spec.where) { const [field, op, value] = this.spec.where; rows = rows.filter(([, data]) => op === "==" ? data[field] === value : data[field]?.includes(value)); }
+    for (const [field, op, value] of this.spec.wheres || []) {
+      rows = rows.filter(([, data]) => op === "==" ? data[field] === value : data[field]?.includes(value));
+    }
     if (this.spec.order) {
       const [field, direction] = this.spec.order, sign = direction === "desc" ? -1 : 1;
       rows = rows.filter(([, data]) => data[field] !== undefined).sort(([, a], [, b]) => (a[field] < b[field] ? -1 : a[field] > b[field] ? 1 : 0) * sign);

@@ -63,6 +63,7 @@ exports.handler = async (event) => {
       : String(body.provider || "").toLowerCase();
 
     let source, summary, link, from = "";
+    let sourceRecordId = String(body.sourceRecordId || body.messageId || body.gmailMessageId || "").trim();
 
     if (provider === "ifax") {
       // Direction from the OPEN FAX link payload is authoritative; subject/body
@@ -70,6 +71,7 @@ exports.handler = async (event) => {
       const openLink = firstUrl(html + "\n" + hay, /https?:\/\/[^\s>"']*ifaxapp\.com\/open-fax\/[^\s>"')]*/i)
         || firstUrl(html + "\n" + hay, /https?:\/\/[^\s>"']*ifaxapp\.com[^\s>"']*/i);
       const meta = decodeIfaxLink(openLink);
+      sourceRecordId = String(meta?.id || meta?.faxId || meta?.fax_id || meta?.jobId || meta?.uuid || openLink || sourceRecordId).trim();
       const metaType = String(meta?.type || "").toLowerCase();
       const metaStatus = String(meta?.status || "").toLowerCase();
       const kwInbound = /a new fax was just received|new fax|fax received|you (?:have )?received a fax|incoming fax|received on/i.test(hay);
@@ -118,7 +120,7 @@ exports.handler = async (event) => {
     // Drive) for Source Link; otherwise createQueueEntry pulls it from `link`.
     const sourceUrl = String(body.attachmentUrl || "").trim();
     if (sourceUrl && /fax/i.test(source)) summary = `${summary} · PDF: ${body.attachmentName || "attachment"}`;
-    const r = await createQueueEntry({ patientId, patientName, from, summary, source, link, sourceUrl, receivedISO: body.receivedISO || new Date().toISOString() });
+    const r = await createQueueEntry({ patientId, patientName, from, summary, source, link, sourceUrl, sourceRecordId, receivedISO: body.receivedISO || "" });
     if (!r.ok) return { statusCode: 502, body: `operations intake error: ${r.error}` };
     return { statusCode: 200, body: JSON.stringify({ ok: true, source, matched: r.matched }) };
   } catch (e) {

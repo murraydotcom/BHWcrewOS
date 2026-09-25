@@ -63,6 +63,7 @@ function ingestOnce() {
         subject: m.getSubject(),
         text: m.getPlainBody(),
         html: m.getBody(),
+        sourceRecordId: m.getId(),
         receivedISO: m.getDate().toISOString()
       };
       var pdf = savePdfToDrive(m);

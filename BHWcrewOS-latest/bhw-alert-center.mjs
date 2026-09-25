@@ -328,7 +328,14 @@ function startAlertCenter(token) {
       clientPromise ||= import("/provider/operations-queue.mjs").then(({ createOperationsCloudClient }) => createOperationsCloudClient());
       const client = await clientPromise;
       if (!client) throw new Error("Google workflow backend is not configured");
-      applyRequests(await client.listPatientRequests({ status: "open", limit: 300 }));
+      // Always reserve a source-filtered lane for CrewOS work so a busy fax
+      // inbox cannot push warm handoffs/referrals out of the alert window.
+      const [crewRequests, recentRequests] = await Promise.all([
+        client.listPatientRequests({ status: "open", source: "crewos", limit: 300 }),
+        client.listPatientRequests({ status: "open", excludeSources: exclusions, limit: 300 }),
+      ]);
+      const merged = [...new Map([...crewRequests, ...recentRequests].map((request) => [request.id, request])).values()];
+      applyRequests(merged);
     } catch {
       ui.root.hidden = true;
     } finally {
