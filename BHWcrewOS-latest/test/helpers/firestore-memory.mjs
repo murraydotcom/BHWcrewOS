@@ -32,18 +32,32 @@ class Query {
   constructor(db, path, spec = {}) { Object.assign(this, { db, path, spec }); }
   doc(id) { return new Ref(this.db, `${this.path}/${id}`); }
   where(field, op, value) { return new Query(this.db, this.path, { ...this.spec, wheres: [...(this.spec.wheres || []), [field, op, value]] }); }
-  orderBy(field, direction = "asc") { return new Query(this.db, this.path, { ...this.spec, order: [field, direction] }); }
+  orderBy(field, direction = "asc") { return new Query(this.db, this.path, { ...this.spec, orders: [...(this.spec.orders || []), [String(field), direction]] }); }
   limit(count) { return new Query(this.db, this.path, { ...this.spec, limit: count }); }
-  startAfter(value) { return new Query(this.db, this.path, { ...this.spec, after: value }); }
+  startAfter(...values) { return new Query(this.db, this.path, { ...this.spec, after: values }); }
   async get() {
     let rows = [...this.db.records].filter(([path]) => path.startsWith(`${this.path}/`) && path.split("/").length === this.path.split("/").length + 1);
     for (const [field, op, value] of this.spec.wheres || []) {
       rows = rows.filter(([, data]) => op === "==" ? data[field] === value : data[field]?.includes(value));
     }
-    if (this.spec.order) {
-      const [field, direction] = this.spec.order, sign = direction === "desc" ? -1 : 1;
-      rows = rows.filter(([, data]) => data[field] !== undefined).sort(([, a], [, b]) => (a[field] < b[field] ? -1 : a[field] > b[field] ? 1 : 0) * sign);
-      if (this.spec.after !== undefined) rows = rows.filter(([, data]) => direction === "desc" ? data[field] < this.spec.after : data[field] > this.spec.after);
+    if (this.spec.orders?.length) {
+      const valueAt = ([path, data], field) => field === "__name__" ? path.split("/").at(-1) : data[field];
+      rows = rows.filter((row) => this.spec.orders.every(([field]) => valueAt(row, field) !== undefined));
+      const compare = (left, right) => {
+        for (const [field, direction] of this.spec.orders) {
+          const a = valueAt(left, field), b = valueAt(right, field), sign = direction === "desc" ? -1 : 1;
+          if (a < b) return -1 * sign;
+          if (a > b) return 1 * sign;
+        }
+        return 0;
+      };
+      rows.sort(compare);
+      if (this.spec.after) {
+        const nameIndex = this.spec.orders.findIndex(([field]) => field === "__name__");
+        const cursorPath = nameIndex >= 0 ? `${this.path}/${this.spec.after[nameIndex]}` : "";
+        const cursor = [cursorPath, Object.fromEntries(this.spec.orders.filter(([field]) => field !== "__name__").map(([field], index) => [field, this.spec.after[index]]))];
+        rows = rows.filter((row) => compare(row, cursor) > 0);
+      }
     }
     if (this.spec.limit) rows = rows.slice(0, this.spec.limit);
     return { docs: await Promise.all(rows.map(([path]) => new Ref(this.db, path).get())) };

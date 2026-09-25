@@ -424,7 +424,7 @@ $('f-go').addEventListener('click',findSpecialists);
 
 /* live inbox feed */
 function bucket(src){ if(/voicemail|phone/i.test(src))return'voice'; if(/text|sms|portal|website|email/i.test(src))return'text'; return'fax'; }
-let INBOX_ITEMS=[], FAX_ITEMS=[], FAX_NEXT='', FAX_MODE='open';
+let INBOX_ITEMS=[], FAX_ITEMS=[], FAX_NEXT='', FAX_NEXT_ID='', FAX_MODE='open';
 function renderInbox(items,faxItems=FAX_ITEMS){
   $('inboxsection').style.display='block';
   const cols={voice:[],text:[],fax:[]};
@@ -459,13 +459,14 @@ function renderInbox(items,faxItems=FAX_ITEMS){
   $('fax-older').hidden=!FAX_NEXT;
 }
 function withQuery(params){const join=API.includes('?')?'&':'?';return `${API}${join}${params}`;}
-async function loadFaxMode(mode,before=''){
+async function loadFaxMode(mode,before='',beforeId=''){
   const key=mode==='completed'?'faxHistory=1':'faxPage=1';
-  const res=await crewFetch(withQuery(`${key}${before?`&before=${encodeURIComponent(before)}`:''}`));
+  const cursor=before?`&before=${encodeURIComponent(before)}${beforeId?`&beforeId=${encodeURIComponent(beforeId)}`:''}`:'';
+  const res=await crewFetch(withQuery(`${key}${cursor}`));
   if(!res.ok)throw new Error('Fax list unavailable');
   const d=await res.json(), incoming=d.faxItems||[];
   FAX_ITEMS=before?[...new Map([...FAX_ITEMS,...incoming].map(i=>[i.id,i])).values()]:incoming;
-  FAX_NEXT=d.faxNextBefore||''; FAX_MODE=mode; renderInbox(INBOX_ITEMS,FAX_ITEMS);
+  FAX_NEXT=d.faxNextBefore||''; FAX_NEXT_ID=d.faxNextBeforeId||''; FAX_MODE=mode; renderInbox(INBOX_ITEMS,FAX_ITEMS);
 }
 async function poll(){
   if(!API)return;
@@ -475,14 +476,14 @@ async function poll(){
     const d=await res.json();
     if(d.items){
       INBOX_ITEMS=d.items;
-      if(FAX_MODE==='open'){FAX_ITEMS=d.faxItems||[];FAX_NEXT=d.faxNextBefore||'';}
+      if(FAX_MODE==='open'){FAX_ITEMS=d.faxItems||[];FAX_NEXT=d.faxNextBefore||'';FAX_NEXT_ID=d.faxNextBeforeId||'';}
       renderInbox(INBOX_ITEMS,FAX_ITEMS);
     }
   }catch(e){}
 }
 poll(); setInterval(poll,60000);
 $('fax-history').addEventListener('click',async()=>{try{await loadFaxMode(FAX_MODE==='completed'?'open':'completed');}catch(e){$('fax-mode-label').textContent=String(e.message||e);}});
-$('fax-older').addEventListener('click',async()=>{if(!FAX_NEXT)return;const b=$('fax-older');b.disabled=true;try{await loadFaxMode(FAX_MODE,FAX_NEXT);}catch(e){$('fax-mode-label').textContent=String(e.message||e);}finally{b.disabled=false;}});
+$('fax-older').addEventListener('click',async()=>{if(!FAX_NEXT)return;const b=$('fax-older');b.disabled=true;try{await loadFaxMode(FAX_MODE,FAX_NEXT,FAX_NEXT_ID);}catch(e){$('fax-mode-label').textContent=String(e.message||e);}finally{b.disabled=false;}});
 
 /* write-back: Start / Done / Reopen buttons -> BHW Cloud */
 const CANNED = [

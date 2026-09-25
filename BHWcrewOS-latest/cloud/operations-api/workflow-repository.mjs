@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { FieldPath } from "@google-cloud/firestore";
 import { FirestoreOperationsRepository } from "./firestore-repository.mjs";
 import { normalizePhone } from "./dialpad-service.mjs";
 import { COLLECTIONS } from "./schema.mjs";
@@ -142,6 +143,7 @@ export class FirestoreWorkflowRepository extends FirestoreOperationsRepository {
     const requestedLimit = Math.max(1, Math.min(500, Number(filters.limit) || 100));
     const source = clean(filters.source, 40).toLowerCase();
     const before = clean(filters.before, 40);
+    const beforeId = clean(filters.beforeId, 100);
     const requestedStatus = clean(filters.status, 80).toLowerCase().replaceAll("-", "_");
     let query = this.patientRequests;
     if (source) query = query.where("source", "==", source);
@@ -150,7 +152,8 @@ export class FirestoreWorkflowRepository extends FirestoreOperationsRepository {
     // out before the requested page is assembled.
     if (source && requestedStatus === "completed") query = query.where("statusCategory", "==", "completed");
     query = query.orderBy("updatedAt", "desc");
-    if (before) query = query.startAfter(before);
+    if (source) query = query.orderBy(FieldPath.documentId(), "desc");
+    if (before) query = source && beforeId ? query.startAfter(before, beforeId) : query.startAfter(before);
     const fetchLimit = source && requestedStatus !== "completed"
       ? Math.min(500, Math.max(requestedLimit, requestedLimit * 3))
       : source ? requestedLimit : 500;

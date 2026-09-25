@@ -49,7 +49,7 @@ test("source-filtered CrewOS work and paged completed fax history are not crowde
   for (let index = 0; index < 520; index += 1) {
     const id = `synthetic-fax-${String(index).padStart(4, "0")}`;
     await repository.patientRequests.doc(id).set({
-      ...request(id, `2026-09-25T${String(20 + Math.floor(index / 60)).padStart(2, "0")}:${String(index % 60).padStart(2, "0")}:00.000Z`),
+      ...request(id, "2026-09-25T20:00:00.000Z"),
       source: "fax",
     });
   }
@@ -64,7 +64,8 @@ test("source-filtered CrewOS work and paged completed fax history are not crowde
   const history = await repository.listPatientRequests({ source: "fax", status: "completed", limit: 25 });
   assert.deepEqual(history.map((row) => row.id), [completedFax.id]);
 
-  const secondPage = await repository.listPatientRequests({ source: "fax", status: "open", before: "2026-09-25T23:00:00.000Z", limit: 5 });
+  const firstPage = await repository.listPatientRequests({ source: "fax", status: "open", limit: 5 });
+  const secondPage = await repository.listPatientRequests({ source: "fax", status: "open", before: firstPage.at(-1).updatedAt, beforeId: firstPage.at(-1).id, limit: 5 });
   assert.equal(secondPage.length, 5);
-  assert.ok(secondPage.every((row) => row.updatedAt < "2026-09-25T23:00:00.000Z"));
+  assert.equal(secondPage.some((row) => firstPage.some((first) => first.id === row.id)), false);
 });

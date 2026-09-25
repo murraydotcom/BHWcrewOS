@@ -238,14 +238,16 @@ exports.handler = async (event) => {
       : event.queryStringParameters?.faxPage ? 'open' : '';
     if (!q && faxMode) {
       const before = String(event.queryStringParameters?.before || '').trim();
+      const beforeId = String(event.queryStringParameters?.beforeId || '').trim();
       const params = new URLSearchParams({ source: 'fax', status: faxMode, limit: '25' });
       if (before) params.set('before', before);
+      if (beforeId) params.set('beforeId', beforeId);
       const result = await operationsRequest(`/v1/patient-requests?${params}`, { actor: session });
       const faxItems = requestRows(result).map(shapeRequest);
       return {
         statusCode: 200,
         headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-        body: JSON.stringify({ faxItems, faxMode, faxNextBefore: faxItems.length === 25 ? faxItems.at(-1).updatedAt : '' }),
+        body: JSON.stringify({ faxItems, faxMode, faxNextBefore: faxItems.length === 25 ? faxItems.at(-1).updatedAt : '', faxNextBeforeId: faxItems.length === 25 ? faxItems.at(-1).id : '' }),
       };
     }
 
@@ -260,7 +262,7 @@ exports.handler = async (event) => {
       return {
         statusCode: 200,
         headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-        body: JSON.stringify({ items, faxItems, faxMode: 'open', faxNextBefore: faxItems.length === 25 ? faxItems.at(-1).updatedAt : '' }),
+        body: JSON.stringify({ items, faxItems, faxMode: 'open', faxNextBefore: faxItems.length === 25 ? faxItems.at(-1).updatedAt : '', faxNextBeforeId: faxItems.length === 25 ? faxItems.at(-1).id : '' }),
       };
     }
 
