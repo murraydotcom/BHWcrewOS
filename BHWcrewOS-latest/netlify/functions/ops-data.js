@@ -101,7 +101,7 @@ exports.handler = async (event) => {
         listCloudPatients(session)
           .then((patients) => ({ ready: true, patients, error: "" }))
           .catch((error) => ({ ready: false, patients: [], error: error.message || "Patient Registry unavailable" })),
-        operationsRequest("/v1/patient-requests?limit=500", { actor: session }),
+        operationsRequest("/v1/patient-requests?source=crewos&limit=500", { actor: session }),
         cloudRequest("/v1/care-management/logs", { actor: session }),
         cloudRequest("/v1/wellness-visits", { actor: session }),
         cloudRequest("/v1/program-care-plans", { actor: session }),

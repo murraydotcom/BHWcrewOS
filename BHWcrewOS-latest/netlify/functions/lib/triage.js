@@ -44,12 +44,19 @@ async function matchPatientByPhone(from) {
 // Create one authoritative Patient Request. The original fax/recording link is
 // retained in protected source metadata. A shared or unmatched phone never gets
 // guessed onto a patient record.
-async function createQueueEntry({ patientId, patientName, from, summary, source, receivedISO, link, sourceUrl }) {
-  const when = receivedISO || new Date().toISOString();
-  const url = sourceUrl || (String(link || "").match(/https?:\/\/[^\s)]+/) || [])[0] || "";
+async function createQueueEntry({ patientId, patientName, from, summary, source, receivedISO, link, sourceUrl, sourceRecordId }) {
+  const url = (sourceUrl || (String(link || "").match(/https?:\/\/[^\s)]+/) || [])[0] || "").slice(0, 1000);
   const message = `${summary || ""}`.trim().slice(0, 4000) || "Inbound communication received";
-  const sourceSlug = String(source || "front-desk").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  const fingerprint = crypto.createHash("sha256").update([sourceSlug, from, when, url, message].join("|")).digest("hex");
+  const sourceSlug = String(source || "front-desk").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
+  // Provider/message IDs are stable across retries. When a provider does not
+  // supply one, deliberately omit our processing time from the fingerprint so
+  // the same retry cannot create a fresh queue row every few seconds.
+  const stableRecord = String(sourceRecordId || "").trim().slice(0, 1000);
+  const fingerprint = crypto.createHash("sha256").update(
+    stableRecord ? `${sourceSlug}|provider|${stableRecord}` : [sourceSlug, from, receivedISO || "", url, message].join("|"),
+  ).digest("hex");
+  const displayName = String(patientName || "Unmatched sender").slice(0, 120);
+  const queueSummary = ((!patientId && patientName ? `${patientName}: ` : "") + message).slice(0, 500);
   const result = await createFrontDeskIntake({
     submissionId: `front-desk:${fingerprint}`,
     body: {
@@ -57,12 +64,12 @@ async function createQueueEntry({ patientId, patientName, from, summary, source,
       patientMatchStatus: patientId ? "matched" : "unmatched",
       requestType: "general",
       priority: "routine",
-      summary: (!patientId && patientName ? `${patientName}: ` : "") + message,
+      summary: queueSummary,
       message,
       source: sourceSlug || "front-desk",
       requester: {
-        displayName: patientName || "Unmatched sender",
-        callbackPhone: from || "",
+        displayName,
+        callbackPhone: String(from || "").slice(0, 40),
         preferredChannel: /fax/i.test(source) ? "fax" : "phone",
       },
       routing: { targetSystem: "crewos", assignedTeam: "front-desk" },

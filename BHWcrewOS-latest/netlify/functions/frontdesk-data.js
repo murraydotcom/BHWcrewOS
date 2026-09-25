@@ -44,6 +44,7 @@ const actionKey = (prefix) => `${prefix}:${crypto.randomUUID()}`;
 const requestRows = (result) => result.requests || result.patientRequests || [];
 const shapeRequest = (request) => ({
   id: request.id || request.patientRequestId,
+  cursorId: request.cursorDocumentId || request.id || request.patientRequestId,
   type: request.requestType || 'general',
   source: request.source || 'crewos',
   priority: request.priority || 'routine',
@@ -51,6 +52,7 @@ const shapeRequest = (request) => ({
   statusCategory: request.statusCategory || '',
   sla: '',
   received: request.workflowContext?.historicalReceivedAt || request.createdAt || request.receivedAt || '',
+  updatedAt: request.updatedAt || request.createdAt || request.receivedAt || '',
   summary: request.summary || '',
   sourceUrl: '',
   name: request.patientName || request.bhwPatientId || '',
@@ -232,14 +234,36 @@ exports.handler = async (event) => {
       };
     }
 
-    // ---- INBOX MODE: no q -> return the live activity feed ----
-    if (!q) {
-      const result = await operationsRequest('/v1/patient-requests?limit=100', { actor: session });
-      const items = requestRows(result).map(shapeRequest);
+    // ---- PAGED FAX MODE: keep the large fax queue out of the general feed ----
+    const faxMode = event.queryStringParameters?.faxHistory ? 'completed'
+      : event.queryStringParameters?.faxPage ? 'open' : '';
+    if (!q && faxMode) {
+      const before = String(event.queryStringParameters?.before || '').trim();
+      const beforeId = String(event.queryStringParameters?.beforeId || '').trim();
+      const params = new URLSearchParams({ source: 'fax', status: faxMode, limit: '25' });
+      if (before) params.set('before', before);
+      if (beforeId) params.set('beforeId', beforeId);
+      const result = await operationsRequest(`/v1/patient-requests?${params}`, { actor: session });
+      const faxItems = requestRows(result).map(shapeRequest);
       return {
         statusCode: 200,
         headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-        body: JSON.stringify({ items }),
+        body: JSON.stringify({ faxItems, faxMode, faxNextBefore: faxItems.length === 25 ? faxItems.at(-1).updatedAt : '', faxNextBeforeId: faxItems.length === 25 ? faxItems.at(-1).cursorId : '' }),
+      };
+    }
+
+    // ---- INBOX MODE: no q -> return non-fax activity plus one fax page ----
+    if (!q) {
+      const [result, faxResult] = await Promise.all([
+        operationsRequest('/v1/patient-requests?excludeSources=fax,ifax&limit=100', { actor: session }),
+        operationsRequest('/v1/patient-requests?source=fax&status=open&limit=25', { actor: session }),
+      ]);
+      const items = requestRows(result).map(shapeRequest);
+      const faxItems = requestRows(faxResult).map(shapeRequest);
+      return {
+        statusCode: 200,
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+        body: JSON.stringify({ items, faxItems, faxMode: 'open', faxNextBefore: faxItems.length === 25 ? faxItems.at(-1).updatedAt : '', faxNextBeforeId: faxItems.length === 25 ? faxItems.at(-1).cursorId : '' }),
       };
     }
 

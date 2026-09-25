@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { FieldPath } from "@google-cloud/firestore";
 import { FirestoreOperationsRepository } from "./firestore-repository.mjs";
 import { normalizePhone } from "./dialpad-service.mjs";
 import { COLLECTIONS } from "./schema.mjs";
@@ -135,21 +136,43 @@ export class FirestoreWorkflowRepository extends FirestoreOperationsRepository {
   }
 
   async listPatientRequests(filters = {}) {
-    const snapshot = await this.patientRequests.limit(500).get();
-    let rows = snapshot.docs.map((doc) => toWorkflowRequest(doc.data()));
-    const status = clean(filters.status, 80).toLowerCase().replaceAll("-", "_");
+    // Firestore's default collection order is document ID, not recency. Limiting
+    // before ordering caused newer warm handoffs and referrals to disappear once
+    // the shared queue exceeded 500 records. Read the newest records first so
+    // CrewOS inboxes and notifications always receive the latest workflow items.
+    const requestedLimit = Math.max(1, Math.min(500, Number(filters.limit) || 100));
+    const source = clean(filters.source, 40).toLowerCase();
+    const before = clean(filters.before, 40);
+    const beforeId = clean(filters.beforeId, 100);
+    const requestedStatus = clean(filters.status, 80).toLowerCase().replaceAll("-", "_");
+    let query = this.patientRequests;
+    if (source) query = query.where("source", "==", source);
+    // Completed fax history is a dedicated review view. Filtering it in the
+    // query prevents thousands of open faxes from crowding completed records
+    // out before the requested page is assembled.
+    if (source && requestedStatus === "completed") query = query.where("statusCategory", "==", "completed");
+    else if (source && requestedStatus === "open") query = query.where("statusCategory", "in", ["received", "in_progress", "waiting", "escalated"]);
+    query = query.orderBy("updatedAt", "desc");
+    if (source) query = query.orderBy(FieldPath.documentId(), "desc");
+    if (before) query = source && beforeId ? query.startAfter(before, beforeId) : query.startAfter(before);
+    const fetchLimit = source ? requestedLimit : 500;
+    const snapshot = await query.limit(fetchLimit).get();
+    let rows = snapshot.docs.map((doc) => ({ ...toWorkflowRequest(doc.data()), cursorDocumentId: doc.id }));
+    const status = requestedStatus;
     const serviceLine = clean(filters.serviceLine, 80).toLowerCase();
     const assignedTo = clean(filters.assignedTo, 200);
     const assignedTeam = clean(filters.assignedTeam, 80).toLowerCase();
     const patientId = clean(filters.bhwPatientId, 16).toUpperCase();
+    const excludeSources = new Set(clean(filters.excludeSources, 500).toLowerCase().split(",").map((value) => value.trim()).filter(Boolean));
     if (status === "open") rows = rows.filter((row) => row.statusCategory !== "completed");
     else if (status) rows = rows.filter((row) => row.status === status || row.statusCategory === status);
     if (serviceLine) rows = rows.filter((row) => row.serviceLine === serviceLine);
     if (assignedTo) rows = rows.filter((row) => row.assignedTo === assignedTo);
     if (assignedTeam) rows = rows.filter((row) => row.assignedTeam === assignedTeam);
     if (patientId) rows = rows.filter((row) => row.bhwPatientId === patientId);
+    if (excludeSources.size) rows = rows.filter((row) => !excludeSources.has(clean(row.source, 40).toLowerCase()));
     rows.sort((left, right) => String(right.updatedAt || right.createdAt).localeCompare(String(left.updatedAt || left.createdAt)));
-    rows = rows.slice(0, Math.max(1, Math.min(500, Number(filters.limit) || 100)));
+    rows = rows.slice(0, requestedLimit);
     const patientIds = [...new Set(rows.map((row) => row.bhwPatientId).filter((id) => id && id !== "BHW0000"))];
     const patientDocs = patientIds.length ? await this.db.getAll(...patientIds.map((id) => this.patients.doc(id))) : [];
     const contactDocs = patientIds.length ? await this.db.getAll(...patientIds.map((id) => this.patientContacts.doc(keyFor(`${id}:primary`)))) : [];

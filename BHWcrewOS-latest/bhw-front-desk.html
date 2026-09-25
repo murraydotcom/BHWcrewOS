@@ -147,7 +147,7 @@
       if(!token)return;
       fetch('/.netlify/functions/frontdesk-data',{headers:{Authorization:'Bearer '+token}}).then(r=>r.ok?r.json():null).then(d=>{
         if(!d||!Array.isArray(d.items)) return;
-        var open=d.items.filter(function(i){return !/done|resolved|complete|closed/i.test(i.status||'');}).length;
+        var open=(d.items||[]).concat(d.faxItems||[]).filter(function(i){return !/done|resolved|complete|closed/i.test(i.status||'');}).length;
         var b=document.getElementById('reqBadge');
         try{localStorage.setItem('bhw_open_requests',String(open));}catch(e){}
         if(open>0&&b){b.textContent=open;b.style.display='inline-flex';}
@@ -170,7 +170,7 @@
     <div id="inboxcols" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
       <div><h3 class="colh">📞 Calls & voicemails</h3><div id="col-voice"></div></div>
       <div><h3 class="colh">💬 Texts & portal</h3><div id="col-text"></div></div>
-      <div><h3 class="colh">📠 Faxes & other</h3><div id="col-fax"></div></div>
+      <div><h3 class="colh">📠 Faxes</h3><div class="fax-tools"><button class="act" id="fax-history" type="button">Review completed</button><button class="act" id="fax-older" type="button" hidden>Load older</button></div><div id="fax-mode-label" class="s"></div><div id="col-fax"></div></div>
     </div>
   </section>
   <style>
@@ -192,6 +192,7 @@
     .replybox select,.replybox textarea{font:inherit;font-size:.76rem;padding:7px 9px;border:1.5px solid var(--line);border-radius:7px;background:var(--white)}
     .replybox textarea{resize:vertical}
     .replybox select:focus,.replybox textarea:focus{outline:2px solid var(--river);outline-offset:1px}
+    .fax-tools{display:flex;gap:6px;flex-wrap:wrap;margin:-2px 0 8px}.fax-tools .act{background:var(--white)}#fax-mode-label{font-size:.7rem;margin-bottom:7px}
     @media(max-width:820px){#inboxcols{grid-template-columns:1fr}}
   </style>
 
@@ -423,18 +424,20 @@ $('f-go').addEventListener('click',findSpecialists);
 
 /* live inbox feed */
 function bucket(src){ if(/voicemail|phone/i.test(src))return'voice'; if(/text|sms|portal|website|email/i.test(src))return'text'; return'fax'; }
-function renderInbox(items){
+let INBOX_ITEMS=[], FAX_ITEMS=[], FAX_NEXT='', FAX_NEXT_ID='', FAX_MODE='open';
+function renderInbox(items,faxItems=FAX_ITEMS){
   $('inboxsection').style.display='block';
   const cols={voice:[],text:[],fax:[]};
   const today=new Date().toISOString().slice(0,10);
   // Completed items drop off the inbox (reopen from Patient Requests → Completed).
   items.forEach(it=>{ if(/done|resolved|complete|closed/i.test(it.status||'')) return; cols[bucket(it.source||'')].push(it); });
+  cols.fax=faxItems;
   ['voice','text','fax'].forEach(k=>{
     const el=$('col-'+k); el.innerHTML='';
     if(!cols[k].length){el.innerHTML='<div class="inb"><div class="s">Nothing waiting.</div></div>';return;}
-    cols[k].slice(0,10).forEach(it=>{
+    cols[k].slice(0,k==='fax'?FAX_ITEMS.length:10).forEach(it=>{
       const breach=/BREACH|At risk/i.test(it.sla||'');
-      const done=/done/i.test(it.status||'');
+      const done=/done|resolved|complete|closed/i.test(it.status||'');
       const started=/progress/i.test(it.status||'');
       const when=it.received? (it.received.slice(0,10)===today? (it.received.slice(11,16)||'today') : it.received.slice(5,10)) : '';
       const btn = done
@@ -451,6 +454,19 @@ function renderInbox(items){
   const openRef=items.filter(i=>/referral/i.test(i.type||'')&&!/done/i.test(i.status||''));
   $('c-open').textContent=openRef.filter(i=>/progress|scheduled|sent/i.test(i.status||'')).length||openRef.length;
   $('c-await').textContent=items.filter(i=>!/done/i.test(i.status||'')&&/BREACH|At risk/i.test(i.sla||'')).length;
+  $('fax-mode-label').textContent=FAX_MODE==='completed'?'Completed fax history — records remain available and can be reopened.':'Open fax work — completed records move to review history.';
+  $('fax-history').textContent=FAX_MODE==='completed'?'Back to open faxes':'Review completed';
+  $('fax-older').hidden=!FAX_NEXT;
+}
+function withQuery(params){const join=API.includes('?')?'&':'?';return `${API}${join}${params}`;}
+async function loadFaxMode(mode,before='',beforeId=''){
+  const key=mode==='completed'?'faxHistory=1':'faxPage=1';
+  const cursor=before?`&before=${encodeURIComponent(before)}${beforeId?`&beforeId=${encodeURIComponent(beforeId)}`:''}`:'';
+  const res=await crewFetch(withQuery(`${key}${cursor}`));
+  if(!res.ok)throw new Error('Fax list unavailable');
+  const d=await res.json(), incoming=d.faxItems||[];
+  FAX_ITEMS=before?[...new Map([...FAX_ITEMS,...incoming].map(i=>[i.id,i])).values()]:incoming;
+  FAX_NEXT=d.faxNextBefore||''; FAX_NEXT_ID=d.faxNextBeforeId||''; FAX_MODE=mode; renderInbox(INBOX_ITEMS,FAX_ITEMS);
 }
 async function poll(){
   if(!API)return;
@@ -458,10 +474,16 @@ async function poll(){
     const res=await crewFetch(API);
     if(!res.ok)return;
     const d=await res.json();
-    if(d.items)renderInbox(d.items);
+    if(d.items){
+      INBOX_ITEMS=d.items;
+      if(FAX_MODE==='open'){FAX_ITEMS=d.faxItems||[];FAX_NEXT=d.faxNextBefore||'';FAX_NEXT_ID=d.faxNextBeforeId||'';}
+      renderInbox(INBOX_ITEMS,FAX_ITEMS);
+    }
   }catch(e){}
 }
 poll(); setInterval(poll,60000);
+$('fax-history').addEventListener('click',async()=>{try{await loadFaxMode(FAX_MODE==='completed'?'open':'completed');}catch(e){$('fax-mode-label').textContent=String(e.message||e);}});
+$('fax-older').addEventListener('click',async()=>{if(!FAX_NEXT)return;const b=$('fax-older');b.disabled=true;try{await loadFaxMode(FAX_MODE,FAX_NEXT,FAX_NEXT_ID);}catch(e){$('fax-mode-label').textContent=String(e.message||e);}finally{b.disabled=false;}});
 
 /* write-back: Start / Done / Reopen buttons -> BHW Cloud */
 const CANNED = [
@@ -502,6 +524,7 @@ function openReply(btn){
   });
 }
 document.addEventListener('click', async e=>{
+  if(e.target.closest('.fax-tools'))return;
   const r=e.target.closest('.reply'); if(r){openReply(r);return;}
   const b=e.target.closest('.act'); if(!b||!API||b.classList.contains('send')||b.classList.contains('cancel'))return;
   b.disabled=true; b.textContent='…';
@@ -511,7 +534,7 @@ document.addEventListener('click', async e=>{
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({pageId:b.dataset.id,action:b.dataset.a})
     });
-    if(res.ok){await poll();}else{b.textContent='Retry';b.disabled=false;}
+    if(res.ok){if(FAX_MODE==='completed')await loadFaxMode('completed');else await poll();}else{b.textContent='Retry';b.disabled=false;}
   }catch(_){b.textContent='Retry';b.disabled=false;}
 });
 
@@ -681,6 +704,7 @@ $('g-make').addEventListener('click', async ()=>{
     a.href=url; a.download=`Referral - ${$('g-pname').value.split(',')[0]||'patient'} - ${$('g-sspec').value||'specialist'}.pdf`;
     a.click();
     window.open(url,'_blank');
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
     // keep the PDF + destination so it can be faxed straight to the specialist
     window.lastReferralPdf = pdf;
     window.lastReferralName = `Referral - ${($('g-pname').value.split(',')[0]||'patient').trim()}.pdf`;
@@ -709,9 +733,9 @@ $('g-make').addEventListener('click', async ()=>{
 $('g-fax').addEventListener('click', async ()=>{
   const st=$('g-status');
   const to=($('g-sfax').value||'').replace(/\D/g,'');
+  if(window.lastFaxDeliveredJobId){ st.textContent='This generated referral already has confirmed fax delivery.'; return; }
   if(!window.lastReferralPdf){ st.textContent='Generate the referral first.'; return; }
   if(!to){ st.textContent='Add the specialist’s fax number first.'; return; }
-  if(window.lastFaxDeliveredJobId){ st.textContent='This generated referral already has confirmed fax delivery.'; return; }
   const fx=$('g-fax'); fx.disabled=true; const label=fx.textContent; fx.textContent='Faxing…';
   try{
     let jobId=window.lastFaxJobId;
@@ -743,6 +767,10 @@ $('g-fax').addEventListener('click', async ()=>{
         }catch(error){ tracking=`Fax sent; workflow status not saved — ${String(error.message||error).slice(0,100)}`; }
       }
       st.textContent=`✓ iFax confirmed delivery to ${$('g-sspec').value||'the specialist'} at ${$('g-sfax').value}. ${tracking}`;
+      // The durable workflow record and provider job ID remain available; the
+      // browser no longer retains a potentially large base64 PDF after delivery.
+      window.lastReferralPdf='';
+      window.lastReferralName='';
     }else{
       fx.textContent='Check fax status';
       fx.disabled=false;

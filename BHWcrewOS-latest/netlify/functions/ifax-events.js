@@ -43,13 +43,15 @@ exports.handler = async (event) => {
     const pages = pick(fax, ["pages", "numPages", "num_pages", "page_count", "pageCount"]);
     const link = pick(fax, ["url", "fileUrl", "file_url", "downloadUrl", "download_url", "pdf", "pdfUrl", "file", "documentUrl", "document_url", "media_url"]);
     const subject = pick(fax, ["subject", "caption", "comment", "note", "title"]);
+    const sourceRecordId = pick(fax, ["id", "faxId", "fax_id", "jobId", "job_id", "uuid", "eventId", "event_id"]);
+    const receivedISO = pick(fax, ["receivedAt", "received_at", "createdAt", "created_at", "timestamp", "eventTime", "event_time"]);
 
     const summary = `Inbound fax · ${pages ? `${pages} page(s)` : "received"}${subject ? ` — ${subject}` : ""}`;
 
     const { patientId, patientName } = await matchPatientByPhone(from);
     const r = await createQueueEntry({
       patientId, patientName, from, summary, source: "Fax",
-      link: link ? `Fax: ${link}` : undefined, receivedISO: new Date().toISOString(),
+      link: link ? `Fax: ${link}` : undefined, sourceRecordId, receivedISO,
     });
     if (!r.ok) return { statusCode: 502, body: `operations intake error: ${r.error}` };
     return { statusCode: 200, body: JSON.stringify({ ok: true, source: "Fax", matched: r.matched }) };

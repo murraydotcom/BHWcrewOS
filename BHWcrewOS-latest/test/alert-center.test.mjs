@@ -136,6 +136,23 @@ test("the installed alert module never requests browser notifications", async ()
   assert.match(source, /type="checkbox"/);
   assert.match(source, /addEventListener\("change"/);
   assert.match(source, /bhw:requests-updated/);
+  assert.match(source, /source: "crewos"/);
+  assert.match(source, /excludeSources: exclusions/);
+});
+
+test("Front Desk keeps faxes paged and clears delivered PDF memory", async () => {
+  const [page, backend, ops] = await Promise.all([
+    readFile(new URL("../bhw-front-desk.html", import.meta.url), "utf8"),
+    readFile(new URL("../netlify/functions/frontdesk-data.js", import.meta.url), "utf8"),
+    readFile(new URL("../netlify/functions/ops-data.js", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /Review completed/);
+  assert.match(page, /faxHistory=1/);
+  assert.match(page, /window\.lastReferralPdf=''/);
+  assert.match(page, /URL\.revokeObjectURL/);
+  assert.match(backend, /source=fax&status=open&limit=25/);
+  assert.match(backend, /excludeSources=fax,ifax/);
+  assert.match(ops, /source=crewos&limit=500/);
 });
 
 test("the alert center is installed on primary authenticated CrewOS surfaces", async () => {
