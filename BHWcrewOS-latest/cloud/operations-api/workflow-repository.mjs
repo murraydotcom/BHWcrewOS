@@ -135,7 +135,11 @@ export class FirestoreWorkflowRepository extends FirestoreOperationsRepository {
   }
 
   async listPatientRequests(filters = {}) {
-    const snapshot = await this.patientRequests.limit(500).get();
+    // Firestore's default collection order is document ID, not recency. Limiting
+    // before ordering caused newer warm handoffs and referrals to disappear once
+    // the shared queue exceeded 500 records. Read the newest records first so
+    // CrewOS inboxes and notifications always receive the latest workflow items.
+    const snapshot = await this.patientRequests.orderBy("updatedAt", "desc").limit(500).get();
     let rows = snapshot.docs.map((doc) => toWorkflowRequest(doc.data()));
     const status = clean(filters.status, 80).toLowerCase().replaceAll("-", "_");
     const serviceLine = clean(filters.serviceLine, 80).toLowerCase();
