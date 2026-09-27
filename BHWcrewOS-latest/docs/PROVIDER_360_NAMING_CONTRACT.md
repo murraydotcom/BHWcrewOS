@@ -16,11 +16,11 @@ Staff shorthand: **Patient 360**
 
 Subtitle: **PSCM longitudinal synthesis, body-system mapping, and feasible care planning**
 
-## Entry workflow
+## Target entry workflow
 
 1. Provider 360 opens the provider environment.
 2. Patient Registry selects and verifies the patient, assigned BHW provider, and enrolled programs.
-3. Staff chooses Patient 360, Health Core Clinical Access, Patient Operations, or an enrolled program lens.
+3. Staff chooses Patient 360, Health Core Clinical Access, Patient Operations, or an enrolled program lens after those Registry controls are implemented.
 4. Patient 360 defaults to All Care and can filter to Primary Care, Flow, Mind & Mood Recovery, CharmEd Minds, or chronic care.
 5. Health Core handles the current encounter, documentation, orders, results, and approvals.
 6. Patient Operations handles follow-through; Care Connect receives approved patient-safe outputs.

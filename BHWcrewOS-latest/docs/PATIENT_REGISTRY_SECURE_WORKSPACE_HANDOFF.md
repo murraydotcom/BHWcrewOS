@@ -46,10 +46,11 @@ After successful redemption, CrewHQ retains a 15-minute tab-scoped context in `s
 ### Patient Registry
 
 - verifies the active patient master record;
-- records assigned BHW provider and enrolled programs;
 - creates the treatment-purpose launch;
-- presents Patient 360, program-lens, and operational workspace choices; and
+- presents Patient 360 and operational workspace choices; and
 - remains the route back when context expires.
+
+Assigned BHW provider, enrolled-program fields, and Registry program-lens launch controls are required next-phase work; they are not implemented by this naming release.
 
 ### Patient 360
 
@@ -83,6 +84,14 @@ The technical destination key `clinical-map`, scope `clinical-map.read`, and `pa
 
 - receives only provider-approved, patient-safe information intended for the patient; and
 - does not expose provider-only synthesis, drafts, or operational worklists.
+
+## Verified route status
+
+- **Patient Registry → Patient 360:** secure launch route is built; real-patient activation remains off.
+- **Patient 360 internal views:** Overview, Body-System Atlas, Clinical Timeline, PSCM Mechanism Map, Context & Exposures, Current Snapshot & Plan, Clinical Data, and Sources & Provenance keep the selected tab context.
+- **Patient Registry → Patient Operations:** secure launch route is built; real-patient activation remains off.
+- **Patient Registry → Health Core Clinical Access:** intentionally locked until Health Core accepts the governed cross-domain context.
+- **Program lenses:** All Care, Primary Care, Flow, Mind & Mood Recovery, CharmEd Minds, and chronic care are the approved lens set, but Registry enrollment fields and lens-specific routes are not yet wired. There is no Trauma program.
 
 ## Activation gate
 

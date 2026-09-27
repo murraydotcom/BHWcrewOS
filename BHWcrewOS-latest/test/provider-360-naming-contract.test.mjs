@@ -17,6 +17,7 @@ import {
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const provider = path.join(root, "provider");
 const docs = path.join(root, "docs");
+const registry = path.join(provider, "patient-registry.html");
 const patientPages = [
   "patient-360.html",
   "patient-360-atlas.html",
@@ -53,8 +54,12 @@ test("all patient-specific synthesis views display Patient 360 while routes rema
 });
 
 test("Patient Registry and Operations API launch Patient 360 without changing compatibility IDs", () => {
+  const registryHtml = fs.readFileSync(registry, "utf8");
   const launcher = fs.readFileSync(path.join(provider, "patient-workspace-launcher.mjs"), "utf8");
   const operations = fs.readFileSync(path.join(provider, "patient-operations.html"), "utf8");
+  assert.match(registryHtml, /Patient 360 — Synthetic/);
+  assert.match(registryHtml, /Open synthetic Patient 360/);
+  assert.doesNotMatch(registryHtml, /Whole-Person Clinical Map|Open synthetic Clinical Map/);
   assert.match(launcher, /Open Patient 360/);
   assert.match(launcher, /data-workspace-destination="clinical-map"/);
   assert.match(operations, /href="patient-360\.html">◉ Patient 360/);
@@ -74,4 +79,6 @@ test("governance documentation separates Patient 360, Health Core, and Patient O
   assert.match(naming, /There is no Trauma program label/i);
   assert.match(handoff, /### Patient 360/);
   assert.match(handoff, /technical destination key `clinical-map`/);
+  assert.match(handoff, /program-lens launch controls are required next-phase work/i);
+  assert.match(handoff, /There is no Trauma program/i);
 });
