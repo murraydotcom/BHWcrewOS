@@ -31,7 +31,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Run patient workspace and Provider 360 contract tests
+      - name: Run Provider 360 / Patient 360 hierarchy tests
         run: |
           node --test BHWcrewOS-latest/test/patient-workspace-context.test.mjs
           node --test BHWcrewOS-latest/test/provider-360-naming-contract.test.mjs

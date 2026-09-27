@@ -1,26 +1,29 @@
 export const PROVIDER_360_TITLE = "BHW Provider 360";
 export const PROVIDER_360_SHORT_TITLE = "Provider 360";
-export const PROVIDER_360_SUBTITLE = "PSCM longitudinal synthesis, body-system mapping, and feasible care planning";
-export const PROVIDER_360_BOUNDARY = "Provider 360 is the synthesis workspace. Health Core remains the canonical record.";
-export const PROVIDER_360_LEGACY_ALIASES = Object.freeze([
+export const PATIENT_360_TITLE = "BHW Patient 360";
+export const PATIENT_360_SHORT_TITLE = "Patient 360";
+export const PATIENT_360_SUBTITLE = "PSCM longitudinal synthesis, body-system mapping, and feasible care planning";
+export const PROVIDER_360_SUBTITLE = PATIENT_360_SUBTITLE;
+export const PROVIDER_360_BOUNDARY = "Provider 360 is the provider environment. Patient 360 is the selected-patient longitudinal workspace. Health Core remains the canonical record.";
+export const PATIENT_360_LEGACY_ALIASES = Object.freeze([
   "PSCM Complex Patient Navigator",
   "Complex Patient Navigator",
   "BHW Whole-Person Clinical Map",
   "Whole-Person Clinical Map",
   "Clinical Map",
-  "Patient 360",
 ]);
+// Deprecated export retained for compatibility with existing imports.
+export const PROVIDER_360_LEGACY_ALIASES = PATIENT_360_LEGACY_ALIASES;
 
 const TEXT_REPLACEMENTS = Object.freeze([
-  [/BHW Whole-Person Clinical Map/g, PROVIDER_360_TITLE],
-  [/Whole-Person Clinical Map/g, PROVIDER_360_SHORT_TITLE],
-  [/PSCM Complex Patient Navigator/g, PROVIDER_360_TITLE],
-  [/Complex Patient Navigator/g, PROVIDER_360_SHORT_TITLE],
-  [/Patient 360/g, PROVIDER_360_SHORT_TITLE],
-  [/Open Clinical Map/g, `Open ${PROVIDER_360_SHORT_TITLE}`],
-  [/Clinical Map provides synthesis/g, `${PROVIDER_360_SHORT_TITLE} provides synthesis`],
-  [/Clinical Map is the synthesis workspace/g, `${PROVIDER_360_SHORT_TITLE} is the synthesis workspace`],
-  [/◉ Clinical Map/g, `◉ ${PROVIDER_360_SHORT_TITLE}`],
+  [/BHW Whole-Person Clinical Map/g, PATIENT_360_TITLE],
+  [/Whole-Person Clinical Map/g, PATIENT_360_SHORT_TITLE],
+  [/PSCM Complex Patient Navigator/g, PATIENT_360_TITLE],
+  [/Complex Patient Navigator/g, PATIENT_360_SHORT_TITLE],
+  [/Open Clinical Map/g, `Open ${PATIENT_360_SHORT_TITLE}`],
+  [/Clinical Map provides synthesis/g, `${PATIENT_360_SHORT_TITLE} provides synthesis`],
+  [/Clinical Map is the synthesis workspace/g, `${PATIENT_360_SHORT_TITLE} is the synthesis workspace`],
+  [/◉ Clinical Map/g, `◉ ${PATIENT_360_SHORT_TITLE}`],
 ]);
 
 function renameText(value) {
@@ -49,7 +52,7 @@ function renameVisibleText(root) {
       if (!parent || ["SCRIPT", "STYLE", "NOSCRIPT", "TEXTAREA"].includes(parent.tagName)) {
         return NodeFilter.FILTER_REJECT;
       }
-      return PROVIDER_360_LEGACY_ALIASES.some((alias) => node.nodeValue?.includes(alias))
+      return PATIENT_360_LEGACY_ALIASES.some((alias) => node.nodeValue?.includes(alias))
         || node.nodeValue?.includes("Open Clinical Map")
         || node.nodeValue?.includes("Clinical Map provides synthesis")
         || node.nodeValue?.includes("Clinical Map is the synthesis workspace")
@@ -63,6 +66,7 @@ function renameVisibleText(root) {
   for (const node of nodes) node.nodeValue = renameText(node.nodeValue);
 }
 
+// Function name retained so existing page imports stay stable.
 export function applyProvider360Naming(root = document) {
   if (typeof document === "undefined") return;
   document.title = renameText(document.title);
@@ -70,7 +74,7 @@ export function applyProvider360Naming(root = document) {
   renameAttributes(root);
 
   const brand = document.querySelector(".brand h1");
-  if (brand) brand.textContent = PROVIDER_360_TITLE;
+  if (brand) brand.textContent = PATIENT_360_TITLE;
 
   const brandDetail = document.querySelector(".brand div");
   if (brandDetail && /PSCM|clinical synthesis|longitudinal synthesis/i.test(brandDetail.textContent || "")) {
@@ -80,11 +84,14 @@ export function applyProvider360Naming(root = document) {
   const pageName = document.getElementById("page-name")?.textContent?.trim();
   const crumb = document.querySelector(".crumb");
   if (crumb && pageName && /Provider 360|Clinical Map|Whole-Person|Patient 360/i.test(crumb.textContent || "")) {
-    crumb.innerHTML = `${PROVIDER_360_SHORT_TITLE} · <b id="page-name"></b>`;
+    crumb.innerHTML = `${PATIENT_360_SHORT_TITLE} · <b id="page-name"></b>`;
     crumb.querySelector("#page-name").textContent = pageName;
   }
 }
 
+export const applyPatient360Naming = applyProvider360Naming;
+
+// Function name retained so existing page imports stay stable.
 export function observeProvider360Naming(root = document.body) {
   if (typeof MutationObserver === "undefined" || !root) return () => {};
   const observer = new MutationObserver((mutations) => {
@@ -98,3 +105,5 @@ export function observeProvider360Naming(root = document.body) {
   observer.observe(root, { childList: true, subtree: true });
   return () => observer.disconnect();
 }
+
+export const observePatient360Naming = observeProvider360Naming;

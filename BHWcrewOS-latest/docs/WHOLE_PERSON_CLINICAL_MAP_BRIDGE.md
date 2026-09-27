@@ -1,25 +1,26 @@
-# BHW Provider 360 bridge
+# BHW Patient 360 bridge
 
-> **Naming update:** This filename is retained as a compatibility artifact. The former **BHW Whole-Person Clinical Map** and earlier **PSCM Complex Patient Navigator** are now canonically named **BHW Provider 360**. See `PROVIDER_360_NAMING_CONTRACT.md`.
+> **Naming update:** This filename is retained as a compatibility artifact. The former **BHW Whole-Person Clinical Map** and earlier **PSCM Complex Patient Navigator** are now canonically named **BHW Patient 360**. Patient 360 is the selected-patient workspace inside **Provider 360**. See `PROVIDER_360_NAMING_CONTRACT.md`.
 
 ## Naming and responsibility
 
-The richer PSCM workspace is formally named **BHW Provider 360**.
+The richer PSCM workspace is formally named **BHW Patient 360**.
 
-Staff shorthand: **Provider 360**
+Staff shorthand: **Patient 360**
 
 Subtitle: **PSCM longitudinal synthesis, body-system mapping, and feasible care planning**
 
 The applications remain separate because they serve different clinical functions:
 
-- **BHW Health Core** is the canonical clinical record and authorization ledger.
-- **BHW Provider 360** is the longitudinal synthesis and clinical reasoning environment.
-- **CrewOS** owns operational execution, queues, scheduling, outreach, and follow-through.
+- **Provider 360** is the provider environment and home.
+- **BHW Health Core Clinical Access** is the current-encounter workflow and canonical clinical record.
+- **BHW Patient 360** is the selected-patient longitudinal synthesis and clinical reasoning environment.
+- **CrewOS Patient Operations** owns operational execution, queues, scheduling, outreach, and follow-through.
 - **Care Connect** receives only provider-approved, patient-safe information.
 
 ## Existing URLs
 
-The existing `patient-360*.html` URLs are retained for backward compatibility. Their displayed application name is Provider 360.
+The existing `patient-360*.html` URLs are retained for backward compatibility. Their displayed application name is Patient 360.
 
 The eight views remain:
 
@@ -34,7 +35,7 @@ The eight views remain:
 
 ## Connected clinical backbone
 
-Provider 360 continues to use the protected CrewHQ cloud client and its Health Core-backed resources. The bridge verifies read access to:
+Patient 360 continues to use the protected CrewHQ cloud client and its Health Core-backed resources. The bridge verifies read access to:
 
 - canonical Health Core record;
 - Body-System Atlas workspace;
@@ -50,11 +51,11 @@ It also provides direct links to the exact Health Core surfaces for:
 - Orders & Justifications; and
 - Care Plans & Blueprints.
 
-Provider 360 does not create a second problem list, medication list, result repository, order, justification, signed note, or Blueprint.
+Patient 360 does not create a second problem list, medication list, result repository, order, justification, signed note, or Blueprint.
 
 ## Source and provenance rules
 
-Provider 360 content must preserve:
+Patient 360 content must preserve:
 
 - BHW patient identity;
 - encounter association;
@@ -77,14 +78,14 @@ Real-patient cross-application navigation must not place PHI or a durable patien
 
 ## Deliberate order boundary
 
-Orders and medical-necessity justifications remain exclusively owned by Health Core. Provider 360 links to the exact Health Core order package rather than storing or independently editing a copy.
+Orders and medical-necessity justifications remain exclusively owned by Health Core. Patient 360 links to the exact Health Core order package rather than storing or independently editing a copy.
 
 ## Next bridge phase
 
 After the synthetic connection matrix is validated, the next phase should add:
 
-- opaque Health Core-to-Provider 360 session handoff;
+- opaque Health Core-to-Patient 360 session handoff;
 - exact source links from body markers and clinical timeline entries;
-- approved Provider 360 summaries projected back into Health Core;
+- approved Patient 360 summaries projected back into Health Core;
 - CrewOS task creation from provider-approved feasible-plan actions; and
 - Care Connect publication only from provider-approved patient-safe artifacts.
