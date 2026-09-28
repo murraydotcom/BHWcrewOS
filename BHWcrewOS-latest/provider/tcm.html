@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script src="/crew-provider-gate.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BHW Provider — TCM / Discharges (CRISP)</title>
+<title>BHW Provider — CRISP Flow</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -127,13 +127,12 @@ a{color:inherit;text-decoration:none}
     <div class="brand"><img src="assets/bhw-emblem.png" alt="BHW Mind &amp; Mood Recovery"><div class="bt-txt"><h1>BHW Provider</h1><div class="sub">Point-of-Care Coding</div></div></div>
     <nav class="nav-group">
       <div class="label">Pre-Bill</div>
-      <a class="nav-item" href="index.html"><span class="ic">◈</span> Encounter Scrub</a>
+      <a class="nav-item" href="index.html"><span class="ic">◈</span> Visit Documentation Assistance</a>
       <a class="nav-item" href="risk.html"><span class="ic">◑</span> Risk &amp; Quality</a>
       <a class="nav-item" href="prior-auth.html"><span class="ic">✋</span> Prior Authorization</a>
       <a class="nav-item" href="preventive.html"><span class="ic">✓</span> Preventive Services</a>
-      <div class="nav-item active"><span class="ic">⏱</span> TCM / Discharges</div>
-      <a class="nav-item" href="claims.html"><span class="ic">▦</span> Claims Tracker</a>
-      <a class="nav-item" href="../index.html"><span class="ic">▤</span> RCM Command Center</a>
+      <div class="nav-item active"><span class="ic">⏱</span> CRISP Flow</div>
+      <a class="nav-item" href="../bhw-care-management.html"><span class="ic">↗</span> Care Management</a>
     </nav>
     <div class="sidebar-foot">TCM worklist from the CRISP ENS panel export.<br>Retained through the authenticated BHW cloud service.</div>
   </aside>
@@ -143,7 +142,7 @@ a{color:inherit;text-decoration:none}
     <div class="topbar">
       <div class="tb-left">
         <button class="hamburger" id="navToggle" aria-label="Open navigation" aria-expanded="false">☰</button>
-        <div class="crumb">Care Coordination · <b>TCM / Discharges (CRISP)</b></div>
+        <div class="crumb">Care Coordination · <b>CRISP Flow</b></div>
       </div>
       <div class="tools">
         <span class="pill" id="countPill">no file loaded</span>
@@ -153,8 +152,8 @@ a{color:inherit;text-decoration:none}
 
     <div class="content">
       <div class="page-head">
-        <h2>TCM / Discharge Worklist</h2>
-        <p>Upload the CRISP ENS <b>Panel Details</b> export and it surfaces the inpatient &amp; observation discharges that
+        <h2>CRISP Flow</h2>
+        <p>Any signed-in CrewHQ staff member can review the shared CRISP flow. Upload the CRISP ENS <b>Panel Details</b> export and it surfaces the inpatient &amp; observation discharges that
            are Transitional Care Management candidates (99495 / 99496) — with the <b>2-business-day call</b> clock and the
            <b>7-day (99496) / 14-day (99495)</b> face-to-face windows. ED visits and current admissions are listed
            separately for outreach.</p>
@@ -166,6 +165,8 @@ a{color:inherit;text-decoration:none}
         interactive contact within 2 business days, and the face-to-face visit within the window. The 2-business-day
         clock ignores federal holidays — verify against the calendar. Confirm eligibility before billing.
       </div>
+      <div class="note"><b>Care Management is the follow-up source.</b> First-contact dates, status, and visit dates shown here read from the connected Care Management row when one exists. Update them in <a href="../bhw-care-management.html"><b>Care Management</b></a>; CRISP Flow remains the shared event and deadline view.</div>
+      <div class="note"><b>Ambulatory chart review is intentional.</b> A matched ambulatory row includes <b>Open chart to attach</b>. That opens the existing Patient 360 clinical-event draft; an authorized provider must review and approve it before it becomes part of the clinical timeline.</div>
 
       <div class="card" id="dropCard">
         <div class="card-head"><h3>Upload the CRISP Panel Details export</h3>
@@ -238,6 +239,7 @@ let RESULT = { items: [], stats: {}, meta: {} }, FILTER = "tcm";
 let RAW_ROWS = [], ROSTER = [], PANEL_ONLY = false;
 let CLOUD = null;
 let ACTIVE_PATIENT_REGISTRY = [];
+let CARE_LOGS_BY_ID = new Map(), CARE_LOGS_BY_PATIENT = new Map();
 const ROSTER_KEY = "bhw-tcm-roster";
 const ALERT_KEY_PREFIX = "bhw-tcm-alert";
 
@@ -312,7 +314,18 @@ async function loadFile(file) {
 
 function rebuild() {
   if (!RAW_ROWS.length) return;
-  RESULT = buildWorklist(RAW_ROWS, { roster: ROSTER });
+  const enrichedRows = RAW_ROWS.map((row) => {
+    const careLog = CARE_LOGS_BY_ID.get(row["TCM Log ID"]) || CARE_LOGS_BY_PATIENT.get(row["BHW Patient ID"]);
+    if (!careLog) return row;
+    return {
+      ...row,
+      "First Contact At": careLog.lastContact || row["First Contact At"],
+      "Follow-Up Appointment": careLog.nextFollowUp || row["Follow-Up Appointment"],
+      "TCM Status": careLog.status || row["TCM Status"],
+      "TCM Log ID": careLog.id || row["TCM Log ID"],
+    };
+  });
+  RESULT = buildWorklist(enrichedRows, { roster: ROSTER });
   render();
   const s = RESULT.stats;
   const onPanel = s.rosterLoaded ? ` · <b>${s.onPanel}</b> on panel` : "";
@@ -328,13 +341,32 @@ async function initCloud() {
       return;
     }
     $("cloudStatus").innerHTML = `<b>Secure retention connected.</b> Loading retained hospital events…`;
-    await Promise.all([loadRetainedEvents(), loadActiveCendRoster()]);
+    await Promise.all([loadRetainedEvents(), loadActiveCendRoster(), loadCareManagement().catch((error) => {
+      $("parseNote").textContent = "CRISP events loaded; Care Management follow-up could not be refreshed: " + error.message;
+    })]);
     window.setInterval(() => loadRetainedEvents(true), 5 * 60 * 1000);
   } catch (error) {
     CLOUD = null;
     $("cloudStatus").innerHTML = `<b>Retention unavailable:</b> ${esc(error.message)}`;
     $("cendRosterStatus").textContent = `CEND roster unavailable: ${error.message}`;
   }
+}
+
+async function loadCareManagement() {
+  let token = "";
+  try { token = sessionStorage.getItem("crewos_token") || ""; } catch { /* storage unavailable */ }
+  if (!token) return;
+  const response = await fetch("/.netlify/functions/care-log-data", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "list", program: "TCM", windowEnd: new Date().toISOString().slice(0, 10) }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "Care Management could not be loaded");
+  const logs = (Array.isArray(data.entries) ? data.entries : []).slice().sort((left, right) => String(left.updatedAt || left.serviceMonth || "").localeCompare(String(right.updatedAt || right.serviceMonth || "")));
+  CARE_LOGS_BY_ID = new Map(logs.filter((log) => log.id).map((log) => [log.id, log]));
+  CARE_LOGS_BY_PATIENT = new Map(logs.filter((log) => log.bhwPatientId).map((log) => [log.bhwPatientId, log]));
+  if (RAW_ROWS.length) rebuild();
 }
 
 async function loadActiveCendRoster() {
@@ -535,7 +567,7 @@ function renderTable() {
   $("tableWrap").innerHTML = `<div class="tblwrap"><table class="tbl">
     <thead><tr>
       <th>Patient</th>${showP ? "<th>Panel</th>" : ""}<th>Status</th><th>Discharge / Admit</th><th>Day</th>
-      <th>Call by</th><th>First contact</th><th>Visit window</th><th>Billable</th><th>Facility</th><th>Primary Dx</th><th>Chief Complaint</th><th>Notes</th>
+      <th>Call by</th><th>Care Management first contact</th><th>Care Management visit</th><th>Visit window</th><th>Billable</th><th>Facility</th><th>Primary Dx</th><th>Chief Complaint</th><th>Notes</th><th>Chart</th>
     </tr></thead>
     <tbody>${rows.map((it) => {
       const dl = it.dl;
@@ -551,12 +583,14 @@ function renderTable() {
         <td>${dl ? dl.daysSince : "—"}</td>
         <td>${callCell(dl)}</td>
         <td>${it.firstContactAt?`${esc(fmtDate(it.firstContactAt))}<br><span class="mini">${esc([it.contactMethod,it.contactOutcome].filter(Boolean).join(" · "))}${it.tcmLogId?` · TCM ${esc(it.tcmStatus||"open")}`:""}</span>`:'<span class="mini">Not recorded</span>'}</td>
+        <td>${it.followUpAppointment?`${esc(fmtDate(it.followUpAppointment))}<br><span class="mini">${CARE_LOGS_BY_ID.has(it.tcmLogId)?"From Care Management":"From CRISP follow-up"}</span>`:'<span class="mini">Not scheduled</span>'}</td>
         <td>${visitCell(dl)}</td>
         <td>${dl ? esc(dl.billable) : "—"}</td>
         <td>${esc(it.facility || "—")}</td>
         <td>${esc(it.dxCodes || "")}${it.dxDesc ? `<br><span class="mini">${esc(it.dxDesc)}</span>` : ""}</td>
         <td>${esc(it.complaint || "—")}</td>
         <td>${it.flags && it.flags.length ? `<span class="flags">${esc(it.flags.join("; "))}</span>` : (it.disposition ? `<span class="mini">${esc(it.disposition)}</span>` : "")}</td>
+        <td>${it.category === "ambulatory" ? (it.bhwPatientId ? `<a class="btn btn-ghost btn-sm" href="patient-360-timeline.html?patient=${encodeURIComponent(it.bhwPatientId)}">Open chart to attach</a>` : '<span class="mini">Match to Patient Registry first</span>') : '<span class="mini">—</span>'}</td>
       </tr>`;
     }).join("")}</tbody></table></div>`;
 }
@@ -566,7 +600,7 @@ function fmtDate(iso) { return String(iso || "").slice(0, 10); }
 function toCSV() {
   const withPanel = !!RESULT.stats.rosterLoaded;
   const cols = ["name", "dob", "gender", "category", "encounterType", "facility", "dischargeAt", "disposition",
-    "daysSince", "callBy", "callState", "firstContactAt", "contactMethod", "contactOutcome", "dischargeDetails", "medicationAccess", "followUpNeeds", "contactNotes", "tcmLogId", "tcmStatus",
+    "daysSince", "callBy", "callState", "firstContactAt", "contactMethod", "contactOutcome", "followUpAppointment", "dischargeDetails", "medicationAccess", "followUpNeeds", "contactNotes", "tcmLogId", "tcmStatus",
     "visitBy99496", "visitBy99495", "billable", "dxCodes", "dxDesc", "complaint", "flags"]
     .concat(withPanel ? ["onPanel", "panelMatch", "mrn", "pcp", "program"] : []);
   const q = (v) => `"${String(v == null ? "" : v).replace(/"/g, '""')}"`;

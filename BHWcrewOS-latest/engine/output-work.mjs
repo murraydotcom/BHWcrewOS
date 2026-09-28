@@ -1,4 +1,5 @@
 import { medicationAuthorizationDocument } from "./medication-prior-auth.mjs";
+import { normalizeEncounterOwner } from "./staff-identity.mjs";
 
 const DOCUMENT_TYPES = new Set(["instructions", "referral", "authorization", "medication_authorization", "letter", "dme", "care_plan", "program", "order"]);
 
@@ -105,7 +106,9 @@ export function materializeEncounterWork(encounter = {}, existingTasks = [], exi
       type: output.type,
       title: output.label,
       reason: output.reason,
-      owner: previous?.owner || (output.type === "medication_authorization" ? "MA / Front Desk" : encounter.owner || "Amaris"),
+      owner: output.type === "medication_authorization"
+        ? previous?.owner || "MA / Front Desk"
+        : normalizeEncounterOwner(previous?.owner || encounter.owner),
       recommendedRole: roleFor(output.type),
       dueAt: previous?.dueAt || dueAt(encounter.completedAt, now),
       status: previous?.status || "open",

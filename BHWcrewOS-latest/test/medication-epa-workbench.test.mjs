@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import { buildEncounterPacket, refreshEncounterIntelligence } from "../engine/encounter-workflow.mjs";
 import {
+  PAYER_CATALOG,
   buildMedicationEpaCases,
   matchPayerProfile,
   medicationEpaCaseUrgency,
@@ -46,6 +47,7 @@ test("payer matching keeps payer family and line of business distinct", () => {
   assert.equal(matchPayerProfile("CareFirst Community Health Plan").id, "carefirst_community");
   assert.equal(matchPayerProfile("UnitedHealthcare Community Plan Medicaid").id, "uhc_medicaid");
   assert.equal(matchPayerProfile("Aetna commercial").id, "aetna_commercial");
+  assert.match(PAYER_CATALOG.find((item) => item.id === "carefirst_medicare").formularyUrl, /^https:\/\//);
 });
 
 test("interim ePA case carries coverage identity and anticipated questions", () => {

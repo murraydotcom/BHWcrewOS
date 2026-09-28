@@ -528,13 +528,20 @@ exports.handler = async (event) => {
             icd: b.icd || "",
             primaryDx: b.primaryDx || "",
             memberId: b.memberId || "",
+            activities: b.activities || "",
+            referrals: b.referrals || "",
             notes: b.notes || "",
             minutes: b.minutes,
             nextFollowUp: b.nextFollowUp || "",
             followUpStage: b.followUpStage || "",
+            lastContact: b.lastContact || "",
           },
         });
-        return json(200, { ok: true, id: result.log.id, savedAt: result.log.updatedAt, storage: "BHW Cloud" });
+        if (!result.log?.id) throw actionError(502, "The care-management save did not return a record ID. Nothing is being shown as saved.");
+        const readBack = await cloudRequest("/v1/care-management/logs", { actor: session });
+        const verified = (readBack.logs || []).find((log) => log.id === result.log.id);
+        if (!verified) throw actionError(502, "The care-management write could not be read back from BHW Cloud. Refresh before trying again.");
+        return json(200, { ok: true, verified: true, id: verified.id, savedAt: verified.updatedAt || result.log.updatedAt, storage: "BHW Cloud" });
       }
 
       case "prog-save": {

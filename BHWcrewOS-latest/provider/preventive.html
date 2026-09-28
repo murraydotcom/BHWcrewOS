@@ -12,10 +12,14 @@
 :root[data-theme="dark"]{--base:#141a1d;--card:#1e272b;--ink:#e6edf0;--soft:#9db0b7;--line:#2b373c;--blue-d:#8fb8c8;--shadow:0 1px 3px rgba(0,0,0,.45),0 8px 22px rgba(0,0,0,.38)}
 *{box-sizing:border-box}body{margin:0;font:14px/1.5 Montserrat,system-ui,sans-serif;background:var(--base);color:var(--ink)}a{color:inherit;text-decoration:none}.app{display:flex;min-height:100vh}.sidebar{width:250px;background:var(--sidebar);color:#c9d6db;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}.brand{padding:22px 20px 16px;border-bottom:1px solid rgba(255,255,255,.07)}.brand h1{font-size:16px;color:#fff;margin:0}.brand div{font-size:10px;color:#a9c8d5;text-transform:uppercase;letter-spacing:1.3px;margin-top:4px}.nav{padding:14px 12px}.nav a,.nav span{display:block;padding:9px 12px;border-radius:9px;font-size:13px;margin-bottom:2px}.nav a:hover{background:var(--sidebar-2);color:#fff}.nav .active{background:var(--blue);color:#fff;font-weight:700}.side-note{margin-top:auto;padding:16px 20px;border-top:1px solid rgba(255,255,255,.07);font-size:10.5px;color:#6f8792}.main{flex:1;min-width:0}.topbar{position:sticky;top:0;z-index:10;background:var(--card);border-bottom:1px solid var(--line);padding:14px 30px;display:flex;justify-content:space-between;align-items:center}.crumb{font-size:12px;color:var(--soft)}.content{max-width:1300px;padding:26px 30px 60px}.page-head h2{font-size:24px;margin:0}.page-head p{color:var(--soft);max-width:860px;margin:4px 0 18px}.grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(320px,.8fr);gap:16px}.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow)}.card h3{margin:0 0 4px;font-size:14px}.mini{font-size:11px;color:var(--soft)}.notice{border-left:4px solid var(--bronze);background:#fdf7ef;border-radius:10px;padding:12px 14px;color:#6b5233;margin-bottom:18px;font-size:12px}:root[data-theme="dark"] .notice{background:#241d15;color:#d8c3a4}.drop{margin-top:14px;border:2px dashed var(--line);border-radius:12px;padding:28px 18px;text-align:center;cursor:pointer}.drop.hot{border-color:var(--blue);background:rgba(128,171,189,.08)}.drop b{display:block;font-size:14px}.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.btn{font:600 12px Montserrat,sans-serif;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:9px;padding:9px 14px;cursor:pointer}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn:disabled{opacity:.45;cursor:not-allowed}.field{margin-top:13px}.field label{display:block;font-size:11px;font-weight:700;margin-bottom:5px}.field input,.field textarea{width:100%;font:12px Montserrat,sans-serif;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:9px}.field textarea{min-height:74px;resize:vertical}.state{display:inline-flex;align-items:center;gap:7px;border-radius:20px;padding:5px 11px;font-size:11px;font-weight:700;background:#ece9e6;color:#6b6259}.state.saving{background:#fdf1d6;color:var(--gold)}.state.saved{background:#e8f0e3;color:#5c7050}.state.error{background:#faece9;color:var(--danger)}.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}.metric{border:1px solid var(--line);border-radius:10px;padding:12px}.metric b{font-size:22px;display:block}.metric span{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--soft)}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:11px;margin-top:12px}.table{width:100%;border-collapse:collapse;min-width:720px}.table th,.table td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}.table th{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--soft)}.table td{font-size:11px}.badge{display:inline-block;padding:2px 7px;border-radius:12px;font-size:10px;font-weight:700;background:#e8f0e3;color:#5c7050}.issue{color:var(--danger)}.review{margin-top:14px;border:1px solid var(--line);border-radius:11px;padding:13px}.review label.check{display:flex;gap:9px;align-items:flex-start;font-size:12px;font-weight:600}.review input[type=checkbox]{margin-top:3px}.empty{padding:22px;text-align:center;color:var(--soft);font-size:12px}.hidden{display:none!important}dialog{border:0;border-radius:14px;padding:0;max-width:420px;width:calc(100% - 30px);box-shadow:0 18px 60px rgba(0,0,0,.35);background:var(--card);color:var(--ink)}dialog::backdrop{background:rgba(18,25,29,.62)}.dialog-body{padding:22px}.dialog-body h3{margin:0 0 6px}.dialog-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}.security-list{margin:13px 0 0;padding-left:18px;font-size:11px;color:var(--soft)}.security-list li{margin:6px 0}@media(max-width:900px){.sidebar{display:none}.grid{grid-template-columns:1fr}.content{padding:20px 15px}.topbar{padding:12px 15px}}@media(max-width:520px){.summary{grid-template-columns:1fr}}
 </style>
+<style>
+.track-control{display:grid;grid-template-columns:minmax(150px,1fr) minmax(150px,1fr);gap:7px;min-width:330px}
+.track-control label{display:flex;gap:6px;align-items:center;font-weight:700}.track-control select,.track-control input{width:100%;font:11px Montserrat,sans-serif;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:7px;padding:6px}.track-note{grid-column:1/-1}.track-control.is-off select,.track-control.is-off input:not([type=checkbox]){opacity:.5}.review-help{margin:0 0 10px;color:var(--soft);font-size:11px}.partial{background:#fff3d8;color:#7c5b12}
+</style>
 </head>
 <body>
 <div class="app">
-  <aside class="sidebar"><div class="brand"><h1>BHW Provider</h1><div>Clinical Intelligence</div></div><nav class="nav"><a href="patient-360.html">Patient 360</a><a href="risk.html">Risk &amp; Quality</a><span class="active">Preventive Services</span><a href="tcm.html">TCM / Discharges</a><a href="../index.html">CrewOS</a></nav><div class="side-note">CRISP Population Explorer evidence enters Health Core only after exact patient matching and provider review.</div></aside>
+  <aside class="sidebar"><div class="brand"><h1>BHW Provider</h1><div>Clinical Intelligence</div></div><nav class="nav"><a href="patient-360.html">Patient 360</a><a href="risk.html">Risk &amp; Quality</a><span class="active">Preventive Services</span><a href="tcm.html">CRISP Flow</a><a href="../index.html">CrewOS</a></nav><div class="side-note">CRISP Population Explorer evidence enters Health Core only after exact patient matching and provider review.</div></aside>
   <main class="main"><div class="topbar"><div class="crumb">Health Core · CRISP · <b>Preventive Services</b></div><div class="actions"><span class="state" id="saveState">Not saved</span><button class="btn" id="themeBtn">Theme</button></div></div>
     <div class="content">
       <div class="page-head"><h2>Preventive Services Intake</h2><p>Preview CRISP Population Explorer evidence, resolve every patient match, then save reviewed completions to Health Core and Patient 360.</p></div>
@@ -32,7 +36,7 @@
       </div>
 
       <section class="card hidden" id="previewCard" style="margin-top:16px"><h3>2 · Review before saving</h3><div class="summary"><div class="metric"><b id="reviewedCount">0</b><span>Rows reviewed</span></div><div class="metric"><b id="readyCount">0</b><span>Ready to save</span></div><div class="metric"><b id="attentionCount">0</b><span>Needs attention</span></div></div><div id="previewTable"></div>
-        <div class="review"><label class="check"><input type="checkbox" id="reviewCheck"><span>I am the reviewing BHW provider. I verified these patient matches and source details. Save the evidence only; do not create orders or referrals.</span></label><div class="field"><label for="reviewNote">Review note (optional)</label><textarea id="reviewNote" maxlength="500" placeholder="Document any source limitation or reconciliation note."></textarea></div><div class="actions"><button class="btn primary" id="saveBtn" disabled>Save reviewed evidence to Health Core</button><button class="btn" id="discardBtn">Discard preview</button></div></div>
+        <div class="review"><p class="review-help">Choose which services to attach to the clinical chart. You can also create a verified Care Management follow-up for referral attendance, completed screening, an abnormal result, or work needed before the next visit. This does not create an order or referral.</p><label class="check"><input type="checkbox" id="reviewCheck"><span>I am the reviewing BHW provider. I verified the selected patient matches, source details, and tracking choices.</span></label><div class="field"><label for="reviewNote">Review note (optional)</label><textarea id="reviewNote" maxlength="1200" placeholder="Document any source limitation or reconciliation note."></textarea></div><div class="actions"><button class="btn primary" id="saveBtn" disabled>Attach selected evidence to chart</button><button class="btn" id="discardBtn">Discard preview</button></div></div>
       </section>
     </div>
   </main>
@@ -44,7 +48,7 @@
 const $=(id)=>document.getElementById(id);
 const esc=(value)=>String(value??"").replace(/[&<>"']/g,(char)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
 const API="/api/crisp-preventive-import";
-let selectedFile=null, clinicalToken="", clinicalExpiresAt=0, preview=null, pendingAction=null;
+let selectedFile=null, clinicalToken="", clinicalExpiresAt=0, preview=null, pendingAction=null, chartSaveComplete=false;
 
 (function theme(){const key="bhw-theme";const set=(value)=>document.documentElement.setAttribute("data-theme",value);try{set(localStorage.getItem(key)||"light")}catch{}$("themeBtn").onclick=()=>{const value=document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark";set(value);try{localStorage.setItem(key,value)}catch{}}})();
 $("sourceDate").value=new Date().toISOString().slice(0,10);
@@ -56,7 +60,7 @@ async function ensureClinical(action){if(clinicalToken&&clinicalExpiresAt>Date.n
 
 $("reauthForm").addEventListener("submit",async(event)=>{event.preventDefault();const token=regularToken();if(!token){location.href="/crewos";return}$("reauthSubmit").disabled=true;try{const res=await fetch("/.netlify/functions/auth",{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json"},body:JSON.stringify({action:"clinical-login",pin:$("providerPin").value})});const body=await res.json().catch(()=>({}));if(!res.ok)throw new Error(body.error||"Provider verification failed");clinicalToken=body.token;clinicalExpiresAt=Date.now()+Number(body.expiresIn||900)*1000;$("reauthDialog").close();const action=pendingAction;pendingAction=null;if(action)await action()}catch(error){$("reauthError").textContent=error.message}finally{$("reauthSubmit").disabled=false}});
 
-function choose(file){selectedFile=file||null;preview=null;$("previewCard").classList.add("hidden");$("fileLabel").textContent=file?file.name:"Drop the Preventive Services export here";$("previewBtn").disabled=!file;$("uploadStatus").textContent=file?`${file.name} selected · not uploaded or saved yet.`:"No workbook selected.";setState("","Not saved")}
+function choose(file){selectedFile=file||null;preview=null;chartSaveComplete=false;$("previewCard").classList.add("hidden");$("fileLabel").textContent=file?file.name:"Drop the Preventive Services export here";$("previewBtn").disabled=!file;$("uploadStatus").textContent=file?`${file.name} selected · not uploaded or saved yet.`:"No workbook selected.";setState("","Not saved")}
 $("drop").onclick=()=>$("fileInput").click();$("fileInput").onchange=()=>choose($("fileInput").files[0]);
 for(const type of ["dragenter","dragover"]){$("drop").addEventListener(type,(event)=>{event.preventDefault();$("drop").classList.add("hot")})}
 for(const type of ["dragleave","drop"]){$("drop").addEventListener(type,(event)=>{event.preventDefault();$("drop").classList.remove("hot")})}
@@ -67,15 +71,155 @@ async function call(body){const res=await fetch(API,{method:"POST",headers:{Auth
 
 function measureLabel(id){return({"breast-cancer-screening":"Breast cancer screening","colorectal-cancer-screening":"Colorectal cancer screening"})[id]||id}
 function issueLabel(reason){return String(reason||"").replaceAll("-"," ")}
-function renderPreview(){const p=preview.preview;$("previewCard").classList.remove("hidden");$("reviewedCount").textContent=p.counts.reviewed;$("readyCount").textContent=p.counts.readyToSave;$("attentionCount").textContent=p.counts.needsAttention;const records=p.records.map((record)=>`<tr><td>${esc(record.sourceImport?.sourceRowNumber)}</td><td><b>${esc(record.bhwPatientId)}</b></td><td>${esc(measureLabel(record.measureId))}</td><td>${esc(String(record.lastCompletedAt||"").slice(0,10))}</td><td>${esc(record.sourceEvidence?.facilityName||"Not supplied")}</td><td><span class="badge">Provider review</span></td></tr>`).join("");const issues=p.issues.map((item)=>`<tr><td>${esc(item.rowNumber)}</td><td colspan="4" class="issue"><b>${esc(issueLabel(item.reason))}</b>${item.detail?` · ${esc(item.detail)}`:""}</td><td><span class="issue">Not saved</span></td></tr>`).join("");$("previewTable").innerHTML=records||issues?`<div class="table-wrap"><table class="table"><thead><tr><th>Row</th><th>BHW patient</th><th>Measure</th><th>Event date</th><th>Source facility</th><th>State</th></tr></thead><tbody>${records}${issues}</tbody></table></div>`:`<div class="empty">No rows are ready to save.</div>`;$("reviewCheck").checked=false;$("saveBtn").disabled=true;setState("","Not saved")}
+function trackingOptions(){
+  return [
+    ["evidence_only","Evidence only"],
+    ["screening_completed","Screening completed"],
+    ["referral_attended","Referral attended"],
+    ["abnormal_follow_up","Abnormal — follow up"],
+    ["before_next_visit","Needed before next visit"],
+  ].map(([value,label])=>`<option value="${value}">${label}</option>`).join("");
+}
+function renderPreview(){
+  const p=preview.preview;
+  chartSaveComplete=false;
+  $("previewCard").classList.remove("hidden");
+  $("reviewedCount").textContent=p.counts.reviewed;
+  $("readyCount").textContent=p.counts.readyToSave;
+  $("attentionCount").textContent=p.counts.needsAttention;
+  const records=p.records.map((record,index)=>`<tr>
+    <td>${esc(record.sourceImport?.sourceRowNumber)}</td>
+    <td><b>${esc(record.bhwPatientId)}</b></td>
+    <td>${esc(measureLabel(record.measureId))}</td>
+    <td>${esc(String(record.lastCompletedAt||"").slice(0,10))}</td>
+    <td>${esc(record.sourceEvidence?.facilityName||"Not supplied")}</td>
+    <td><div class="track-control is-off" data-track="${index}">
+      <label><input class="attach-check" type="checkbox"> Attach to chart</label>
+      <select class="track-outcome" aria-label="Tracking outcome" disabled>${trackingOptions()}</select>
+      <input class="track-follow" type="date" aria-label="Follow-up date" disabled>
+      <input class="track-note" type="text" maxlength="180" aria-label="Tracking note" placeholder="Optional tracking note" disabled>
+    </div></td>
+  </tr>`).join("");
+  const issues=p.issues.map((item)=>`<tr><td>${esc(item.rowNumber)}</td><td colspan="4" class="issue"><b>${esc(issueLabel(item.reason))}</b>${item.detail?` · ${esc(item.detail)}`:""}</td><td><span class="issue">Not saved</span></td></tr>`).join("");
+  $("previewTable").innerHTML=records||issues?`<div class="table-wrap"><table class="table"><thead><tr><th>Row</th><th>BHW patient</th><th>Measure</th><th>Event date</th><th>Source facility</th><th>Chart &amp; follow-up</th></tr></thead><tbody>${records}${issues}</tbody></table></div>`:`<div class="empty">No rows are ready to save.</div>`;
+  $("reviewCheck").checked=false;
+  $("reviewNote").value="";
+  syncSaveState();
+  setState("","Not saved");
+}
+
+function selectedTracking(){
+  return [...document.querySelectorAll("[data-track]")].flatMap((control)=>{
+    const attach=control.querySelector(".attach-check");
+    if(!attach.checked)return[];
+    return [{
+      index:Number(control.dataset.track),
+      outcome:control.querySelector(".track-outcome").value,
+      followUp:control.querySelector(".track-follow").value,
+      note:control.querySelector(".track-note").value.trim(),
+    }];
+  });
+}
+function syncSaveState(){
+  const selected=selectedTracking();
+  $("saveBtn").disabled=chartSaveComplete||!$("reviewCheck").checked||!selected.length;
+}
+$("previewTable").addEventListener("change",(event)=>{
+  const control=event.target.closest("[data-track]");
+  if(control&&event.target.classList.contains("attach-check")){
+    const enabled=event.target.checked;
+    control.classList.toggle("is-off",!enabled);
+    for(const field of control.querySelectorAll("select,input:not(.attach-check)"))field.disabled=!enabled;
+  }
+  syncSaveState();
+});
 
 async function previewFile(){if(!selectedFile)return;const file=selectedFile;setState("saving","Previewing…");$("previewBtn").disabled=true;$("uploadStatus").textContent="Reading inside the protected BHW connection…";try{preview=await call({action:"preview",fileName:file.name,fileBase64:await fileBase64(file),sourceUpdatedAt:$("sourceDate").value});selectedFile=null;$("fileInput").value="";$("uploadStatus").textContent=`Preview ready · raw workbook retained: ${preview.rawFileRetained?"yes":"no"}.`;renderPreview()}catch(error){setState("error","Not saved");$("uploadStatus").textContent=error.message}finally{$("previewBtn").disabled=!selectedFile}}
 $("previewBtn").onclick=()=>ensureClinical(previewFile);
 
-$("reviewCheck").onchange=()=>{$("saveBtn").disabled=!$("reviewCheck").checked||!preview?.preview?.records?.length};
-async function saveReviewed(){setState("saving","Saving…");$("saveBtn").disabled=true;try{const saved=await call({action:"commit",records:preview.preview.records,previewToken:preview.previewToken,sourceFile:preview.preview.sourceFile,reviewAttestation:{reviewed:true,note:$("reviewNote").value}});const stamp=new Date(saved.savedAt).toLocaleString();setState("saved",`Saved to BHW Cloud · ${stamp}`);$("uploadStatus").textContent=`${saved.verifiedCount} reviewed evidence record(s) saved and read back from Health Core. No orders or referrals were created.`}catch(error){setState("error","Not saved");$("uploadStatus").textContent=error.message;$("saveBtn").disabled=false}}
+$("reviewCheck").onchange=syncSaveState;
+function validateTracking(choices){
+  const missing=choices.filter((choice)=>["abnormal_follow_up","before_next_visit"].includes(choice.outcome)&&!choice.followUp);
+  if(missing.length)throw new Error("Choose a follow-up date for every abnormal or needed-before-next-visit item.");
+}
+async function saveCareTracking(choice,record){
+  if(choice.outcome==="evidence_only")return null;
+  const token=regularToken();
+  if(!token)throw new Error("Sign in to CrewHQ again before creating Care Management follow-up.");
+  const complete=["screening_completed","referral_attended"].includes(choice.outcome);
+  const labels={
+    screening_completed:"Screening completed",
+    referral_attended:"Referral attended",
+    abnormal_follow_up:"Abnormal result follow-up",
+    before_next_visit:"Needed before next visit",
+  };
+  const eventDate=String(record.lastCompletedAt||"").slice(0,10);
+  const response=await fetch("/.netlify/functions/action",{
+    method:"POST",
+    headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json"},
+    body:JSON.stringify({
+      action:"care-log-create",
+      program:"Preventive",
+      type:"Episode",
+      name:record.patientName||record.displayName||record.bhwPatientId,
+      bhwPatientId:record.bhwPatientId,
+      month:(eventDate||new Date().toISOString().slice(0,10)).slice(0,7),
+      episodeDate:eventDate,
+      status:complete?"Complete":"Open",
+      activities:`${labels[choice.outcome]} · ${measureLabel(record.measureId)}`,
+      referrals:choice.outcome==="referral_attended"?`Attended · ${measureLabel(record.measureId)}`:"",
+      nextFollowUp:choice.followUp,
+      lastContact:complete?(eventDate||new Date().toISOString()):"",
+      notes:choice.note||"Created from reviewed CRISP preventive evidence; chart attachment verified separately.",
+    }),
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||!data.ok||!data.verified)throw new Error(data.error||"Care Management follow-up did not read back from BHW Cloud.");
+  return data;
+}
+async function saveReviewed(){
+  const choices=selectedTracking();
+  try{validateTracking(choices)}catch(error){$("uploadStatus").textContent=error.message;return}
+  setState("saving","Saving…");
+  $("saveBtn").disabled=true;
+  const records=choices.map((choice)=>preview.preview.records[choice.index]);
+  const trackingSummary=choices.map((choice)=>{
+    const record=preview.preview.records[choice.index];
+    return `${record.bhwPatientId} ${measureLabel(record.measureId)}: ${choice.outcome}${choice.followUp?` due ${choice.followUp}`:""}`;
+  }).join("; ");
+  let saved;
+  try{
+    saved=await call({
+      action:"commit",
+      records,
+      previewToken:preview.previewToken,
+      sourceFile:preview.preview.sourceFile,
+      reviewAttestation:{reviewed:true,note:[$("reviewNote").value.trim(),`Tracking: ${trackingSummary}`].filter(Boolean).join(" | ")},
+    });
+  }catch(error){
+    setState("error","Not saved");
+    $("uploadStatus").textContent=error.message;
+    syncSaveState();
+    return;
+  }
+  chartSaveComplete=true;
+  const failures=[];
+  for(const choice of choices){
+    try{await saveCareTracking(choice,preview.preview.records[choice.index])}
+    catch(error){failures.push(error.message)}
+  }
+  const stamp=new Date(saved.savedAt).toLocaleString();
+  if(failures.length){
+    setState("partial","Chart saved · follow-up needs attention");
+    $("uploadStatus").textContent=`${saved.verifiedCount} record(s) attached and read back from Health Core at ${stamp}. Care Management did not verify ${failures.length} follow-up item(s): ${failures.join(" ")} Open Care Management to complete them.`;
+  }else{
+    setState("saved",`Saved to BHW Cloud · ${stamp}`);
+    const tracked=choices.filter((choice)=>choice.outcome!=="evidence_only").length;
+    $("uploadStatus").textContent=`${saved.verifiedCount} selected evidence record(s) attached and read back from Health Core.${tracked?` ${tracked} follow-up item(s) also read back from Care Management.`:""} No orders or referrals were created.`;
+  }
+}
 $("saveBtn").onclick=()=>ensureClinical(saveReviewed);
-$("discardBtn").onclick=()=>{preview=null;$("previewCard").classList.add("hidden");$("reviewNote").value="";setState("","Not saved");$("uploadStatus").textContent="Preview discarded. No evidence was saved."};
+$("discardBtn").onclick=()=>{preview=null;chartSaveComplete=false;$("previewCard").classList.add("hidden");$("reviewNote").value="";setState("","Not saved");$("uploadStatus").textContent="Preview discarded. No evidence was saved."};
 
 $("syntheticBtn").onclick=()=>{const headers=["BHW Patient ID","First Name","Last Name","Date of Birth","Preventive Services Category","Preventive Services Code","Preventive Services Description","Preventive Services Results","Preventive Services Test Name","Preventive Services Data Source","Preventive Services Document Evidence Date","Preventive Services Event Date","Preventive Services Facility Name"];const values=["BHW0000","Synthetic","Patient","1986-01-01","Breast cancer screening","SYNTHETIC-BREAST-SCREEN","SYNTHETIC completed screening","","","CCD",new Date().toISOString().slice(0,10),"2026-08-15","Synthetic Maryland Facility"];const csv=[headers,values].map((row)=>row.map((value)=>`"${String(value).replaceAll('"','""')}"`).join(",")).join("\r\n");const link=document.createElement("a");link.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));link.download="BHW0000-CRISP-Preventive-Services-SYNTHETIC.csv";link.click();setTimeout(()=>URL.revokeObjectURL(link.href),0)};
 </script>

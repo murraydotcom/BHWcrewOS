@@ -5,6 +5,59 @@ const { getSession, json } = require("./_lib");
 const { cloudRequest, listCloudPatients } = require("./lib/cloud-patients");
 const { operationsRequest } = require("./lib/operations-cloud");
 
+function isoDate(value) {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return match ? `${match[1]}-${match[2]}-${match[3]}` : "";
+}
+
+function shiftDate(value, days) {
+  const date = new Date(`${isoDate(value)}T12:00:00Z`);
+  if (!Number.isFinite(date.getTime())) return "";
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function monthOf(value) { return isoDate(value).slice(0, 7); }
+
+function previousMonth(value) {
+  const date = new Date(`${monthOf(value)}-01T12:00:00Z`);
+  date.setUTCMonth(date.getUTCMonth() - 1);
+  return date.toISOString().slice(0, 7);
+}
+
+function monthEnd(month) {
+  const date = new Date(`${month}-01T12:00:00Z`);
+  date.setUTCMonth(date.getUTCMonth() + 1);
+  date.setUTCDate(0);
+  return date.toISOString().slice(0, 10);
+}
+
+function monthsInWindow(start, end) {
+  const months = [];
+  const cursor = new Date(`${monthOf(start)}-01T12:00:00Z`);
+  const last = monthOf(end);
+  while (Number.isFinite(cursor.getTime())) {
+    const month = cursor.toISOString().slice(0, 7);
+    months.push(month);
+    if (month === last || months.length >= 3) break;
+    cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+  }
+  return months;
+}
+
+function documentationGaps(log = {}) {
+  const gaps = [];
+  const program = String(log.program || "").toUpperCase();
+  const status = String(log.status || "Open").toLowerCase();
+  if (!String(log.activities || "").trim()) gaps.push("activity/documentation");
+  if (["CCM", "PCM", "RPM", "RTM", "BHI", "COCM"].includes(program) && !(Number(log.minutes) > 0)) gaps.push("time");
+  if (program === "TCM" && !isoDate(log.lastContact)) gaps.push("first contact");
+  if (program === "TCM" && !isoDate(log.nextFollowUp)) gaps.push("visit date");
+  if (!["complete", "billed"].includes(status) && !isoDate(log.nextFollowUp)) gaps.push("next follow-up");
+  if (status === "complete") gaps.push("claim processing");
+  return [...new Set(gaps)];
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return json(405, { error: "POST only" });
   const session = getSession(event);
@@ -15,14 +68,22 @@ exports.handler = async (event) => {
   if ((body.action || "list") !== "list") return json(400, { error: "Unknown action" });
 
   try {
-    const params = new URLSearchParams();
     const program = String(body.program || "").trim();
     const month = String(body.month || "").trim();
-    if (program && program !== "All") params.set("program", program);
-    if (/^\d{4}-\d{2}$/.test(month)) params.set("month", month);
-    const suffix = params.toString() ? `?${params}` : "";
-    const [result, roster, activityResult] = await Promise.all([
-      cloudRequest(`/v1/care-management/logs${suffix}`, { actor: session }),
+    const requestedEnd = isoDate(body.windowEnd) || new Date().toISOString().slice(0, 10);
+    const windowEnd = /^\d{4}-\d{2}$/.test(month) ? monthEnd(month) : requestedEnd;
+    const windowStart = /^\d{4}-\d{2}$/.test(month) ? `${month}-01` : shiftDate(windowEnd, -29);
+    const windowMonths = /^\d{4}-\d{2}$/.test(month) ? [month] : monthsInWindow(windowStart, windowEnd);
+    const closeMonth = previousMonth(windowEnd);
+    const requestedMonths = [...new Set([...windowMonths, closeMonth])];
+    const logRequests = requestedMonths.map((requestedMonth) => {
+      const params = new URLSearchParams({ month: requestedMonth });
+      if (program && program !== "All") params.set("program", program);
+      return cloudRequest(`/v1/care-management/logs?${params}`, { actor: session })
+        .then((result) => [requestedMonth, Array.isArray(result.logs) ? result.logs : []]);
+    });
+    const [logResults, roster, activityResult] = await Promise.all([
+      Promise.all(logRequests),
       listCloudPatients(session),
       Promise.all([
         operationsRequest("/v1/patient-requests?source=care-connect&limit=100", { actor: session }),
@@ -33,8 +94,11 @@ exports.handler = async (event) => {
         warning: "",
       })).catch((error) => ({ requests: [], warning: String(error.message || error) })),
     ]);
+    const logsByMonth = new Map(logResults);
+    const resultLogs = [...new Map(windowMonths.flatMap((value) => logsByMonth.get(value) || [])
+      .map((log) => [log.id, log])).values()];
     const byId = new Map(roster.map((patient) => [patient.bhwPatientId, patient]));
-    const entries = (Array.isArray(result.logs) ? result.logs : []).map((log) => {
+    const entries = resultLogs.map((log) => {
       const patient = byId.get(log.bhwPatientId);
       return {
         ...log,
@@ -52,7 +116,8 @@ exports.handler = async (event) => {
     for (const request of activityResult.requests) {
       if (request.source === "care-connect" && request.requestType !== "clinical_review") continue;
       const occurredAt = request.receivedAt || request.createdAt || request.updatedAt || "";
-      if (/^\d{4}-\d{2}$/.test(month) && !String(occurredAt).startsWith(month)) continue;
+      const activityDate = isoDate(occurredAt);
+      if (activityDate && (activityDate < windowStart || activityDate > windowEnd)) continue;
       const patient = byId.get(request.bhwPatientId);
       activityById.set(request.id, {
         id: request.id,
@@ -74,12 +139,35 @@ exports.handler = async (event) => {
     const activity = [...activityById.values()].sort((left, right) => String(right.occurredAt).localeCompare(String(left.occurredAt)));
     const updated = [...entries.map((entry) => entry.edited), ...activity.map((item) => item.updatedAt)]
       .reduce((latest, value) => value > latest ? value : latest, "");
+    const closeEntries = [...new Map((logsByMonth.get(closeMonth) || []).map((log) => [log.id, log])).values()].map((log) => {
+      const patient = byId.get(log.bhwPatientId);
+      return {
+        ...log,
+        ctlNo: log.bhwPatientId,
+        entry: log.entry || patient?.name || log.bhwPatientId,
+        gaps: documentationGaps(log),
+      };
+    });
     return json(200, {
       entries,
       activity,
       count: entries.length,
       activityCount: activity.length,
       updated,
+      window: { start: windowStart, end: windowEnd, days: 30 },
+      monthClose: {
+        month: closeMonth,
+        start: `${closeMonth}-01`,
+        end: monthEnd(closeMonth),
+        generatedAt: new Date().toISOString(),
+        entries: closeEntries,
+        counts: {
+          tracked: closeEntries.length,
+          complete: closeEntries.filter((entry) => ["complete", "billed"].includes(String(entry.status || "").toLowerCase())).length,
+          missing: closeEntries.filter((entry) => entry.gaps.length).length,
+          claimPending: closeEntries.filter((entry) => String(entry.status || "").toLowerCase() === "complete").length,
+        },
+      },
       activityWarning: activityResult.warning,
       storage: "BHW Cloud",
     });
@@ -87,3 +175,5 @@ exports.handler = async (event) => {
     return json(500, { error: String(error.message || error) });
   }
 };
+
+exports._test = { documentationGaps, isoDate, monthEnd, monthsInWindow, previousMonth, shiftDate };

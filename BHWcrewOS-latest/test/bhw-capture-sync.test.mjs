@@ -118,7 +118,7 @@ test("Capture keeps non-PHI caching separate from reauthenticated protected Clin
   assert.match(app, /clinicalDraftId \|\| \(clinicalDraftId = uid\(\)\)/);
   assert.match(app, /Stop the recording and wait for transcription before changing capture mode/);
   assert.match(app, /Send to 24-Hour Documentation/);
-  assert.match(app, /Use Open full Visit Transcription above for patient audio/);
+  assert.match(app, /Use Open Capture above for patient audio/);
   assert.match(app, /var dbPromise = null/);
   assert.match(app, /CACHE_STARTUP_TIMEOUT_MS/);
   assert.match(app, /await openDB\(\);/);

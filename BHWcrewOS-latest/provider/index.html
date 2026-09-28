@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script src="/crew-provider-gate.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BHW Provider — Claim Laundering</title>
+<title>BHW Provider — Visit Documentation Assistance</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -129,13 +129,12 @@ textarea{font-family:inherit;font-size:12.5px;padding:10px 12px;border:1px solid
     <nav class="nav-group">
       <div class="label">Pre-Bill</div>
       <a class="nav-item" href="patient-registry.html"><span class="ic">◎</span> Patient Registry</a>
+      <a class="nav-item" href="transcription.html"><span class="ic">◉</span> Capture</a>
       <a class="nav-item" href="workflow.html"><span class="ic">◷</span> 24-Hour Work Queue</a>
-      <div class="nav-item active"><span class="ic">◈</span> Claim Laundering</div>
+      <div class="nav-item active"><span class="ic">◈</span> Visit Documentation Assistance</div>
       <a class="nav-item" href="risk.html"><span class="ic">◑</span> Risk &amp; Quality</a>
       <a class="nav-item" href="prior-auth.html"><span class="ic">✋</span> Prior Authorization</a>
-      <a class="nav-item" href="tcm.html"><span class="ic">⏱</span> TCM / Discharges</a>
-      <a class="nav-item" href="claims.html"><span class="ic">▦</span> Claims Tracker</a>
-      <a class="nav-item" href="../index.html"><span class="ic">▤</span> RCM Command Center</a>
+      <a class="nav-item" href="tcm.html"><span class="ic">⏱</span> CRISP Flow</a>
     </nav>
     <div class="sidebar-foot">Themis engine · shared with the RCM app.<br>Decision support — validate before billing.</div>
   </aside>
@@ -145,7 +144,7 @@ textarea{font-family:inherit;font-size:12.5px;padding:10px 12px;border:1px solid
     <div class="topbar">
       <div class="tb-left">
         <button class="hamburger" id="navToggle" aria-label="Open navigation" aria-expanded="false">☰</button>
-        <div class="crumb">Clinical Intelligence · Encounter Operations · <b>Claim Laundering</b></div>
+        <div class="crumb">Clinical Intelligence · Encounter Operations · <b>Visit Documentation Assistance</b></div>
       </div>
       <div class="tools">
         <span class="pill" id="dataPill">loading…</span>
@@ -155,14 +154,8 @@ textarea{font-family:inherit;font-size:12.5px;padding:10px 12px;border:1px solid
 
     <div class="content">
       <div class="page-head">
-        <h2>Claim Laundering — Documentation &amp; Coding Review</h2>
+        <h2>Visit Documentation Assistance</h2>
         <p>One review for documentation and coding: ICD-10-CM specificity, diagnosis support, CPT/ICD medical-necessity match, duplicate services, NCCI PTP/MUE edits, modifiers, add-on rules, payer corrections, and E/M level support.</p>
-      </div>
-
-      <div class="note">
-        <b>Decision support, not a guarantee.</b> Findings are the same edits the RCM Command Center runs.
-        The E/M suggestion + documentation checklist use published 2021 AMA guidance — <b>validate against BHW's
-        Coders' Specialty Guide</b>. Frequency edits need the patient's prior claim history to fire.
       </div>
 
       <div class="grid g2">

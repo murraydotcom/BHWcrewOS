@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script src="/auth-gate.js"></script>
+<script src="/crew-provider-gate.js"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>BHW Provider — 24-Hour Encounter Operations</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -35,27 +35,26 @@
   <div class="brand"><h1>BHW Provider</h1><div>Clinical Intelligence</div></div>
   <div class="nav-label">Documentation</div>
   <a class="nav" href="patient-registry.html">◎ Patient Registry</a>
+  <a class="nav" href="transcription.html">◉ Capture</a>
   <a class="nav active" href="workflow.html">◷ 24-Hour Work Queue</a>
-  <a class="nav" href="transcription.html">◉ Transcription Pilot</a>
-  <a class="nav" href="index.html">◈ Encounter Scrub</a>
-  <a class="nav" href="claims.html">▦ Legacy Claims / Optum</a>
+  <a class="nav" href="index.html">◈ Visit Documentation Assistance</a>
   <a class="nav" href="prior-auth.html">✋ Prior Authorization</a>
   <a class="nav" href="risk.html">◑ Risk &amp; Quality</a>
+  <a class="nav" href="tcm.html">⏱ CRISP Flow</a>
   <div class="side-note">Provider workspace<br>Clinical and coding intelligence only.<br><br>Charm Entry Agent: supervised draft entry.</div>
 </aside>
 <main class="main">
   <nav class="mobile-nav" aria-label="Provider navigation">
     <a href="patient-registry.html">Patients</a>
+    <a href="transcription.html">Capture</a>
     <a class="active" href="workflow.html">Work Queue</a>
-    <a href="transcription.html">Transcription</a>
-    <a href="index.html">Scrub</a>
-    <a href="claims.html">Claims</a>
+    <a href="index.html">Visit Assistance</a>
     <a href="prior-auth.html">Prior Auth</a>
     <a href="risk.html">Risk</a>
   </nav>
   <div class="top"><div class="crumb">Clinical Intelligence · <b>24-Hour Encounter Operations</b></div><div class="pilotbar"><span class="badge warning">Amaris-only pilot</span><span id="cloudStatus" class="badge warning">Browser-only</span><span id="clock" class="badge ontrack">Monitoring</span><button class="btn" id="alerts">Enable alerts</button><button class="btn" id="theme">◐ Theme</button></div></div>
   <div class="content">
-    <div class="hero"><div><h2>24-Hour Encounter Operations</h2><p>One encounter packet moves from the Freed draft through documentation review, coding intelligence, forms, provider approval, and supervised CharmHealth draft entry.</p></div><div class="hero-actions"><a class="btn link" href="transcription.html">Open transcription pilot</a><a class="btn link" href="charm-bridge-setup.html">Install Charm bridge</a><button class="btn primary" id="newEncounter">+ Add encounter</button></div></div>
+    <div class="hero"><div><h2>24-Hour Encounter Operations</h2><p>One encounter packet moves from Capture through documentation review, coding intelligence, forms, provider approval, and supervised CharmHealth draft entry.</p></div><div class="hero-actions"><a class="btn link" href="transcription.html">Open Capture</a><a class="btn link" href="charm-bridge-setup.html">Install Charm bridge</a><button class="btn primary" id="newEncounter">+ Add encounter</button></div></div>
     <section class="kpis" id="kpis"></section>
     <section class="workspace">
       <div class="card"><div class="card-head"><h3>Exception-based work queue</h3><div class="filters" id="filters"><button class="filter on" data-filter="open">Open</button><button class="filter" data-filter="urgent">Urgent</button><button class="filter" data-filter="provider">My review</button><button class="filter" data-filter="all">All</button></div></div><div class="queue-note" id="queuePrivacy">Connecting to the protected Google Cloud queue…</div><div class="queue" id="queue"></div></div>
@@ -76,5 +75,6 @@
 </div>
 
 <script type="module" src="workflow-app.mjs"></script>
+<script src="/staff-chat-launcher.js" defer></script>
 </body>
 </html>

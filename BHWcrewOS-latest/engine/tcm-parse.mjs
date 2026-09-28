@@ -49,6 +49,7 @@ const INTERNAL_FIELD_HEADERS = {
   medicationAccess: "Medication Access",
   followUpNeeds: "Follow-Up Needs",
   contactNotes: "Contact Notes",
+  followUpAppointment: "Follow-Up Appointment",
   tcmLogId: "TCM Log ID",
   tcmStatus: "TCM Status",
 };
@@ -360,8 +361,8 @@ export function summarize(items, rosterLoaded = false) {
     s[it.category] = (s[it.category] || 0) + 1;
     if (it.panel && it.panel.onPanel) s.onPanel++;
     if (it.category === "tcm" && it.dl) {
-      if (it.dl.callState === "due-today") s.callsDueToday++;
-      if (it.dl.callState === "passed" && it.dl.windowState !== "closed") s.callsOverdue++;
+      if (!it.firstContactAt && it.dl.callState === "due-today") s.callsDueToday++;
+      if (!it.firstContactAt && it.dl.callState === "passed" && it.dl.windowState !== "closed") s.callsOverdue++;
       if (it.dl.windowState === "7") s.visitsDue7++;
       if (it.dl.windowState === "closed") s.windowClosed++;
       if (it.panel && it.panel.onPanel) s.tcmOnPanel++;

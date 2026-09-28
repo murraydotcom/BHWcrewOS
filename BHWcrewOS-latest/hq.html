@@ -123,7 +123,7 @@ header.top{position:sticky;top:0;z-index:40;backdrop-filter:blur(12px);backgroun
 
 /* ---- destination cards (the core) ---- */
 .dest-wrap{max-width:1120px;margin:26px auto 0;padding:0 22px}
-.dest{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.dest{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
 .dcard{position:relative;display:flex;flex-direction:column;border-radius:20px;padding:26px 24px 22px;min-height:230px;
   background:linear-gradient(180deg,var(--panel-hi),var(--panel));border:1px solid var(--panel-line);overflow:hidden;
   transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
@@ -248,7 +248,7 @@ footer{max-width:1120px;margin:60px auto 0;padding:26px 22px 60px;border-top:1px
   </div>
 </section>
 
-<!-- THREE DESTINATIONS -->
+<!-- CORE DESTINATIONS -->
 <div class="dest-wrap">
   <div class="dest">
 
@@ -258,15 +258,6 @@ footer{max-width:1120px;margin:60px auto 0;padding:26px 22px 60px;border-top:1px
       <h2>BHWcrewOS</h2>
       <p>The daily operations hub — front desk, panel, care plans, clinical tools, and the whole crew. Sign in with your name and PIN.</p>
       <span class="go">Open crewOS <span class="arrow">→</span></span>
-    </a>
-
-    <a class="dcard" style="--accent:var(--gold)" href="https://rcm.bhwmedical.org/" target="_blank" rel="noopener">
-      <span class="ext"><svg viewBox="0 0 24 24"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>External</span>
-      <div class="ico"><svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><line x1="2.5" y1="10" x2="21.5" y2="10"/><line x1="6" y1="15" x2="10" y2="15"/></svg></div>
-      <div class="kick">Revenue &amp; Billing</div>
-      <h2>RCM Command Center</h2>
-      <p>The revenue-cycle platform — claims, eligibility, ERA &amp; payments, and the billing tracker. Everything money moves through.</p>
-      <span class="go">Open RCM <span class="arrow">→</span></span>
     </a>
 
     <!-- NOTE: welcometoBHW is its own React/Netlify site (repo: murraydotcom/welcometobhw).
@@ -368,9 +359,12 @@ const TOOLS=[
   {name:'Medicare (DPC)',accent:'var(--peri)',tag:'Setup',href:'/bhw-dpc.html',
    desc:'Check the CMS Data at the Point of Care connection and read each patient’s last Annual Wellness Visit from Medicare claims.',
    icon:'<path d="M3 12h4l2 5 4-10 2 5h6"/>'},
-  {name:'Claim Laundering',accent:'var(--gold)',tag:'Live',href:'/provider/workflow.html',
-   desc:'Clinical Intelligence — encounter operations, transcription, documentation review, coding intelligence, and provider approval before a claim goes out.',
+  {name:'Visit Documentation Assistance',accent:'var(--gold)',tag:'Live',href:'/provider/workflow.html',
+   desc:'Capture, documentation review, coding intelligence, and provider approval for the encounter before claim processing.',
    icon:'<path d="M3 9h18M7 15h2m4 0h4"/><rect x="3" y="4" width="18" height="16" rx="2.5"/>'},
+  {name:'CRISP Flow',accent:'var(--peri)',tag:'Live',href:'/provider/tcm.html',
+   desc:'Authenticated hospital and ambulatory follow-through with Care Management contact and visit updates in one shared view.',
+   icon:'<path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/><path d="M16 16l2 2 3-4"/>'},
   {name:'Send a Fax',accent:'var(--teal)',tag:'Live',href:'/bhw-fax.html',
    desc:'Fax any PDF out through Dialpad — pick a document, enter the number (or look up a patient), and send from the practice line. For documents made outside the studios.',
    icon:'<path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="8" rx="2"/><path d="M8 17v4h8v-4"/><path d="M16 13h.01"/>'},

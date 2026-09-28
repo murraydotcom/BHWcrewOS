@@ -15,6 +15,11 @@ import {
   isProviderReviewStatus,
   summarizeQueue,
 } from "../engine/encounter-workflow.mjs";
+import {
+  DEFAULT_ENCOUNTER_OWNER,
+  normalizeEncounterOwner,
+  ownerIdentityForStaff,
+} from "../engine/staff-identity.mjs";
 
 const REPORT = `⚠️ FIX BEFORE CLOSING (Critical + High)
 1. [HIGH] Issue: Hypertension code lacks supporting management | Location: Assessment | Suggested fix: Document only the management that occurred | Supporting source: BHW Documentation Standard (2026)
@@ -100,11 +105,25 @@ test("CrewHQ exposes one correction bundle and keeps optional revenue work nonbl
   assert.doesNotMatch(workflow, /id="applyCodingCorrections"/);
 });
 
-test("CrewHQ Claim Laundering prioritizes the note and pulls documented time", async () => {
+test("CrewHQ Visit Documentation Assistance prioritizes the note and pulls documented time", async () => {
   const html = await readFile(new URL("../provider/index.html", import.meta.url), "utf8");
-  assert.match(html, /Claim Laundering — Documentation &amp; Coding Review/);
+  assert.match(html, /Visit Documentation Assistance/);
   assert.match(html, /import \{ documentedTotalMinutes \}/);
   assert.match(html, /\$\("minutes"\)\.value = time\.minutes/);
   assert.ok(html.indexOf("<!-- ============ CLINICAL NOTE ============ -->") < html.indexOf("<!-- ============ COVERAGE ============ -->"));
   assert.match(html, /<details class="card"[^>]*>[\s\S]*Documentation coverage reference/);
+});
+
+test("CrewHQ uses a complete professional owner identity", async () => {
+  assert.equal(normalizeEncounterOwner("Amaris"), DEFAULT_ENCOUNTER_OWNER);
+  assert.equal(normalizeEncounterOwner("Murray, Amaris CRNP"), DEFAULT_ENCOUNTER_OWNER);
+  assert.equal(ownerIdentityForStaff({ name: "Yahaira", role: "CRNP" }), "Yahaira Matias, CRNP");
+  assert.equal(normalizeEncounterOwner("Jordan Lee, CPC — Coding Lead"), "Jordan Lee, CPC — Coding Lead");
+
+  const packet = buildEncounterPacket({ id: "ENC-OWNER", owner: "Amaris" });
+  assert.equal(packet.owner, DEFAULT_ENCOUNTER_OWNER);
+
+  const workflow = await readFile(new URL("../provider/workflow-app.mjs", import.meta.url), "utf8");
+  assert.match(workflow, /Owner — full name, credentials\/title/);
+  assert.match(workflow, /owner: currentOwnerIdentity/);
 });

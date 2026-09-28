@@ -59,6 +59,11 @@ import {
   contextReviewSummary,
   normalizeNotePlan,
 } from "../engine/note-composer.mjs";
+import {
+  DEFAULT_ENCOUNTER_OWNER,
+  normalizeEncounterOwner,
+  ownerIdentityForStaff,
+} from "../engine/staff-identity.mjs";
 
 const QUEUE_KEY = "bhw_encounter_queue_v1";
 const NOTES_KEY = "bhw_encounter_session_notes_v1";
@@ -122,6 +127,21 @@ const cloudPendingIds = new Set();
 const cloudSaveChains = new Map();
 const noteEditingIds = new Set();
 const noteAutosaveTimers = new Map();
+
+function signedInStaffIdentity() {
+  try {
+    const token = sessionStorage.getItem("crewos_token") || "";
+    const [body, signature] = token.split(".");
+    if (!body || !signature) return DEFAULT_ENCOUNTER_OWNER;
+    const normalized = body.replace(/-/g, "+").replace(/_/g, "/");
+    const padding = "=".repeat((4 - (normalized.length % 4)) % 4);
+    return ownerIdentityForStaff(JSON.parse(atob(normalized + padding)));
+  } catch {
+    return DEFAULT_ENCOUNTER_OWNER;
+  }
+}
+
+const currentOwnerIdentity = signedInStaffIdentity();
 
 const lineValues = (value) => String(value || "").split("\n").map((item) => item.trim()).filter(Boolean);
 
@@ -391,7 +411,7 @@ function sync(row, { invalidateApproval = true } = {}) {
   const nextSourceTranscript = $("dTranscript") ? $("dTranscript").value : row.sourceTranscript;
   const nextNotePlan = notePlanFromDetail(row);
   const nextBuilderInput = builderInputFromDetail(row);
-  const nextOwner = $("dOwner").value.trim() || "Amaris";
+  const nextOwner = normalizeEncounterOwner($("dOwner").value, currentOwnerIdentity);
   const nextCodes = $("dCodes").value.split(/[\s,]+/).map((value) => value.trim().toUpperCase()).filter(Boolean);
   const nextDiagnoses = $("dDiagnoses").value.split(/[\s,]+/).map((value) => value.trim().toUpperCase()).filter(Boolean);
   const clinicalChanged = row.note !== nextNote
@@ -559,7 +579,7 @@ function renderDetail() {
   $("detail").innerHTML = `
     <div class="card-head"><div><h3>${esc(row.id)} · Encounter packet</h3><div class="enc-meta">${row.bhwPatientId ? `${esc(row.bhwPatientId)} · ` : ""}${esc(row.provider)} · ${esc(row.payer)} · completed ${ago(urgency.hours)} ago</div></div><span class="badge ${urgency.level}">${esc(urgency.label)}</span></div>
     <div class="detail-body"><div class="notice"><b>Operational pilot:</b> ${cloudState === "connected" ? "this packet is encrypted and synchronized through the protected BHW Google Cloud project." : "this packet is temporarily using browser storage until Google Cloud connects."} Freed and CharmHealth remain the designated medical records.</div>
-    <div class="formgrid"><div class="field"><label>Status</label><select id="dStatus">${statusOptions(row.status)}</select></div><div class="field"><label>Owner</label><input id="dOwner" value="${esc(row.owner)}"></div><div class="field"><label>Approved CPT/HCPCS — after note audit</label><input id="dCodes" value="${esc(row.codes.join(", "))}" placeholder="Review and apply the post-note recommendations"></div></div>
+    <div class="formgrid"><div class="field"><label>Status</label><select id="dStatus">${statusOptions(row.status)}</select></div><div class="field"><label>Owner — full name, credentials/title</label><input id="dOwner" value="${esc(normalizeEncounterOwner(row.owner, currentOwnerIdentity))}" placeholder="First Last, credentials — title"></div><div class="field"><label>Approved CPT/HCPCS — after note audit</label><input id="dCodes" value="${esc(row.codes.join(", "))}" placeholder="Review and apply the post-note recommendations"></div></div>
     <div class="field"><label>Approved ICD-10-CM diagnoses — after note audit</label><input id="dDiagnoses" value="${esc(row.diagnoses.join(", "))}" placeholder="Review and apply the post-note recommendations"></div>
     <div style="margin-top:12px">${renderNoteBuilder(row)}</div>
     <div class="field" style="margin-top:12px"><label>Source transcription or imported clinical draft</label><textarea id="dTranscript" rows="7">${esc(row.sourceTranscript || "")}</textarea><div class="privacy">Source material remains separate from the structured note. Provider review is required before generation.</div></div>
@@ -686,6 +706,7 @@ function renderMedicationEpaWorkbench(row) {
       const urgency = medicationEpaCaseUrgency(caseItem);
       const questions = providerQuestionSummary(caseItem);
       const events = [].concat(caseItem.events || []).slice().reverse();
+      const payerResource = PAYER_CATALOG.find((item) => item.id === profile.payerProfileId) || PAYER_CATALOG[0];
       return `<article class="epa-case urgency-${esc(urgency.level)}" data-epa-case-id="${esc(caseItem.id)}">
         <div class="output-head"><div><span class="code-chip">${esc(caseItem.action || "medication")}</span> <b>${esc(caseItem.medicationName)}</b><p>${esc(caseItem.sourceText)}</p></div><div class="epa-badges"><span class="badge ${urgency.level === "complete" ? "complete" : urgency.overdue ? "warning" : "ontrack"}">${esc(urgency.label)}</span><span class="badge ${questions.missing ? "warning" : "complete"}">${questions.complete}/${questions.total} answers</span></div></div>
 
@@ -702,6 +723,7 @@ function renderMedicationEpaWorkbench(row) {
           <div class="field"><label>PBM name</label><input data-epa-field="pbm" value="${esc(profile.pbm)}" placeholder="CarelonRx or other administrator"></div>
           <div class="field"><label>Medicare contract ID</label><input data-epa-field="medicareContractId" value="${esc(profile.medicareContractId)}" placeholder="H####"></div>
           <div class="field"><label>Medicare PBP ID</label><input data-epa-field="medicarePbpId" value="${esc(profile.medicarePbpId)}"></div>
+          <div class="field epa-span"><label>Matched formulary resource</label>${payerResource.formularyUrl ? `<a class="btn" href="${esc(payerResource.formularyUrl)}" target="_blank" rel="noopener">Open ${esc(payerResource.label)} formulary / drug lookup ↗</a>` : '<span class="privacy">Select the exact payer and line of business to open its official drug-list resource.</span>'}</div>
         </div></details>
 
         <details open><summary>Provider clinical answers</summary><p class="privacy">Questions are anticipated from the documented medication and diagnosis context. They are not represented as the payer's exact questionnaire.</p>${caseItem.questions.map((question) => renderEpaQuestion(question, "common")).join("")}</details>
@@ -754,7 +776,7 @@ function renderOutputs(row) {
   const medicationAnswered = medicationPa.candidates.reduce((sum, item) => sum + item.documented, 0);
   const medicationTotal = medicationPa.candidates.reduce((sum, item) => sum + item.total, 0);
   const medicationNotice = medicationPa.candidates.length
-    ? `<div class="notice"><b>Medication PA readiness: ${medicationAnswered}/${medicationTotal} common clinical answers found for ${medicationPa.candidates.length} new or changed medication request${medicationPa.candidates.length === 1 ? "" : "s"}.</b> Coverage has not been checked. The prescriber should complete or mark the remaining items not applicable, review the packet, and then use <b>Ready for MA/front desk</b>. Staff still verify the live formulary/benefit and answer any payer-specific follow-up questions.</div>`
+    ? `<div class="notice"><b>Medication PA readiness: ${medicationAnswered}/${medicationTotal} common clinical answers found for ${medicationPa.candidates.length} new or coverage-flagged medication request${medicationPa.candidates.length === 1 ? "" : "s"}.</b> Continuations and dose-only changes do not create PA follow-up. The prescriber should complete or mark the remaining items not applicable, review the packet, and then use <b>Ready for MA/front desk</b>. Staff verify the patient-specific formulary/benefit using the payer matched from coverage.</div>`
     : "";
   return `${medicationNotice}${renderMedicationEpaWorkbench(row)}<div class="notice"><b>${tasks.length - completed} open task${tasks.length - completed === 1 ? "" : "s"}; ${documents.length} generated draft${documents.length === 1 ? "" : "s"}.</b> Drafts live in this encounter packet and synchronize to the protected queue. Edit them here, download when needed, and mark the work complete.</div><h4>Completion tasks</h4>${tasks.length ? tasks.map((task) => `<label class="task ${task.status === "complete" ? "done" : ""}"><input type="checkbox" class="task-toggle" data-task-id="${esc(task.id)}" ${task.status === "complete" ? "checked" : ""}><span><b>${esc(task.title)}</b><small>${esc(task.reason)} · Owner: ${esc(task.owner)} · Suggested role: ${esc(task.recommendedRole)} · Due ${new Date(task.dueAt).toLocaleString()}</small></span></label>`).join("") : '<p class="privacy">Paste or update the note to generate work tasks.</p>'}<h4>Generated documents and forms</h4>${documents.length ? documents.map((document) => `<div class="document-card"><div class="output-head"><div><b>${esc(document.title)}</b><p>${esc(document.reason)}</p></div><span class="badge ${document.status === "complete" ? "complete" : "warning"}">${esc(document.status)}</span></div><textarea class="document-content" data-document-id="${esc(document.id)}" rows="12">${esc(document.content)}</textarea><div class="actions"><button class="btn document-save" data-document-id="${esc(document.id)}">Save draft</button><button class="btn document-ready" data-document-id="${esc(document.id)}" ${document.status === "complete" ? "disabled" : ""}>${document.type === "medication_authorization" ? "Ready for MA/front desk" : "Mark ready"}</button><button class="btn primary document-complete" data-document-id="${esc(document.id)}" ${document.status === "complete" ? "disabled" : ""}>Complete</button><button class="btn document-download" data-document-id="${esc(document.id)}">Download .txt</button></div></div>`).join("") : '<p class="privacy">No generated document is required from the language detected in this note.</p>'}`;
 }
@@ -1570,7 +1592,7 @@ $("create").onclick = async () => {
   const draft = {
     bhwPatientId,
     provider: $("mProvider").value.trim() || "Amaris",
-    owner: "Amaris",
+    owner: currentOwnerIdentity,
     completedAt: completedAt.toISOString(),
     payer: $("mPayer").value,
     coverage: {

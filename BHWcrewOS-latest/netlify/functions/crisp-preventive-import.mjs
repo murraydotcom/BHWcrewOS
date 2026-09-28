@@ -158,7 +158,7 @@ export default async function crispPreventiveImport(request) {
         records,
         previewToken: body.previewToken,
         sourceFile: String(body.sourceFile || "").split(/[\\/]/).at(-1).slice(0, 160),
-        reviewAttestation: { reviewed: true, note: String(body.reviewAttestation.note || "").slice(0, 500) },
+        reviewAttestation: { reviewed: true, note: String(body.reviewAttestation.note || "").slice(0, 2_000) },
       });
       return response(200, { ...saved, rawFileRetained: false });
     }
