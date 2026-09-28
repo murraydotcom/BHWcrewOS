@@ -97,6 +97,14 @@ test("Care Management contact and visit fields suppress completed-contact alerts
   assert.equal(result.items[0].followUpAppointment, "2026-09-08");
 });
 
+test("CRISP Flow routes matched ambulatory events to provider-reviewed chart attachment", async () => {
+  const html = await readFile(new URL("../provider/tcm.html", import.meta.url), "utf8");
+  assert.match(html, /Ambulatory chart review is intentional/);
+  assert.match(html, /Open chart to attach/);
+  assert.match(html, /patient-360-timeline\.html\?patient=/);
+  assert.match(html, /authorized provider must review and approve/i);
+});
+
 test("admitted dates render the adm label instead of escaped HTML", async () => {
   const html = await readFile(new URL("../provider/tcm.html", import.meta.url), "utf8");
 
