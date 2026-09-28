@@ -10,8 +10,9 @@ const careDue = require("../netlify/functions/care-due-data.js")._test;
 test("monthly care-log preparation recognizes every care-management program shown in CrewOS", () => {
   assert.deepEqual(careImport.normalizedPrograms([
     "Chronic Care Management", "APCM", "Principal Care Management", "Remote Patient Monitoring", "RTM",
-    "Behavioral Health Integration", "Collaborative Care", "CharmEd Minds",
-  ]), ["CCM", "APCM", "PCM", "RPM", "RTM", "BHI", "COCM", "CHARMED MINDS"]);
+    "Behavioral Health Integration", "Collaborative Care", "Community Health Integration",
+    "Principal Illness Navigation", "CharmEd Minds",
+  ]), ["CCM", "APCM", "PCM", "RPM", "RTM", "BHI", "COCM", "CHI", "PIN", "CHARMED MINDS"]);
 });
 
 test("recent monthly enrollment is recovered for no more than two months", () => {

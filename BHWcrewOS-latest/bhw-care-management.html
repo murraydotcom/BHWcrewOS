@@ -34,6 +34,15 @@ table{border-collapse:collapse;width:100%;min-width:1050px;font-size:12.5px}
 th{text-align:left;font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--soft);font-weight:700;padding:9px 8px;border-bottom:2px solid var(--line);white-space:nowrap;position:sticky;top:0;background:#fff}
 td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
 tr:hover td{background:#faf8f5}
+tr.readiness-ready td{background:#eef8f3}
+tr.readiness-incomplete td{background:#fff8e8}
+tr.readiness-blocked td{background:#fceeed}
+tr.readiness-ready:hover td{background:#e5f3ec}
+tr.readiness-incomplete:hover td{background:#fff2d2}
+tr.readiness-blocked:hover td{background:#f8dfdc}
+tr.readiness-ready td:first-child{border-left:5px solid var(--ok)}
+tr.readiness-incomplete td:first-child{border-left:5px solid #C58A21}
+tr.readiness-blocked td:first-child{border-left:5px solid var(--urgent)}
 .pt{font-weight:700}
 .pt small{display:block;font-weight:500;color:var(--soft);font-size:10.5px}
 .badge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px;background:var(--linen);border:1px solid var(--line);color:var(--clay-deep);white-space:nowrap}
@@ -46,26 +55,37 @@ td select{width:100%;min-width:90px}
 .due{color:var(--urgent);font-weight:700}
 .rowsave{white-space:nowrap}
 .saved{color:var(--ok);font-size:11px;font-weight:700}
+.readiness-btn{border:0;border-radius:99px;padding:5px 9px;font:700 10px var(--sans);cursor:pointer;white-space:nowrap}
+.readiness-btn.ready{background:#dbeee7;color:var(--ok)}
+.readiness-btn.incomplete{background:#f8e5b9;color:#805A0B}
+.readiness-btn.blocked{background:#f4d6d2;color:#8D352E}
+.readiness-summary{font-size:9.5px;color:var(--soft);margin-top:4px;max-width:190px}
+.requirements-row[hidden]{display:none}.requirements-row td{background:#fff!important;padding:0;border-bottom:2px solid var(--line)}
+.requirements-panel{padding:16px;border-left:5px solid var(--river)}
+.requirements-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:12px}.requirements-head h3{font-family:var(--serif,Georgia);margin:0;font-size:17px}.requirements-head p{margin:3px 0 0;color:var(--soft);font-size:11px}
+.requirements-alert{padding:9px 11px;border-radius:8px;margin-bottom:12px;font-size:11px}.requirements-alert.blocked{background:#fceeed;color:#8D352E}.requirements-alert.incomplete{background:#fff8e8;color:#805A0B}.requirements-alert.ready{background:#eef8f3;color:var(--ok)}
+.requirements-grid{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:10px}.requirements-grid label{display:grid;gap:4px;font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);font-weight:750}.requirements-grid label.wide{grid-column:span 2}.requirements-grid input[type=text],.requirements-grid input[type=date],.requirements-grid input[type=number],.requirements-grid select{width:100%;min-width:0}.requirements-checks{display:flex;flex-wrap:wrap;gap:12px;margin:12px 0}.requirements-checks label{display:flex;gap:7px;align-items:flex-start;font-size:11px;color:var(--ink)}.requirements-notes{width:100%;min-height:64px;border:1.5px solid var(--line);border-radius:8px;padding:8px;font:12px var(--sans)}
+.requirement-lists{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.requirement-list{border:1px solid var(--line);border-radius:8px;padding:10px;font-size:10.5px}.requirement-list b{display:block;margin-bottom:5px}.requirement-list ul{margin:0;padding-left:17px}.requirement-list.blocked{border-color:#e8b7b2}.requirement-list.missing{border-color:#ecd49d}
 .msg{padding:24px;text-align:center;color:var(--soft)}
 .disc{background:#fdf6ec;border:1px solid var(--sand);border-radius:9px;padding:9px 13px;font-size:11.5px;color:var(--clay-deep);margin-bottom:12px}
 .gate{max-width:460px;margin:60px auto;background:#fff;border:1px solid var(--line);border-radius:14px;padding:26px;text-align:center}
-.activity{margin-top:18px;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}.activity-head{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:flex-start;justify-content:space-between}.activity-head h2{font-family:var(--serif,Georgia);font-size:18px;margin:0}.activity-head p{margin:3px 0 0;font-size:11px;color:var(--soft)}.activity-list{display:grid}.activity-row{display:grid;grid-template-columns:minmax(180px,1.15fr) minmax(135px,.8fr) minmax(120px,.7fr) minmax(150px,.9fr) auto;gap:12px;align-items:center;padding:11px 16px;border-bottom:1px solid var(--line);font-size:11.5px}.activity-row:last-child{border-bottom:0}.activity-row .when{color:var(--soft);font-size:10.5px}.activity-row .status{text-transform:capitalize}.activity-row .open{color:var(--ok);font-weight:750;text-decoration:none;white-space:nowrap}.activity-warning{padding:9px 13px;background:#fdf6ec;color:var(--clay-deep);font-size:10.5px}@media(max-width:760px){.activity-row{grid-template-columns:1fr 1fr}.activity-row .open{grid-column:1/-1}}
+.activity{margin-top:18px;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}.activity-head{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:flex-start;justify-content:space-between}.activity-head h2{font-family:var(--serif,Georgia);font-size:18px;margin:0}.activity-head p{margin:3px 0 0;font-size:11px;color:var(--soft)}.activity-list{display:grid}.activity-row{display:grid;grid-template-columns:minmax(180px,1.15fr) minmax(135px,.8fr) minmax(120px,.7fr) minmax(150px,.9fr) auto;gap:12px;align-items:center;padding:11px 16px;border-bottom:1px solid var(--line);font-size:11.5px}.activity-row:last-child{border-bottom:0}.activity-row .when{color:var(--soft);font-size:10.5px}.activity-row .status{text-transform:capitalize}.activity-row .open{color:var(--ok);font-weight:750;text-decoration:none;white-space:nowrap}.activity-warning{padding:9px 13px;background:#fdf6ec;color:var(--clay-deep);font-size:10.5px}@media(max-width:900px){.requirements-grid{grid-template-columns:repeat(2,minmax(140px,1fr))}}@media(max-width:760px){.activity-row{grid-template-columns:1fr 1fr}.activity-row .open{grid-column:1/-1}.requirements-grid,.requirement-lists{grid-template-columns:1fr}.requirements-grid label.wide{grid-column:auto}}
 </style>
 </head>
 <body>
 <div class="wrap">
 <header>
   <img src="/assets/bhw-medical-logo.png" alt="" onerror="this.style.display='none'">
-  <div><h1>Care Management Log</h1><div class="sub">CCM · APCM · TCM — time, activities, referrals & follow-up</div></div>
+  <div><h1>Care Management Log</h1><div class="sub">APCM · CCM · BHI · CoCM · CHI · PIN · RPM — activity, evidence &amp; follow-up</div></div>
   <div class="controls" id="controls" style="display:none">
     <select id="program" onchange="load()">
       <option>All</option><option>CCM</option><option>APCM</option><option>PCM</option><option>TCM</option>
-      <option>RPM</option><option>RTM</option><option>BHI</option><option>CoCM</option><option>CharmEd Minds</option>
+      <option>RPM</option><option>RTM</option><option>BHI</option><option>CoCM</option><option>CHI</option><option>PIN</option><option>CharmEd Minds</option>
     </select>
     <input type="month" id="month" onchange="load()">
     <input type="text" id="q" placeholder="Search name / Ctl / ICD…" oninput="render()">
     <button class="btn sec sm" onclick="load()">↻ Refresh</button>
-    <button class="btn sm" id="importBtn" onclick="importNow()" title="Prepare this month's enrolled CCM, APCM, PCM, RPM, RTM, BHI, CoCM, and CharmEd Minds patients">⟳ Run monthly import</button>
+    <button class="btn sm" id="importBtn" onclick="importNow()" title="Prepare this month's enrolled APCM, CCM, PCM, RPM, RTM, BHI, CoCM, CHI, PIN, and CharmEd Minds patients">⟳ Run monthly import</button>
   </div>
 </header>
 
@@ -134,14 +154,16 @@ function render(){
   var today = todayISO();
   var due = rows.filter(function(e){ return e.nextFollowUp && e.nextFollowUp <= today && e.status!=="Complete" && e.status!=="Billed"; }).length;
   var mins = rows.reduce(function(a,e){ return a + (e.minutes||0); }, 0);
-  var under = rows.filter(function(e){ return (e.program==="CCM"||e.program==="APCM") && (e.minutes||0) < 20; }).length;
+  var notReady = rows.filter(function(e){ return !e.billingReadiness || e.billingReadiness.state!=="ready"; }).length;
+  var ready = rows.length-notReady;
 
   var head =
-    '<div class="disc">Log time, what you did, completed referrals, and the next follow-up. Every entry is linked to the protected Patient Registry and saved to BHW Cloud.</div>'+
+    '<div class="disc"><b>Billing evidence check:</b> amber rows are missing information, red rows have a blocking issue, and green rows have the recorded requirements for review. APCM is evaluated without a minute threshold. This is a readiness aid—not an automatic claim approval.</div>'+
     '<div class="kpis">'+
       kpi(rows.length,"patients")+
       kpi(due,"follow-ups due",due?"due":"")+
-      kpi(under,"under 20 min",under?"due":"")+
+      kpi(notReady,"need attention",notReady?"due":"")+
+      kpi(ready,"billing ready")+
       kpi(mins,"minutes logged")+
     '</div>';
 
@@ -149,9 +171,12 @@ function render(){
 
   var body = rows.map(function(e){
     var dueCls = (e.nextFollowUp && e.nextFollowUp<=today && e.status!=="Complete" && e.status!=="Billed") ? " due" : "";
-    return '<tr data-id="'+esc(e.id)+'">'+
+    var readiness = e.billingReadiness || {state:"incomplete",label:"Evidence missing",missing:["Billing evidence was not evaluated"],blockers:[],passed:[]};
+    var problemSummary = (readiness.blockers||[]).concat(readiness.missing||[]).slice(0,2).join(" · ");
+    return '<tr data-id="'+esc(e.id)+'" class="readiness-'+esc(readiness.state)+'">'+
       '<td class="pt">'+esc(nameOf(e))+'<small>'+esc(e.ctlNo||"")+(e.coordinator?" · "+esc(e.coordinator):"")+'</small></td>'+
       '<td><span class="badge">'+esc(e.program||"")+'</span></td>'+
+      '<td><button type="button" class="readiness-btn '+esc(readiness.state)+'" onclick="toggleRequirements(this)">'+esc(readiness.label)+'</button><div class="readiness-summary">'+esc(problemSummary)+'</div></td>'+
       '<td class="icd">'+esc(e.icd||"—")+'</td>'+
       '<td><input type="number" min="0" class="f-min" value="'+(e.minutes==null?"":e.minutes)+'"></td>'+
       '<td><input type="text" class="act f-act" value="'+esc(e.activities||"")+'" placeholder="what was done"></td>'+
@@ -159,14 +184,75 @@ function render(){
       '<td class="'+dueCls+'"><input type="date" class="f-fu" value="'+esc(e.nextFollowUp||"")+'"></td>'+
       '<td><select class="f-stage">'+STAGES.map(function(s){return '<option'+(s===e.followUpStage?" selected":"")+'>'+esc(s)+'</option>';}).join("")+'</select></td>'+
       '<td><select class="f-status">'+STATUSES.map(function(s){return '<option'+(s===(e.status||"Open")?" selected":"")+'>'+esc(s)+'</option>';}).join("")+'</select></td>'+
-      '<td class="rowsave"><button class="btn sm" onclick="save(this)">Save</button> <span class="saved" style="display:none"></span></td>'+
-    '</tr>';
+      '<td class="rowsave"><button class="btn sm row-save-btn" onclick="save(this)">Save</button> <span class="saved" style="display:none"></span></td>'+
+    '</tr>'+requirementsMarkup(e);
   }).join("");
 
   app.innerHTML = head +
     '<div class="tablewrap"><table><thead><tr>'+
-    '<th>Patient</th><th>Program</th><th>ICD-10</th><th>Min</th><th>Activities done</th><th>Referrals completed</th><th>Next follow-up</th><th>Stage</th><th>Status</th><th></th>'+
+    '<th>Patient</th><th>Program</th><th>Readiness</th><th>ICD-10</th><th>Min</th><th>Activities done</th><th>Referrals completed</th><th>Next follow-up</th><th>Stage</th><th>Status</th><th></th>'+
     '</tr></thead><tbody>'+body+'</tbody></table></div>' + activityMarkup(activity);
+}
+
+function optionList(options,current){
+  return options.map(function(item){
+    var value = Array.isArray(item)?item[0]:item;
+    var label = Array.isArray(item)?item[1]:item;
+    return '<option value="'+esc(value)+'"'+(String(value)===String(current||"")?' selected':'')+'>'+esc(label)+'</option>';
+  }).join("");
+}
+
+function checkAttr(value){ return value===true?' checked':''; }
+function issueList(title,items,cls){
+  if(!items||!items.length)return '';
+  return '<div class="requirement-list '+cls+'"><b>'+esc(title)+'</b><ul>'+items.map(function(item){return '<li>'+esc(item)+'</li>';}).join('')+'</ul></div>';
+}
+
+function requirementsMarkup(e){
+  var evidence=e.billingReadinessEvidence||{};
+  var readiness=e.billingReadiness||{state:'incomplete',label:'Evidence missing',missing:['Billing evidence was not evaluated'],blockers:[],passed:[]};
+  var alertText=readiness.state==='ready'
+    ?'All currently configured requirements are recorded. Provider and RCM still make the final billing decision.'
+    :readiness.state==='blocked'
+      ?'Do not bill while a red blocking item remains.'
+      :'Complete or document the amber items before this row can become billing ready.';
+  return '<tr class="requirements-row" data-requirements-for="'+esc(e.id)+'" hidden><td colspan="11"><div class="requirements-panel">'+
+    '<div class="requirements-head"><div><h3>'+esc(nameOf(e))+' · '+esc(e.program)+' requirements</h3><p>Record the evidence that supports this patient-program-month. Missing evidence remains visible and does not become a claim automatically.</p></div><button type="button" class="btn sec sm" onclick="toggleRequirements(this)">Close</button></div>'+
+    '<div class="requirements-alert '+esc(readiness.state)+'"><b>'+esc(readiness.label)+'.</b> '+esc(alertText)+'</div>'+
+    '<div class="requirements-grid">'+
+      '<label>Eligibility<select class="r-eligibility">'+optionList([['potential','Potential — screening/review needed'],['confirmed','Confirmed eligible'],['not-eligible','Not eligible']],evidence.eligibilityStatus||'potential')+'</select></label>'+
+      '<label>Consent<select class="r-consent">'+optionList([['missing','Missing'],['current','Current'],['declined','Declined'],['revoked','Revoked']],evidence.consentStatus||'missing')+'</select></label>'+
+      '<label>Consent date<input type="date" class="r-consent-date" value="'+esc(evidence.consentDate||'')+'"></label>'+
+      '<label>Consent review due<input type="date" class="r-consent-due" value="'+esc(evidence.consentReviewDue||'')+'"></label>'+
+      '<label>Coverage<select class="r-coverage">'+optionList([['unknown','Unknown'],['verified','Verified'],['needs-review','Needs review'],['inactive','Inactive']],evidence.coverageStatus||'unknown')+'</select></label>'+
+      '<label>Coverage checked<input type="date" class="r-coverage-date" value="'+esc(evidence.coverageCheckedAt||'')+'"></label>'+
+      '<label>Initiating visit<select class="r-visit">'+optionList([['missing','Missing'],['complete','Complete'],['not-required','Not required']],evidence.initiatingVisitStatus||'missing')+'</select></label>'+
+      '<label>Initiating visit date<input type="date" class="r-visit-date" value="'+esc(evidence.initiatingVisitDate||'')+'"></label>'+
+      '<label>Care plan<select class="r-plan">'+optionList([['missing','Missing'],['draft','Draft'],['active','Active']],evidence.carePlanStatus||'missing')+'</select></label>'+
+      '<label>Assigned person<input type="text" class="r-person" value="'+esc(evidence.assignedPerson||'')+'" placeholder="name / role"></label>'+
+      '<label>Billing pathway<select class="r-path">'+optionList([['','Choose pathway'],['standard','Standard program pathway'],['apcm-addon','APCM behavioral-health add-on'],['cocm-initial','CoCM initial month'],['cocm-subsequent','CoCM subsequent month'],['cocm-30','CoCM 30-minute pathway'],['payer-specific','Payer-specific pathway']],evidence.billingPath||'')+'</select></label>'+
+      '<label>Required minutes<input type="number" min="0" class="r-required-minutes" value="'+(evidence.requiredMinutes||'')+'" placeholder="0 for non-time-based"></label>'+
+      '<label>Required device days<input type="number" min="0" max="31" class="r-required-days" value="'+(evidence.requiredDeviceDays||'')+'"></label>'+
+      '<label>Device days recorded<input type="number" min="0" max="31" class="r-device-days" value="'+(evidence.deviceDataDays||'')+'"></label>'+
+      '<label>Provider review<select class="r-provider-review">'+optionList([['pending','Pending'],['approved','Approved'],['held','Held']],evidence.providerReviewStatus||'pending')+'</select></label>'+
+      '<label>Provider review date<input type="date" class="r-provider-date" value="'+esc(evidence.providerReviewedAt||'')+'"></label>'+
+    '</div>'+
+    '<div class="requirements-checks">'+
+      '<label><input type="checkbox" class="r-plan-shared"'+checkAttr(evidence.carePlanShared)+'> Care-plan copy shared with patient/caregiver</label>'+
+      '<label><input type="checkbox" class="r-instructions"'+checkAttr(evidence.patientInstructionsProvided)+'> Program, assigned-person, and urgent-contact instructions reviewed</label>'+
+      '<label><input type="checkbox" class="r-monthly"'+checkAttr(evidence.monthlyRequirementsMet)+'> Required monthly program elements completed</label>'+
+      '<label><input type="checkbox" class="r-interaction"'+checkAttr(evidence.interactiveCommunicationCompleted)+'> Required interactive communication completed</label>'+
+    '</div>'+
+    '<label style="display:grid;gap:4px;font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);font-weight:750">Evidence notes<textarea class="requirements-notes r-notes" placeholder="Evidence references, payer-specific rule, or reason for hold">'+esc(evidence.notes||'')+'</textarea></label>'+
+    '<div class="actions" style="margin-top:12px"><button type="button" class="btn sm" onclick="saveRequirements(this)">Save requirements to BHW Cloud</button></div>'+
+    '<div class="requirement-lists">'+issueList('Blocking issues',readiness.blockers,'blocked')+issueList('Missing items',readiness.missing,'missing')+issueList('Recorded checks',readiness.passed,'passed')+'</div>'+
+  '</div></td></tr>';
+}
+
+function toggleRequirements(btn){
+  var row=btn.closest('tr');
+  var requirements=row.classList.contains('requirements-row')?row:row.nextElementSibling;
+  if(requirements&&requirements.classList.contains('requirements-row'))requirements.hidden=!requirements.hidden;
 }
 
 function activityMarkup(items){
@@ -186,6 +272,44 @@ function activityMarkup(items){
 function kpi(n,l,cls){ return '<div class="kpi"><div class="n'+(cls?" "+cls:"")+'">'+n+'</div><div class="l">'+l+'</div></div>'; }
 function nameOf(e){ return (e.entry||"").split(" — ")[0] || e.entry || "—"; }
 
+function evidenceFromRow(tr){
+  var details=tr.nextElementSibling;
+  if(!details||!details.classList.contains('requirements-row'))return {};
+  function value(selector){var node=details.querySelector(selector);return node?node.value:'';}
+  function checked(selector){var node=details.querySelector(selector);return !!(node&&node.checked);}
+  function numeric(selector){var raw=value(selector);return raw===''?0:Number(raw);}
+  return {
+    eligibilityStatus:value('.r-eligibility'),
+    consentStatus:value('.r-consent'),
+    consentDate:value('.r-consent-date'),
+    consentReviewDue:value('.r-consent-due'),
+    coverageStatus:value('.r-coverage'),
+    coverageCheckedAt:value('.r-coverage-date'),
+    initiatingVisitStatus:value('.r-visit'),
+    initiatingVisitDate:value('.r-visit-date'),
+    carePlanStatus:value('.r-plan'),
+    carePlanShared:checked('.r-plan-shared'),
+    assignedPerson:value('.r-person'),
+    patientInstructionsProvided:checked('.r-instructions'),
+    monthlyRequirementsMet:checked('.r-monthly'),
+    interactiveCommunicationCompleted:checked('.r-interaction'),
+    deviceDataDays:numeric('.r-device-days'),
+    billingPath:value('.r-path'),
+    requiredMinutes:numeric('.r-required-minutes'),
+    requiredDeviceDays:numeric('.r-required-days'),
+    providerReviewStatus:value('.r-provider-review'),
+    providerReviewedAt:value('.r-provider-date'),
+    notes:value('.r-notes')
+  };
+}
+
+function saveRequirements(btn){
+  var details=btn.closest('tr');
+  var row=details&&details.previousElementSibling;
+  var saveButton=row&&row.querySelector('.row-save-btn');
+  if(saveButton)save(saveButton);
+}
+
 async function save(btn){
   var tr = btn.closest("tr");
   var id = tr.getAttribute("data-id");
@@ -196,7 +320,8 @@ async function save(btn){
     referrals: tr.querySelector(".f-ref").value,
     nextFollowUp: tr.querySelector(".f-fu").value,
     followUpStage: tr.querySelector(".f-stage").value,
-    status: tr.querySelector(".f-status").value
+    status: tr.querySelector(".f-status").value,
+    billingReadinessEvidence: evidenceFromRow(tr)
   };
   btn.disabled = true; btn.textContent = "Saving…";
   var res = await api("action", payload);
@@ -208,14 +333,15 @@ async function save(btn){
     s.textContent = "Saved to BHW Cloud · " + when; s.style.display="inline";
     // keep local copy in sync so filters/KPIs reflect the save
     var e = ALL.filter(function(x){ return x.id===id; })[0];
-    if(e){ e.minutes=payload.minutes===""?null:payload.minutes; e.activities=payload.activities; e.referrals=payload.referrals; e.nextFollowUp=payload.nextFollowUp; e.followUpStage=payload.followUpStage; e.status=payload.status; }
+    if(e){ e.minutes=payload.minutes===""?null:payload.minutes; e.activities=payload.activities; e.referrals=payload.referrals; e.nextFollowUp=payload.nextFollowUp; e.followUpStage=payload.followUpStage; e.status=payload.status; e.billingReadinessEvidence=payload.billingReadinessEvidence; }
+    setTimeout(load,650);
   } else {
     alert("Couldn't save: " + (res.d.error || res.status));
   }
 }
 
 async function importNow(){
-  if(!confirm("Prepare this month's enrolled care-management rows from the protected Patient Registry and Population Health?\n\nThis includes CCM, APCM, PCM, RPM, RTM, BHI, CoCM, and CharmEd Minds. Recent Cloud care-log enrollment is used for up to two months when an enrollment field has not caught up yet. Safe to re-run — it won't duplicate rows or overwrite time, activities, referrals, or follow-up you've entered.")) return;
+  if(!confirm("Prepare this month's enrolled care-management rows from the protected Patient Registry and Population Health?\n\nThis includes APCM, CCM, PCM, RPM, RTM, BHI, CoCM, CHI, PIN, and CharmEd Minds. Recent Cloud care-log enrollment is used for up to two months when an enrollment field has not caught up yet. Safe to re-run — it won't duplicate rows or overwrite time, activities, referrals, follow-up, or billing evidence you've entered.")) return;
   var btn = document.getElementById("importBtn");
   btn.disabled = true; btn.textContent = "Importing…";
   var res = await api("care-log-import", { confirm:true });

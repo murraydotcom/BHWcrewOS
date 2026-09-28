@@ -4,6 +4,7 @@
 const { getSession, json } = require("./_lib");
 const { cloudRequest, listCloudPatients } = require("./lib/cloud-patients");
 const { operationsRequest } = require("./lib/operations-cloud");
+const { evaluateCareBillingReadiness } = require("./lib/care-billing-readiness");
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return json(405, { error: "POST only" });
@@ -36,7 +37,7 @@ exports.handler = async (event) => {
     const byId = new Map(roster.map((patient) => [patient.bhwPatientId, patient]));
     const entries = (Array.isArray(result.logs) ? result.logs : []).map((log) => {
       const patient = byId.get(log.bhwPatientId);
-      return {
+      const entry = {
         ...log,
         month: log.serviceMonth || "",
         ctlNo: log.bhwPatientId,
@@ -47,6 +48,8 @@ exports.handler = async (event) => {
         rosterLinked: Boolean(patient),
         edited: log.updatedAt || "",
       };
+      entry.billingReadiness = evaluateCareBillingReadiness(entry, patient);
+      return entry;
     });
     const activityById = new Map();
     for (const request of activityResult.requests) {
