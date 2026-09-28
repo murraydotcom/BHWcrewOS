@@ -146,6 +146,7 @@ export function createWorkflowService(repository, {
     10,
   ).toLowerCase() === "true";
   const medicationSmsEnabled = cleanText(environment.PATIENT_MEDICATION_SMS_ENABLED, 10).toLowerCase() === "true";
+  const patientContentFreshMinutes = Math.max(5, Math.min(1440, Number(environment.PATIENT_CONTENT_FRESH_MINUTES) || 15));
   const dispatchSecret = cleanText(environment.WORKFLOW_DISPATCH_SECRET, 1000);
   const dispatchAudience = safeHttpsUrl(environment.WORKFLOW_DISPATCH_AUDIENCE);
   const dispatchServiceAccount = cleanText(environment.WORKFLOW_DISPATCH_SERVICE_ACCOUNT, 320).toLowerCase();
@@ -485,8 +486,11 @@ export function createWorkflowService(repository, {
     const requestId = `content-${deterministicId(source, sourceRecordId).slice(0, 48)}`;
     const submitted = new Date(cleanText(input.submittedAt, 40));
     const current = clock();
-    const receivedAt = Number.isFinite(submitted.getTime()) && submitted.getTime() <= current.getTime() + 300_000
+    const validSubmittedAt = Number.isFinite(submitted.getTime()) && submitted.getTime() <= current.getTime() + 300_000;
+    const receivedAt = validSubmittedAt
       ? iso(submitted) : iso(current);
+    const freshProjection = validSubmittedAt
+      && current.getTime() - submitted.getTime() <= patientContentFreshMinutes * 60_000;
     const expected = {
       bhwPatientId: cleanText(input.bhwPatientId, 20).toUpperCase(),
       source,
@@ -547,13 +551,16 @@ export function createWorkflowService(repository, {
 
     let chatResult = { status: "replayed", reason: "existing-projection" };
     let notification = { status: "replayed", reason: "existing-projection" };
-    if (!replayed) {
+    if (!replayed && freshProjection) {
       [chatResult, notification] = await Promise.all([
         syncChat(saved, user),
         saved.notificationMode === "none"
           ? Promise.resolve({ status: "suppressed", reason: "notification-mode-none" })
           : notifyForCurrentState(saved, user),
       ]);
+    } else if (!replayed) {
+      chatResult = { status: "suppressed", reason: "historical-projection" };
+      notification = { status: "suppressed", reason: "historical-projection" };
     }
     return { request: saved, communication: inbound.communication, replayed, chat: chatResult, notification };
   }
@@ -975,6 +982,7 @@ export function createWorkflowService(repository, {
     automationEnabled,
     manualSmsEnabled,
     medicationSmsEnabled,
+    patientContentFreshMinutes,
     requestActions: [...REQUEST_ACTIONS],
     createRequest,
     projectPatientContent,

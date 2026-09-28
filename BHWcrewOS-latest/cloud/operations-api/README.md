@@ -57,6 +57,7 @@ HR data.
 | `PATIENT_WORKFLOW_AUTOMATION_ENABLED` | Automatic workflow SMS gate; anything except `true` suppresses automatic sends |
 | `PATIENT_MANUAL_SMS_ENABLED` | Staff-composed, no-PHI SMS gate; defaults to the automatic workflow setting when omitted |
 | `PATIENT_MEDICATION_SMS_ENABLED` | Narrow automatic SMS gate for protected medication-form requests only; defaults off and does not enable other workflow messages |
+| `PATIENT_CONTENT_FRESH_MINUTES` | Freshness window for new-submission Chat/SMS handling; older catch-up records are linked without generating new alerts (default 15 minutes) |
 | `PATIENT_PORTAL_URL` | HTTPS secure patient-page link used by no-PHI templates |
 | `PATIENT_NOTIFICATION_RULES_JSON` | Optional rule enable/template/cooldown overrides |
 | `SMS_TIME_ZONE` | Quiet-hours timezone; defaults to `America/New_York` |
