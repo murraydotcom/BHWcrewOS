@@ -472,8 +472,22 @@ export function createWorkflowService(repository, {
   async function action(requestId, input, user = {}) {
     const current = await repository.getPatientRequest(requestId);
     if (!current) throw Object.assign(new Error("request was not found"), { status: 404 });
+    const requestedAction = cleanText(input.action, 80).toLowerCase().replace(/[\s_]+/g, "-");
     const result = applyPatientRequestAction(current, input, { user, now: clock() });
     if (result.duplicate) return { request: result.request, duplicate: true, notification: { status: "duplicate" } };
+    if (requestedAction === "link-patient") {
+      const bhwPatientId = cleanText(input.bhwPatientId, 16).toUpperCase();
+      if (!/^BHW\d{4}$/.test(bhwPatientId) || bhwPatientId === "BHW0000") {
+        throw Object.assign(new Error("choose an existing non-synthetic BHW Patient Registry record"), { status: 400 });
+      }
+      const eligibility = typeof repository.patientLinkEligibility === "function"
+        ? await repository.patientLinkEligibility(bhwPatientId)
+        : { exists: await repository.patientExists(bhwPatientId), eligible: true, patientStatus: "active" };
+      if (!eligibility?.exists) throw Object.assign(new Error("BHW Patient ID was not found in the Patient Registry"), { status: 404 });
+      if (!eligibility.eligible || eligibility.patientStatus !== "active") {
+        throw Object.assign(new Error("only an active Patient Registry record can be connected to new Front Desk work"), { status: 409 });
+      }
+    }
     if (input.expectedVersion && Number(input.expectedVersion) !== Number(current.version)) {
       throw Object.assign(new Error("request changed; refresh before applying this action"), { status: 409 });
     }
@@ -486,6 +500,10 @@ export function createWorkflowService(repository, {
     });
     if (savedResult.duplicate) return { request: savedResult.request, duplicate: true, notification: { status: "duplicate" } };
     const saved = savedResult.request;
+    if (requestedAction === "link-patient"
+        && (saved.bhwPatientId !== cleanText(input.bhwPatientId, 16).toUpperCase() || saved.patientMatchStatus !== "matched")) {
+      throw Object.assign(new Error("the Patient Registry connection could not be verified after save"), { status: 502 });
+    }
     await recordAudit(`patient-request.${result.action}`, saved, user, {
       previousStatus: result.previousStatus,
       status: saved.status,
@@ -494,11 +512,12 @@ export function createWorkflowService(repository, {
       version: saved.version,
     });
     const chatSource = user.source === "google-chat";
+    const identityOnly = result.action === "link-patient";
     const [chatResult, notification] = await Promise.all([
-      syncChat(saved, user, { skipApi: chatSource }),
-      result.statusChanged && result.action !== "reclassify"
+      identityOnly ? Promise.resolve({ status: "not-applicable", reason: "patient-identity-connection" }) : syncChat(saved, user, { skipApi: chatSource }),
+      result.statusChanged && result.action !== "reclassify" && !identityOnly
         ? notifyForCurrentState(saved, user)
-        : Promise.resolve({ status: "not-applicable", reason: result.action === "reclassify" ? "request-type-correction" : "status-unchanged" }),
+        : Promise.resolve({ status: "not-applicable", reason: identityOnly ? "patient-identity-connection" : result.action === "reclassify" ? "request-type-correction" : "status-unchanged" }),
     ]);
     return { request: saved, duplicate: false, chat: chatResult, notification };
   }

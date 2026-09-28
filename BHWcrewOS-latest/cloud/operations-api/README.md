@@ -95,7 +95,7 @@ collections. Do not put either secret or a service-account key in the repo.
 | `GET/PUT /v1/patient-portal-access/:BHW####` | CrewHQ | Review or update the adult Primary Care pilot gate; invitation copy is preview-only and never sent by this API |
 | `GET/POST /v1/patient-requests` | CrewOS | List or create operational requests; verified staff can view the shared queue while each response's `canAct` flag preserves provider action boundaries |
 | `GET /v1/patient-requests/:id` | CrewOS | Read one request with its current role-specific `canAct` flag |
-| `POST /v1/patient-requests/:id/actions` | CrewOS / Chat | Assign, start, milestone, resolve, reopen, escalate, unassign, or perform an operations-only audited type correction |
+| `POST /v1/patient-requests/:id/actions` | CrewOS / Chat | Assign, start, milestone, resolve, reopen, escalate, unassign, connect an unmatched request to one active existing Registry patient, or perform an operations-only audited type correction |
 | `POST /v1/patient-requests/:id/notify` | CrewOS | Apply the current safe template through the approved channel |
 | `POST /v1/patient-requests/:id/messages` | CrewOS | Send an attested no-PHI manual SMS through Dialpad |
 | `GET /v1/patient-requests/:id/communications` | CrewOS | Read inbound/outbound delivery and suppression history |
@@ -121,6 +121,11 @@ metadata confirms a Front Desk referral document and destination. Request-type
 correction is restricted to operations roles, preserves nuanced waiting and
 completed states by refusing unsafe conversion, resets ownership, reroutes the
 Chat mirror, and never triggers a patient SMS.
+
+Existing-patient connection never creates or edits a Patient Registry record.
+It accepts only an active canonical `BHW####` record, refuses the reserved
+synthetic identity and already-linked work, commits with request-version
+protection, and performs no patient or Google Chat notification.
 
 ## Firestore documents
 

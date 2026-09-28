@@ -30,3 +30,14 @@ test("completed and pre-existing work has a stable review route", () => {
   assert.match(requests, /REQUEST_QUERY\.get\('filter'\)/);
   assert.match(requests, /button\.dataset\.f===FILTER/);
 });
+
+test("unmatched Front Desk work connects to one verified existing Registry patient without creating a duplicate", () => {
+  assert.match(frontDesk, /Connect existing patient/);
+  assert.match(frontDesk, /Confirm and connect/);
+  assert.match(frontDesk, /No new patient will be created/);
+  assert.match(frontDesk, /action:'link_patient'/);
+  assert.match(frontDesk, /Saved to BHW Cloud/);
+  assert.match(frontDeskApi, /action: 'link-patient'/);
+  assert.match(frontDeskApi, /patientMatchStatus !== 'matched'/);
+  assert.doesNotMatch(frontDeskApi, /link_patient[\s\S]{0,500}patient-create/);
+});

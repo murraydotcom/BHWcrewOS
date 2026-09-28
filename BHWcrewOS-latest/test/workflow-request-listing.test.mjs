@@ -69,3 +69,84 @@ test("source-filtered CrewOS work and paged completed fax history are not crowde
   assert.equal(secondPage.length, 5);
   assert.equal(secondPage.some((row) => firstPage.some((first) => first.id === row.id)), false);
 });
+
+test("an unmatched request never masquerades as the reserved synthetic patient", async () => {
+  const db = new MemoryFirestore();
+  const repository = new FirestoreWorkflowRepository({ firestore: db });
+  const id = "portal-unmatched-registry-link-0001";
+  await repository.patientRequests.doc(id).set({
+    id,
+    patientRequestId: id,
+    bhwPatientId: "",
+    patientMatchStatus: "unmatched",
+    requestType: "general",
+    source: "care-connect",
+    status: "received",
+    requester: { displayName: "Shared number" },
+    summary: "Patient response awaiting identity reconciliation",
+    createdAt: "2026-09-27T14:00:00.000Z",
+    updatedAt: "2026-09-27T14:00:00.000Z",
+  });
+
+  const [row] = await repository.listPatientRequests({ limit: 10 });
+  assert.equal(row.bhwPatientId, "");
+  assert.equal(row.patientMatchStatus, "unmatched");
+  assert.equal(row.patientName, "Shared number");
+  assert.notEqual(row.patientName, "Synthetic Patient");
+});
+
+test("a pre-existing unmatched row with the old synthetic placeholder becomes connectable", async () => {
+  const db = new MemoryFirestore();
+  const repository = new FirestoreWorkflowRepository({ firestore: db });
+  const id = "legacy-unmatched-placeholder-0001";
+  await repository.patientRequests.doc(id).set({
+    ...request(id, "2026-09-26T14:00:00.000Z"),
+    bhwPatientId: "BHW0000",
+    patientMatchStatus: "unmatched",
+    requester: { displayName: "Existing Registry patient" },
+  });
+
+  const loaded = await repository.getPatientRequest(id);
+  assert.equal(loaded.bhwPatientId, "");
+  assert.equal(loaded.patientMatchStatus, "unmatched");
+});
+
+test("Registry status is rechecked transactionally before an existing-patient connection is committed", async () => {
+  const db = new MemoryFirestore();
+  const repository = new FirestoreWorkflowRepository({ firestore: db });
+  const id = "transactional-registry-link-0001";
+  const current = {
+    ...request(id, "2026-09-27T14:00:00.000Z"),
+    bhwPatientId: "",
+    patientMatchStatus: "unmatched",
+  };
+  await repository.patientRequests.doc(id).set(current);
+  await repository.patients.doc("BHW0613").set({ patient: { bhwPatientId: "BHW0613", patientStatus: "inactive" } });
+  const linked = {
+    ...current,
+    bhwPatientId: "BHW0613",
+    patientMatchStatus: "matched",
+    version: 2,
+    processedActionKeys: ["synthetic-link-hash"],
+  };
+
+  await assert.rejects(() => repository.commitPatientRequestAction({
+    previousVersion: 1,
+    request: linked,
+    action: "link-patient",
+    actionHash: "synthetic-link-hash",
+    user: { sub: "crew:synthetic-front-desk" },
+  }), /only an active Patient Registry record/i);
+  assert.equal((await repository.getPatientRequest(id)).bhwPatientId, "");
+
+  await repository.patients.doc("BHW0613").set({ patient: { bhwPatientId: "BHW0613", patientStatus: "active" } });
+  const saved = await repository.commitPatientRequestAction({
+    previousVersion: 1,
+    request: linked,
+    action: "link-patient",
+    actionHash: "synthetic-link-hash",
+    user: { sub: "crew:synthetic-front-desk" },
+  });
+  assert.equal(saved.request.bhwPatientId, "BHW0613");
+  assert.equal((await repository.getPatientRequest(id)).patientMatchStatus, "matched");
+});

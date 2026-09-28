@@ -125,6 +125,36 @@ test("operations can correct a request type without carrying a misleading workfl
   assert.throws(() => act(waiting, "reclassify", { requestType: "general" }, 3), /start the waiting request/i);
 });
 
+test("Front Desk can connect an unmatched request to one canonical existing patient", () => {
+  const unmatched = {
+    ...syntheticRequest("general", "synthetic-unmatched-link"),
+    bhwPatientId: "",
+    patientMatchStatus: "unmatched",
+  };
+  const result = applyPatientRequestAction(unmatched, {
+    action: "link-patient",
+    bhwPatientId: "BHW0613",
+    idempotencyKey: "synthetic-link-existing-patient",
+  }, { user: { sub: "crew:synthetic-front-desk", role: "front-desk" }, now: NOON });
+
+  assert.equal(result.request.bhwPatientId, "BHW0613");
+  assert.equal(result.request.patientMatchStatus, "matched");
+  assert.equal(result.request.status, unmatched.status);
+  assert.equal(result.request.version, unmatched.version + 1);
+  assert.equal(result.request.statusHistory.at(-1).action, "link-patient");
+  assert.equal(result.statusChanged, false);
+  assert.throws(() => applyPatientRequestAction(unmatched, {
+    action: "link-patient",
+    bhwPatientId: "BHW0000",
+    idempotencyKey: "synthetic-link-reserved-patient",
+  }, { user: { sub: "crew:synthetic-front-desk", role: "front-desk" }, now: NOON }), /reserved synthetic patient/i);
+  assert.throws(() => applyPatientRequestAction(result.request, {
+    action: "link-patient",
+    bhwPatientId: "BHW0614",
+    idempotencyKey: "synthetic-link-second-patient",
+  }, { user: { sub: "crew:synthetic-front-desk", role: "front-desk" }, now: NOON }), /already connected/i);
+});
+
 test("Care Connect check-ins create a clinician-only review workflow without patient notification", () => {
   let review = sanitizePatientRequest({
     id: "synthetic-checkin-review",
@@ -369,6 +399,7 @@ test("providers can see the shared queue without receiving unrelated action acce
   const provider = { sub: "crew:synthetic-provider", name: "Synthetic Provider", role: "CRNP" };
 
   assert.ok(service.requestActions.includes("reclassify"));
+  assert.ok(service.requestActions.includes("link-patient"));
   const visible = await service.listRequests({}, provider);
   assert.equal(visible.length, 1);
   assert.equal(visible[0].canAct, false);
@@ -441,6 +472,55 @@ test("type correction is audited, reroutes Chat, and never triggers a patient SM
   const audit = repository.audit.find((event) => event.eventType === "patient-request.reclassify");
   assert.equal(audit.metadata.previousRequestType, "referral");
   assert.equal(audit.metadata.requestType, "general");
+});
+
+test("existing-patient connection verifies Registry eligibility, audits the save, and sends no message", async () => {
+  const repository = inMemoryRepository();
+  repository.patientLinkEligibility = async (bhwPatientId) => ({
+    exists: bhwPatientId === "BHW0613",
+    eligible: bhwPatientId === "BHW0613",
+    patientStatus: bhwPatientId === "BHW0613" ? "active" : "missing",
+  });
+  const request = {
+    ...syntheticRequest("general", "synthetic-service-patient-link"),
+    bhwPatientId: "",
+    patientMatchStatus: "unmatched",
+  };
+  repository.requests.set(request.id, structuredClone(request));
+  const sentSms = [];
+  const sentChat = [];
+  const service = createWorkflowService(repository, {
+    environment: { PATIENT_WORKFLOW_AUTOMATION_ENABLED: "true" },
+    dialpad: { configured: true, async sendSms(message) { sentSms.push(message); } },
+    chat: { enabled: true, async updateRequestCard(message) { sentChat.push(message); } },
+    clock: () => NOON,
+  });
+
+  const linked = await service.action(request.id, {
+    action: "link-patient",
+    bhwPatientId: "BHW0613",
+    expectedVersion: request.version,
+    idempotencyKey: "synthetic-service-link-existing",
+  }, { sub: "crew:synthetic-front-desk", role: "front-desk" });
+
+  assert.equal(linked.request.bhwPatientId, "BHW0613");
+  assert.equal(linked.request.patientMatchStatus, "matched");
+  assert.equal(linked.chat.reason, "patient-identity-connection");
+  assert.equal(linked.notification.reason, "patient-identity-connection");
+  assert.equal(sentSms.length, 0);
+  assert.equal(sentChat.length, 0);
+  assert.ok(repository.audit.some((event) => event.eventType === "patient-request.link-patient"));
+
+  const inactiveRepository = inMemoryRepository();
+  inactiveRepository.patientLinkEligibility = async () => ({ exists: true, eligible: false, patientStatus: "inactive" });
+  inactiveRepository.requests.set(request.id, structuredClone(request));
+  const inactiveService = createWorkflowService(inactiveRepository, { clock: () => NOON });
+  await assert.rejects(() => inactiveService.action(request.id, {
+    action: "link-patient",
+    bhwPatientId: "BHW0613",
+    idempotencyKey: "synthetic-service-link-inactive",
+  }, { sub: "crew:synthetic-front-desk", role: "front-desk" }), /only an active Patient Registry record/i);
+  assert.equal(inactiveRepository.requests.get(request.id).bhwPatientId, "");
 });
 
 test("synthetic end-to-end transitions send through one idempotent Dialpad path for all five request types", async () => {

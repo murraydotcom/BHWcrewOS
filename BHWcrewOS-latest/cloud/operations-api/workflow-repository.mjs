@@ -32,10 +32,18 @@ function workflowStatus(type, value) {
 
 function toWorkflowRequest(raw = {}) {
   const source = raw.request && raw.request.id ? raw.request : raw;
-  if (source.id && source.requestType && source.statusCategory && source.version) return clone(source);
+  if (source.id && source.requestType && source.statusCategory && source.version) {
+    const normalized = clone(source);
+    // Older unmatched records were sometimes projected through the reserved
+    // smoke-test identity. Treat that invalid combination as truly unmatched
+    // so staff can connect the authoritative existing Registry record.
+    if (normalized.patientMatchStatus === "unmatched" && normalized.bhwPatientId === "BHW0000") normalized.bhwPatientId = "";
+    return normalized;
+  }
   const type = workflowType(source.requestType || source.type);
   const status = workflowStatus(type, source.status);
   const createdAt = source.createdAt || source.receivedAt || new Date().toISOString();
+  const unmatched = source.patientMatchStatus === "unmatched" && !source.bhwPatientId;
   const request = sanitizePatientRequest({
     id: source.id || source.patientRequestId,
     bhwPatientId: source.bhwPatientId || "BHW0000",
@@ -52,6 +60,8 @@ function toWorkflowRequest(raw = {}) {
     createdBy: source.createdBy || source.receivedBy || "system:migration",
   }, { user: { sub: source.createdBy || source.receivedBy || "system:migration" }, now: new Date(createdAt) });
   request.patientRequestId = request.id;
+  request.bhwPatientId = unmatched ? "" : request.bhwPatientId;
+  request.patientMatchStatus = unmatched ? "unmatched" : (source.patientMatchStatus || "matched");
   request.createdAt = createdAt;
   request.updatedAt = source.updatedAt || createdAt;
   request.receivedAt = source.receivedAt || createdAt;
@@ -63,6 +73,8 @@ function toWorkflowRequest(raw = {}) {
   request.statusHistory = Array.isArray(source.statusHistory) ? source.statusHistory : request.statusHistory;
   request.chatMessageName = source.chatMessageName || "";
   request.chatSpace = source.chatSpace || "";
+  request.requester = clone(source.requester || {});
+  request.sourceMetadata = clone(source.sourceMetadata || {});
   Object.assign(request, Object.fromEntries(Object.entries(source).filter(([key]) => key.startsWith("teamNote"))));
   return request;
 }
@@ -100,7 +112,7 @@ export class FirestoreWorkflowRepository extends FirestoreOperationsRepository {
     await this.db.runTransaction(async (transaction) => {
       const existing = await transaction.get(ref);
       if (existing.exists) throw Object.assign(new Error("patient request id already exists"), { status: 409 });
-      if (request.bhwPatientId !== "BHW0000") {
+      if (request.bhwPatientId && request.bhwPatientId !== "BHW0000") {
         const patient = await transaction.get(this.patients.doc(request.bhwPatientId));
         if (!patient.exists) throw Object.assign(new Error("BHW Patient ID was not found in the Patient Registry"), { status: 404 });
       }
@@ -109,7 +121,7 @@ export class FirestoreWorkflowRepository extends FirestoreOperationsRepository {
         taskId: `patient-request:${request.id}`,
         patientRequestId: request.id,
         requestId: request.id,
-        patientReference: keyFor(request.bhwPatientId),
+        ...(request.bhwPatientId ? { patientReference: keyFor(request.bhwPatientId) } : {}),
         serviceLine: request.serviceLine,
         assignedTeam: request.assignedTeam,
         assignedTo: request.assignedTo,
@@ -126,6 +138,15 @@ export class FirestoreWorkflowRepository extends FirestoreOperationsRepository {
   async patientExists(bhwPatientId) {
     if (bhwPatientId === "BHW0000") return true;
     return (await this.patients.doc(bhwPatientId).get()).exists;
+  }
+
+  async patientLinkEligibility(bhwPatientId) {
+    if (bhwPatientId === "BHW0000") return { exists: false, eligible: false, patientStatus: "synthetic" };
+    const snapshot = await this.patients.doc(bhwPatientId).get();
+    if (!snapshot.exists) return { exists: false, eligible: false, patientStatus: "missing" };
+    const patient = snapshot.data()?.patient || snapshot.data() || {};
+    const patientStatus = clean(patient.patientStatus || patient.status, 40).toLowerCase();
+    return { exists: true, eligible: patientStatus === "active", patientStatus };
   }
 
   async getPatientRequest(requestId) {
@@ -183,7 +204,9 @@ export class FirestoreWorkflowRepository extends FirestoreOperationsRepository {
       const contact = contactById.get(row.bhwPatientId);
       return {
         ...row,
-        patientName: row.bhwPatientId === "BHW0000" ? "Synthetic Patient" : [patient?.preferredName || patient?.legalFirstName, patient?.legalLastName, patient?.nameSuffix].filter(Boolean).join(" "),
+        patientName: row.patientMatchStatus === "unmatched"
+          ? clean(row.requester?.displayName || "Unmatched sender", 160)
+          : row.bhwPatientId === "BHW0000" ? "Synthetic Patient" : [patient?.preferredName || patient?.legalFirstName, patient?.legalLastName, patient?.nameSuffix].filter(Boolean).join(" "),
         canSms: Boolean(contact?.active !== false && (contact?.phoneE164 || contact?.phone)),
       };
     });
@@ -198,13 +221,21 @@ export class FirestoreWorkflowRepository extends FirestoreOperationsRepository {
       const current = toWorkflowRequest(existing.data());
       if ((current.processedActionKeys || []).includes(actionHash)) return { request: current, duplicate: true };
       if (Number(current.version) !== Number(previousVersion)) throw Object.assign(new Error("request changed; refresh before applying this action"), { status: 409 });
+      if (action === "link-patient") {
+        const patientSnapshot = await transaction.get(this.patients.doc(request.bhwPatientId));
+        if (!patientSnapshot.exists) throw Object.assign(new Error("BHW Patient ID was not found in the Patient Registry"), { status: 404 });
+        const patient = patientSnapshot.data()?.patient || patientSnapshot.data() || {};
+        if (clean(patient.patientStatus || patient.status, 40).toLowerCase() !== "active") {
+          throw Object.assign(new Error("only an active Patient Registry record can be connected to new Front Desk work"), { status: 409 });
+        }
+      }
       const savedRequest = { ...request, ...Object.fromEntries(Object.entries(current).filter(([key]) => key.startsWith("teamNote"))), patientRequestId: request.id };
       transaction.set(ref, savedRequest, { merge: true });
       transaction.set(taskRef, {
         taskId: `patient-request:${request.id}`,
         patientRequestId: request.id,
         requestId: request.id,
-        patientReference: keyFor(request.bhwPatientId),
+        ...(request.bhwPatientId ? { patientReference: keyFor(request.bhwPatientId) } : {}),
         serviceLine: request.serviceLine,
         assignedTeam: request.assignedTeam,
         assignedTo: request.assignedTo,

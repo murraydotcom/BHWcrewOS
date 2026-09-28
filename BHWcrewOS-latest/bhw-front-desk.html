@@ -60,6 +60,7 @@
   .p-head .meta{font-size:.78rem;font-weight:600;opacity:.94}
   .p-head .p-open{margin-left:auto;font-size:.74rem;font-weight:700;color:#fff;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.5);padding:6px 12px;border-radius:8px;text-decoration:none;white-space:nowrap}
   .p-head .p-open:hover{background:rgba(255,255,255,.3)}
+  .patient-link-panel{padding:12px 16px;background:#eef5f5;border-bottom:1px solid var(--line);font-size:.76rem;line-height:1.45}.patient-link-panel .actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}.patient-link-panel .status{margin-top:7px}
   .p-grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
   .p-col{padding:14px 18px}
   .p-col+.p-col{border-left:1px solid var(--line)}
@@ -215,6 +216,11 @@
         <span class="name" id="p-name"></span>
         <span class="meta" id="p-meta"></span>
         <a class="p-open" id="p-open" target="_blank" rel="noopener" style="display:none">Open patient page ↗</a>
+      </div>
+      <div class="patient-link-panel" id="p-link-panel" hidden>
+        <b id="p-link-copy">Confirm the existing Patient Registry record before connecting it.</b>
+        <div class="actions"><button class="act primary" id="p-link-confirm" type="button">Confirm and connect</button><button class="act" id="p-link-cancel" type="button">Cancel</button></div>
+        <div class="status" id="p-link-status" role="status" aria-live="polite"></div>
       </div>
       <div class="p-grid">
         <div class="p-col">
@@ -448,11 +454,13 @@ function renderInbox(items,faxItems=FAX_ITEMS){
       const done=/done|resolved|complete|closed/i.test(it.status||'');
       const started=/progress/i.test(it.status||'');
       const when=it.received? (it.received.slice(0,10)===today? (it.received.slice(11,16)||'today') : it.received.slice(5,10)) : '';
-      const id=esc(it.id), label=esc(it.name||it.type||it.source||'Message');
+      const id=esc(it.id), rawLabel=it.name||it.type||it.source||'Message', label=esc(rawLabel);
+      const unmatched=it.patientMatchStatus==='unmatched'||!it.bhwPatientId;
+      const connect=unmatched?`<button class="act link-patient" data-id="${id}" data-version="${Number(it.version)||1}" data-query="${esc(rawLabel)}">Connect existing patient</button>`:'';
       const btn = done
-        ? `<button class="act" data-id="${id}" data-a="reopen">Reopen</button><button class="act open-request" data-id="${id}" data-completed="1">View full history</button>`
-        : `${it.canSms?`<button class="act reply" data-id="${id}">Reply by text</button>`:''}${started?'':`<button class="act" data-id="${id}" data-a="start">Start</button>`}<button class="act primary" data-id="${id}" data-a="done">✓ Done</button><button class="act open-request" data-id="${id}">Open request</button>`;
-      const unavailable=!done&&k!=='fax'&&!it.canSms?'<div class="reply-unavailable">Text reply becomes available after one verified Patient Registry mobile number is connected.</div>':'';
+        ? `${connect}<button class="act" data-id="${id}" data-a="reopen">Reopen</button><button class="act open-request" data-id="${id}" data-completed="1">View full history</button>`
+        : `${connect}${it.canSms?`<button class="act reply" data-id="${id}">Reply by text</button>`:''}${started?'':`<button class="act" data-id="${id}" data-a="start">Start</button>`}<button class="act primary" data-id="${id}" data-a="done">✓ Done</button><button class="act open-request" data-id="${id}">Open request</button>`;
+      const unavailable=!done&&k!=='fax'&&!it.canSms?`<div class="reply-unavailable">${unmatched?'Choose Connect existing patient; shared or uncertain matches stay unlinked.':'Text reply needs an active verified mobile number and current consent.'}</div>`:'';
       el.insertAdjacentHTML('beforeend',`<article class="inb request-card ${breach?'breach':''}" data-request-id="${id}" data-completed="${done?'1':''}" tabindex="0" role="group" aria-label="${label} request; press Enter to open">
         <div class="t ${done?'done':''}"><span>${label}${it.type?' · '+esc(it.type):''}</span><span class="w">${esc(when)}</span></div>
         <div class="s ${done?'done':''}">${esc(it.summary||it.source||'')}${it.assigned?' — '+esc(it.assigned):''}${breach?' · <b style="color:var(--urgent)">'+esc(it.sla)+'</b>':''}</div>
@@ -539,8 +547,35 @@ function openReply(btn){
   });
   textarea.focus();
 }
+let PENDING_PATIENT_LINK=null;
+function beginPatientLink(btn){
+  PENDING_PATIENT_LINK={requestId:btn.dataset.id,expectedVersion:Number(btn.dataset.version)||1};
+  const hint=String(btn.dataset.query||'').trim();
+  $('q').value=/unmatched|shared number|\//i.test(hint)?'':hint;
+  $('lkstatus').textContent='Search the existing Patient Registry, verify the BHW ID and DOB, then confirm the connection below. No new patient will be created.';
+  $('profile').classList.remove('show');$('p-link-panel').hidden=true;
+  document.getElementById('lk').scrollIntoView({behavior:'smooth',block:'start'});
+  $('q').focus();
+  if($('q').value)lookup();
+}
+async function connectSelectedPatient(){
+  const pending=PENDING_PATIENT_LINK,p=window.lastPatient,button=$('p-link-confirm'),status=$('p-link-status');
+  const patientStatus=String(p?.status||'').toLowerCase();
+  if(!pending||!p||!/^BHW\d{4}$/.test(p.ctl||'')||p.ctl==='BHW0000'||patientStatus!=='active'){
+    status.textContent='Choose one active, non-synthetic Patient Registry record first.';return;
+  }
+  button.disabled=true;button.textContent='Connecting…';status.textContent='Saving to BHW Cloud and verifying the request connection…';
+  try{
+    const res=await crewFetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'link_patient',pageId:pending.requestId,bhwPatientId:p.ctl,expectedVersion:pending.expectedVersion})});
+    const result=await res.json().catch(()=>({}));
+    if(!res.ok||result.bhwPatientId!==p.ctl)throw new Error(result.error||'The connection was not confirmed.');
+    status.textContent=`Saved to BHW Cloud · ${p.ctl} connected. Opening the request history…`;button.textContent='Connected ✓';
+    const requestId=pending.requestId;PENDING_PATIENT_LINK=null;await poll();setTimeout(()=>openRequest(requestId),900);
+  }catch(error){status.textContent=String(error.message||'Not saved.').slice(0,180);button.disabled=false;button.textContent='Retry connection';}
+}
 document.addEventListener('click', async e=>{
   if(e.target.closest('.fax-tools'))return;
+  const link=e.target.closest('.link-patient');if(link){beginPatientLink(link);return;}
   const open=e.target.closest('.open-request'); if(open){openRequest(open.dataset.id,open.dataset.completed==='1');return;}
   const r=e.target.closest('.reply'); if(r){openReply(r);return;}
   const b=e.target.closest('.act');
@@ -626,11 +661,21 @@ function renderProfile(p,requests){
     </div>`).join(''):'<div class="req"><div class="sub">No logged requests yet.</div></div>';
   $('profile').classList.add('show');
   $('lkstatus').textContent='';
+  const linkPanel=$('p-link-panel'),linkButton=$('p-link-confirm'),patientStatus=String(p.status||'').toLowerCase();
+  if(PENDING_PATIENT_LINK){
+    const eligible=/^BHW\d{4}$/.test(p.ctl||'')&&p.ctl!=='BHW0000'&&patientStatus==='active';
+    linkPanel.hidden=false;$('p-link-copy').textContent=eligible
+      ? `Connect this Front Desk item to ${p.name} (${p.ctl})? Verify the name, DOB, and BHW ID above before continuing.`
+      : 'This record cannot be connected to new work. It must be active, canonical, and non-synthetic.';
+    $('p-link-status').textContent='';linkButton.disabled=!eligible;linkButton.textContent='Confirm and connect';
+  }else linkPanel.hidden=true;
   // Auto-populate the referral form from the Master List record.
   fillReferralPatient(p,{auto:true});
 }
 $('go').addEventListener('click',lookup);
 $('q').addEventListener('keydown',e=>{if(e.key==='Enter')lookup();});
+$('p-link-confirm').addEventListener('click',connectSelectedPatient);
+$('p-link-cancel').addEventListener('click',()=>{PENDING_PATIENT_LINK=null;$('p-link-panel').hidden=true;$('p-link-status').textContent='';});
 /* ============ REFERRAL GENERATOR ============ */
 const REF_API = API ? API.replace('frontdesk-data','referral-pdf') : '';
 const REF_SYNC_API = '/.netlify/functions/referral-sync';
