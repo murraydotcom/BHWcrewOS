@@ -5,6 +5,7 @@ import { normalizeStructuredEncounter } from "./structured-encounter.mjs";
 import { normalizeEncounterSnapshot, normalizeNotePlan } from "./note-composer.mjs";
 import { medicationAuthorizationCandidates } from "./medication-prior-auth.mjs";
 import { buildMedicationEpaCases } from "./medication-epa-workbench.mjs";
+import { normalizeEncounterOwner } from "./staff-identity.mjs";
 
 export const WORKFLOW_STATUS = Object.freeze({
   VISIT_COMPLETE: "visit_complete",
@@ -129,7 +130,7 @@ export function buildEncounterPacket(input = {}) {
     ...structured,
     outputs: detectOutputs(note, structured),
     status: input.status || (note ? WORKFLOW_STATUS.DRAFT_RECEIVED : WORKFLOW_STATUS.VISIT_COMPLETE),
-    owner: input.owner || "Provider",
+    owner: normalizeEncounterOwner(input.owner),
     providerApproved: Boolean(input.providerApproved),
     charmDraftSaved: Boolean(input.charmDraftSaved),
     clinicalAudit: normalizeClinicalAudit(input.clinicalAudit),

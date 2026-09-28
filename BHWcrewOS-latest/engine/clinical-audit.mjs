@@ -1,4 +1,5 @@
 import { controlledMedicationReviews } from "./structured-encounter.mjs";
+import { normalizeEncounterOwner } from "./staff-identity.mjs";
 
 const SEVERITIES = ["critical", "high", "moderate", "low"];
 const RESOLVED_DECISIONS = new Set(["occurred", "already_documented", "not_done", "dismissed"]);
@@ -423,7 +424,7 @@ export function auditTasks(auditValue, encounter = {}, now = new Date()) {
       type: "audit_follow_up",
       title: `Audit follow-up: ${finding.issue}`.slice(0, 160),
       reason: finding.providerResponse || "Provider confirmed the recommended action did not occur during the visit; complete follow-up without changing the historical note.",
-      owner: encounter.owner || "Amaris",
+      owner: normalizeEncounterOwner(encounter.owner),
       recommendedRole: "Provider / care team",
       dueAt,
       status: "open",

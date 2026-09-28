@@ -3,6 +3,7 @@ import {
   canQueueCharmEntry,
   urgencyFor,
 } from "./encounter-workflow.mjs";
+import { normalizeEncounterOwner } from "./staff-identity.mjs";
 
 export const PILOT_STORAGE_VERSION = 1;
 export const CHARM_PACKET_SCHEMA = "bhw-charm-draft/v1";
@@ -41,7 +42,7 @@ export function encounterMetadata(encounter = {}) {
     visitType: cleanText(encounter.visitType, "Office visit"),
     payer: cleanText(encounter.payer, "Unknown payer"),
     status: cleanText(encounter.status, "visit_complete"),
-    owner: cleanText(encounter.owner, "Amaris"),
+    owner: normalizeEncounterOwner(encounter.owner),
     providerApproved: Boolean(encounter.providerApproved),
     charmDraftSaved: Boolean(encounter.charmDraftSaved),
     auditTrail: cleanAuditTrail(encounter.auditTrail),

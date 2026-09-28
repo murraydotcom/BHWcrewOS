@@ -59,6 +59,11 @@ import {
   contextReviewSummary,
   normalizeNotePlan,
 } from "../engine/note-composer.mjs";
+import {
+  DEFAULT_ENCOUNTER_OWNER,
+  normalizeEncounterOwner,
+  ownerIdentityForStaff,
+} from "../engine/staff-identity.mjs";
 
 const QUEUE_KEY = "bhw_encounter_queue_v1";
 const NOTES_KEY = "bhw_encounter_session_notes_v1";
@@ -122,6 +127,21 @@ const cloudPendingIds = new Set();
 const cloudSaveChains = new Map();
 const noteEditingIds = new Set();
 const noteAutosaveTimers = new Map();
+
+function signedInStaffIdentity() {
+  try {
+    const token = sessionStorage.getItem("crewos_token") || "";
+    const [body, signature] = token.split(".");
+    if (!body || !signature) return DEFAULT_ENCOUNTER_OWNER;
+    const normalized = body.replace(/-/g, "+").replace(/_/g, "/");
+    const padding = "=".repeat((4 - (normalized.length % 4)) % 4);
+    return ownerIdentityForStaff(JSON.parse(atob(normalized + padding)));
+  } catch {
+    return DEFAULT_ENCOUNTER_OWNER;
+  }
+}
+
+const currentOwnerIdentity = signedInStaffIdentity();
 
 const lineValues = (value) => String(value || "").split("\n").map((item) => item.trim()).filter(Boolean);
 
@@ -391,7 +411,7 @@ function sync(row, { invalidateApproval = true } = {}) {
   const nextSourceTranscript = $("dTranscript") ? $("dTranscript").value : row.sourceTranscript;
   const nextNotePlan = notePlanFromDetail(row);
   const nextBuilderInput = builderInputFromDetail(row);
-  const nextOwner = $("dOwner").value.trim() || "Amaris";
+  const nextOwner = normalizeEncounterOwner($("dOwner").value, currentOwnerIdentity);
   const nextCodes = $("dCodes").value.split(/[\s,]+/).map((value) => value.trim().toUpperCase()).filter(Boolean);
   const nextDiagnoses = $("dDiagnoses").value.split(/[\s,]+/).map((value) => value.trim().toUpperCase()).filter(Boolean);
   const clinicalChanged = row.note !== nextNote
@@ -559,7 +579,7 @@ function renderDetail() {
   $("detail").innerHTML = `
     <div class="card-head"><div><h3>${esc(row.id)} · Encounter packet</h3><div class="enc-meta">${row.bhwPatientId ? `${esc(row.bhwPatientId)} · ` : ""}${esc(row.provider)} · ${esc(row.payer)} · completed ${ago(urgency.hours)} ago</div></div><span class="badge ${urgency.level}">${esc(urgency.label)}</span></div>
     <div class="detail-body"><div class="notice"><b>Operational pilot:</b> ${cloudState === "connected" ? "this packet is encrypted and synchronized through the protected BHW Google Cloud project." : "this packet is temporarily using browser storage until Google Cloud connects."} Freed and CharmHealth remain the designated medical records.</div>
-    <div class="formgrid"><div class="field"><label>Status</label><select id="dStatus">${statusOptions(row.status)}</select></div><div class="field"><label>Owner</label><input id="dOwner" value="${esc(row.owner)}"></div><div class="field"><label>Approved CPT/HCPCS — after note audit</label><input id="dCodes" value="${esc(row.codes.join(", "))}" placeholder="Review and apply the post-note recommendations"></div></div>
+    <div class="formgrid"><div class="field"><label>Status</label><select id="dStatus">${statusOptions(row.status)}</select></div><div class="field"><label>Owner — full name, credentials/title</label><input id="dOwner" value="${esc(normalizeEncounterOwner(row.owner, currentOwnerIdentity))}" placeholder="First Last, credentials — title"></div><div class="field"><label>Approved CPT/HCPCS — after note audit</label><input id="dCodes" value="${esc(row.codes.join(", "))}" placeholder="Review and apply the post-note recommendations"></div></div>
     <div class="field"><label>Approved ICD-10-CM diagnoses — after note audit</label><input id="dDiagnoses" value="${esc(row.diagnoses.join(", "))}" placeholder="Review and apply the post-note recommendations"></div>
     <div style="margin-top:12px">${renderNoteBuilder(row)}</div>
     <div class="field" style="margin-top:12px"><label>Source transcription or imported clinical draft</label><textarea id="dTranscript" rows="7">${esc(row.sourceTranscript || "")}</textarea><div class="privacy">Source material remains separate from the structured note. Provider review is required before generation.</div></div>
@@ -1570,7 +1590,7 @@ $("create").onclick = async () => {
   const draft = {
     bhwPatientId,
     provider: $("mProvider").value.trim() || "Amaris",
-    owner: "Amaris",
+    owner: currentOwnerIdentity,
     completedAt: completedAt.toISOString(),
     payer: $("mPayer").value,
     coverage: {

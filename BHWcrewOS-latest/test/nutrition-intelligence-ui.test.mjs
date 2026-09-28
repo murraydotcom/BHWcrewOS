@@ -36,7 +36,7 @@ test("Nutrition Intelligence preserves the real-life, physiology, and reconcilia
   assert.doesNotMatch(html, /id="nutrition-digestion-map"/);
   assert.match(html, /data-bhw-system-navigation/);
   assert.match(html, /← Patient 360/);
-  assert.match(html, /⌂ CrewOS Home/);
+  assert.match(html, /⌂ CrewHQ/);
   assert.match(html, /Food-first and natural-source preference/);
   assert.match(app, /renderNutritionQuestionnaire\(questionnaireContract\)/);
   assert.match(app, /collectNutritionQuestionnaire\(\$\("patient-questionnaire"\), questionnaireContract\)/);
