@@ -29,8 +29,8 @@ function looksLikeNonMedicationPlan(text = "") {
 export function medicationAction(value = "") {
   const text = medicationText(value);
   if (/\b(?:stop(?:ped)?|discontinue(?:d)?|hold)\b/i.test(text)) return "stopped";
-  if (/\b(?:start(?:ed|ing)?|initiat(?:e|ed|ing)|begin|prescrib(?:e|ed|ing)|new\s+(?:medication|prescription)|trial\s+of)\b/i.test(text)) return "new";
-  if (/\b(?:increase(?:d)?|decrease(?:d)?|titrate(?:d)?|restart(?:ed)?|switch(?:ed)?|change(?:d)?(?:\s+(?:to|from))?)\b/i.test(text)) return "changed";
+  if (/\b(?:start(?:ed|ing)?|restart(?:ed|ing)?|initiat(?:e|ed|ing)|begin|prescrib(?:e|ed|ing)|new\s+(?:medication|prescription)|trial\s+of)\b/i.test(text)) return "new";
+  if (/\b(?:increase(?:d)?|decrease(?:d)?|titrate(?:d)?|switch(?:ed)?|change(?:d)?(?:\s+(?:to|from))?)\b/i.test(text)) return "changed";
   if (/\b(?:prior auth|authorization|not covered|formulary|step therapy|quantity limit)\b/i.test(text)) return "coverage_issue";
   if (/\b(?:continue(?:d)?|refill(?:ed)?|renew(?:ed)?)\b/i.test(text)) return "continuation";
   return "unknown";
@@ -102,21 +102,28 @@ function question(id, label, answer, audience = "provider") {
 }
 
 export function medicationAuthorizationCandidates(encounter = {}) {
-  const noteHasCoverageLanguage = /\b(?:prior auth|authorization|not covered|formulary|step therapy|quantity limit)\b/i.test(String(encounter.note || ""));
+  const noteSentences = sentences(encounter.note);
   return [].concat(encounter.medications || []).map((medication, index) => {
     const sourceText = medicationText(medication);
     const action = clean(medication?.action) || medicationAction(sourceText);
+    const medicationTerms = unique([clean(medication?.name), sourceText.split(/\s+/)[0]])
+      .map((term) => term.replace(/[^a-z0-9-]/gi, ""))
+      .filter((term) => term.length >= 4);
+    const coverageIssueInNote = noteSentences.some((sentence) =>
+      /\b(?:prior auth|authorization|not covered|formulary|step therapy|quantity limit)\b/i.test(sentence)
+      && medicationTerms.some((term) => sentence.toLowerCase().includes(term.toLowerCase())));
     return {
       id: clean(medication?.id) || `medication:${index + 1}`,
       name: clean(medication?.name) || sourceText.slice(0, 120),
       doseFrequency: clean(medication?.doseFrequency),
       sourceText,
       action,
+      coverageIssueInNote,
       questionSets: classQuestionSets(sourceText),
     };
   }).filter((medication) => {
     if (!medication.sourceText || looksLikeNonMedicationPlan(medication.sourceText) || ["stopped", "continuation"].includes(medication.action)) return false;
-    return ["new", "changed", "coverage_issue"].includes(medication.action) || noteHasCoverageLanguage;
+    return medication.action === "new" || medication.action === "coverage_issue" || medication.coverageIssueInNote;
   });
 }
 

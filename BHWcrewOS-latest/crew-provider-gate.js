@@ -1,6 +1,62 @@
 (function guardCrewProviderWorkspace() {
+  const NAVIGATION_KEY = "bhw_crewhq_navigation_v1";
+  const BACK_TARGET_KEY = "bhw_crewhq_back_target_v1";
+
+  function internalPath(value) {
+    try {
+      const url = new URL(value, location.href);
+      return url.origin === location.origin ? `${url.pathname}${url.search}${url.hash}` : "";
+    } catch { return ""; }
+  }
+
+  function readNavigation() {
+    try {
+      const value = JSON.parse(sessionStorage.getItem(NAVIGATION_KEY) || "[]");
+      return Array.isArray(value) ? value.map(internalPath).filter(Boolean).slice(-30) : [];
+    } catch { return []; }
+  }
+
+  function writeNavigation(value) {
+    try { sessionStorage.setItem(NAVIGATION_KEY, JSON.stringify(value.slice(-30))); } catch { /* storage unavailable */ }
+  }
+
+  function rememberPage() {
+    const current = internalPath(location.href);
+    const referrer = internalPath(document.referrer);
+    const stack = readNavigation();
+    let pending = "";
+    try {
+      pending = internalPath(sessionStorage.getItem(BACK_TARGET_KEY) || "");
+      sessionStorage.removeItem(BACK_TARGET_KEY);
+    } catch { /* storage unavailable */ }
+
+    if (pending === current) {
+      if (stack.at(-1) !== current) stack.push(current);
+      writeNavigation(stack);
+      return;
+    }
+    if (referrer && referrer !== current && stack.at(-1) !== referrer) stack.push(referrer);
+    if (stack.at(-1) !== current) stack.push(current);
+    writeNavigation(stack);
+  }
+
+  function returnToPreviousPage() {
+    const current = internalPath(location.href);
+    const stack = readNavigation();
+    while (stack.at(-1) === current) stack.pop();
+    const target = stack.at(-1) || internalPath(document.referrer);
+    if (target && target !== current) {
+      writeNavigation(stack);
+      try { sessionStorage.setItem(BACK_TARGET_KEY, target); } catch { /* storage unavailable */ }
+      location.assign(target);
+      return;
+    }
+    location.assign("/hq.html");
+  }
+
   function installSystemNavigation() {
     const mount = () => {
+      rememberPage();
       if (document.querySelector("[data-bhw-system-navigation]")) return;
       const navigation = document.createElement("nav");
       navigation.className = "bhw-system-navigation bhw-system-navigation-fallback";
@@ -13,12 +69,7 @@
       document.head.append(style);
       document.body.append(navigation);
 
-      navigation.querySelector('[data-system-nav="back"]').addEventListener("click", () => {
-        let sameOriginReferrer = false;
-        try { sameOriginReferrer = Boolean(document.referrer) && new URL(document.referrer).origin === location.origin; } catch { /* invalid referrer */ }
-        if (sameOriginReferrer && history.length > 1) history.back();
-        else location.assign("/hq.html");
-      });
+      navigation.querySelector('[data-system-nav="back"]').addEventListener("click", returnToPreviousPage);
     };
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mount, { once: true });
     else mount();

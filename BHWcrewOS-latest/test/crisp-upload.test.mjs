@@ -84,6 +84,19 @@ test("incomplete patient-only rows are skipped without blocking complete CRISP e
   }]);
 });
 
+test("Care Management contact and visit fields suppress completed-contact alerts", () => {
+  const result = buildWorklist([{
+    "First Name": "Synthetic", "Last Name": "Patient", "Date of Birth": "1986-01-01",
+    "Encounter Type": "Inpatient", "Admit Date / Time": "2026-09-01",
+    "Discharge Date / Time": "2026-09-02", "Discharge Disposition": "Home",
+    "Facility": "Synthetic Hospital", "First Contact At": "2026-09-03T10:30",
+    "Follow-Up Appointment": "2026-09-08",
+  }], { today: "2026-09-05" });
+  assert.equal(result.stats.callsOverdue, 0);
+  assert.equal(result.items[0].firstContactAt, "2026-09-03T10:30");
+  assert.equal(result.items[0].followUpAppointment, "2026-09-08");
+});
+
 test("admitted dates render the adm label instead of escaped HTML", async () => {
   const html = await readFile(new URL("../provider/tcm.html", import.meta.url), "utf8");
 

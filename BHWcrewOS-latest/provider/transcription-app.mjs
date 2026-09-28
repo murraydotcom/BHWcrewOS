@@ -160,7 +160,7 @@ function handleSegmentError(error, segment) {
       : `${segmentLabel(segment)} could not be transcribed. Its audio is retained in this open tab for retry.`;
   setState(sessionExpired
     ? "CrewHQ session expired · audio retained in this tab"
-    : "Transcription needs attention · audio retained for retry");
+    : "Capture needs attention · audio retained for retry");
   $("reauth").hidden = !sessionExpired;
   showToast(detail);
 }
@@ -188,7 +188,7 @@ function updateSegmentStatus(snapshot = queueSnapshot()) {
     ? `${snapshot.completed} of ${snapshot.total} protected segment${snapshot.total === 1 ? "" : "s"} transcribed${snapshot.retained ? ` · ${snapshot.retained} retained in this tab` : " · successful audio discarded"}`
     : "";
   if (snapshot.failed) {
-    setState("Transcription needs attention · audio retained for retry");
+    setState("Capture needs attention · audio retained for retry");
   } else if (visitFinishing && waiting) {
     setState(`Finishing visit · ${waiting} protected segment${waiting === 1 ? "" : "s"} processing`);
   } else if (visitActive && !visitFinishing) {

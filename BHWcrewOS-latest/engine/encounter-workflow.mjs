@@ -73,7 +73,7 @@ export function detectOutputs(noteText = "", structuredInput = {}) {
   };
 
   if (structured.referrals.length || /refer(red|ral)?|consult (with|to)|specialist/i.test(note)) add("referral", "Referral order / letter", "Referral language detected in the plan.");
-  if (medicationPaCandidates.length) add("medication_authorization", "Medication PA readiness + staff handoff", "A new, changed, or coverage-flagged medication was detected. Capture the common clinical answers now, then route the reviewed packet to the MA/front desk for the patient-specific benefit check.");
+  if (medicationPaCandidates.length) add("medication_authorization", "Medication PA readiness + staff handoff", "A new or medication-specific coverage-flagged prescription was detected. Capture the common clinical answers now, then route the reviewed packet to the MA/front desk for the patient-specific benefit check.");
   if (/prior auth|authorization|not covered|step therapy/i.test(note) && !medicationPaCandidates.length) add("authorization", "Prior-authorization support", "Coverage or authorization language detected.");
   if (/work note|school note|return to work|excuse/i.test(note)) add("letter", "Work or school note", "Work/school documentation was discussed.");
   if (/dme|wheelchair|walker|cane|brace|cpap|supplies/i.test(note)) add("dme", "DME order / medical necessity", "Durable medical equipment was discussed.");

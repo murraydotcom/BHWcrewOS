@@ -217,7 +217,7 @@ test("CrewHQ frontend exposes verified consent, retry-safe segments, and the pro
   ]);
   assert.match(html, /crew-provider-gate\.js/);
   assert.doesNotMatch(html, /auth-gate\.js/);
-  assert.match(html, /Consent-gated visit transcription/);
+  assert.match(html, /Consent-gated Capture/);
   assert.match(html, /private temporary Google Cloud Storage object/);
   assert.match(html, /Verify the signed consent without leaving this page/);
   assert.match(html, /id="consentSignedAt"/);

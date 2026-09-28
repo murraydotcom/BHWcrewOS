@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script src="/crew-provider-gate.js"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>BHW Provider — Visit Transcription</title>
+<title>BHW Provider — Capture</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -18,9 +18,9 @@
 </head>
 <body>
 <div class="app">
-<aside class="sidebar"><div class="brand"><h1>BHW Provider</h1><div>Clinical Intelligence</div></div><div class="nav-label">Documentation</div><a class="nav" href="patient-registry.html">◎ Patient Registry</a><a class="nav" href="workflow.html">◷ 24-Hour Work Queue</a><a class="nav active" href="transcription.html">◉ Visit Transcription</a><a class="nav" href="index.html">◈ Encounter Scrub</a><div class="side-note">Consent-gated transcription<br>Up to two hours per visit.<br><br>CharmHealth remains the legal medical record.</div></aside>
-<main class="main"><div class="top"><div>Clinical Intelligence · <b>Visit Transcription</b></div><span class="badge" id="cloudStatus">Connecting…</span></div><div class="content">
-  <div class="hero"><h2>Consent-gated visit transcription</h2><p>Record visits for up to two hours. The page automatically secures and transcribes five-minute protected segments in order while the visit continues, then assembles them into one review draft.</p></div>
+<aside class="sidebar"><div class="brand"><h1>BHW Provider</h1><div>Clinical Intelligence</div></div><div class="nav-label">Documentation</div><a class="nav" href="patient-registry.html">◎ Patient Registry</a><a class="nav active" href="transcription.html">◉ Capture</a><a class="nav" href="workflow.html">◷ 24-Hour Work Queue</a><a class="nav" href="index.html">◈ Visit Documentation Assistance</a><div class="side-note">Consent-gated capture<br>Up to two hours per visit.<br><br>CharmHealth remains the legal medical record.</div></aside>
+<main class="main"><div class="top"><div>Clinical Intelligence · <b>Capture</b></div><span class="badge" id="cloudStatus">Connecting…</span></div><div class="content">
+  <div class="hero"><h2>Consent-gated Capture</h2><p>Record visits for up to two hours. Capture automatically secures and transcribes five-minute protected segments in order while the visit continues, then assembles them into one review draft.</p></div>
   <div class="notice" id="complianceNotice"><b>Two consent checks are required.</b> The system must verify signed recording and AI-transcription consent from either the previsit form or the new-patient packet. The patient—and every other person who may be heard—must also agree to recording today. If anyone withdraws consent, stop and clear the recording.</div>
   <section class="grid">
     <div class="card"><h3>1 · Select and record</h3><div class="field"><label>Verified patient</label><select id="patient" disabled><option value="">Loading protected Patient Registry…</option></select></div>

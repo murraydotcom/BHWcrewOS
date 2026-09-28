@@ -122,19 +122,30 @@ test("Netlify intake parses server-side, drops unexpected columns, and uses the 
 });
 
 test("Preventive UI exposes preview, explicit save state, review gate, and Patient 360 connection", async () => {
-  const [html, patient360] = await Promise.all([
+  const [html, patient360, actions] = await Promise.all([
     readFile(new URL("../provider/preventive.html", import.meta.url), "utf8"),
     readFile(new URL("../provider/patient-360-app.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../netlify/functions/action.js", import.meta.url), "utf8"),
   ]);
   assert.match(html, /Preview — no save/);
   assert.match(html, /Saved to BHW Cloud/);
   assert.match(html, /rawFileRetained/);
   assert.match(html, /clinical-login/);
-  assert.match(html, /do not create orders or referrals/i);
+  assert.match(html, /does not create an order or referral/i);
   assert.match(html, /Baltimore Healthcare and Wellness - Panel \(MD_BMOREHW\)/);
   assert.match(html, /Preventive Services Category/);
   assert.match(html, /Preventive Services Event Date/);
+  assert.match(html, /Attach to chart/);
+  assert.match(html, /Abnormal — follow up/);
+  assert.match(html, /Needed before next visit/);
+  assert.match(html, /records=choices\.map/);
+  assert.match(html, /Care Management follow-up did not read back/);
+  assert.match(actions, /activities: b\.activities/);
+  assert.match(actions, /verified: true/);
   assert.match(patient360, /record\.preventiveCare/);
   assert.match(patient360, /Preventive care &amp; health screenings/);
   assert.match(patient360, /no automatic order/i);
+
+  const moduleScript = html.match(/<script type="module">([\s\S]*?)<\/script>/)?.[1] || "";
+  assert.doesNotThrow(() => new Function(moduleScript));
 });

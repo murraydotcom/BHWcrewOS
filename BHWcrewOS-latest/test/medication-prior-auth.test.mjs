@@ -52,6 +52,21 @@ test("continuation alone does not create a medication PA readiness task", () => 
   assert.equal(medicationAuthorizationCandidates({ note, medications: [note] }).length, 0);
 });
 
+test("dose-only changes do not create PA follow-up", () => {
+  const note = "Increase sertraline to 100 mg daily and continue therapy.";
+  assert.equal(medicationAuthorizationCandidates({ note, medications: [note] }).length, 0);
+});
+
+test("coverage language applies only to the named medication", () => {
+  const note = "Insurance reports Nurtec is not covered. Continue lisinopril 10 mg daily.";
+  const candidates = medicationAuthorizationCandidates({
+    note,
+    medications: [{ sourceText: "Nurtec 75 mg as needed" }, { sourceText: "Lisinopril 10 mg daily" }],
+  });
+  assert.equal(candidates.length, 1);
+  assert.match(candidates[0].sourceText, /Nurtec/);
+});
+
 test("non-medication treatment plans do not create medication PA work", () => {
   const note = "Start physical therapy twice weekly for six weeks and continue the home exercise program.";
   const outputs = detectOutputs(note, {});

@@ -6,6 +6,7 @@ import test from "node:test";
 const require = createRequire(import.meta.url);
 const careImport = require("../netlify/functions/care-log-import.js")._test;
 const careDue = require("../netlify/functions/care-due-data.js")._test;
+const careLogData = require("../netlify/functions/care-log-data.js")._test;
 
 test("monthly care-log preparation recognizes every care-management program shown in CrewOS", () => {
   assert.deepEqual(careImport.normalizedPrograms([
@@ -30,6 +31,19 @@ test("recent monthly enrollment is recovered for no more than two months", () =>
 test("CM Due excludes fax rows without changing the shared Front Desk queue", () => {
   assert.equal(careDue.isFaxRequest({ requestType: "fax", source: "iFax" }), true);
   assert.equal(careDue.isFaxRequest({ requestType: "referral", source: "phone" }), false);
+});
+
+test("Care Management uses a rolling 30-day window and builds prior-month close gaps", async () => {
+  assert.deepEqual(careLogData.monthsInWindow("2026-08-30", "2026-09-28"), ["2026-08", "2026-09"]);
+  assert.equal(careLogData.previousMonth("2026-09-28"), "2026-08");
+  assert.equal(careLogData.monthEnd("2026-02"), "2026-02-28");
+  assert.deepEqual(careLogData.documentationGaps({ program: "TCM", status: "Open" }), ["activity/documentation", "first contact", "visit date", "next follow-up"]);
+  const page = await readFile(new URL("../bhw-care-management.html", import.meta.url), "utf8");
+  assert.match(page, /Rolling day-to-day tracking/);
+  assert.match(page, /documentation &amp; claim close/);
+  assert.match(page, /First \/ last contact/);
+  const scripts = [...page.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)].map((match) => match[1]);
+  for (const script of scripts) assert.doesNotThrow(() => new Function(script));
 });
 
 test("Population Health and Hospital Visits share Registry identity, contact details, and TCM status", async () => {

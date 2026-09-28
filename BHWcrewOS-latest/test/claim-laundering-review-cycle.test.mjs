@@ -105,9 +105,9 @@ test("CrewHQ exposes one correction bundle and keeps optional revenue work nonbl
   assert.doesNotMatch(workflow, /id="applyCodingCorrections"/);
 });
 
-test("CrewHQ Claim Laundering prioritizes the note and pulls documented time", async () => {
+test("CrewHQ Visit Documentation Assistance prioritizes the note and pulls documented time", async () => {
   const html = await readFile(new URL("../provider/index.html", import.meta.url), "utf8");
-  assert.match(html, /Claim Laundering — Documentation &amp; Coding Review/);
+  assert.match(html, /Visit Documentation Assistance/);
   assert.match(html, /import \{ documentedTotalMinutes \}/);
   assert.match(html, /\$\("minutes"\)\.value = time\.minutes/);
   assert.ok(html.indexOf("<!-- ============ CLINICAL NOTE ============ -->") < html.indexOf("<!-- ============ COVERAGE ============ -->"));

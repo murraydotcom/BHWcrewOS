@@ -129,9 +129,9 @@ import {
       $("liveSpeech").checked = false;
       $("keepAudio").checked = false;
       $("captureNotice").innerHTML = "<b>Protected Clinical mode.</b> Patient-linked text routes directly to the protected 24-hour documentation queue. It is not written to the ordinary BHW Memory endpoint, offline cache, or JSON export.";
-      $("recordLabel").textContent = "Full visits use Visit Transcription";
+      $("recordLabel").textContent = "Full visits use Capture";
       $("recordStatus").textContent = "Open the protected two-hour recorder above for patient audio.";
-      $("audioHelper").textContent = "Clinical Capture accepts typed patient-linked drafts. Patient recording is handled by Visit Transcription so failed audio can be retried safely.";
+      $("audioHelper").textContent = "Clinical Capture accepts typed patient-linked drafts. Patient recording is handled by Capture so failed audio can be retried safely.";
       $("saveBtn").textContent = "Send to 24-Hour Documentation";
       $("transcript").placeholder = "Speak or type the patient-linked clinical draft here.";
     } else {
@@ -835,7 +835,7 @@ import {
   async function startRecording() {
     if (transcriptionBusy) return;
     if (isClinical()) {
-      $("recordStatus").textContent = "Use Open full Visit Transcription above for patient audio. Clinical Capture remains available for typed drafts.";
+      $("recordStatus").textContent = "Use Open Capture above for patient audio. Clinical Capture remains available for typed drafts.";
       return;
     }
     var protectedPatientId = "";
