@@ -141,6 +141,10 @@ export function createWorkflowService(repository, {
     end: cleanText(environment.SMS_QUIET_HOURS_END || "08:00", 20),
   };
   const automationEnabled = cleanText(environment.PATIENT_WORKFLOW_AUTOMATION_ENABLED, 10).toLowerCase() === "true";
+  const manualSmsEnabled = cleanText(
+    environment.PATIENT_MANUAL_SMS_ENABLED ?? environment.PATIENT_WORKFLOW_AUTOMATION_ENABLED,
+    10,
+  ).toLowerCase() === "true";
   const dispatchSecret = cleanText(environment.WORKFLOW_DISPATCH_SECRET, 1000);
   const dispatchAudience = safeHttpsUrl(environment.WORKFLOW_DISPATCH_AUDIENCE);
   const dispatchServiceAccount = cleanText(environment.WORKFLOW_DISPATCH_SERVICE_ACCOUNT, 320).toLowerCase();
@@ -556,7 +560,7 @@ export function createWorkflowService(repository, {
     const message = sanitizeManualSms(input.message || input.text, { noPhiAttestation: input.noPhiAttestation });
     const idempotencyKey = cleanText(input.idempotencyKey, 160);
     if (!idempotencyKey) throw Object.assign(new Error("idempotency key is required"), { status: 400 });
-    if (!automationEnabled) return suppressedCommunication(request, null, "automation-not-enabled", user, `manual:${idempotencyKey}`);
+    if (!manualSmsEnabled) return suppressedCommunication(request, null, "manual-messaging-not-enabled", user, `manual:${idempotencyKey}`);
     if (requiresSafetyHold(request)) return suppressedCommunication(request, null, "safety-manual-review", user, `manual:${idempotencyKey}`);
     const context = await messagingContext(request);
     const consentState = evaluatePortalConsent(context.smsConsent, { bhwPatientId: request.bhwPatientId, channel: "sms" });
@@ -588,8 +592,9 @@ export function createWorkflowService(repository, {
 
   async function dispatchDue(header) {
     await verifyDispatcher(header);
-    if (!automationEnabled) return { processed: 0, results: [] };
-    const due = await repository.listDueCommunications(iso(clock()), 50);
+    if (!automationEnabled && !manualSmsEnabled) return { processed: 0, results: [] };
+    const due = (await repository.listDueCommunications(iso(clock()), 50))
+      .filter((communication) => automationEnabled || communication.templateId === "manual-no-phi");
     const results = [];
     for (const queued of due) {
       const claimed = await repository.claimCommunication(queued.id, iso(clock()));
@@ -870,6 +875,7 @@ export function createWorkflowService(repository, {
 
   return {
     automationEnabled,
+    manualSmsEnabled,
     requestActions: [...REQUEST_ACTIONS],
     createRequest,
     syncCreatedRequest,

@@ -54,7 +54,8 @@ HR data.
 | `FRONT_DESK_INTAKE_SECRET` | Server-only secret used by the Front Desk referral bridge |
 | `FRONT_DESK_CLIENT_ID` | Optional; defaults to `front-desk-os` |
 | `ALLOWED_ORIGINS` | Comma-separated exact CrewOS origins for staff browser calls |
-| `PATIENT_WORKFLOW_AUTOMATION_ENABLED` | Master SMS dispatch gate; anything except `true` suppresses sends |
+| `PATIENT_WORKFLOW_AUTOMATION_ENABLED` | Automatic workflow SMS gate; anything except `true` suppresses automatic sends |
+| `PATIENT_MANUAL_SMS_ENABLED` | Staff-composed, no-PHI SMS gate; defaults to the automatic workflow setting when omitted |
 | `PATIENT_PORTAL_URL` | HTTPS secure patient-page link used by no-PHI templates |
 | `PATIENT_NOTIFICATION_RULES_JSON` | Optional rule enable/template/cooldown overrides |
 | `SMS_TIME_ZONE` | Quiet-hours timezone; defaults to `America/New_York` |
@@ -132,6 +133,9 @@ that view while retaining it in Patient Requests with status history. After an
 accepted manual SMS is recorded, FrontDeskOS supplies its communication ID to
 the start action; the API verifies the outbound log entry and suppresses a
 second automatic patient notification before moving the request to in-progress.
+Manual replies have their own activation gate so staff can intentionally reply
+without enabling broader automatic workflow notifications. Consent, opt-out,
+verified-destination, quiet-hours, no-PHI, and idempotency controls still apply.
 
 ## Firestore documents
 

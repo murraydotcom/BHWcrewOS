@@ -36,6 +36,7 @@ test("Operations API owns the authenticated request/action/communication contrac
   };
   const workflow = {
     automationEnabled: false,
+    manualSmsEnabled: true,
     async listRequests(filters, user) { calls.push(["list", filters, user]); return [patientRequest]; },
     async action(id, input, user) { calls.push(["action", id, input, user]); return { request: { ...patientRequest, status: "completed", statusCategory: "completed" } }; },
     async listCommunications(id, user) { calls.push(["communications", id, user]); return [{ id: "comm-1", requestId: id, status: "sent" }]; },
@@ -46,6 +47,10 @@ test("Operations API owns the authenticated request/action/communication contrac
   const app = createOperationsApp({ repository: {}, workflow, environment: {
     ALLOWED_ORIGINS: "https://crewhq.bhwmedical.org", CREWOS_OPERATIONS_TOKEN_SECRET: SECRET,
   }, now: () => NOW });
+
+  let health = await app(request("/health", { authorization: "" }));
+  assert.equal(health.status, 200);
+  assert.equal((await health.json()).manualSmsEnabled, true);
 
   let response = await app(request("/v1/patient-requests?status=open"));
   assert.equal(response.status, 200);
