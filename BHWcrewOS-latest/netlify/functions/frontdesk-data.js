@@ -88,12 +88,13 @@ exports.handler = async (event) => {
         const result = await operationsRequest(`/v1/patient-requests/${encodeURIComponent(pageId)}/actions`, { actor: session, method: 'POST', body });
         return { statusCode: 200, body: JSON.stringify({ ok: true, savedAt: result.request?.updatedAt, storage: 'BHW Cloud' }) };
       } else if (action === 'sms') {
-        const { text: msg } = JSON.parse(event.body || '{}');
+        const { text: msg, noPhiAttestation } = JSON.parse(event.body || '{}');
         if (!pageId || !msg) return { statusCode: 400, body: JSON.stringify({ error: 'missing request/text' }) };
+        if (noPhiAttestation !== true) return { statusCode: 400, body: JSON.stringify({ error: 'confirm that the message contains no PHI before sending' }) };
         const result = await operationsRequest(`/v1/patient-requests/${encodeURIComponent(pageId)}/messages`, {
           actor: session,
           method: 'POST',
-          body: { message: msg, noPhiAttestation: true, idempotencyKey: actionKey('frontdesk-sms') },
+          body: { message: msg, noPhiAttestation, idempotencyKey: actionKey('frontdesk-sms') },
         });
         return { statusCode: result.status === 'sent' ? 200 : 202, body: JSON.stringify({ ok: true, ...result }) };
       } else if (action === 'fax') {
