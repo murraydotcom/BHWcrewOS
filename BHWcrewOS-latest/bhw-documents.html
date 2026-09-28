@@ -231,9 +231,10 @@
   .education-workflow{padding:12px 20px;background:var(--cream);border-bottom:1px solid var(--sand);font-size:12px;line-height:1.6;display:flex;gap:12px 24px;align-items:center;flex-wrap:wrap;}
   .education-workflow p{margin:0;flex:1 1 420px;}
   .education-workflow a{color:#365c6c;font-weight:600;text-underline-offset:3px;}
+  .body-p a,.info-box a,.bullet-list a{color:#2f6174;font-weight:700;text-underline-offset:2px;overflow-wrap:anywhere;}
   @media print{
     body{background:#fff;}
-    .topbar,.editor,.education-workflow{display:none !important;}
+    .topbar,.editor,.education-workflow,.builder-overlay{display:none !important;}
     .preview-pane{padding:0;display:block;background:#fff;}
     .page{box-shadow:none;margin:0;width:auto;min-height:auto;}
     @page{size:letter;margin:0;}
@@ -258,6 +259,8 @@
     </select>
     <button class="secondary" id="visualAidsBtn" title="Add simple icons throughout for low-literacy patients">Icons: off</button>
     <div class="divider"></div>
+    <button class="secondary" id="templateLibraryBtn">Templates</button>
+    <button class="secondary" id="guidePracticeBtn">Guide &amp; practice</button>
     <button id="aiDraftBtn" title="Describe the document you need and let AI draft it">✨ Draft with AI</button>
     <button class="secondary" id="loadSampleBtn">Load sample</button>
     <button class="secondary" id="resetBtn">Reset</button>
@@ -268,6 +271,7 @@
   <nav class="education-workflow" aria-label="Patient education workflow">
     <a href="/hq.html" target="_blank" rel="noopener noreferrer">CrewHQ</a>
     <p><strong>Prepare → review → share.</strong> Build a handout here, review it with the clinician, then download HTML or save a PDF. In Patient Materials &amp; Feedback, select the verified patient and upload the reviewed file. Opening that tool does not save or transfer this draft.</p>
+    <a href="/bhw-staff-guide.html#document-builder-training" target="_blank" rel="noopener noreferrer">Full staff guide</a>
     <a href="/bhw-patient-materials.html" target="_blank" rel="noopener noreferrer">Open Patient Materials &amp; Feedback</a>
   </nav>
   <div class="main">
@@ -280,6 +284,36 @@
 </div>
 
 <style>
+  .builder-overlay{position:fixed;inset:0;background:rgba(20,32,38,.58);display:none;align-items:center;justify-content:center;z-index:10000;padding:18px;}
+  .builder-overlay.show{display:flex;}
+  .builder-panel{background:#fff;border-radius:14px;box-shadow:0 30px 80px -20px rgba(20,32,38,.55);width:100%;max-width:980px;max-height:92vh;overflow:auto;padding:22px;}
+  .builder-panel.narrow{max-width:780px;}
+  .builder-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:16px;}
+  .builder-panel h2{margin:0 0 4px;font-size:1.25rem;color:var(--teal-dark);}
+  .builder-panel h3{margin:18px 0 7px;font-size:.96rem;color:var(--ink);}
+  .builder-panel .sub{color:#68777e;font-size:.84rem;line-height:1.5;margin:0;}
+  .builder-close{appearance:none;border:0;background:#eef3f4;color:#3d5a66;border-radius:9px;padding:8px 11px;font:inherit;font-weight:700;cursor:pointer;white-space:nowrap;}
+  .builder-filter{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 16px;padding:12px;background:var(--cream);border:1px solid var(--sand);border-radius:10px;}
+  .builder-filter label{font-size:.78rem;font-weight:700;color:#52626a;}
+  .builder-filter select{font:inherit;font-size:.86rem;padding:8px 10px;border:1px solid #ccd7db;border-radius:8px;background:#fff;}
+  .template-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;}
+  .template-card{border:1px solid #dbe3e6;border-radius:11px;padding:15px;background:#fff;display:flex;flex-direction:column;gap:8px;}
+  .template-card h3{font-size:.96rem;margin:0;color:#365c6c;}
+  .template-card p{font-size:.79rem;line-height:1.5;margin:0;color:#59686f;}
+  .template-role{font-size:.68rem;text-transform:uppercase;letter-spacing:.04em;color:#8b5a3f;font-weight:700;}
+  .template-note{background:var(--rust-tint);border-left:3px solid var(--rust);padding:7px 9px;border-radius:0 7px 7px 0;color:#6a4936!important;}
+  .template-use{appearance:none;border:0;border-radius:8px;background:var(--teal-dark);color:#fff;font:inherit;font-size:.82rem;font-weight:700;padding:9px 12px;cursor:pointer;margin-top:auto;align-self:flex-start;}
+  .role-guide-select{width:100%;font:inherit;padding:9px 11px;border:1px solid #ccd7db;border-radius:8px;background:#fff;margin-top:5px;}
+  .guide-callout{background:var(--teal-tint);border-left:4px solid var(--teal-dark);border-radius:0 9px 9px 0;padding:11px 13px;font-size:.84rem;line-height:1.55;margin:12px 0;}
+  .guide-warning{background:var(--rust-tint);border-left-color:var(--rust);}
+  .guide-columns{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .guide-card{border:1px solid #dbe3e6;border-radius:10px;padding:13px;background:#fff;}
+  .guide-card h3{margin:0 0 7px;}
+  .guide-card ol,.guide-card ul{margin:0;padding-left:20px;font-size:.82rem;line-height:1.6;}
+  .guide-links{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;}
+  .guide-links a{display:inline-block;background:#eef3f4;color:#365c6c;border-radius:8px;padding:9px 12px;font-size:.8rem;font-weight:700;text-decoration:none;}
+  @media(max-width:700px){.guide-columns{grid-template-columns:1fr}.builder-panel{padding:17px}.template-grid{grid-template-columns:1fr}}
+
   .aidraft-overlay{position:fixed;inset:0;background:rgba(20,32,38,.5);display:none;align-items:center;justify-content:center;z-index:9999;padding:18px}
   .aidraft-overlay.show{display:flex}
   .aidraft-panel{background:#fff;border-radius:14px;box-shadow:0 30px 80px -20px rgba(20,32,38,.5);width:100%;max-width:560px;max-height:92vh;overflow:auto;padding:22px 22px 18px}
@@ -307,6 +341,33 @@
   .aidraft-status{font-size:.85rem;min-height:1.2em}
   .aidraft-status.err{color:#a85846}
 </style>
+
+<div class="builder-overlay" id="templateOverlay" role="dialog" aria-modal="true" aria-labelledby="templateHeading">
+  <section class="builder-panel">
+    <div class="builder-panel-head">
+      <div><h2 id="templateHeading">BHW document templates</h2><p class="sub">Choose a starting point, then replace every placeholder and complete the required role review. Using a template never sends or saves a document.</p></div>
+      <button class="builder-close" type="button" data-close-overlay="templateOverlay">Close</button>
+    </div>
+    <div class="builder-filter">
+      <label for="templateRoleFilter">Show templates for</label>
+      <select id="templateRoleFilter"></select>
+      <span class="sub" id="templateCount" aria-live="polite"></span>
+    </div>
+    <div class="template-grid" id="templateGrid"></div>
+  </section>
+</div>
+
+<div class="builder-overlay" id="guideOverlay" role="dialog" aria-modal="true" aria-labelledby="guideHeading">
+  <section class="builder-panel narrow">
+    <div class="builder-panel-head">
+      <div><h2 id="guideHeading">Guide &amp; role-based practice</h2><p class="sub">Use this for orientation, a role change, or annual competency review.</p></div>
+      <button class="builder-close" type="button" data-close-overlay="guideOverlay">Close</button>
+    </div>
+    <label for="trainingRoleSelect"><strong>Choose the learner's role</strong></label>
+    <select class="role-guide-select" id="trainingRoleSelect"></select>
+    <div id="roleGuideContent"></div>
+  </section>
+</div>
 
 <div class="aidraft-overlay" id="aidraftOverlay">
   <div class="aidraft-panel">
@@ -658,6 +719,315 @@ Keep the large-print patient copy of this list where the patient can reach it.`,
   }
 };
 
+const ROLE_LABELS = {
+  all: "All roles",
+  front_desk: "Front desk",
+  medical_assistant: "Medical assistant / clinical support",
+  care_coordination: "Care coordination",
+  behavioral_health: "Behavioral health",
+  provider: "Licensed clinician / provider",
+  billing_operations: "Billing / operations"
+};
+
+const TEMPLATE_LIBRARY = [
+  {
+    id: "weekly_checkin_medication",
+    label: "Weekly Check-In + Medication Request",
+    docType: "patient_education",
+    roles: ["medical_assistant","care_coordination","front_desk","provider"],
+    summary: "A plain-language weekly check-in with symptoms, progress, barriers, medication questions, and a place for the patient's expiring private medication-request link.",
+    note: "Generate the link in Medication Request Links for the verified patient, then replace the placeholder. A request is not a prescription.",
+    title: "Your Weekly BHW Check-In",
+    badgeText: "Complete before your follow-up",
+    meta: { patientName:"" },
+    sections: [
+      { heading:"How has this week been?", blocks:[
+        { type:"bullets", items:[
+          "Overall, I have felt: □ better  □ about the same  □ worse",
+          "My biggest improvement or win was: ______________________________",
+          "My biggest concern or change was: ______________________________",
+          "I had trouble following the plan because of: □ cost  □ transportation  □ schedule  □ side effects  □ I did not understand  □ other: __________"
+        ]}
+      ]},
+      { heading:"Symptoms and daily health", blocks:[
+        { type:"bullets", items:[
+          "New or worsening symptoms: _______________________________________",
+          "Sleep, appetite, movement, bowel habits, or stress changes: __________________",
+          "Home readings your care team asked you to track: ___________________________"
+        ]}
+      ]},
+      { heading:"Medication check", blocks:[
+        { type:"bullets", items:[
+          "I missed or changed a dose: □ no  □ yes — explain: ____________________",
+          "I noticed a side effect or problem: □ no  □ yes — explain: ______________",
+          "I may run out before my next visit: □ no  □ yes"
+        ]},
+        { type:"para", text:"For a refill, new medication question, side effect, or dose concern, use the private link BHW created for you. **Private medication-request link:** [PASTE THE EXPIRING PRIVATE LINK HERE]" },
+        { type:"infobox", kind:"info", text:"Sending the form gives BHW information for review. It does not create, renew, or guarantee a prescription. Do not start, stop, or change a medication unless your clinician tells you to." }
+      ]},
+      { heading:"Urgent help", blocks:[
+        { type:"infobox", kind:"warn", text:"This check-in is not continuously monitored. Call 911 for an emergency. Call or text 988 for a mental-health or substance-use crisis. For a time-sensitive medical concern, call the office rather than waiting for a reply to this form." }
+      ]}
+    ]
+  },
+  {
+    id: "mental_health_checkin",
+    label: "Mental Health Conversation Check-In",
+    docType: "patient_education",
+    roles: ["behavioral_health","provider","medical_assistant"],
+    summary: "A non-scored conversation guide about mood, anxiety, sleep, function, substance use, support, and safety.",
+    note: "This is not a diagnostic or validated screening instrument. Follow the approved screening and crisis workflow when indicated.",
+    title: "Your Mind & Mood Check-In",
+    badgeText: "A conversation guide — not a diagnosis",
+    meta: { patientName:"" },
+    sections: [
+      { heading:"Looking back over the last 7 days", blocks:[
+        { type:"bullets", items:[
+          "My mood has mostly felt: __________________________________________",
+          "Worry, panic, irritability, or feeling on edge: __________________________",
+          "Sleep — hours, restfulness, nightmares, or staying awake: __________________",
+          "Energy, focus, motivation, and ability to complete daily tasks: ______________",
+          "Appetite or eating changes: ________________________________________",
+          "Alcohol, cannabis, or other substance use changed: □ no  □ yes — explain: ______"
+        ]}
+      ]},
+      { heading:"Support and safety", blocks:[
+        { type:"bullets", items:[
+          "A person or place that helped me feel supported: _________________________",
+          "The hardest moment this week was: __________________________________",
+          "I felt unsafe, unable to care for myself, or had thoughts of harming myself or someone else: □ no  □ yes"
+        ]},
+        { type:"infobox", kind:"warn", text:"If you may hurt yourself or someone else, call or text 988 now. Call 911 or go to the nearest emergency department for immediate danger. Do not wait for this form to be reviewed." }
+      ]},
+      { heading:"What I want help with", blocks:[
+        { type:"bullets", items:[
+          "The question I most want to discuss: _________________________________",
+          "A skill, medication concern, referral, or resource I want to ask about: __________",
+          "The best way and time for the care team to contact me: ____________________"
+        ]}
+      ]}
+    ]
+  },
+  {
+    id: "after_visit_summary",
+    label: "After Visit Summary — Safe Starter",
+    docType: "avs",
+    roles: ["provider","medical_assistant"],
+    summary: "A structured AVS starter for the visit reason, findings, clinician-approved plan, medication decisions, follow-up, and return precautions.",
+    note: "A licensed clinician must verify every diagnosis, medication instruction, threshold, order, and follow-up before release.",
+    title: "After Visit Summary",
+    badgeText: "[FOLLOW-UP TIMEFRAME]",
+    meta: { patientName:"", dob:"", visitDate:"", provider:"" },
+    sections: [
+      { heading:"What we discussed today", blocks:[{ type:"para", text:"[PLAIN-LANGUAGE REASON FOR VISIT AND THE PATIENT'S MAIN CONCERNS]" }]},
+      { heading:"What your clinician found", blocks:[{ type:"bullets", items:[
+        "[ASSESSMENT OR RESULT IN PLAIN LANGUAGE]",
+        "[WHAT IS IMPROVING, STABLE, OR NEEDS FOLLOW-UP]"
+      ]}]},
+      { heading:"Your plan", blocks:[{ type:"bullets", items:[
+        "[CLINICIAN-APPROVED ACTION AND TIMING]",
+        "[TEST, REFERRAL, OR MONITORING PLAN]",
+        "[PATIENT GOAL OR AGREED NEXT STEP]"
+      ]}]},
+      { heading:"Medication decisions", blocks:[{ type:"para", text:"[LIST ONLY VERIFIED CONTINUE / START / STOP / CHANGE DECISIONS FROM THE SIGNED CLINICAL PLAN. IF NONE, WRITE: No medication changes were made today.]" }]},
+      { heading:"Follow-up and when to get help", blocks:[
+        { type:"para", text:"Next visit or check-in: [DATE OR TIMEFRAME]." },
+        { type:"infobox", kind:"warn", text:"[CLINICIAN-APPROVED RETURN PRECAUTIONS AND EMERGENCY INSTRUCTIONS]" }
+      ]}
+    ]
+  },
+  {
+    id: "home_vitals_tracker",
+    label: "Home Vitals Tracker",
+    docType: "care_plan",
+    roles: ["medical_assistant","care_coordination","provider"],
+    summary: "A flexible log for blood pressure, pulse, weight, blood sugar, symptoms, and the patient's clinician-specific instructions.",
+    note: "Do not invent alert thresholds. The responsible clinician enters and approves patient-specific targets and call parameters.",
+    title: "Home Vitals Tracker",
+    badgeText: "Bring or share at your next visit",
+    meta: { patientName:"", dob:"", visitDate:"", provider:"" },
+    sections: [
+      { heading:"How to use this tracker", blocks:[{ type:"bullets", items:[
+        "Measure only what your care team asked you to track.",
+        "Use the same device and similar time of day when possible.",
+        "Write down symptoms, missed medicines, illness, meals, or activity that may explain a change."
+      ]}]},
+      { heading:"Your care team's instructions", blocks:[
+        { type:"para", text:"What to measure and how often: [CLINICIAN-APPROVED INSTRUCTIONS]" },
+        { type:"para", text:"Call BHW when: [PATIENT-SPECIFIC THRESHOLDS OR SYMPTOMS APPROVED BY THE CLINICIAN]" },
+        { type:"infobox", kind:"warn", text:"If these instructions are blank or unclear, call BHW before guessing. Call 911 for emergency symptoms such as severe chest pain, severe trouble breathing, fainting, or stroke symptoms." }
+      ]},
+      { heading:"Tracking log", blocks:[{ type:"table", headers:["Date / time","Blood pressure","Pulse","Weight","Blood sugar","Symptoms / notes"], rows:[
+        ["","","","","",""],["","","","","",""],["","","","","",""],["","","","","",""],["","","","","",""],["","","","","",""]
+      ]}]}
+    ]
+  },
+  {
+    id: "care_team_questions",
+    label: "Questions for My Care Team",
+    docType: "patient_education",
+    roles: ["front_desk","medical_assistant","care_coordination","behavioral_health","provider"],
+    summary: "A question organizer patients can use before a visit or between-visit follow-up.",
+    title: "Questions for My BHW Care Team",
+    badgeText: "Write down what matters most",
+    meta: { patientName:"" },
+    sections: [
+      { heading:"My top three questions", blocks:[{ type:"bullets", items:[
+        "1. __________________________________________________________",
+        "2. __________________________________________________________",
+        "3. __________________________________________________________"
+      ]}]},
+      { heading:"Changes since my last visit", blocks:[{ type:"bullets", items:[
+        "New or worsening symptoms: _______________________________________",
+        "Medication, supplement, or pharmacy questions: _________________________",
+        "New urgent care, emergency room, hospital, specialist, or test results: __________",
+        "Changes in sleep, mood, food, movement, work, housing, transportation, or caregiving: __________________________________________________"
+      ]}]},
+      { heading:"What would make today's visit successful?", blocks:[{ type:"para", text:"At the end of the visit, I hope to understand or have a plan for: __________________________" }]},
+      { heading:"Before you leave", blocks:[{ type:"bullets", items:[
+        "□ I know the next step and who is responsible.",
+        "□ I know when and how I will receive results.",
+        "□ I know when to follow up and what should make me call sooner.",
+        "□ I asked for simpler wording, larger text, written instructions, or another support if I need it."
+      ]}]}
+    ]
+  },
+  {
+    id: "symptom_trigger_tracker",
+    label: "Symptom & Trigger Tracker",
+    docType: "care_plan",
+    roles: ["medical_assistant","care_coordination","behavioral_health","provider"],
+    summary: "A neutral tracker for timing, severity, context, what helped, and the effect on daily function.",
+    title: "Symptom & Trigger Tracker",
+    badgeText: "Patterns help guide the conversation",
+    meta: { patientName:"", dob:"", visitDate:"", provider:"" },
+    sections: [
+      { heading:"What to record", blocks:[{ type:"bullets", items:[
+        "What the symptom felt like and where it happened.",
+        "Start time, duration, and severity from 0 to 10.",
+        "Food, medicine, sleep, stress, activity, exposure, menstrual cycle, or other context.",
+        "What helped, what made it worse, and what you could not do because of it."
+      ]}]},
+      { heading:"Tracking log", blocks:[{ type:"table", headers:["Date / time","Symptom + 0–10","Possible trigger / context","What helped","Effect on daily life"], rows:[
+        ["","","","",""],["","","","",""],["","","","",""],["","","","",""],["","","","",""]
+      ]}]},
+      { heading:"Safety", blocks:[{ type:"infobox", kind:"warn", text:"This tracker is not monitored continuously and does not replace urgent evaluation. Follow your clinician's instructions and use 911 for emergency symptoms." }]}
+    ]
+  },
+  {
+    id: "care_coordination_followup",
+    label: "Care Coordination Follow-Up",
+    docType: "care_plan",
+    roles: ["care_coordination","medical_assistant","provider"],
+    summary: "A weekly whole-person follow-up for goals, referrals, barriers, equipment, resources, and the next responsible person.",
+    title: "Weekly Care Coordination Follow-Up",
+    badgeText: "One plan, clear next steps",
+    meta: { patientName:"", dob:"", visitDate:"", provider:"" },
+    sections: [
+      { heading:"What changed this week", blocks:[{ type:"bullets", items:[
+        "Health, symptoms, or daily function: __________________________________",
+        "Hospital, emergency, urgent care, or specialist update: ______________________",
+        "Food, housing, utilities, transportation, work, caregiving, or safety concern: ______"
+      ]}]},
+      { heading:"Open follow-up", blocks:[{ type:"table", headers:["Need / task","Current exact status","Next action","Owner","Due date"], rows:[
+        ["Referral","[sent / ready to schedule / scheduled]","","",""],
+        ["Medication question","[waiting on clinician / pharmacy / patient]","","",""],
+        ["Equipment / resource","","","",""]
+      ]}]},
+      { heading:"Patient's goal before the next check-in", blocks:[{ type:"para", text:"The patient chose this realistic next step: __________________________________________" }]},
+      { heading:"Handoff", blocks:[{ type:"infobox", kind:"info", text:"Document the exact next action, owner, and due date in the authoritative BHW workflow. This handout is a patient-facing summary, not the work queue or medical record." }]}
+    ]
+  },
+  {
+    id: "appointment_preparation",
+    label: "Appointment & Insurance Preparation",
+    docType: "patient_education",
+    roles: ["front_desk","billing_operations","care_coordination"],
+    summary: "A non-clinical checklist for visit logistics, documents, pharmacy information, insurance questions, and accessibility needs.",
+    title: "Prepare for Your BHW Appointment",
+    badgeText: "A quick checklist",
+    meta: { patientName:"" },
+    sections: [
+      { heading:"Please bring or have ready", blocks:[{ type:"bullets", items:[
+        "□ Photo identification and current insurance card, if applicable",
+        "□ Medication and supplement bottles, or a current list",
+        "□ Hospital, urgent care, specialist, imaging, or lab information BHW may not have",
+        "□ Your pharmacy name and location",
+        "□ Your top questions and any forms that need review"
+      ]}]},
+      { heading:"Tell us before the visit", blocks:[{ type:"bullets", items:[
+        "A language, hearing, vision, mobility, reading, sensory, or communication support you need",
+        "A transportation, technology, privacy, cost, or scheduling barrier",
+        "A coverage or referral question you want billing or care coordination to review"
+      ]}]},
+      { heading:"Insurance and forms", blocks:[{ type:"infobox", kind:"info", text:"Coverage estimates are not a guarantee of payment. Clinical forms and letters require appropriate review and cannot be promised before the responsible clinician has the needed information." }]}
+    ]
+  }
+];
+
+const ROLE_TRAINING = {
+  front_desk: {
+    boundary: "Prepare approved administrative instructions, appointment materials, and general education; insert a verified patient's private link only when authorized. Do not interpret diagnoses, medications, results, or clinical thresholds.",
+    assignment: [
+      "Use BHW0000 and open the Appointment & Insurance Preparation template.",
+      "Add one accessibility support and one scheduling barrier without adding real patient details.",
+      "Export the HTML, then explain why downloading did not send or save it to a patient.",
+      "Point to Patient Materials & Feedback and describe the verified-patient, upload, expiring-link, and Record as sent steps without completing a live send."
+    ],
+    pass: ["Uses only BHW0000","Keeps the content non-clinical","States that generated is not sent","Identifies the protected sharing workflow"]
+  },
+  medical_assistant: {
+    boundary: "Transcribe provider-approved AVS, medication, monitoring, and vital instructions. Never independently change a diagnosis, dose, alert threshold, treatment plan, or return precaution.",
+    assignment: [
+      "Use BHW0000 and open Weekly Check-In + Medication Request.",
+      "Keep the medication-link placeholder marked TEST ONLY; explain where an authorized staff member creates the patient-specific expiring link.",
+      "Add one provider-approved monitoring question and verify that the form does not promise a refill.",
+      "Export a PDF and identify every item requiring clinician review before real-patient use."
+    ],
+    pass: ["Does not create or send a real link","Preserves the no-prescription warning","Escalates clinical edits","Correctly exports and explains review before sharing"]
+  },
+  care_coordination: {
+    boundary: "Summarize approved goals, barriers, referrals, resources, and follow-up ownership. Do not invent clinical goals, treatment advice, referral completion, or medication outcomes.",
+    assignment: [
+      "Use BHW0000 and open Care Coordination Follow-Up.",
+      "Complete one synthetic transportation barrier, one referral status, and one next action with owner and due date.",
+      "Keep Referral sent, Ready to schedule, and Scheduled distinct.",
+      "Export HTML and explain what belongs in the authoritative queue instead of only on the handout."
+    ],
+    pass: ["Uses exact statuses","Names an owner and due date","Keeps the queue authoritative","Does not add independent clinical advice"]
+  },
+  behavioral_health: {
+    boundary: "Use approved behavioral-health education and check-in wording within role and license. Do not change validated instruments or scoring, and never leave a crisis or immediate safety concern waiting in a document or queue.",
+    assignment: [
+      "Use BHW0000 and open Mental Health Conversation Check-In.",
+      "Read the safety question and crisis language aloud as a teach-back.",
+      "Add one neutral question about function without diagnosing or scoring the answer.",
+      "Export the PDF, then state the immediate action if a learner marks the safety question yes."
+    ],
+    pass: ["Calls this a non-scored conversation guide","Preserves 988/911 language","Uses neutral wording","States that crisis action is immediate"]
+  },
+  provider: {
+    boundary: "Own final clinical accuracy and patient-specific approval. Verify identity, diagnoses, medications, orders, contraindications, thresholds, follow-up, return precautions, and whether the document is appropriate to release.",
+    assignment: [
+      "Use BHW0000 and open After Visit Summary — Safe Starter.",
+      "Replace every bracketed placeholder with synthetic information and add one clear return precaution.",
+      "Verify that medication wording matches a synthetic signed plan and that no unsupported treatment is added.",
+      "Export the PDF and perform a final release read-back: patient, date, provider, plan, medications, follow-up, and warning signs."
+    ],
+    pass: ["No placeholders remain","All clinical content is internally consistent","Return precautions and follow-up are clear","Performs the full release read-back"]
+  },
+  billing_operations: {
+    boundary: "Prepare non-clinical coverage, scheduling, form, and documentation-readiness instructions. Do not guarantee coverage/payment or write clinical justification, diagnoses, or treatment decisions for a clinician.",
+    assignment: [
+      "Use BHW0000 and open Appointment & Insurance Preparation.",
+      "Add one synthetic coverage question and one document the patient should bring.",
+      "Keep the no-guarantee language and identify what requires clinician review.",
+      "Export HTML and explain why the file is not a claim, authorization, chart entry, or proof of delivery."
+    ],
+    pass: ["Does not guarantee payment","Keeps clinical justification with the clinician","Uses no real PHI","Correctly describes the file's limited status"]
+  }
+};
+
 /* ---------------- Freeform text parser ----------------
    ## Heading           -> new section
    - text / * text      -> bullet (supports **bold**)
@@ -756,7 +1126,10 @@ function parseRawText(raw){
 }
 
 function bold(text){
-  return escapeHtml(text).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  const withBold = escapeHtml(text).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  return withBold.replace(/https:\/\/[A-Za-z0-9._~:/?#\[\]@!$&'()*+,;=%-]+/g, url =>
+    `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`
+  );
 }
 function escapeHtml(s){
   return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
@@ -1538,6 +1911,137 @@ function setModeButtons(){
   }
 }
 
+/* ---------------- Templates, guide, and practice ---------------- */
+let builderOverlayTrigger = null;
+
+function deepCopy(value){ return JSON.parse(JSON.stringify(value)); }
+
+function openBuilderOverlay(id, trigger){
+  const overlay = document.getElementById(id);
+  if(!overlay) return;
+  builderOverlayTrigger = trigger || document.activeElement;
+  overlay.classList.add("show");
+  const first = overlay.querySelector("button,select,input,textarea,a[href]");
+  if(first) setTimeout(()=>first.focus(), 0);
+}
+
+function closeBuilderOverlay(id){
+  const overlay = document.getElementById(id);
+  if(overlay) overlay.classList.remove("show");
+  if(builderOverlayTrigger && typeof builderOverlayTrigger.focus === "function") builderOverlayTrigger.focus();
+  builderOverlayTrigger = null;
+}
+
+function applyTemplate(templateId){
+  const template = TEMPLATE_LIBRARY.find(item=>item.id===templateId);
+  if(!template) return;
+  if(!confirm(`Use “${template.label}”? This replaces the current draft. Download anything you need first.`)) return;
+  state = defaultStateFor(template.docType);
+  state.title = template.title || DOC_CONFIG[template.docType].defaultTitle;
+  state.badgeText = template.badgeText || "";
+  state.meta = Object.assign({}, state.meta, deepCopy(template.meta || {}));
+  state.sections = deepCopy(template.sections || [blankSection()]);
+  state.mode = "build";
+  if(template.footer) state.footer = template.footer;
+  const docTypeSelect = document.getElementById("docTypeSelect");
+  if(docTypeSelect) docTypeSelect.value = template.docType;
+  setModeButtons();
+  closeBuilderOverlay("templateOverlay");
+  render();
+}
+
+function renderTemplateLibrary(){
+  const filter = document.getElementById("templateRoleFilter");
+  const grid = document.getElementById("templateGrid");
+  const count = document.getElementById("templateCount");
+  if(!filter || !grid) return;
+  const role = filter.value || "all";
+  const templates = TEMPLATE_LIBRARY.filter(item=>role==="all" || item.roles.includes(role));
+  if(count) count.textContent = `${templates.length} template${templates.length===1?"":"s"}`;
+  grid.innerHTML = templates.map(item=>`
+    <article class="template-card">
+      <div class="template-role">${item.roles.map(roleId=>escapeHtml(ROLE_LABELS[roleId])).join(" · ")}</div>
+      <h3>${escapeHtml(item.label)}</h3>
+      <p>${escapeHtml(item.summary)}</p>
+      ${item.note ? `<p class="template-note"><strong>Role check:</strong> ${escapeHtml(item.note)}</p>` : ""}
+      <button class="template-use" type="button" data-template-id="${escapeHtml(item.id)}">Use this template</button>
+    </article>`).join("");
+}
+
+function renderRoleGuide(){
+  const select = document.getElementById("trainingRoleSelect");
+  const target = document.getElementById("roleGuideContent");
+  if(!select || !target) return;
+  const roleId = select.value;
+  const training = ROLE_TRAINING[roleId];
+  if(!training) return;
+  target.innerHTML = `
+    <div class="guide-callout"><strong>Training rule:</strong> Practice only with synthetic patient <strong>BHW0000</strong>. Do not use a real name, birth date, diagnosis, medication, contact detail, or private patient link. Reading the guide alone is not competency sign-off.</div>
+    <div class="guide-columns">
+      <section class="guide-card">
+        <h3>How every document moves</h3>
+        <ol>
+          <li>Choose the correct document type or role-appropriate template.</li>
+          <li>Replace every placeholder; use plain language, accessible text size, and only verified information.</li>
+          <li>Review identity, dates, content, warnings, links, and role boundaries. Clinical content requires licensed-clinician approval.</li>
+          <li>Download HTML or Print / Save PDF. This creates a local file only.</li>
+          <li>When authorized, open Patient Materials &amp; Feedback, select the verified Patient 360 record, upload the reviewed file, create the expiring assignment, and intentionally record sending.</li>
+        </ol>
+      </section>
+      <section class="guide-card">
+        <h3>${escapeHtml(ROLE_LABELS[roleId])} boundary</h3>
+        <p class="sub">${escapeHtml(training.boundary)}</p>
+        <div class="guide-callout guide-warning"><strong>Stop and escalate</strong> for an identity mismatch, unclear medication or threshold, unsupported clinical statement, missing approval, crisis/emergency concern, or any placeholder left in a final document.</div>
+      </section>
+      <section class="guide-card">
+        <h3>Practice assignment</h3>
+        <ol>${training.assignment.map(item=>`<li>${escapeHtml(item)}</li>`).join("")}</ol>
+      </section>
+      <section class="guide-card">
+        <h3>Trainer pass check</h3>
+        <ul>${training.pass.map(item=>`<li>□ ${escapeHtml(item)}</li>`).join("")}</ul>
+        <p class="sub" style="margin-top:9px"><strong>Pass only when every item is correct.</strong> Any missed identity, role, clinical-review, crisis, link, save, or send distinction requires coaching and a repeat scenario.</p>
+      </section>
+    </div>
+    <div class="guide-links">
+      <a href="/bhw-staff-guide.html#document-builder-training" target="_blank" rel="noopener noreferrer">Open full printable staff guide</a>
+      <a href="/bhw-medication-request-links.html" target="_blank" rel="noopener noreferrer">Medication Request Links</a>
+      <a href="/bhw-patient-materials.html" target="_blank" rel="noopener noreferrer">Patient Materials &amp; Feedback</a>
+    </div>`;
+}
+
+function initBuilderSupport(){
+  const templateFilter = document.getElementById("templateRoleFilter");
+  templateFilter.innerHTML = Object.entries(ROLE_LABELS).map(([id,label])=>`<option value="${id}">${escapeHtml(label)}</option>`).join("");
+  templateFilter.value = "all";
+  templateFilter.addEventListener("change", renderTemplateLibrary);
+
+  const trainingSelect = document.getElementById("trainingRoleSelect");
+  trainingSelect.innerHTML = Object.entries(ROLE_LABELS).filter(([id])=>id!=="all").map(([id,label])=>`<option value="${id}">${escapeHtml(label)}</option>`).join("");
+  trainingSelect.value = "front_desk";
+  trainingSelect.addEventListener("change", renderRoleGuide);
+
+  const templateButton = document.getElementById("templateLibraryBtn");
+  const guideButton = document.getElementById("guidePracticeBtn");
+  templateButton.addEventListener("click", ()=>openBuilderOverlay("templateOverlay", templateButton));
+  guideButton.addEventListener("click", ()=>openBuilderOverlay("guideOverlay", guideButton));
+  document.getElementById("templateGrid").addEventListener("click", event=>{
+    const button = event.target.closest("[data-template-id]");
+    if(button) applyTemplate(button.dataset.templateId);
+  });
+  document.querySelectorAll("[data-close-overlay]").forEach(button=>button.addEventListener("click", ()=>closeBuilderOverlay(button.dataset.closeOverlay)));
+  document.querySelectorAll(".builder-overlay").forEach(overlay=>overlay.addEventListener("click", event=>{
+    if(event.target===overlay) closeBuilderOverlay(overlay.id);
+  }));
+  document.addEventListener("keydown", event=>{
+    if(event.key!=="Escape") return;
+    const openOverlay = document.querySelector(".builder-overlay.show");
+    if(openOverlay) closeBuilderOverlay(openOverlay.id);
+  });
+  renderTemplateLibrary();
+  renderRoleGuide();
+}
+
 /* ---------------- Draft with AI ---------------- */
 function initAiDraft(){
   const API='/.netlify/functions', DASH_KEY='02142022';
@@ -1615,6 +2119,7 @@ function initAiDraft(){
 /* ---------------- Init ---------------- */
 initTopbar();
 setModeButtons();
+initBuilderSupport();
 initAiDraft();
 render();
 </script>

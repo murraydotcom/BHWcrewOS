@@ -5,7 +5,7 @@ import test from "node:test";
 test("staff guide teaches the current Patient Requests and alert workflow", async () => {
   const html = await readFile(new URL("../bhw-staff-guide.html", import.meta.url), "utf8");
 
-  assert.match(html, /Updated September 20, 2026/);
+  assert.match(html, /Updated September 27, 2026/);
   assert.match(html, /Staff Chat — across signed-in staff pages/);
   assert.match(html, /unread badge is optional and off initially/);
   assert.match(html, /crewhq\.bhwmedical\.org\/crewos/);
@@ -47,6 +47,9 @@ test("staff guide teaches the current Patient Requests and alert workflow", asyn
   assert.match(html, /planned interruption/i);
   assert.match(html, /Failure recovery/);
   assert.match(html, /four pass results/);
+  assert.match(html, /id="document-builder-training"/);
+  assert.match(html, /Role-specialized synthetic practice/);
+  assert.match(html, /Generated means not yet recorded as sent/);
   assert.doesNotMatch(html, /bhwcrewos\.netlify\.app/);
   assert.doesNotMatch(html, /duplicate the .*template/i);
 });
