@@ -487,7 +487,7 @@ test("protected patient HTML submissions project once with a metadata-only inbou
     contentPath: "/bhw-medication-request.html",
     sourceStatus: "new",
     priority: "time-sensitive",
-    submittedAt: "2026-08-26T15:45:00.000Z",
+    submittedAt: "2026-08-26T15:40:00.000Z",
   };
 
   const first = await service.projectPatientContent(input, USER);
@@ -501,6 +501,8 @@ test("protected patient HTML submissions project once with a metadata-only inbou
   assert.equal(first.communication.direction, "inbound");
   assert.equal(first.communication.channel, "portal");
   assert.equal(first.communication.status, "received");
+  assert.equal(first.notification.reason, "historical-projection");
+  assert.equal(first.chat.reason, "historical-projection");
   assert.match(first.communication.content, /clinical details remain/i);
   assert.doesNotMatch(JSON.stringify(first), /medicationName|responses|pillsRemaining/i);
   assert.equal([...repository.communications.values()].filter((item) => item.direction === "inbound").length, 1);

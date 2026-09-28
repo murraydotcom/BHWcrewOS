@@ -157,6 +157,7 @@ export function createOperationsApp({
           workflowAutomationEnabled: workflow?.automationEnabled === true,
           manualSmsEnabled: workflow?.manualSmsEnabled === true,
           medicationSmsEnabled: workflow?.medicationSmsEnabled === true,
+          patientContentFreshMinutes: workflow?.patientContentFreshMinutes || 15,
         }, cors);
       }
 
@@ -199,6 +200,7 @@ export function createOperationsApp({
           notificationAutomationEnabled: workflow?.automationEnabled === true,
           manualSmsEnabled: workflow?.manualSmsEnabled === true,
           medicationSmsEnabled: workflow?.medicationSmsEnabled === true,
+          patientContentFreshMinutes: workflow?.patientContentFreshMinutes || 15,
         }, cors);
       }
 
