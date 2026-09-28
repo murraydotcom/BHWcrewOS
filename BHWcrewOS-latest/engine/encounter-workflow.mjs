@@ -1,4 +1,4 @@
-import { codingOpportunities } from "./coding-opportunities.mjs";
+import { codingOpportunities, requiresProviderCodingResolution } from "./coding-opportunities.mjs";
 import { materializeEncounterWork } from "./output-work.mjs";
 import { addRequiredClinicalFindings, auditTasks, clinicalAuditSummary, normalizeClinicalAudit } from "./clinical-audit.mjs";
 import { normalizeStructuredEncounter } from "./structured-encounter.mjs";
@@ -31,6 +31,17 @@ export const STATUS_LABELS = Object.freeze({
   [WORKFLOW_STATUS.DOWNSTREAM_PENDING]: "Orders/forms pending",
   [WORKFLOW_STATUS.CLOSED]: "Fully closed",
 });
+
+const PROVIDER_REVIEW_STATUSES = new Set([
+  WORKFLOW_STATUS.AUDIT_REVIEW,
+  WORKFLOW_STATUS.NEEDS_CLARIFICATION,
+  WORKFLOW_STATUS.CODING_REVIEW,
+  WORKFLOW_STATUS.READY_FOR_PROVIDER,
+]);
+
+export function isProviderReviewStatus(status) {
+  return PROVIDER_REVIEW_STATUSES.has(status);
+}
 
 export function ageHours(completedAt, now = new Date()) {
   const started = new Date(completedAt).getTime();
@@ -166,8 +177,8 @@ export function canQueueCharmEntry(encounter) {
   const audit = clinicalAuditSummary(encounter.clinicalAudit);
   if (audit.status === "not_run") reasons.push("Run the Required Changes clinical audit before approval.");
   if (audit.blocking) reasons.push(`${audit.blocking} Critical/High clinical audit finding${audit.blocking === 1 ? "" : "s"} still require provider resolution.`);
-  const codingDecisions = [].concat(encounter.codingRecommendations || []).filter((item) => item.requiresDecision && item.status === "pending");
-  if (codingDecisions.length) reasons.push(`${codingDecisions.length} required coding clarification${codingDecisions.length === 1 ? "" : "s"} still need provider review.`);
+  const codingDecisions = [].concat(encounter.codingRecommendations || []).filter(requiresProviderCodingResolution);
+  if (codingDecisions.length) reasons.push(`${codingDecisions.length} coding conflict${codingDecisions.length === 1 ? "" : "s"} affecting the current approved code still need provider review.`);
   if (encounter.status === WORKFLOW_STATUS.CLOSED) reasons.push("The encounter is already closed.");
   return { allowed: reasons.length === 0, reasons };
 }
@@ -178,7 +189,7 @@ export function summarizeQueue(encounters = [], now = new Date()) {
     const urgency = urgencyFor(encounter, now);
     if (urgency.level === "overdue") summary.overdue += 1;
     if (urgency.level === "critical") summary.dueSoon += 1;
-    if (encounter.status === WORKFLOW_STATUS.READY_FOR_PROVIDER) summary.ready += 1;
+    if (isProviderReviewStatus(encounter.status)) summary.ready += 1;
     if (encounter.status === WORKFLOW_STATUS.NEEDS_CLARIFICATION) summary.clarification += 1;
     if (encounter.status === WORKFLOW_STATUS.CHARM_DRAFT_SAVED || encounter.charmDraftSaved) summary.charmSaved += 1;
     if (encounter.status === WORKFLOW_STATUS.CLOSED) summary.closed += 1;

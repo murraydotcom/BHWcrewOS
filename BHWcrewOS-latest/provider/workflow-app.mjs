@@ -5,16 +5,19 @@ import {
   urgencyFor,
   buildEncounterPacket,
   canQueueCharmEntry,
+  isProviderReviewStatus,
   summarizeQueue,
   refreshEncounterIntelligence,
 } from "../engine/encounter-workflow.mjs";
 import {
   applyCodingOpportunity,
   approvedCodingAddenda,
+  requiresProviderCodingResolution,
   resolveCodingClarification,
 } from "../engine/coding-opportunities.mjs";
 import {
   approvedAuditAddenda,
+  carryForwardClinicalAuditDecisions,
   clinicalAuditSummary,
   controlledClinicalFinding,
   normalizeClinicalAudit,
@@ -431,7 +434,7 @@ function filteredRows() {
     const medicationPa = medicationEpaSummary(row.medicationEpaCases || []);
     if (filter === "all") return true;
     if (filter === "urgent") return ["critical", "overdue"].includes(urgency.level) || medicationPa.overdue > 0;
-    if (filter === "provider") return [WORKFLOW_STATUS.READY_FOR_PROVIDER, WORKFLOW_STATUS.NEEDS_CLARIFICATION].includes(row.status);
+    if (filter === "provider") return isProviderReviewStatus(row.status);
     return row.status !== WORKFLOW_STATUS.CLOSED;
   }).sort((left, right) => medicationEpaSummary(right.medicationEpaCases || []).overdue - medicationEpaSummary(left.medicationEpaCases || []).overdue || urgencyFor(right).hours - urgencyFor(left).hours);
 }
@@ -446,7 +449,7 @@ function renderKpis() {
   }, { open: 0, overdue: 0 });
   const data = [
     [summary.total, "Queue encounters", ""],
-    [summary.ready, "Ready for review", ""],
+    [summary.ready, "Provider review", ""],
     [summary.clarification, "Need clarification", ""],
     [summary.dueSoon, "Due within 4h", summary.dueSoon ? "alert" : ""],
     [summary.overdue, "Over 24h", summary.overdue ? "alert" : ""],
@@ -526,6 +529,22 @@ function renderNoteBuilder(row) {
   </details><details style="margin-top:12px"><summary><b>Imported patient and pre-visit context</b></summary><div style="margin-top:12px">${renderEncounterContext(row)}</div></details>`;
 }
 
+function reviewCorrectionState(row) {
+  const audit = approvedAuditAddenda(row.clinicalAudit).map((item) => ({ ...item, kind: "audit" }));
+  const coding = approvedCodingAddenda(row.codingRecommendations).map((item) => ({ ...item, kind: "coding" }));
+  const pendingAudit = clinicalAuditSummary(row.clinicalAudit).pending;
+  const pendingCoding = [].concat(row.codingRecommendations || []).filter(requiresProviderCodingResolution).reduce((count, recommendation) => count
+    + [].concat(recommendation.clarifications || []).filter((question) => question.decision === "pending").length, 0);
+  return { audit, coding, corrections: [...audit, ...coding], pendingAudit, pendingCoding };
+}
+
+function renderCorrectionBundle(row) {
+  const state = reviewCorrectionState(row);
+  if (!state.corrections.length) return "";
+  const pending = state.pendingAudit + state.pendingCoding;
+  return `<div class="notice"><b>One-cycle correction bundle: ${state.corrections.length} provider-confirmed fact${state.corrections.length === 1 ? "" : "s"} ready.</b> ${pending ? `Finish the remaining ${pending} provider decision${pending === 1 ? "" : "s"}; then` : ""} append all confirmed facts once and rerun documentation, coding, and the clinical audit once. Unrelated resolved decisions will remain resolved when the same finding returns unchanged.</div><div class="actions"><button class="btn primary" id="applyConfirmedCorrections" ${pending ? "disabled" : ""}>Apply all confirmed corrections + rerun once</button></div>`;
+}
+
 function renderDetail() {
   const row = rows.find((candidate) => candidate.id === selected);
   if (!row) {
@@ -547,6 +566,7 @@ function renderDetail() {
     <div class="field" style="margin-top:12px"><label>Structured clinical note — editable provider draft</label><textarea id="dNote" rows="15">${esc(row.note)}</textarea><div class="actions" style="margin-top:7px"><span id="noteSaveState" class="badge warning">Not saved</span><span class="privacy" style="margin:0">Autosaves after you pause. Cloud saves are read back and verified.</span></div></div>
     <details class="audit-raw"><summary>Structured encounter packet — auto-extracted, reviewable</summary><div class="formgrid" style="margin-top:12px"><div class="field"><label>Medications — one per line</label><textarea id="dMedications" rows="5">${esc(structuredLines(row.medications.map((item) => item.sourceText || [item.name, item.doseFrequency].filter(Boolean).join(" — "))))}</textarea></div><div class="field"><label>Orders — one per line</label><textarea id="dOrders" rows="5">${esc(structuredLines(row.orders))}</textarea></div><div class="field"><label>Referrals — one per line</label><textarea id="dReferrals" rows="5">${esc(structuredLines(row.referrals))}</textarea></div><div class="field"><label>Follow-up</label><textarea id="dFollowUp" rows="5">${esc(structuredLines(row.followUp))}</textarea></div><div class="field"><label>Patient instructions</label><textarea id="dInstructions" rows="5">${esc(structuredLines(row.patientInstructions))}</textarea></div><div class="field"><label>Pending results</label><textarea id="dPendingResults" rows="5">${esc(structuredLines(row.pendingResults))}</textarea></div><div class="field"><label>Return precautions</label><textarea id="dReturnPrecautions" rows="5">${esc(structuredLines(row.returnPrecautions))}</textarea></div></div></details>
     <div class="actions"><button class="btn" id="pasteFreed">Paste source transcript / draft</button><button class="btn primary" id="analyze" ${analyzingId === row.id ? "disabled" : ""}>${analyzingId === row.id ? "Running full clinical audit…" : "Run documentation + coding + clinical audit"}</button><button class="btn" id="savePacket">Update packet</button><button class="btn danger" id="deleteEncounter">Remove encounter</button></div>
+    ${renderCorrectionBundle(row)}
     <div class="tabs"><button class="tab ${activeTab === "clinical" ? "on" : ""}" data-tab="clinical">Required Changes${auditSummary.pending ? ` (${auditSummary.pending})` : ""}</button><button class="tab ${activeTab === "audit" ? "on" : ""}" data-tab="audit">Documentation</button><button class="tab ${activeTab === "coding" ? "on" : ""}" data-tab="coding">Coding clarification & opportunities${pendingCoding ? ` (${pendingCoding})` : ""}</button><button class="tab ${activeTab === "actions" ? "on" : ""}" data-tab="actions">Tasks, AVS & drafts${openTasks ? ` (${openTasks})` : ""}</button><button class="tab ${activeTab === "charm" ? "on" : ""}" data-tab="charm">Charm entry</button><button class="tab ${activeTab === "history" ? "on" : ""}" data-tab="history">Audit trail</button></div>
     <div class="panel ${activeTab === "clinical" ? "on" : ""}" id="p-clinical">${renderClinicalAudit(row)}</div>
     <div class="panel ${activeTab === "audit" ? "on" : ""}" id="p-audit">${renderReport(report)}</div>
@@ -590,7 +610,7 @@ function renderClinicalAudit(row) {
     <div class="review-note"><b>Audit-suggested codes after changes — review only:</b> CPT/HCPCS ${esc(suggestedCpt.join(", ") || "none stated")} · ICD-10-CM ${esc(suggestedDx.join(", ") || "none stated")}. These are never applied automatically.</div>
     ${audit.findings?.length ? audit.findings.map((finding) => `<div class="audit-finding severity-${esc(finding.severity)}" data-audit-id="${esc(finding.id)}"><div class="output-head"><div><span class="code-chip">${esc(finding.severity.toUpperCase())}</span> <b>${esc(finding.issue)}</b></div><span class="badge ${finding.decision === "pending" ? "warning" : "complete"}">${esc(finding.decision.replaceAll("_", " "))}</span></div><div class="review-note"><b>Location:</b> ${esc(finding.location || "See audit finding")}</div><div class="review-note"><b>Suggested correction:</b> ${esc(finding.suggestedFix || finding.issue)}</div><div class="source"><b>Supporting source:</b> ${esc(finding.supportingSource || "Current primary-source verification required")}</div><div class="field"><label>Your context / reason</label><input class="audit-response" value="${esc(finding.providerResponse || "")}" placeholder="Optional provider context"></div><div class="field"><label>Exact correction to add only if it actually occurred</label><textarea class="audit-addendum" rows="3" placeholder="Enter only facts you can personally confirm occurred during this visit.">${esc(finding.approvedAddendum || "")}</textarea></div><div class="actions"><button class="btn audit-decision" data-decision="occurred">Occurred — draft correction</button><button class="btn audit-decision" data-decision="already_documented">Already documented</button><button class="btn audit-decision" data-decision="not_done">Not done — create task</button><button class="btn audit-decision" data-decision="dismissed">Dismiss</button></div></div>`).join("") : '<p class="privacy">No actionable findings were identified.</p>'}
     ${audit.guidelineChecks?.length ? `<h4>Relevant condition-guideline checks</h4>${audit.guidelineChecks.map((item) => `<div class="review-note"><b>${esc(item.topic || "Guideline check")}</b>${esc(item.note || "")}<div class="source">Source: ${esc(item.source)} · Year: ${esc(item.year)}</div></div>`).join("")}` : ""}
-    ${corrections.length ? `<div class="notice"><b>${corrections.length} provider-confirmed correction${corrections.length === 1 ? " is" : "s are"} ready.</b> Append them to the editable note, then the documentation and coding engines will rerun against the corrected note.</div><button class="btn primary" id="applyAuditCorrections">Append confirmed corrections + rerun</button>` : ""}
+    ${corrections.length ? `<div class="notice"><b>${corrections.length} provider-confirmed correction${corrections.length === 1 ? " is" : "s are"} ready.</b> It is included in the one-cycle correction bundle above.</div>` : ""}
     <details class="audit-raw"><summary>Full clinical audit output</summary><pre>${esc(audit.rawReport)}</pre></details>
     <div class="actions"><button class="btn" id="reanalyzeAudit">Run the full analysis again</button></div>`;
 }
@@ -610,11 +630,25 @@ function renderCoding(row) {
     const current = item.replaceCode ? `${item.replaceCode} → ` : "";
     const reviewOnly = item.action === "review";
     const pendingQuestions = [].concat(item.clarifications || []).some((question) => question.decision === "pending");
+    const blockingProviderReview = requiresProviderCodingResolution(item);
+    const pendingLabel = item.reviewKind === "current_code_evidence_review"
+      ? "needs decision"
+      : item.requiresDecision && !blockingProviderReview ? "optional RCM follow-up"
+      : item.reviewKind === "encounter_evidence_required"
+        ? "context only"
+        : reviewOnly ? "clarify" : item.status;
     const mdm = item.mdm;
     const mdmHtml = mdm ? `<div class="mdm-grid"><div><b>Problems</b><span>${esc(mdmLabel(mdm.problems?.rank))}</span></div><div><b>Data</b><span>${esc(mdmLabel(mdm.data?.rank))}</span></div><div><b>Risk</b><span>${esc(mdmLabel(mdm.risk?.rank))}</span></div></div>` : "";
     const questionsHtml = [].concat(item.clarifications || []).map((question) => `<div class="coding-clarification" data-recommendation-id="${esc(item.id)}" data-clarification-id="${esc(question.id)}"><div class="output-head"><div><b>${esc(question.label)}</b><p>${esc(question.question)}</p></div><span class="badge ${question.decision === "pending" ? "warning" : "complete"}">${esc(question.decision.replaceAll("_", " "))}</span></div>${question.evidence ? `<div class="evidence"><b>Why this question appeared</b><div>“${esc(question.evidence)}”</div></div>` : ""}<div class="review-note">${esc(question.reason)}</div><div class="field"><label>Your answer or chart location</label><input class="coding-response" value="${esc(question.providerResponse || "")}" placeholder="Required for Already documented; optional context otherwise"></div><div class="field"><label>Exact provider-confirmed fact to add only if it occurred</label><textarea class="coding-addendum" rows="3" placeholder="Do not copy the suggestion. Enter only the fact you can personally confirm.">${esc(question.approvedAddendum || "")}</textarea></div><div class="actions"><button class="btn coding-decision" data-decision="occurred">Occurred — add exact fact</button><button class="btn coding-decision" data-decision="already_documented">Already documented</button><button class="btn coding-decision" data-decision="not_done">Did not occur</button><button class="btn coding-decision" data-decision="not_applicable">Not applicable</button></div></div>`).join("");
-    return `<div class="recommendation ${esc(item.status)}"><div class="output-head"><div><span class="code-chip">${esc(item.category.toUpperCase())}</span> <b>${esc(current)}${esc(item.code)}</b><p>${esc(item.title)}</p></div><span class="badge ${applied ? "complete" : dismissed ? "warning" : "ontrack"}">${reviewOnly && !applied && !dismissed ? "clarify" : esc(item.status)}</span></div>${mdmHtml}<div class="evidence"><b>Evidence found</b><div>“${esc(item.evidence || "No qualifying evidence captured.")}”</div></div>${item.missingDocumentation ? `<div class="review-note"><b>${reviewOnly ? "Documentation/eligibility check:" : "Before applying:"}</b> ${esc(item.missingDocumentation)}</div>` : ""}${questionsHtml}<div class="review-note"><b>Coverage check:</b> ${esc(item.coverageNote)}</div><div class="source"><a href="${esc(item.sourceUrl)}" target="_blank" rel="noopener">${esc(item.sourceLabel)}</a></div><div class="actions"><button class="btn primary apply-code" data-recommendation-id="${esc(item.id)}" ${applied || dismissed || pendingQuestions || !["add", "replace"].includes(item.action) ? "disabled" : ""}>${item.action === "replace" ? "Apply supported code change" : item.action === "add" ? "Add to approved fields" : "Clarify and rerun first"}</button><button class="btn dismiss-code" data-recommendation-id="${esc(item.id)}" ${applied || dismissed ? "disabled" : ""}>Dismiss</button></div></div>`;
-  }).join("")}${corrections.length ? `<div class="notice"><b>${corrections.length} provider-confirmed coding fact${corrections.length === 1 ? " is" : "s are"} ready.</b> Append the exact facts to the note and rerun both MDM and time checks before any code can be applied.</div><button class="btn primary" id="applyCodingCorrections">Append confirmed coding facts + rerun</button>` : ""}`;
+    const reviewButton = item.reviewKind === "current_code_evidence_review"
+      ? "Remove the code or add encounter evidence, then rerun"
+      : item.requiresDecision && !blockingProviderReview
+        ? "Optional revenue review — does not block provider"
+        : item.reviewKind === "encounter_evidence_required"
+          ? "Clinical context only — not addable"
+          : "Resolve Required Changes and rerun";
+    return `<div class="recommendation ${esc(item.status)}"><div class="output-head"><div><span class="code-chip">${esc(item.category.toUpperCase())}</span> <b>${esc(current)}${esc(item.code)}</b><p>${esc(item.title)}</p></div><span class="badge ${applied ? "complete" : dismissed ? "warning" : "ontrack"}">${applied || dismissed ? esc(item.status) : esc(pendingLabel)}</span></div>${mdmHtml}<div class="evidence"><b>Evidence found</b><div>“${esc(item.evidence || "No qualifying evidence captured.")}”</div></div>${item.missingDocumentation ? `<div class="review-note"><b>${reviewOnly ? "Documentation/eligibility check:" : "Before applying:"}</b> ${esc(item.missingDocumentation)}</div>` : ""}${questionsHtml}<div class="review-note"><b>Coverage check:</b> ${esc(item.coverageNote)}</div><div class="source"><a href="${esc(item.sourceUrl)}" target="_blank" rel="noopener">${esc(item.sourceLabel)}</a></div><div class="actions"><button class="btn primary apply-code" data-recommendation-id="${esc(item.id)}" ${applied || dismissed || pendingQuestions || !["add", "replace"].includes(item.action) ? "disabled" : ""}>${item.action === "replace" ? "Apply supported code change" : item.action === "add" ? "Add to approved fields" : esc(reviewButton)}</button><button class="btn dismiss-code" data-recommendation-id="${esc(item.id)}" ${applied || dismissed || item.requiresDecision ? "disabled" : ""}>Dismiss</button></div></div>`;
+  }).join("")}${corrections.length ? `<div class="notice"><b>${corrections.length} provider-confirmed coding fact${corrections.length === 1 ? " is" : "s are"} ready.</b> It is included in the one-cycle correction bundle above.</div>` : ""}`;
 }
 
 function optionList(entries, current) {
@@ -740,7 +774,8 @@ function renderHistory(row) {
   return `<div class="audit">${row.auditTrail.length ? row.auditTrail.slice().reverse().map((entry) => `<div class="audit-row"><b>${esc(entry.text)}</b><div>${new Date(entry.at).toLocaleString()}</div></div>`).join("") : '<div class="privacy">No workflow activity recorded.</div>'}</div>`;
 }
 
-async function runEncounterAnalysis(row) {
+async function runEncounterAnalysis(row, { preserveResolvedAudit = false } = {}) {
+  const previousAudit = normalizeClinicalAudit(row.clinicalAudit);
   sync(row);
   if (row.note.trim().length < 20) {
     showToast("Paste the Freed note before running the full analysis.");
@@ -771,10 +806,12 @@ async function runEncounterAnalysis(row) {
     audit.automatedAt = result.automatedAt || new Date().toISOString();
     audit.model = result.model || "";
     audit.automationRunId = result.automationRunId || "";
-    row.clinicalAudit = audit;
+    row.clinicalAudit = preserveResolvedAudit
+      ? carryForwardClinicalAuditDecisions(audit, previousAudit)
+      : audit;
     refreshEncounterIntelligence(row);
     const summary = clinicalAuditSummary(row.clinicalAudit);
-    const pendingCoding = row.codingRecommendations.some((item) => item.status === "pending");
+    const pendingCoding = row.codingRecommendations.some(requiresProviderCodingResolution);
     row.status = summary.pending
       ? WORKFLOW_STATUS.AUDIT_REVIEW
       : pendingCoding ? WORKFLOW_STATUS.CODING_REVIEW : WORKFLOW_STATUS.READY_FOR_PROVIDER;
@@ -850,7 +887,7 @@ function wireDetail(row) {
       row.clinicalAudit = resolveClinicalAuditFinding(row.clinicalAudit, card.dataset.auditId, decision, { providerResponse, approvedAddendum });
       refreshEncounterIntelligence(row);
       const summary = clinicalAuditSummary(row.clinicalAudit);
-      const pendingCoding = row.codingRecommendations.some((item) => item.status === "pending");
+      const pendingCoding = row.codingRecommendations.some(requiresProviderCodingResolution);
       row.providerApproved = false;
       row.charmDraftSaved = false;
       row.status = summary.pending ? WORKFLOW_STATUS.AUDIT_REVIEW : pendingCoding ? WORKFLOW_STATUS.CODING_REVIEW : WORKFLOW_STATUS.READY_FOR_PROVIDER;
@@ -860,17 +897,23 @@ function wireDetail(row) {
     };
   });
 
-  if ($("applyAuditCorrections")) $("applyAuditCorrections").onclick = async () => {
-    const corrections = approvedAuditAddenda(row.clinicalAudit);
-    if (!corrections.length) return;
+  if ($("applyConfirmedCorrections")) $("applyConfirmedCorrections").onclick = async () => {
+    const state = reviewCorrectionState(row);
+    if (!state.corrections.length || state.pendingAudit || state.pendingCoding) return;
+    const corrections = [...new Map(state.corrections.map((item) => [item.text, item])).values()];
     const block = corrections.map((item) => `- ${item.text}`).join("\n");
-    $("dNote").value = `${$("dNote").value.trim()}\n\nProvider-confirmed audit clarification:\n${block}`.trim();
+    $("dNote").value = `${$("dNote").value.trim()}\n\nProvider-confirmed review clarification:\n${block}`.trim();
     const appliedAt = new Date().toISOString();
     row.clinicalAudit.findings.forEach((finding) => {
-      if (corrections.some((item) => item.id === finding.id)) finding.addendumAppliedAt = appliedAt;
+      if (state.audit.some((item) => item.id === finding.id)) finding.addendumAppliedAt = appliedAt;
     });
-    log(row, `${corrections.length} provider-confirmed audit correction${corrections.length === 1 ? "" : "s"} appended; full analysis will rerun`);
-    await runEncounterAnalysis(row);
+    for (const correction of state.coding) {
+      const recommendation = row.codingRecommendations.find((item) => item.id === correction.recommendationId);
+      const question = recommendation?.clarifications?.find((item) => item.id === correction.id);
+      if (question) question.addendumAppliedAt = appliedAt;
+    }
+    log(row, `${corrections.length} provider-confirmed review correction${corrections.length === 1 ? "" : "s"} appended in one bundle; full analysis will rerun once`);
+    await runEncounterAnalysis(row, { preserveResolvedAudit: true });
   };
 
   if ($("reanalyzeAudit")) $("reanalyzeAudit").onclick = () => runEncounterAnalysis(row);
@@ -1075,21 +1118,6 @@ function wireDetail(row) {
       render();
     };
   });
-
-  if ($("applyCodingCorrections")) $("applyCodingCorrections").onclick = async () => {
-    const corrections = approvedCodingAddenda(row.codingRecommendations);
-    if (!corrections.length) return;
-    const block = corrections.map((item) => `- ${item.text}`).join("\n");
-    $("dNote").value = `${$("dNote").value.trim()}\n\nProvider-confirmed coding clarification:\n${block}`.trim();
-    const appliedAt = new Date().toISOString();
-    for (const correction of corrections) {
-      const recommendation = row.codingRecommendations.find((item) => item.id === correction.recommendationId);
-      const question = recommendation?.clarifications?.find((item) => item.id === correction.id);
-      if (question) question.addendumAppliedAt = appliedAt;
-    }
-    log(row, `${corrections.length} provider-confirmed coding fact${corrections.length === 1 ? "" : "s"} appended; MDM and time analysis will rerun`);
-    await runEncounterAnalysis(row);
-  };
 
   document.querySelectorAll(".apply-code").forEach((button) => {
     button.onclick = () => {
