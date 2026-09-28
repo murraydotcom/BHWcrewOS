@@ -51,3 +51,79 @@ test('Front Desk resolves BHW0000 direct lookup without querying a live patient 
   assert.equal(body.patient.bhwPatientId, 'BHW0000');
   assert.equal(body.patient.name, 'Synthetic QA');
 });
+
+test('an accepted Front Desk text moves the request to the communication log exactly once', async () => {
+  const previousUrl = process.env.OPERATIONS_CLOUD_API_URL;
+  const previousSecret = process.env.CREWOS_OPERATIONS_TOKEN_SECRET;
+  const previousFetch = global.fetch;
+  const calls = [];
+  process.env.OPERATIONS_CLOUD_API_URL = 'https://operations.example';
+  process.env.CREWOS_OPERATIONS_TOKEN_SECRET = 'synthetic-operations-secret';
+  global.fetch = async (url, options) => {
+    calls.push({ url: String(url), body: JSON.parse(options.body) });
+    if (String(url).endsWith('/messages')) {
+      return { ok: true, status: 200, json: async () => ({ ok: true, status: 'sent', communicationId: 'synthetic-communication-001' }) };
+    }
+    return { ok: true, status: 200, json: async () => ({ ok: true, request: { status: 'in_progress', statusCategory: 'in_progress' } }) };
+  };
+  try {
+    const response = await handler({
+      httpMethod: 'POST',
+      headers: signedHeaders(),
+      queryStringParameters: {},
+      body: JSON.stringify({
+        action: 'sms',
+        pageId: 'synthetic-request-001',
+        text: 'Please call us at 443-762-5343.',
+        noPhiAttestation: true,
+        idempotencyKey: 'frontdesk-reply:synthetic-001',
+      }),
+    });
+    assert.equal(response.statusCode, 200);
+    assert.equal(JSON.parse(response.body).movedToCommunicationLog, true);
+    assert.equal(calls.length, 2);
+    assert.equal(calls[0].body.idempotencyKey, 'frontdesk-reply:synthetic-001');
+    assert.equal(calls[1].body.action, 'start');
+    assert.equal(calls[1].body.responseCommunicationId, 'synthetic-communication-001');
+    assert.equal(calls[1].body.idempotencyKey, 'frontdesk-reply:synthetic-001:move-to-communication-log');
+  } finally {
+    global.fetch = previousFetch;
+    if (previousUrl === undefined) delete process.env.OPERATIONS_CLOUD_API_URL; else process.env.OPERATIONS_CLOUD_API_URL = previousUrl;
+    if (previousSecret === undefined) delete process.env.CREWOS_OPERATIONS_TOKEN_SECRET; else process.env.CREWOS_OPERATIONS_TOKEN_SECRET = previousSecret;
+  }
+});
+
+test('a suppressed Front Desk text stays visible for correction', async () => {
+  const previousUrl = process.env.OPERATIONS_CLOUD_API_URL;
+  const previousSecret = process.env.CREWOS_OPERATIONS_TOKEN_SECRET;
+  const previousFetch = global.fetch;
+  let calls = 0;
+  process.env.OPERATIONS_CLOUD_API_URL = 'https://operations.example';
+  process.env.CREWOS_OPERATIONS_TOKEN_SECRET = 'synthetic-operations-secret';
+  global.fetch = async () => {
+    calls += 1;
+    return { ok: true, status: 202, json: async () => ({ ok: true, status: 'suppressed', statusReason: 'automation-not-enabled', communicationId: 'synthetic-suppressed-001' }) };
+  };
+  try {
+    const response = await handler({
+      httpMethod: 'POST',
+      headers: signedHeaders(),
+      queryStringParameters: {},
+      body: JSON.stringify({
+        action: 'sms',
+        pageId: 'synthetic-request-002',
+        text: 'Please call us at 443-762-5343.',
+        noPhiAttestation: true,
+        idempotencyKey: 'frontdesk-reply:synthetic-002',
+      }),
+    });
+    const body = JSON.parse(response.body);
+    assert.equal(response.statusCode, 202);
+    assert.equal(body.movedToCommunicationLog, false);
+    assert.equal(calls, 1);
+  } finally {
+    global.fetch = previousFetch;
+    if (previousUrl === undefined) delete process.env.OPERATIONS_CLOUD_API_URL; else process.env.OPERATIONS_CLOUD_API_URL = previousUrl;
+    if (previousSecret === undefined) delete process.env.CREWOS_OPERATIONS_TOKEN_SECRET; else process.env.CREWOS_OPERATIONS_TOKEN_SECRET = previousSecret;
+  }
+});

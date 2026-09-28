@@ -131,7 +131,7 @@
     <div style="margin-left:auto;display:flex;align-items:center;gap:12px">
       <a class="btn" href="/bhw-requests.html" style="position:relative;text-decoration:none;display:inline-flex;align-items:center;gap:8px;background:var(--river)">
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H8l-4 3z"/></svg>
-        Patient Requests
+        Requests &amp; Communication Log
         <span id="reqBadge" style="display:none;min-width:20px;height:20px;padding:0 6px;border-radius:20px;background:var(--urgent);color:#fff;font-size:.66rem;font-weight:800;display:none;align-items:center;justify-content:center"></span>
       </a>
       <a class="btn" href="/bhw-patient-monitor-list.html" style="text-decoration:none;display:inline-flex;align-items:center;gap:8px;background:var(--sage)">
@@ -148,7 +148,10 @@
       if(!token)return;
       fetch('/.netlify/functions/frontdesk-data',{headers:{Authorization:'Bearer '+token}}).then(r=>r.ok?r.json():null).then(d=>{
         if(!d||!Array.isArray(d.items)) return;
-        var open=(d.items||[]).concat(d.faxItems||[]).filter(function(i){return !/done|resolved|complete|closed/i.test(i.status||'');}).length;
+        var open=(d.items||[]).concat(d.faxItems||[]).filter(function(i){
+          if(i.statusCategory)return i.statusCategory==='received';
+          return !/progress|waiting|escalated|done|resolved|complete|closed/i.test(i.status||'');
+        }).length;
         var b=document.getElementById('reqBadge');
         try{localStorage.setItem('bhw_open_requests',String(open));}catch(e){}
         if(open>0&&b){b.textContent=open;b.style.display='inline-flex';}
@@ -169,7 +172,7 @@
   <section aria-labelledby="li" id="inboxsection" style="display:none">
     <div class="inbox-head">
       <h2 id="li">Today's inbox <span id="livechip" style="letter-spacing:0;text-transform:none;font-size:.66rem;background:var(--sage);color:#fff;padding:2px 10px;border-radius:20px">live · refreshes every 60s</span></h2>
-      <a class="history-link" href="/bhw-requests.html?filter=done">Review completed messages</a>
+      <div class="inbox-links"><a class="history-link" href="/bhw-requests.html">Open communication log</a><a class="history-link" href="/bhw-requests.html?filter=done">Review completed messages</a></div>
     </div>
     <div id="inboxcols" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
       <div><h3 class="colh">📞 Calls & voicemails</h3><div id="col-voice"></div></div>
@@ -179,7 +182,7 @@
   </section>
   <style>
     .colh{font-size:.68rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:8px}
-    .inbox-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}.inbox-head h2{font-size:.78rem;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-soft);display:flex;align-items:center;gap:10px}.history-link{font-size:.72rem;font-weight:800;color:var(--river);text-decoration:none}.history-link:hover{text-decoration:underline}
+    .inbox-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}.inbox-head h2{font-size:.78rem;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-soft);display:flex;align-items:center;gap:10px}.inbox-links{display:flex;gap:12px;flex-wrap:wrap}.history-link{font-size:.72rem;font-weight:800;color:var(--river);text-decoration:none}.history-link:hover{text-decoration:underline}
     .inb{border:1px solid var(--line);border-left:3px solid var(--sand);border-radius:0 10px 10px 0;padding:8px 10px;margin-bottom:8px;font-size:.78rem;background:var(--white)}
     .inb.request-card{cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}.inb.request-card:hover{border-color:var(--river);box-shadow:0 4px 14px rgba(25,68,78,.1);transform:translateY(-1px)}.inb.request-card:focus-visible{outline:3px solid rgba(34,111,121,.28);outline-offset:2px}
     .inb.breach{border-left-color:var(--urgent);background:#fdf6f6}
@@ -438,14 +441,21 @@ function bucket(src){ if(/voicemail|phone/i.test(src))return'voice'; if(/text|sm
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function requestUrl(id,completed=false){return `/bhw-requests.html?request=${encodeURIComponent(String(id||''))}${completed?'&filter=done':''}`;}
 function openRequest(id,completed=false){if(id)location.assign(requestUrl(id,completed));}
+function awaitsFrontDeskAction(it){
+  const category=String(it.statusCategory||'').toLowerCase();
+  if(category)return category==='received';
+  return !/progress|waiting|escalated|done|resolved|complete|closed/i.test(it.status||'');
+}
 let INBOX_ITEMS=[], FAX_ITEMS=[], FAX_NEXT='', FAX_NEXT_ID='', FAX_MODE='open';
 function renderInbox(items,faxItems=FAX_ITEMS){
   $('inboxsection').style.display='block';
   const cols={voice:[],text:[],fax:[]};
   const today=new Date().toISOString().slice(0,10);
-  // Completed items drop off the inbox (reopen from Patient Requests → Completed).
-  items.forEach(it=>{ if(/done|resolved|complete|closed/i.test(it.status||'')) return; cols[bucket(it.source||'')].push(it); });
-  cols.fax=faxItems;
+  // FrontDeskOS is an intake queue. Once staff start, reply, escalate, or
+  // complete an item, its durable record remains in Patient Requests and its
+  // communications log but it no longer stays in the intake columns.
+  items.forEach(it=>{if(awaitsFrontDeskAction(it))cols[bucket(it.source||'')].push(it);});
+  cols.fax=FAX_MODE==='completed'?faxItems:faxItems.filter(awaitsFrontDeskAction);
   ['voice','text','fax'].forEach(k=>{
     const el=$('col-'+k); el.innerHTML='';
     if(!cols[k].length){el.innerHTML='<div class="inb"><div class="s">Nothing waiting.</div></div>';return;}
@@ -524,6 +534,7 @@ function openReply(btn){
     </div>`);
   const box=card.querySelector('.replybox');
   const textarea=box.querySelector('textarea'), confirmBox=box.querySelector('.no-phi'), send=box.querySelector('.send'), status=box.querySelector('.reply-status');
+  const replyKey=`frontdesk-reply:${crypto.randomUUID()}`;
   const update=()=>{send.disabled=!(textarea.value.trim()&&confirmBox.checked);};
   box.querySelectorAll('.quick-reply').forEach(quickBtn=>quickBtn.addEventListener('click',()=>{textarea.value=CANNED[+quickBtn.dataset.index][1];textarea.focus();update();}));
   textarea.addEventListener('input',update);confirmBox.addEventListener('change',update);
@@ -535,13 +546,14 @@ function openReply(btn){
     try{
       const res=await crewFetch(API,{
         method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({action:'sms',pageId:btn.dataset.id,text:msg,noPhiAttestation:true})
+        body:JSON.stringify({action:'sms',pageId:btn.dataset.id,text:msg,noPhiAttestation:true,idempotencyKey:replyKey})
       });
       const result=await res.json().catch(()=>({}));
+      if(!res.ok&&result.communicationSaved){send.textContent='Retry queue move';send.disabled=false;status.textContent=result.error||'The text is saved; retry to finish moving it to the communication log.';return;}
       if(!res.ok)throw new Error(result.error||'Text was not sent');
       const delivery=String(result.status||'sent').toLowerCase();
-      if(delivery==='suppressed'){send.textContent='Review and retry';send.disabled=false;status.textContent=result.statusReason||'Not sent — check consent or the verified mobile number.';return;}
-      send.textContent=delivery==='queued'?'Queued ✓':'Sent ✓';status.textContent=delivery==='queued'?'Queued for the approved delivery window.':'Saved to the conversation history.';
+      if(!result.movedToCommunicationLog){send.textContent='Review and retry';send.disabled=false;status.textContent=result.statusReason||'Not sent — it remains in the Front Desk queue for correction.';return;}
+      send.textContent=delivery==='queued'?'Queued ✓':'Sent ✓';status.textContent=delivery==='queued'?'Queued and moved to the communication log.':'Sent and moved to the communication log.';
       setTimeout(()=>box.remove(),1200);poll();
     }catch(error){send.textContent='Retry send';send.disabled=false;status.textContent=String(error.message||'Text was not sent.').slice(0,140);}
   });
