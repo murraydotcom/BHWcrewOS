@@ -155,6 +155,7 @@ export function createOperationsApp({
           service: "bhw-operations-api",
           schemaVersion: SCHEMA_VERSION,
           workflowAutomationEnabled: workflow?.automationEnabled === true,
+          manualSmsEnabled: workflow?.manualSmsEnabled === true,
         }, cors);
       }
 
@@ -195,6 +196,7 @@ export function createOperationsApp({
           communicationStatuses: COMMUNICATION_STATUSES,
           patientRequestActions: workflow?.requestActions || [],
           notificationAutomationEnabled: workflow?.automationEnabled === true,
+          manualSmsEnabled: workflow?.manualSmsEnabled === true,
         }, cors);
       }
 

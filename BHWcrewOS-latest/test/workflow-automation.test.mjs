@@ -663,6 +663,38 @@ test("missing messaging configuration and opt-out both suppress rather than send
   assert.equal(sendCount, 0);
 });
 
+test("staff-attested manual SMS can be enabled without automatic workflow notifications", async () => {
+  const repository = inMemoryRepository();
+  const request = syntheticRequest("general", "synthetic-manual-only-sms");
+  repository.requests.set(request.id, structuredClone(request));
+  const sent = [];
+  const service = createWorkflowService(repository, {
+    environment: {
+      PATIENT_WORKFLOW_AUTOMATION_ENABLED: "false",
+      PATIENT_MANUAL_SMS_ENABLED: "true",
+      SMS_TIME_ZONE: "America/New_York",
+    },
+    dialpad: {
+      configured: true,
+      async sendSms(message) { sent.push(structuredClone(message)); return { providerMessageId: "synthetic-manual-message" }; },
+    },
+    chat: { enabled: false },
+    clock: () => NOON,
+  });
+
+  const result = await service.sendManualSms(request.id, {
+    message: "Please call us at 443-762-5343.",
+    noPhiAttestation: true,
+    idempotencyKey: "synthetic-manual-only-message",
+  }, USER);
+
+  assert.equal(service.automationEnabled, false);
+  assert.equal(service.manualSmsEnabled, true);
+  assert.equal(result.status, "sent");
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].text, "Please call us at 443-762-5343.");
+});
+
 test("queued-message dispatcher accepts only the configured Google Scheduler identity", async () => {
   const repository = inMemoryRepository();
   const verified = [];
