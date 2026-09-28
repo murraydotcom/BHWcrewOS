@@ -355,6 +355,7 @@ function inMemoryRepository() {
       communications.set(communication.id, structuredClone(communication));
       return { created: true, communication: structuredClone(communication) };
     },
+    async getCommunication(id) { return communications.has(id) ? structuredClone(communications.get(id)) : null; },
     async updateCommunication(id, patch) {
       const next = { ...communications.get(id), ...structuredClone(patch) };
       communications.set(id, next);
@@ -521,6 +522,56 @@ test("existing-patient connection verifies Registry eligibility, audits the save
     idempotencyKey: "synthetic-service-link-inactive",
   }, { sub: "crew:synthetic-front-desk", role: "front-desk" }), /only an active Patient Registry record/i);
   assert.equal(inactiveRepository.requests.get(request.id).bhwPatientId, "");
+});
+
+test("a logged Front Desk text starts the request without sending a duplicate patient message", async () => {
+  const repository = inMemoryRepository();
+  const request = syntheticRequest("general", "synthetic-frontdesk-response");
+  repository.requests.set(request.id, structuredClone(request));
+  repository.communications.set("synthetic-accepted-response", {
+    id: "synthetic-accepted-response",
+    requestId: request.id,
+    direction: "outbound",
+    channel: "sms",
+    status: "sent",
+  });
+  const sentSms = [];
+  const service = createWorkflowService(repository, {
+    environment: { PATIENT_WORKFLOW_AUTOMATION_ENABLED: "true" },
+    dialpad: { configured: true, async sendSms(message) { sentSms.push(message); } },
+    chat: { enabled: false },
+    clock: () => NOON,
+  });
+
+  const result = await service.action(request.id, {
+    action: "start",
+    responseCommunicationId: "synthetic-accepted-response",
+    idempotencyKey: "synthetic-frontdesk-response:move-to-log",
+  }, USER);
+
+  assert.equal(result.request.statusCategory, "in_progress");
+  assert.equal(result.notification.reason, "response-already-logged");
+  assert.equal(sentSms.length, 0);
+  const audit = repository.audit.find((event) => event.eventType === "patient-request.start");
+  assert.equal(audit.metadata.responseCommunicationId, "synthetic-accepted-response");
+
+  const invalidRepository = inMemoryRepository();
+  const invalidRequest = syntheticRequest("general", "synthetic-wrong-response");
+  invalidRepository.requests.set(invalidRequest.id, structuredClone(invalidRequest));
+  invalidRepository.communications.set("synthetic-mismatched-response", {
+    id: "synthetic-mismatched-response",
+    requestId: "another-request",
+    direction: "outbound",
+    channel: "sms",
+    status: "sent",
+  });
+  const invalidService = createWorkflowService(invalidRepository, { clock: () => NOON });
+  await assert.rejects(() => invalidService.action(invalidRequest.id, {
+    action: "start",
+    responseCommunicationId: "synthetic-mismatched-response",
+    idempotencyKey: "synthetic-wrong-response:move-to-log",
+  }, USER), /accepted outbound response/i);
+  assert.equal(invalidRepository.requests.get(invalidRequest.id).statusCategory, "received");
 });
 
 test("synthetic end-to-end transitions send through one idempotent Dialpad path for all five request types", async () => {

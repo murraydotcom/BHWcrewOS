@@ -127,6 +127,12 @@ It accepts only an active canonical `BHW####` record, refuses the reserved
 synthetic identity and already-linked work, commits with request-version
 protection, and performs no patient or Google Chat notification.
 
+FrontDeskOS is the unworked intake view. Starting a request removes it from
+that view while retaining it in Patient Requests with status history. After an
+accepted manual SMS is recorded, FrontDeskOS supplies its communication ID to
+the start action; the API verifies the outbound log entry and suppresses a
+second automatic patient notification before moving the request to in-progress.
+
 ## Firestore documents
 
 All operational records are flat, versioned documents. `websiteContent` stores

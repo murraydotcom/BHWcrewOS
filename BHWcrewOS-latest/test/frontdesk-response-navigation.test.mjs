@@ -25,6 +25,18 @@ test("Front Desk reply composer keeps fast templates and explicit no-PHI confirm
   assert.doesNotMatch(frontDesk, /Good news — your prescription was sent/);
 });
 
+test("Start and an accepted text reply leave FrontDeskOS but remain in the communication log", () => {
+  assert.match(frontDesk, /Requests &amp; Communication Log/);
+  assert.match(frontDesk, /Open communication log/);
+  assert.match(frontDesk, /function awaitsFrontDeskAction/);
+  assert.match(frontDesk, /return category==='received'/);
+  assert.match(frontDesk, /faxItems\.filter\(awaitsFrontDeskAction\)/);
+  assert.match(frontDesk, /idempotencyKey:replyKey/);
+  assert.match(frontDesk, /Retry queue move/);
+  assert.match(frontDeskApi, /responseCommunicationId: result\.communicationId/);
+  assert.match(frontDeskApi, /movedToCommunicationLog: true/);
+});
+
 test("completed and pre-existing work has a stable review route", () => {
   assert.match(frontDesk, /href="\/bhw-requests\.html\?filter=done"/);
   assert.match(requests, /REQUEST_QUERY\.get\('filter'\)/);

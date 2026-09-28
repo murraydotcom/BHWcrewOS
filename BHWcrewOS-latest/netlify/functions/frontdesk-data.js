@@ -111,15 +111,34 @@ exports.handler = async (event) => {
         }
         return { statusCode: 200, body: JSON.stringify({ ok: true, bhwPatientId: targetId, savedAt: result.request.updatedAt, storage: 'BHW Cloud' }) };
       } else if (action === 'sms') {
-        const { text: msg, noPhiAttestation } = JSON.parse(event.body || '{}');
+        const { text: msg, noPhiAttestation, idempotencyKey } = JSON.parse(event.body || '{}');
         if (!pageId || !msg) return { statusCode: 400, body: JSON.stringify({ error: 'missing request/text' }) };
         if (noPhiAttestation !== true) return { statusCode: 400, body: JSON.stringify({ error: 'confirm that the message contains no PHI before sending' }) };
+        const suppliedKey = String(idempotencyKey || '').trim();
+        const replyKey = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/.test(suppliedKey) ? suppliedKey : actionKey('frontdesk-sms');
         const result = await operationsRequest(`/v1/patient-requests/${encodeURIComponent(pageId)}/messages`, {
           actor: session,
           method: 'POST',
-          body: { message: msg, noPhiAttestation, idempotencyKey: actionKey('frontdesk-sms') },
+          body: { message: msg, noPhiAttestation, idempotencyKey: replyKey },
         });
-        return { statusCode: result.status === 'sent' ? 200 : 202, body: JSON.stringify({ ok: true, ...result }) };
+        const deliveryStatus = String(result.status || '').toLowerCase();
+        const accepted = ['sent', 'queued', 'delivered'].includes(deliveryStatus) && result.communicationId;
+        if (!accepted) {
+          return { statusCode: 202, body: JSON.stringify({ ok: true, ...result, movedToCommunicationLog: false }) };
+        }
+        const moved = await operationsRequest(`/v1/patient-requests/${encodeURIComponent(pageId)}/actions`, {
+          actor: session,
+          method: 'POST',
+          body: {
+            action: 'start',
+            responseCommunicationId: result.communicationId,
+            idempotencyKey: `${replyKey}:move-to-communication-log`,
+          },
+        });
+        if (!moved.request || moved.request.statusCategory === 'received') {
+          return { statusCode: 502, body: JSON.stringify({ error: 'The reply was saved, but moving it off the Front Desk queue was not confirmed. Retry safely to finish the move.', communicationSaved: true, movedToCommunicationLog: false }) };
+        }
+        return { statusCode: deliveryStatus === 'sent' || deliveryStatus === 'delivered' ? 200 : 202, body: JSON.stringify({ ok: true, ...result, movedToCommunicationLog: true, requestStatus: moved.request.status }) };
       } else if (action === 'fax') {
         // Fax a document through iFax. Two inputs:
         //   pdf  — base64 of a real PDF (referral, filled paperwork, uploaded doc)

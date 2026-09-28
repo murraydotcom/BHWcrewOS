@@ -475,6 +475,23 @@ export function createWorkflowService(repository, {
     const requestedAction = cleanText(input.action, 80).toLowerCase().replace(/[\s_]+/g, "-");
     const result = applyPatientRequestAction(current, input, { user, now: clock() });
     if (result.duplicate) return { request: result.request, duplicate: true, notification: { status: "duplicate" } };
+    const responseCommunicationId = requestedAction === "start" ? cleanText(input.responseCommunicationId, 200) : "";
+    let responseAlreadyLogged = false;
+    if (responseCommunicationId) {
+      if (typeof repository.getCommunication !== "function") {
+        throw Object.assign(new Error("the communication log is unavailable"), { status: 503 });
+      }
+      const communication = await repository.getCommunication(responseCommunicationId);
+      const acceptedStatuses = new Set(["sent", "queued", "delivered"]);
+      responseAlreadyLogged = Boolean(communication
+        && communication.requestId === current.id
+        && cleanText(communication.direction, 40).toLowerCase() === "outbound"
+        && cleanText(communication.channel, 40).toLowerCase() === "sms"
+        && acceptedStatuses.has(cleanText(communication.status, 40).toLowerCase()));
+      if (!responseAlreadyLogged) {
+        throw Object.assign(new Error("an accepted outbound response must be recorded before moving this request to the communication log"), { status: 409 });
+      }
+    }
     if (requestedAction === "link-patient") {
       const bhwPatientId = cleanText(input.bhwPatientId, 16).toUpperCase();
       if (!/^BHW\d{4}$/.test(bhwPatientId) || bhwPatientId === "BHW0000") {
@@ -510,14 +527,15 @@ export function createWorkflowService(repository, {
       previousRequestType: result.previousRequestType || saved.requestType,
       requestType: saved.requestType,
       version: saved.version,
+      ...(responseAlreadyLogged ? { responseCommunicationId } : {}),
     });
     const chatSource = user.source === "google-chat";
     const identityOnly = result.action === "link-patient";
     const [chatResult, notification] = await Promise.all([
       identityOnly ? Promise.resolve({ status: "not-applicable", reason: "patient-identity-connection" }) : syncChat(saved, user, { skipApi: chatSource }),
-      result.statusChanged && result.action !== "reclassify" && !identityOnly
+      result.statusChanged && result.action !== "reclassify" && !identityOnly && !responseAlreadyLogged
         ? notifyForCurrentState(saved, user)
-        : Promise.resolve({ status: "not-applicable", reason: identityOnly ? "patient-identity-connection" : result.action === "reclassify" ? "request-type-correction" : "status-unchanged" }),
+        : Promise.resolve({ status: "not-applicable", reason: responseAlreadyLogged ? "response-already-logged" : identityOnly ? "patient-identity-connection" : result.action === "reclassify" ? "request-type-correction" : "status-unchanged" }),
     ]);
     return { request: saved, duplicate: false, chat: chatResult, notification };
   }
