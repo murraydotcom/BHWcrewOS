@@ -56,6 +56,9 @@ const shapeRequest = (request) => ({
   summary: request.summary || '',
   sourceUrl: '',
   name: request.patientName || request.bhwPatientId || '',
+  patientMatchStatus: request.patientMatchStatus || (request.bhwPatientId ? 'matched' : 'unmatched'),
+  bhwPatientId: request.bhwPatientId || '',
+  version: Math.max(1, Number(request.version) || 1),
   canSms: Boolean(request.canSms),
   assigned: request.assignedToName || '',
 });
@@ -87,6 +90,26 @@ exports.handler = async (event) => {
         };
         const result = await operationsRequest(`/v1/patient-requests/${encodeURIComponent(pageId)}/actions`, { actor: session, method: 'POST', body });
         return { statusCode: 200, body: JSON.stringify({ ok: true, savedAt: result.request?.updatedAt, storage: 'BHW Cloud' }) };
+      } else if (action === 'link_patient') {
+        const { bhwPatientId, expectedVersion } = JSON.parse(event.body || '{}');
+        const targetId = String(bhwPatientId || '').trim().toUpperCase();
+        if (!/^BHW\d{4}$/.test(targetId) || targetId === 'BHW0000') {
+          return { statusCode: 400, body: JSON.stringify({ error: 'choose an existing non-synthetic Patient Registry record' }) };
+        }
+        const result = await operationsRequest(`/v1/patient-requests/${encodeURIComponent(pageId)}/actions`, {
+          actor: session,
+          method: 'POST',
+          body: {
+            action: 'link-patient',
+            bhwPatientId: targetId,
+            expectedVersion: Number(expectedVersion) || undefined,
+            idempotencyKey: actionKey('frontdesk-link-patient'),
+          },
+        });
+        if (result.request?.bhwPatientId !== targetId || result.request?.patientMatchStatus !== 'matched') {
+          return { statusCode: 502, body: JSON.stringify({ error: 'the Patient Registry connection was not confirmed after save' }) };
+        }
+        return { statusCode: 200, body: JSON.stringify({ ok: true, bhwPatientId: targetId, savedAt: result.request.updatedAt, storage: 'BHW Cloud' }) };
       } else if (action === 'sms') {
         const { text: msg, noPhiAttestation } = JSON.parse(event.body || '{}');
         if (!pageId || !msg) return { statusCode: 400, body: JSON.stringify({ error: 'missing request/text' }) };

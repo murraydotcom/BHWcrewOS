@@ -26,7 +26,7 @@ function workflowContext(value = {}) {
 
 export const REQUEST_TYPES = Object.freeze(["refill", "referral", "prior_auth", "billing_rcm", "clinical_review", "general"]);
 export const REQUEST_PRIORITIES = Object.freeze(["routine", "time-sensitive", "urgent", "emergency"]);
-export const REQUEST_ACTIONS = Object.freeze(["assign", "start", "milestone", "resolve", "reopen", "escalate", "unassign", "reclassify"]);
+export const REQUEST_ACTIONS = Object.freeze(["assign", "start", "milestone", "resolve", "reopen", "escalate", "unassign", "reclassify", "link-patient"]);
 
 const COMMON_RECEIVED = "BHW Medical Group: We received your request. Your care team will post details securely.";
 const COMMON_IN_PROGRESS = "BHW Medical Group: Your care team is working on your request. Detailed updates stay in your secure BHW page.";
@@ -334,6 +334,45 @@ export function applyPatientRequestAction(request, input = {}, { user = {}, now 
   const actorSub = cleanText(user.sub, 200);
   const actorName = cleanText(user.name || user.email || user.sub || "Staff", 160);
   const currentState = statusDefinition(request.requestType, request.status);
+
+  if (action === "link-patient") {
+    const role = normalizeStaffRole(user.role);
+    if (!["front-desk", "ma-bha", "care-manager", "operations-manager", "executive"].includes(role)) {
+      throw Object.assign(new Error("patient-access role is required to connect an existing patient"), { status: 403 });
+    }
+    const bhwPatientId = assertBhwPatientId(input.bhwPatientId);
+    if (bhwPatientId === "BHW0000") {
+      throw Object.assign(new Error("the reserved synthetic patient cannot be connected to live Front Desk work"), { status: 400 });
+    }
+    if (request.bhwPatientId || request.patientMatchStatus === "matched") {
+      throw Object.assign(new Error("this request is already connected; use protected Patient ID reconciliation for corrections"), { status: 409 });
+    }
+    const next = {
+      ...request,
+      bhwPatientId,
+      patientMatchStatus: "matched",
+      version: Math.max(1, Number(request.version) || 1) + 1,
+      processedActionKeys: [...(request.processedActionKeys || []).slice(-39), actionHash],
+      statusHistory: [...(request.statusHistory || []).slice(-49), {
+        status: request.status,
+        category: request.statusCategory,
+        at: timestamp,
+        actor: actorSub,
+        action,
+        patientMatchStatus: "matched",
+      }],
+      updatedAt: timestamp,
+      updatedBy: actorSub,
+    };
+    return {
+      request: next,
+      duplicate: false,
+      actionHash,
+      statusChanged: false,
+      previousStatus: request.status,
+      action,
+    };
+  }
 
   if (action === "reclassify") {
     if (!["operations-manager", "executive"].includes(normalizeStaffRole(user.role))) {
