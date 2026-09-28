@@ -3,6 +3,7 @@
 
 const { getSession, json } = require("./_lib");
 const { cloudRequest, listCloudPatients } = require("./lib/cloud-patients");
+const { operationsRequest } = require("./lib/operations-cloud");
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return json(405, { error: "POST only" });
@@ -20,9 +21,17 @@ exports.handler = async (event) => {
     if (program && program !== "All") params.set("program", program);
     if (/^\d{4}-\d{2}$/.test(month)) params.set("month", month);
     const suffix = params.toString() ? `?${params}` : "";
-    const [result, roster] = await Promise.all([
+    const [result, roster, activityResult] = await Promise.all([
       cloudRequest(`/v1/care-management/logs${suffix}`, { actor: session }),
       listCloudPatients(session),
+      Promise.all([
+        operationsRequest("/v1/patient-requests?source=care-connect&limit=100", { actor: session }),
+        operationsRequest("/v1/patient-requests?source=patient-medication-html&limit=100", { actor: session }),
+        operationsRequest("/v1/patient-requests?source=patient-content-html&limit=100", { actor: session }),
+      ]).then((responses) => ({
+        requests: responses.flatMap((response) => response.requests || response.patientRequests || []),
+        warning: "",
+      })).catch((error) => ({ requests: [], warning: String(error.message || error) })),
     ]);
     const byId = new Map(roster.map((patient) => [patient.bhwPatientId, patient]));
     const entries = (Array.isArray(result.logs) ? result.logs : []).map((log) => {
@@ -39,8 +48,41 @@ exports.handler = async (event) => {
         edited: log.updatedAt || "",
       };
     });
-    const updated = entries.reduce((latest, entry) => entry.edited > latest ? entry.edited : latest, "");
-    return json(200, { entries, count: entries.length, updated, storage: "BHW Cloud" });
+    const activityById = new Map();
+    for (const request of activityResult.requests) {
+      if (request.source === "care-connect" && request.requestType !== "clinical_review") continue;
+      const occurredAt = request.receivedAt || request.createdAt || request.updatedAt || "";
+      if (/^\d{4}-\d{2}$/.test(month) && !String(occurredAt).startsWith(month)) continue;
+      const patient = byId.get(request.bhwPatientId);
+      activityById.set(request.id, {
+        id: request.id,
+        bhwPatientId: request.bhwPatientId,
+        patientName: patient?.name || request.patientName || request.bhwPatientId,
+        source: request.source,
+        sourceLabel: request.source === "patient-medication-html" ? "Medication request"
+          : request.source === "care-connect" ? "Patient check-in" : "Patient form response",
+        status: request.statusLabel || String(request.status || "received").replaceAll("_", " "),
+        statusCategory: request.statusCategory || "received",
+        priority: request.priority || "routine",
+        summary: request.summary || "Protected patient activity",
+        sourceReference: request.sourceReference || "",
+        occurredAt,
+        updatedAt: request.updatedAt || occurredAt,
+        requestsUrl: `/bhw-requests.html?request=${encodeURIComponent(request.id)}`,
+      });
+    }
+    const activity = [...activityById.values()].sort((left, right) => String(right.occurredAt).localeCompare(String(left.occurredAt)));
+    const updated = [...entries.map((entry) => entry.edited), ...activity.map((item) => item.updatedAt)]
+      .reduce((latest, value) => value > latest ? value : latest, "");
+    return json(200, {
+      entries,
+      activity,
+      count: entries.length,
+      activityCount: activity.length,
+      updated,
+      activityWarning: activityResult.warning,
+      storage: "BHW Cloud",
+    });
   } catch (error) {
     return json(500, { error: String(error.message || error) });
   }

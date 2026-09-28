@@ -156,6 +156,7 @@ export function createOperationsApp({
           schemaVersion: SCHEMA_VERSION,
           workflowAutomationEnabled: workflow?.automationEnabled === true,
           manualSmsEnabled: workflow?.manualSmsEnabled === true,
+          medicationSmsEnabled: workflow?.medicationSmsEnabled === true,
         }, cors);
       }
 
@@ -197,6 +198,7 @@ export function createOperationsApp({
           patientRequestActions: workflow?.requestActions || [],
           notificationAutomationEnabled: workflow?.automationEnabled === true,
           manualSmsEnabled: workflow?.manualSmsEnabled === true,
+          medicationSmsEnabled: workflow?.medicationSmsEnabled === true,
         }, cors);
       }
 
@@ -466,6 +468,11 @@ export function createOperationsApp({
           payloadHash: bundle.payloadHash,
         });
         return json(result.replayed ? 200 : 201, { ok: true, replayed: result.replayed, patientRequest: result.request }, cors);
+      }
+      if (url.pathname === "/v1/patient-content-projections" && request.method === "POST") {
+        if (!workflow) throw apiError(503, "workflow_not_configured", "patient content projection is not configured");
+        const result = await workflow.projectPatientContent(await readJson(request), workflowActor(actor));
+        return json(result.replayed ? 200 : 201, { ok: true, ...result, patientRequest: result.request }, cors);
       }
 
       const requestMatch = url.pathname.match(/^\/v1\/patient-requests\/([^/]+)$/);

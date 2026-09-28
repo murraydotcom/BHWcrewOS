@@ -475,6 +475,76 @@ test("type correction is audited, reroutes Chat, and never triggers a patient SM
   assert.equal(audit.metadata.requestType, "general");
 });
 
+test("protected patient HTML submissions project once with a metadata-only inbound communication", async () => {
+  const repository = inMemoryRepository();
+  const service = createWorkflowService(repository, {
+    environment: { PATIENT_WORKFLOW_AUTOMATION_ENABLED: "false", PATIENT_MEDICATION_SMS_ENABLED: "false" },
+    clock: () => NOON,
+  });
+  const input = {
+    sourceRecordId: "submission-synthetic-0001",
+    bhwPatientId: "BHW0000",
+    contentPath: "/bhw-medication-request.html",
+    sourceStatus: "new",
+    priority: "time-sensitive",
+    submittedAt: "2026-08-26T15:45:00.000Z",
+  };
+
+  const first = await service.projectPatientContent(input, USER);
+  const replay = await service.projectPatientContent(input, USER);
+  assert.equal(first.replayed, false);
+  assert.equal(replay.replayed, true);
+  assert.equal(first.request.source, "patient-medication-html");
+  assert.equal(first.request.requestType, "refill");
+  assert.equal(first.request.priority, "time-sensitive");
+  assert.equal(first.request.createdAt, input.submittedAt);
+  assert.equal(first.communication.direction, "inbound");
+  assert.equal(first.communication.channel, "portal");
+  assert.equal(first.communication.status, "received");
+  assert.match(first.communication.content, /clinical details remain/i);
+  assert.doesNotMatch(JSON.stringify(first), /medicationName|responses|pillsRemaining/i);
+  assert.equal([...repository.communications.values()].filter((item) => item.direction === "inbound").length, 1);
+});
+
+test("the medication SMS gate is narrow and independent from broad workflow automation", async () => {
+  const repository = inMemoryRepository();
+  const sent = [];
+  const service = createWorkflowService(repository, {
+    environment: {
+      PATIENT_WORKFLOW_AUTOMATION_ENABLED: "false",
+      PATIENT_MEDICATION_SMS_ENABLED: "true",
+      PATIENT_PORTAL_URL: "https://health.bhwmedical.org/",
+      SMS_TIME_ZONE: "America/New_York",
+      SMS_QUIET_HOURS_START: "23:00",
+      SMS_QUIET_HOURS_END: "05:00",
+    },
+    dialpad: { configured: true, async sendSms(message) { sent.push(message); return { id: "synthetic-medication-message" }; } },
+    clock: () => NOON,
+  });
+
+  const projected = await service.projectPatientContent({
+    sourceRecordId: "submission-synthetic-0002",
+    bhwPatientId: "BHW0000",
+    contentPath: "/bhw-medication-request.html",
+    submittedAt: NOON.toISOString(),
+  }, USER);
+  assert.equal(service.automationEnabled, false);
+  assert.equal(service.medicationSmsEnabled, true);
+  assert.equal(projected.notification.status, "sent");
+  assert.equal(sent.length, 1);
+  assert.doesNotMatch(sent[0].text, /prescribed|pharmacy|medication name/i);
+
+  const unrelated = await service.createRequest({
+    id: "synthetic-unrelated-automation",
+    bhwPatientId: "BHW0000",
+    requestType: "general",
+    source: "synthetic-test",
+  }, USER);
+  assert.equal(unrelated.notification.status, "suppressed");
+  assert.equal(unrelated.notification.reason, "automation-not-enabled");
+  assert.equal(sent.length, 1);
+});
+
 test("existing-patient connection verifies Registry eligibility, audits the save, and sends no message", async () => {
   const repository = inMemoryRepository();
   repository.patientLinkEligibility = async (bhwPatientId) => ({
