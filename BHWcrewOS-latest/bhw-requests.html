@@ -283,7 +283,8 @@
 const API='/.netlify/functions';
 let TOKEN=sessionStorage.getItem('crewos_token')||'';
 let ITEMS=[];
-let FILTER='all';
+const REQUEST_QUERY=new URLSearchParams(location.search);
+let FILTER=['all','today','yesterday','unclaimed','done'].includes(REQUEST_QUERY.get('filter'))?REQUEST_QUERY.get('filter'):'all';
 let STAFF=''; // retained for roster compatibility; routing filters use TEAM
 let TEAM='';
 let REQUEST_TYPE='';
@@ -687,7 +688,12 @@ function openReply(id,mode,slotId){
   };
 }
 
-function setFilter(f,btn){ FILTER=f; document.querySelectorAll('.filters button').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); render(); }
+function setFilter(f,btn){
+  FILTER=f;
+  document.querySelectorAll('.filters button[data-f]').forEach(b=>b.classList.toggle('on',b.dataset.f===f));
+  const url=new URL(location.href);if(f==='all')url.searchParams.delete('filter');else url.searchParams.set('filter',f);history.replaceState({},'',url);
+  render();
+}
 function setStaff(n){ STAFF=n; render(); }
 function setTeam(value){TEAM=value;render();}
 function setRequestType(value){REQUEST_TYPE=value;SELECTED='';render();}
@@ -783,6 +789,7 @@ async function loadRoster(){
 }
 
 if(TOKEN){document.getElementById('me').textContent='signed in';}
+document.querySelectorAll('.filters button[data-f]').forEach(button=>button.classList.toggle('on',button.dataset.f===FILTER));
 document.getElementById('requestSearch').value=SEARCH;
 document.getElementById('requestSearch').addEventListener('input',event=>{SEARCH=event.target.value.trim().toLowerCase();render();});
 document.getElementById('teamFilter').addEventListener('change',event=>setTeam(event.target.value));
