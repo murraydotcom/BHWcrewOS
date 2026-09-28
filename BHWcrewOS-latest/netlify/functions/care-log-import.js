@@ -13,6 +13,8 @@ const PROGRAM_PATTERNS = Object.freeze([
   ["RTM", /\bRTM\b|remote therapeutic monitoring/i],
   ["BHI", /\bBHI\b|behavioral health integration/i],
   ["COCM", /\bCOCM\b|collaborative care/i],
+  ["CHI", /\bCHI\b|community health integration/i],
+  ["PIN", /\bPIN\b|principal illness navigation/i],
   ["CHARMED MINDS", /charmed\s*minds/i],
 ]);
 
