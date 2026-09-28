@@ -145,6 +145,7 @@ export function createWorkflowService(repository, {
     environment.PATIENT_MANUAL_SMS_ENABLED ?? environment.PATIENT_WORKFLOW_AUTOMATION_ENABLED,
     10,
   ).toLowerCase() === "true";
+  const medicationSmsEnabled = cleanText(environment.PATIENT_MEDICATION_SMS_ENABLED, 10).toLowerCase() === "true";
   const dispatchSecret = cleanText(environment.WORKFLOW_DISPATCH_SECRET, 1000);
   const dispatchAudience = safeHttpsUrl(environment.WORKFLOW_DISPATCH_AUDIENCE);
   const dispatchServiceAccount = cleanText(environment.WORKFLOW_DISPATCH_SERVICE_ACCOUNT, 320).toLowerCase();
@@ -312,7 +313,13 @@ export function createWorkflowService(repository, {
     ignoreRuleDisabled = false,
   } = {}) {
     if (!rule) return { status: "not-applicable", reason: "no-rule" };
-    if (!automationEnabled) return suppressedCommunication(request, rule, "automation-not-enabled", user, mode);
+    const medicationAutomationAllowed = mode === "automatic"
+      && medicationSmsEnabled
+      && request.requestType === "refill"
+      && request.source === "patient-medication-html";
+    if (!automationEnabled && !medicationAutomationAllowed) {
+      return suppressedCommunication(request, rule, "automation-not-enabled", user, mode);
+    }
     if (mode === "automatic") {
       if (!rule.enabled && !ignoreRuleDisabled) return suppressedCommunication(request, rule, "rule-disabled", user, mode);
       if (request.notificationMode === "none") return suppressedCommunication(request, rule, "request-notifications-disabled", user, mode);
@@ -463,6 +470,94 @@ export function createWorkflowService(repository, {
     return { request: saved, chat: chatResult, notification };
   }
 
+  async function projectPatientContent(input = {}, user = {}) {
+    const sourceRecordId = cleanText(input.sourceRecordId || input.submissionId, 128);
+    const contentPath = cleanText(input.contentPath, 240);
+    if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/.test(sourceRecordId)) {
+      throw Object.assign(new Error("valid protected source record ID is required"), { status: 400 });
+    }
+    if (!contentPath.startsWith("/")) {
+      throw Object.assign(new Error("valid protected content path is required"), { status: 400 });
+    }
+    const medication = contentPath === "/bhw-medication-request.html";
+    const source = medication ? "patient-medication-html" : "patient-content-html";
+    const requestType = medication ? "refill" : "clinical_review";
+    const requestId = `content-${deterministicId(source, sourceRecordId).slice(0, 48)}`;
+    const submitted = new Date(cleanText(input.submittedAt, 40));
+    const current = clock();
+    const receivedAt = Number.isFinite(submitted.getTime()) && submitted.getTime() <= current.getTime() + 300_000
+      ? iso(submitted) : iso(current);
+    const expected = {
+      bhwPatientId: cleanText(input.bhwPatientId, 20).toUpperCase(),
+      source,
+      sourceReference: sourceRecordId,
+      requestType,
+    };
+    let saved = await repository.getPatientRequest(requestId);
+    let replayed = Boolean(saved);
+    if (saved) {
+      const conflict = Object.entries(expected).some(([key, value]) => cleanText(saved[key], 240) !== value);
+      if (conflict) throw Object.assign(new Error("protected source record belongs to a different request"), { status: 409 });
+    } else {
+      if (expected.bhwPatientId !== "BHW0000" && typeof repository.patientExists === "function"
+          && !(await repository.patientExists(expected.bhwPatientId))) {
+        throw Object.assign(new Error("BHW Patient ID was not found in the Patient Registry"), { status: 404 });
+      }
+      saved = sanitizePatientRequest({
+        id: requestId,
+        bhwPatientId: expected.bhwPatientId,
+        requestType,
+        source,
+        sourceReference: sourceRecordId,
+        summary: medication
+          ? "Medication request received from protected patient form"
+          : "Patient response received from protected patient content",
+        priority: input.priority === "time-sensitive" ? "time-sensitive" : "routine",
+        notificationMode: medication ? "automatic" : "none",
+      }, { user, now: new Date(receivedAt), patientId: expected.bhwPatientId });
+      saved.receivedAt = receivedAt;
+      saved.sourceMetadata = {
+        sourceRecordId,
+        contentPath,
+        sourceStatus: cleanText(input.sourceStatus || "new", 40).toLowerCase(),
+        submittedAt: receivedAt,
+        clinicalValuesStoredIn: "protected-patient-content-service",
+      };
+      saved = await repository.createPatientRequest(saved, user);
+      await recordAudit("patient-content.projected", saved, user, { source, sourceRecordId, contentPath });
+    }
+
+    const inboundId = deterministicId("patient-content-inbound", requestId, sourceRecordId);
+    const inbound = await reserveCommunication(baseCommunication(saved, {
+      id: inboundId,
+      direction: "inbound",
+      channel: "portal",
+      transport: "protected-patient-form",
+      content: medication
+        ? "Medication request received from protected patient form; clinical details remain in the medication intake record."
+        : "Patient response received from protected content; clinical details remain in the source record.",
+      templateId: "protected-patient-content-reference",
+      actor: user?.sub,
+      status: "received",
+      containsPhi: false,
+    }));
+    if (inbound.created) {
+      await recordAudit("patient-content.communication-recorded", saved, user, { communicationId: inboundId, sourceRecordId });
+    }
+
+    let chatResult = { status: "replayed", reason: "existing-projection" };
+    let notification = { status: "replayed", reason: "existing-projection" };
+    if (!replayed) {
+      [chatResult, notification] = await Promise.all([
+        syncChat(saved, user),
+        saved.notificationMode === "none"
+          ? Promise.resolve({ status: "suppressed", reason: "notification-mode-none" })
+          : notifyForCurrentState(saved, user),
+      ]);
+    }
+    return { request: saved, communication: inbound.communication, replayed, chat: chatResult, notification };
+  }
+
   async function syncCreatedRequest(requestId, user = {}) {
     const request = await repository.getPatientRequest(requestId);
     if (!request) throw Object.assign(new Error("request was not found"), { status: 404 });
@@ -592,14 +687,17 @@ export function createWorkflowService(repository, {
 
   async function dispatchDue(header) {
     await verifyDispatcher(header);
-    if (!automationEnabled && !manualSmsEnabled) return { processed: 0, results: [] };
-    const due = (await repository.listDueCommunications(iso(clock()), 50))
-      .filter((communication) => automationEnabled || communication.templateId === "manual-no-phi");
+    if (!automationEnabled && !manualSmsEnabled && !medicationSmsEnabled) return { processed: 0, results: [] };
+    const due = await repository.listDueCommunications(iso(clock()), 50);
     const results = [];
     for (const queued of due) {
+      const request = await repository.getPatientRequest(queued.requestId);
+      const allowed = (queued.templateId === "manual-no-phi" && manualSmsEnabled)
+        || automationEnabled
+        || (medicationSmsEnabled && request?.requestType === "refill" && request?.source === "patient-medication-html");
+      if (!allowed) continue;
       const claimed = await repository.claimCommunication(queued.id, iso(clock()));
       if (!claimed?.claimed) continue;
-      const request = await repository.getPatientRequest(queued.requestId);
       if (!request) {
         await updateCommunication(queued.id, { status: "failed", statusReason: "request-not-found", updatedAt: iso(clock()) });
         continue;
@@ -876,8 +974,10 @@ export function createWorkflowService(repository, {
   return {
     automationEnabled,
     manualSmsEnabled,
+    medicationSmsEnabled,
     requestActions: [...REQUEST_ACTIONS],
     createRequest,
+    projectPatientContent,
     syncCreatedRequest,
     action,
     manualNotify,

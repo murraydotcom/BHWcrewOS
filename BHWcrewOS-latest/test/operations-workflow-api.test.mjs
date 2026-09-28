@@ -37,12 +37,17 @@ test("Operations API owns the authenticated request/action/communication contrac
   const workflow = {
     automationEnabled: false,
     manualSmsEnabled: true,
+    medicationSmsEnabled: false,
     async listRequests(filters, user) { calls.push(["list", filters, user]); return [patientRequest]; },
     async action(id, input, user) { calls.push(["action", id, input, user]); return { request: { ...patientRequest, status: "completed", statusCategory: "completed" } }; },
     async listCommunications(id, user) { calls.push(["communications", id, user]); return [{ id: "comm-1", requestId: id, status: "sent" }]; },
     async listTeamNotes(id, user) { calls.push(["team-notes", id, user]); return { notes: [{ id: "NOTE-1", requestId: id, content: "Synthetic internal note" }], unreadCount: 1 }; },
     async createTeamNote(id, input, user) { calls.push(["team-note-create", id, input, user]); return { note: { id: "NOTE-2", requestId: id, content: input.content }, replayed: false }; },
     async markTeamNotesRead(id, input, user) { calls.push(["team-notes-read", id, input, user]); return { requestId: id, lastReadAt: input.readThroughAt }; },
+    async projectPatientContent(input, user) {
+      calls.push(["patient-content", input, user]);
+      return { request: { ...patientRequest, id: "content-synthetic-projection" }, replayed: false, communication: { id: "content-inbound" } };
+    },
   };
   const app = createOperationsApp({ repository: {}, workflow, environment: {
     ALLOWED_ORIGINS: "https://crewhq.bhwmedical.org", CREWOS_OPERATIONS_TOKEN_SECRET: SECRET,
@@ -52,7 +57,14 @@ test("Operations API owns the authenticated request/action/communication contrac
   assert.equal(health.status, 200);
   assert.equal((await health.json()).manualSmsEnabled, true);
 
-  let response = await app(request("/v1/patient-requests?status=open"));
+  let response = await app(request("/v1/patient-content-projections", {
+    method: "POST",
+    body: { sourceRecordId: "submission-synthetic", bhwPatientId: "BHW0000", contentPath: "/bhw-medication-request.html" },
+  }));
+  assert.equal(response.status, 201);
+  assert.equal((await response.json()).request.id, "content-synthetic-projection");
+
+  response = await app(request("/v1/patient-requests?status=open"));
   assert.equal(response.status, 200);
   assert.equal((await response.json()).requests[0].id, patientRequest.id);
 
@@ -81,7 +93,7 @@ test("Operations API owns the authenticated request/action/communication contrac
   }));
   assert.equal(response.status, 200);
   assert.equal((await response.json()).readState.lastReadAt, NOW.toISOString());
-  assert.deepEqual(calls.map((call) => call[0]), ["list", "action", "communications", "team-notes", "team-note-create", "team-notes-read"]);
+  assert.deepEqual(calls.map((call) => call[0]), ["patient-content", "list", "action", "communications", "team-notes", "team-note-create", "team-notes-read"]);
 });
 
 test("Chat and Dialpad callbacks delegate verification to fail-closed workflow services", async () => {

@@ -726,9 +726,24 @@ function normalizeRequestRow(r){
   };
 }
 
+let LAST_CONTENT_SYNC=0;
+let CONTENT_SYNC_WARNING='';
+async function syncProtectedPatientContent(){
+  if(!TOKEN||Date.now()-LAST_CONTENT_SYNC<300000)return;
+  LAST_CONTENT_SYNC=Date.now();
+  try{
+    const response=await fetch('/.netlify/functions/patient-content-sync',{method:'POST',cache:'no-store',headers:{Authorization:`Bearer ${TOKEN}`}});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok&&response.status!==207)CONTENT_SYNC_WARNING=data.error||'Protected patient-form responses could not be refreshed.';
+    else if(response.status===207)CONTENT_SYNC_WARNING=`${data.failedCount||0} protected patient response${data.failedCount===1?'':'s'} could not be linked. Review the source patient ID.`;
+    else CONTENT_SYNC_WARNING='';
+  }catch(error){CONTENT_SYNC_WARNING=error.message||'Protected patient-form responses could not be refreshed.';}
+}
+
 async function load(){
   const banner=document.getElementById('banner');
   try{
+    await syncProtectedPatientContent();
     const client=await cloudClient();
     const [rows,actions]=await Promise.all([
       client.listPatientRequests({status:'',limit:500}),
@@ -742,7 +757,9 @@ async function load(){
       if(selectedRequest)ITEMS.unshift(normalizeRequestRow(selectedRequest));
     }
     document.getElementById('me').textContent='signed in';
-    banner.className='banner'; render();
+    if(CONTENT_SYNC_WARNING){banner.className='banner demo';banner.textContent=CONTENT_SYNC_WARNING;}
+    else banner.className='banner';
+    render();
     window.dispatchEvent(new CustomEvent('bhw:requests-updated',{detail:{requests:ITEMS}}));
     return;
   }catch(e){

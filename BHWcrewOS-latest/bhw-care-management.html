@@ -49,6 +49,7 @@ td select{width:100%;min-width:90px}
 .msg{padding:24px;text-align:center;color:var(--soft)}
 .disc{background:#fdf6ec;border:1px solid var(--sand);border-radius:9px;padding:9px 13px;font-size:11.5px;color:var(--clay-deep);margin-bottom:12px}
 .gate{max-width:460px;margin:60px auto;background:#fff;border:1px solid var(--line);border-radius:14px;padding:26px;text-align:center}
+.activity{margin-top:18px;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}.activity-head{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:flex-start;justify-content:space-between}.activity-head h2{font-family:var(--serif,Georgia);font-size:18px;margin:0}.activity-head p{margin:3px 0 0;font-size:11px;color:var(--soft)}.activity-list{display:grid}.activity-row{display:grid;grid-template-columns:minmax(180px,1.15fr) minmax(135px,.8fr) minmax(120px,.7fr) minmax(150px,.9fr) auto;gap:12px;align-items:center;padding:11px 16px;border-bottom:1px solid var(--line);font-size:11.5px}.activity-row:last-child{border-bottom:0}.activity-row .when{color:var(--soft);font-size:10.5px}.activity-row .status{text-transform:capitalize}.activity-row .open{color:var(--ok);font-weight:750;text-decoration:none;white-space:nowrap}.activity-warning{padding:9px 13px;background:#fdf6ec;color:var(--clay-deep);font-size:10.5px}@media(max-width:760px){.activity-row{grid-template-columns:1fr 1fr}.activity-row .open{grid-column:1/-1}}
 </style>
 </head>
 <body>
@@ -77,6 +78,9 @@ try { TOKEN = sessionStorage.getItem("crewos_token") || ""; } catch(e){}
 var STAGES = ["", "1 day", "4 days", "2 weeks", "1 month"];
 var STATUSES = ["Open", "In progress", "Complete", "Billed"];
 var ALL = [];
+var ACTIVITY = [];
+var ACTIVITY_WARNING = "";
+var LAST_CONTENT_SYNC = 0;
 var app = document.getElementById("app");
 
 function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
@@ -104,11 +108,18 @@ async function load(){
   app.innerHTML = '<div class="msg">Loading…</div>';
   var program = document.getElementById("program").value;
   var month = (document.getElementById("month").value||"").trim();
+  if(Date.now()-LAST_CONTENT_SYNC>300000){
+    var sync = await api("patient-content-sync", {});
+    LAST_CONTENT_SYNC = Date.now();
+    if(!sync.ok && sync.status!==207) ACTIVITY_WARNING = sync.d.error || "Patient HTML responses could not be refreshed.";
+  }
   var res = await api("care-log-data", { action:"list", program:program, month:month });
   if(res.status===401){ gate("Your session expired — sign in to crewOS again."); return; }
   if(!res.ok){ app.innerHTML = '<div class="msg">Couldn’t load: '+esc(res.d.error||res.status)+'</div>'; return; }
   document.getElementById("controls").style.display="flex";
   ALL = res.d.entries || [];
+  ACTIVITY = res.d.activity || [];
+  ACTIVITY_WARNING = res.d.activityWarning || ACTIVITY_WARNING;
   render();
 }
 
@@ -116,6 +127,9 @@ function render(){
   var q = (document.getElementById("q").value||"").toLowerCase();
   var rows = ALL.filter(function(e){
     return !q || (e.entry+" "+e.ctlNo+" "+e.icd+" "+e.coordinator).toLowerCase().indexOf(q)>-1;
+  });
+  var activity = ACTIVITY.filter(function(e){
+    return !q || (e.patientName+" "+e.bhwPatientId+" "+e.sourceLabel+" "+e.status).toLowerCase().indexOf(q)>-1;
   });
   var today = todayISO();
   var due = rows.filter(function(e){ return e.nextFollowUp && e.nextFollowUp <= today && e.status!=="Complete" && e.status!=="Billed"; }).length;
@@ -131,7 +145,7 @@ function render(){
       kpi(mins,"minutes logged")+
     '</div>';
 
-  if(!rows.length){ app.innerHTML = head + '<div class="tablewrap"><div class="msg">No entries for this filter. Adjust the program/month, or run the monthly import.</div></div>'; return; }
+  if(!rows.length){ app.innerHTML = head + '<div class="tablewrap"><div class="msg">No entries for this filter. Adjust the program/month, or run the monthly import.</div></div>' + activityMarkup(activity); return; }
 
   var body = rows.map(function(e){
     var dueCls = (e.nextFollowUp && e.nextFollowUp<=today && e.status!=="Complete" && e.status!=="Billed") ? " due" : "";
@@ -152,7 +166,21 @@ function render(){
   app.innerHTML = head +
     '<div class="tablewrap"><table><thead><tr>'+
     '<th>Patient</th><th>Program</th><th>ICD-10</th><th>Min</th><th>Activities done</th><th>Referrals completed</th><th>Next follow-up</th><th>Stage</th><th>Status</th><th></th>'+
-    '</tr></thead><tbody>'+body+'</tbody></table></div>';
+    '</tr></thead><tbody>'+body+'</tbody></table></div>' + activityMarkup(activity);
+}
+
+function activityMarkup(items){
+  var warning = ACTIVITY_WARNING ? '<div class="activity-warning">Patient activity refresh warning: '+esc(ACTIVITY_WARNING)+'</div>' : '';
+  var rows = items.length ? items.map(function(item){
+    var when = item.occurredAt ? new Date(item.occurredAt).toLocaleString([], {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}) : "—";
+    return '<div class="activity-row">'+
+      '<div class="pt">'+esc(item.patientName||item.bhwPatientId)+'<small>'+esc(item.bhwPatientId||"")+'</small></div>'+
+      '<div><b>'+esc(item.sourceLabel||"Patient activity")+'</b><div class="when">'+esc(when)+'</div></div>'+
+      '<div class="status"><span class="badge">'+esc(item.status||"received")+'</span></div>'+
+      '<div>'+esc(item.summary||"Protected patient activity")+'</div>'+
+      '<a class="open" href="'+esc(item.requestsUrl||"/bhw-requests.html")+'">Open request & log →</a></div>';
+  }).join("") : '<div class="msg">No check-ins, medication requests, or protected patient-form responses were received in this month.</div>';
+  return '<section class="activity">'+warning+'<div class="activity-head"><div><h2>Patient tracking & communications</h2><p>Read-only operational references from patient check-ins and private HTML forms. Clinical answers stay in their source record; these rows do not add billable minutes.</p></div><span class="badge">'+items.length+' events</span></div><div class="activity-list">'+rows+'</div></section>';
 }
 
 function kpi(n,l,cls){ return '<div class="kpi"><div class="n'+(cls?" "+cls:"")+'">'+n+'</div><div class="l">'+l+'</div></div>'; }
