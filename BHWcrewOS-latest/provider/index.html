@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script src="/crew-provider-gate.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BHW Provider — Pre-Bill Scrub &amp; Coding Assist</title>
+<title>BHW Provider — Claim Laundering</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -130,7 +130,7 @@ textarea{font-family:inherit;font-size:12.5px;padding:10px 12px;border:1px solid
       <div class="label">Pre-Bill</div>
       <a class="nav-item" href="patient-registry.html"><span class="ic">◎</span> Patient Registry</a>
       <a class="nav-item" href="workflow.html"><span class="ic">◷</span> 24-Hour Work Queue</a>
-      <div class="nav-item active"><span class="ic">◈</span> Encounter Scrub</div>
+      <div class="nav-item active"><span class="ic">◈</span> Claim Laundering</div>
       <a class="nav-item" href="risk.html"><span class="ic">◑</span> Risk &amp; Quality</a>
       <a class="nav-item" href="prior-auth.html"><span class="ic">✋</span> Prior Authorization</a>
       <a class="nav-item" href="tcm.html"><span class="ic">⏱</span> TCM / Discharges</a>
@@ -145,7 +145,7 @@ textarea{font-family:inherit;font-size:12.5px;padding:10px 12px;border:1px solid
     <div class="topbar">
       <div class="tb-left">
         <button class="hamburger" id="navToggle" aria-label="Open navigation" aria-expanded="false">☰</button>
-        <div class="crumb">Pre-Bill · <b>Encounter Scrub &amp; Coding Assist</b></div>
+        <div class="crumb">Clinical Intelligence · Encounter Operations · <b>Claim Laundering</b></div>
       </div>
       <div class="tools">
         <span class="pill" id="dataPill">loading…</span>
@@ -155,10 +155,8 @@ textarea{font-family:inherit;font-size:12.5px;padding:10px 12px;border:1px solid
 
     <div class="content">
       <div class="page-head">
-        <h2>Pre-Bill Scrub &amp; Coding Assist</h2>
-        <p>Enter the encounter before the superbill leaves the room. The shared Themis engine runs the real
-           payer-aware clean-claim edits (NCCI PTP, MUE, add-on, covered-dx, payer quirks); the assist layer
-           suggests the E/M level and lists what the note must contain for each code.</p>
+        <h2>Claim Laundering — Documentation &amp; Coding Review</h2>
+        <p>One review for documentation and coding: ICD-10-CM specificity, diagnosis support, CPT/ICD medical-necessity match, duplicate services, NCCI PTP/MUE edits, modifiers, add-on rules, payer corrections, and E/M level support.</p>
       </div>
 
       <div class="note">
@@ -248,13 +246,6 @@ textarea{font-family:inherit;font-size:12.5px;padding:10px 12px;border:1px solid
         </div>
       </div>
 
-      <!-- ============ COVERAGE ============ -->
-      <div class="card" style="margin-top:16px">
-        <div class="card-head"><h3>Documentation coverage</h3><span id="covPill" class="readiness"></span></div>
-        <div class="mini" style="margin-bottom:10px">The scrub engine covers every code with CMS data; this tracks the note↔code documentation map across the 137-code charge master. Codes without an entry still need a guide.</div>
-        <div id="coverage"></div>
-      </div>
-
       <!-- ============ CLINICAL NOTE ============ -->
       <div class="card" style="margin-top:16px">
         <div class="card-head"><h3>Clinical note</h3><span id="readiness"></span></div>
@@ -274,6 +265,13 @@ textarea{font-family:inherit;font-size:12.5px;padding:10px 12px;border:1px solid
           </div>
         </div>
       </div>
+
+      <!-- ============ COVERAGE ============ -->
+      <details class="card" style="margin-top:16px">
+        <summary class="card-head"><h3>Documentation coverage reference</h3><span id="covPill" class="readiness"></span></summary>
+        <div class="mini" style="margin-bottom:10px">The scrub engine covers every code with CMS data; this tracks the note↔code documentation map across the 137-code charge master. Codes without an entry still need a guide.</div>
+        <div id="coverage"></div>
+      </details>
     </div>
   </div>
 </div>
@@ -283,6 +281,7 @@ textarea{font-family:inherit;font-size:12.5px;padding:10px 12px;border:1px solid
 <script type="module">
 import { suggestEM, docChecklist } from "../engine/assist.mjs";
 import { analyzeNote } from "../engine/note-analyze.mjs";
+import { documentedTotalMinutes } from "../engine/coding-opportunities.mjs";
 import { checkPriorAuth } from "../engine/prior-auth.mjs";
 import { extractCodes } from "../engine/code-extract.mjs";
 
@@ -423,14 +422,17 @@ function pullCodes() {
   // Extract unvalidated so no real scribe code is dropped; the scrub engine
   // then flags anything unknown / not on BHW's charge master.
   const r = extractCodes(note);
-  if (!r.all.length) { $("pullStatus").textContent = "No CPT/HCPCS or ICD-10 codes found in the note."; return; }
+  const time = documentedTotalMinutes(note);
+  if (!r.all.length && !time) { $("pullStatus").textContent = "No CPT/HCPCS, ICD-10, or total-time statement found in the note."; return; }
   if (r.primary) $("em").value = r.primary;
   if (r.sameDayProcs[0]) $("proc").value = r.sameDayProcs[0];
   if (r.icd10[0]) $("dx").value = r.icd10[0];
   if (r.modifiers.length) $("mods").value = r.modifiers.join(", ");
+  if (time) $("minutes").value = time.minutes;
   const extraDx = r.icd10.length > 1 ? ` (+${r.icd10.length - 1} more dx: ${r.icd10.slice(1).join(", ")})` : "";
   const extraProc = r.sameDayProcs.length > 1 ? ` · other procs: ${r.sameDayProcs.slice(1).join(", ")}` : "";
-  $("pullStatus").innerHTML = `Pulled: <b>${esc([r.primary, r.sameDayProcs[0], r.icd10[0]].filter(Boolean).join(", "))}</b>${esc(extraDx + extraProc)} — confirm before billing.`;
+  const pulled = [r.primary, r.sameDayProcs[0], r.icd10[0], time ? `${time.minutes} total min` : ""].filter(Boolean);
+  $("pullStatus").innerHTML = `Pulled: <b>${esc(pulled.join(", "))}</b>${esc(extraDx + extraProc)} — confirm before billing.`;
   run();
 }
 

@@ -2,6 +2,7 @@ import { controlledMedicationReviews } from "./structured-encounter.mjs";
 
 const SEVERITIES = ["critical", "high", "moderate", "low"];
 const RESOLVED_DECISIONS = new Set(["occurred", "already_documented", "not_done", "dismissed"]);
+const EMPTY_FINDING = /^(?:none|n\/?a|not applicable|no (?:actionable )?(?:findings?|changes?)(?: required)?|nothing to report)[.!]?$/i;
 
 const clean = (value) => String(value ?? "").replace(/\r/g, "").trim();
 const unique = (values) => Array.from(new Set(values.filter(Boolean)));
@@ -111,6 +112,17 @@ function makeFinding(text, severity, index) {
     approvedAddendum: "",
     decidedAt: "",
   };
+}
+
+function isMeaningfulFinding(finding = {}) {
+  return Boolean(clean(finding.issue)) && !EMPTY_FINDING.test(clean(finding.issue));
+}
+
+function decisionKey(finding = {}) {
+  if (String(finding.id || "").startsWith("controlled:")) return `id:${finding.id}`;
+  return [finding.issue, finding.location, finding.suggestedFix, finding.supportingSource]
+    .map((value) => clean(value).toLowerCase().replace(/\s+/g, " "))
+    .join("|");
 }
 
 export function emptyClinicalAudit() {
@@ -305,6 +317,7 @@ export function parseClinicalAuditReport(reportText, encounter = {}) {
     if (section === "codes_after") codeLines.push(line);
   });
 
+  audit.findings = audit.findings.filter(isMeaningfulFinding);
   audit.guidelineNotes = unique(audit.guidelineNotes);
   audit.completeNotes = unique(audit.completeNotes);
   const documentedCodes = parseSuggestedCodes(documentedCodeLines);
@@ -332,7 +345,7 @@ export function normalizeClinicalAudit(value) {
     id: clean(finding.id) || `audit:${index + 1}`,
     severity: SEVERITIES.includes(finding.severity) ? finding.severity : severityFromText(finding.severity, "moderate"),
     decision: RESOLVED_DECISIONS.has(finding.decision) ? finding.decision : "pending",
-  }));
+  })).filter(isMeaningfulFinding);
   audit.guidelineNotes = unique([].concat(value.guidelineNotes || []).map(clean));
   audit.guidelineChecks = [].concat(value.guidelineChecks || []).map((item) => ({
     topic: clean(item?.topic),
@@ -354,6 +367,28 @@ export function normalizeClinicalAudit(value) {
   };
   audit.status = audit.status === "not_run" ? "not_run" : (audit.findings.some((finding) => finding.decision === "pending") ? "needs_resolution" : "resolved");
   return audit;
+}
+
+export function carryForwardClinicalAuditDecisions(nextValue, previousValue) {
+  const next = normalizeClinicalAudit(nextValue);
+  const previous = normalizeClinicalAudit(previousValue);
+  const resolved = new Map(previous.findings
+    .filter((finding) => RESOLVED_DECISIONS.has(finding.decision))
+    .map((finding) => [decisionKey(finding), finding]));
+  next.findings = next.findings.map((finding) => {
+    const prior = resolved.get(decisionKey(finding));
+    if (!prior) return finding;
+    return {
+      ...finding,
+      decision: prior.decision,
+      providerResponse: prior.providerResponse || "",
+      approvedAddendum: prior.approvedAddendum || "",
+      decidedAt: prior.decidedAt || "",
+      addendumAppliedAt: prior.addendumAppliedAt || "",
+    };
+  });
+  next.status = next.findings.some((finding) => finding.decision === "pending") ? "needs_resolution" : "resolved";
+  return next;
 }
 
 export function resolveClinicalAuditFinding(auditValue, findingId, decision, details = {}) {

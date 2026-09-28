@@ -26,6 +26,7 @@ const EM_MDM = Object.freeze({
 const MDM_RANK = Object.freeze({ straightforward: 1, low: 2, moderate: 3, high: 4 });
 const MDM_LABEL = Object.freeze({ 1: "straightforward", 2: "low", 3: "moderate", 4: "high" });
 const CLARIFICATION_DECISIONS = new Set(["pending", "occurred", "already_documented", "not_done", "not_applicable"]);
+const PROVIDER_BLOCKING_REVIEW_KINDS = new Set(["time_conflict", "current_code_evidence_review"]);
 
 const EXACT_DIAGNOSES = Object.freeze([
   { phrase: "essential hypertension", code: "I10", label: "Essential (primary) hypertension" },
@@ -67,6 +68,14 @@ export function documentedTotalMinutes(noteText = "") {
     }
   }
   return null;
+}
+
+export function requiresProviderCodingResolution(opportunity = {}) {
+  return Boolean(
+    opportunity.requiresDecision
+    && opportunity.status === "pending"
+    && PROVIDER_BLOCKING_REVIEW_KINDS.has(opportunity.reviewKind),
+  );
 }
 
 function visitFamily(visitType = "", codes = new Set()) {
