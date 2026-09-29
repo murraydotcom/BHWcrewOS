@@ -9,7 +9,7 @@
 // Cloud signing secret.
 
 const { getSession, json } = require("./_lib");
-const { listCloudPatients, searchCloudPatients } = require("./lib/cloud-patients");
+const { listCloudPatients, searchCloudPatients, resolveMedicareMbi } = require("./lib/cloud-patients");
 
 // Map a Master-List payer/plan onto the register form's Insurance options
 // (NP_INS in index.html). Unknown → "" (left blank; the raw payer is shown).
@@ -65,7 +65,7 @@ async function masterSearch(q, session) {
     ...p,
     insuranceLabel: insuranceLabel(p.payer, p.medicaidMco, p.insurancePlanName),
     insurance: mapInsurance(p.payer, p.insurancePlanName),
-    mbi: p.medicareMbi || "",
+    mbi: resolveMedicareMbi(p),
   }));
 }
 
