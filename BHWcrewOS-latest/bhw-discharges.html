@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-<title>Hospital Discharges &amp; TCM — Care Management</title>
+<title>CRISP Flow — Care Management</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -55,7 +55,7 @@ td b{font-weight:700}
 <div class="wrap">
   <div class="head">
     <div>
-      <h1>Hospital Visits &amp; Transitional Care</h1>
+      <h1>CRISP Flow</h1>
       <p class="sub">Admissions, discharges, and ED visits across your panel (CRISP ADT feed), surfaced so no discharge slips past the <b>TCM</b> window. Post-discharge follow-up is better care <i>and</i> billable (99495 / 99496).</p>
     </div>
     <div class="r">
@@ -91,12 +91,12 @@ td b{font-weight:700}
       <label>Diagnosis codes<input id="mDx" placeholder="I10; E11.9"></label>
       <label class="span3">Diagnosis description<textarea id="mDxDesc" placeholder="Optional diagnosis description"></textarea></label>
     </div>
-    <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:12px"><button class="btn" id="manualPatientSave" type="button">Add to Hospital Discharges</button><span class="mini" id="manualPatientNote"></span></div>
+    <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:12px"><button class="btn" id="manualPatientSave" type="button">Add to CRISP Flow</button><span class="mini" id="manualPatientNote"></span></div>
   </details>
 
   <details class="card" id="uploadCard">
     <summary style="cursor:pointer;font-weight:800;font-size:.9rem;color:var(--deep,#2f4551)">⬆ Load discharge data manually <span class="tag">CSV or paste</span></summary>
-    <div class="note" style="margin-top:10px"><b>Best:</b> copy the rows straight from a spreadsheet or Notion table and paste — that keeps names like “Horton, S.” intact. (Typed CSV also works; put quotes around any name that has a comma.) Header row, any column order: <b>patient, event, facility, date, disposition, complexity</b>. <b>date</b> = a real date (2026-08-01) <i>or</i> a number of days ago. <b>complexity</b> = high / moderate (leave blank for ED/admissions). Signed-in uploads are retained in the shared Hospital Visits feed for CrewHQ and RCM.</div>
+    <div class="note" style="margin-top:10px"><b>Best:</b> copy the rows straight from a spreadsheet or Notion table and paste — that keeps names like “Horton, S.” intact. (Typed CSV also works; put quotes around any name that has a comma.) Header row, any column order: <b>patient, event, facility, date, disposition, complexity</b>. <b>date</b> = a real date (2026-08-01) <i>or</i> a number of days ago. <b>complexity</b> = high / moderate (leave blank for ED/admissions). Signed-in uploads are retained in the shared CRISP Flow event feed for CrewHQ and RCM.</div>
     <input type="file" id="csvFile" accept=".csv,text/csv" style="margin:10px 0 6px">
     <textarea id="pasteBox" placeholder="patient, event, facility, date, disposition, complexity&#10;Doe, J., Discharge (inpatient), Sinai Hospital, 2026-08-01, Home, moderate&#10;Roe, M., ED visit, GBMC, 2, Discharged from ED," style="width:100%;min-height:96px;font-family:ui-monospace,monospace;font-size:12px;padding:9px;border:1px solid var(--line,#e2ddd2);border-radius:8px;background:var(--linen,#fff);color:var(--ink,#2e3d45)"></textarea>
     <div style="display:flex;gap:8px;margin-top:9px;flex-wrap:wrap;align-items:center">
@@ -209,7 +209,7 @@ function updateUrgentAlert(count){
   if(!count||!("Notification" in window)||Notification.permission!=="granted")return;
   const marker=`bhw-hospital-alert:${new Date().toISOString().slice(0,10)}:${count}`;
   try{if(localStorage.getItem(marker))return;localStorage.setItem(marker,new Date().toISOString());}catch(e){return;}
-  new Notification("TCM follow-up alert",{body:`${count} contact${count===1?" is":"s are"} due today or overdue. Open Hospital Visits in CrewHQ.`,tag:"bhw-hospital-alert"});
+  new Notification("TCM follow-up alert",{body:`${count} contact${count===1?" is":"s are"} due today or overdue. Open CRISP Flow in CrewHQ.`,tag:"bhw-hospital-alert"});
 }
 document.getElementById("alertsToggle").addEventListener("click",async()=>{
   if(!("Notification" in window))return;
@@ -475,7 +475,7 @@ document.getElementById("manualPatientSave").addEventListener("click",async e=>{
     await CLOUD.importTcmEvents([row],{source:"CrewHQ Population Health",sourceFile:"manual add patient",manual:true});
     await loadSharedEvents();
     ["mFirst","mLast","mDob","mAdmit","mDischarge","mFacility","mDisposition","mComplaint","mDx","mDxDesc"].forEach(id=>document.getElementById(id).value="");
-    note.textContent="Added. This patient event is now visible in CrewHQ and RCM Hospital Visits.";
+    note.textContent="Added. This patient event is now visible in CrewHQ CRISP Flow and RCM Hospital Visits.";
   }catch(error){note.textContent="Couldn't add this event: "+error.message;}
   finally{button.disabled=false;}
 });
