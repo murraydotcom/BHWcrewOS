@@ -2,6 +2,36 @@ const crypto = require("crypto");
 
 const apiBase = () => String(process.env.RCM_CLOUD_API_URL || "").replace(/\/$/, "");
 
+const MBI_PATTERN = /^[1-9][AC-HJ-KM-NP-RT-Y][AC-HJ-KM-NP-RT-Y0-9][0-9][AC-HJ-KM-NP-RT-Y][AC-HJ-KM-NP-RT-Y0-9][0-9][AC-HJ-KM-NP-RT-Y][AC-HJ-KM-NP-RT-Y][0-9][0-9]$/;
+const normalizeMedicareMbi = (value) => String(value || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+const isValidMedicareMbi = (value) => MBI_PATTERN.test(normalizeMedicareMbi(value));
+
+function isOriginalMedicareCoverage(record = {}) {
+  const label = [record.primaryPayer, record.payer, record.payerName, record.insurancePlanName, record.planName, record.insurance]
+    .filter(Boolean).join(" ").toLowerCase();
+  if (/medicare advantage|part\s*c|\bma\s+plan\b/.test(label)) return false;
+  return /medicare|\bcms\b|\bqmb\b|\bdual\b|part\s*[ab]\b/.test(label);
+}
+
+function resolveMedicareMbi(patient = {}) {
+  const explicit = normalizeMedicareMbi(patient.medicareMbi);
+  if (isValidMedicareMbi(explicit)) return explicit;
+
+  const coverages = Array.isArray(patient.coverageRecords) ? patient.coverageRecords : [];
+  for (const coverage of coverages) {
+    const nested = normalizeMedicareMbi(coverage?.medicareMbi);
+    if (isValidMedicareMbi(nested)) return nested;
+  }
+
+  const memberId = normalizeMedicareMbi(patient.memberId || patient.member);
+  if (isOriginalMedicareCoverage(patient) && isValidMedicareMbi(memberId)) return memberId;
+  for (const coverage of coverages) {
+    const nestedMemberId = normalizeMedicareMbi(coverage?.memberId);
+    if (isOriginalMedicareCoverage(coverage) && isValidMedicareMbi(nestedMemberId)) return nestedMemberId;
+  }
+  return "";
+}
+
 function cloudToken(actor = {}) {
   const secret = process.env.CREWHQ_CLOUD_TOKEN_SECRET;
   if (!secret) throw new Error("CREWHQ_CLOUD_TOKEN_SECRET is not configured");
@@ -92,6 +122,7 @@ function legacyPatient(p) {
     mco: p.medicaidMco || "",
     insurance: p.insurancePlanName || p.primaryPayer || p.payerName || "",
     member: p.memberId || "",
+    medicareMbi: resolveMedicareMbi(p),
     program: programs.join(" · "),
     programs,
     status,
@@ -126,4 +157,14 @@ function searchCloudPatients(patients, query, limit = 25) {
   }).slice(0, limit);
 }
 
-module.exports = { cloudRequest, legacyPatient, listCloudPatients, findCloudPatient, parsePatientName, searchCloudPatients };
+module.exports = {
+  cloudRequest,
+  legacyPatient,
+  listCloudPatients,
+  findCloudPatient,
+  parsePatientName,
+  searchCloudPatients,
+  normalizeMedicareMbi,
+  isValidMedicareMbi,
+  resolveMedicareMbi,
+};

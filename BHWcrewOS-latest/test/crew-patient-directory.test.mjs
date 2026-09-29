@@ -40,3 +40,11 @@ test("no fallback roster is produced when the Cloud Registry is unavailable", ()
   const result = buildPatientDirectory();
   assert.deepEqual(result, { patients: [], patientLabel: {} });
 });
+
+test("nested Registry MBI status reaches every CrewHQ chart through the shared directory", () => {
+  const result = buildPatientDirectory([cloud({
+    memberId: "",
+    coverageRecords: [{ payer: "CMS Medicare", medicareMbi: "1EG4-TE5-MK73" }],
+  })]);
+  assert.equal(result.patients[0].hasMbi, true);
+});

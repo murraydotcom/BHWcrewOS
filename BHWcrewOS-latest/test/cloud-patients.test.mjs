@@ -3,7 +3,13 @@ import test from 'node:test';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const { legacyPatient, parsePatientName, searchCloudPatients } = require('../netlify/functions/lib/cloud-patients');
+const {
+  legacyPatient,
+  parsePatientName,
+  searchCloudPatients,
+  resolveMedicareMbi,
+  isValidMedicareMbi,
+} = require('../netlify/functions/lib/cloud-patients');
 
 test('Cloud patient adapter exposes canonical picker fields without a legacy patient key', () => {
   const patient = legacyPatient({
@@ -42,4 +48,22 @@ test('new patient names store common suffixes separately from the legal last nam
   assert.deepEqual(parsePatientName('Aaron McCorkle', 'Jr.'), {
     legalFirstName: 'Aaron', legalLastName: 'McCorkle', nameSuffix: 'Jr', name: 'Aaron McCorkle Jr',
   });
+});
+
+test('Medicare MBI resolver reconciles canonical and coverage-record locations without guessing', () => {
+  assert.equal(resolveMedicareMbi({ medicareMbi: '1EG4-TE5-MK73' }), '1EG4TE5MK73');
+  assert.equal(resolveMedicareMbi({ coverageRecords: [{ payer: 'CMS Medicare', medicareMbi: '1EG4 TE5 MK73' }] }), '1EG4TE5MK73');
+  assert.equal(resolveMedicareMbi({ primaryPayer: 'Original Medicare', memberId: '1EG4TE5MK73' }), '1EG4TE5MK73');
+  assert.equal(resolveMedicareMbi({ primaryPayer: 'Commercial', memberId: '1EG4TE5MK73' }), '');
+  assert.equal(resolveMedicareMbi({ primaryPayer: 'Medicare Advantage', memberId: '1EG4TE5MK73' }), '');
+  assert.equal(resolveMedicareMbi({ primaryPayer: 'Medicare', memberId: 'INVALID12345' }), '');
+  assert.equal(isValidMedicareMbi('1EG4-TE5-MK73'), true);
+});
+
+test('Cloud patient adapter promotes a nested Registry MBI for every directory consumer', () => {
+  const patient = legacyPatient({
+    bhwPatientId: 'BHW0141', legalFirstName: 'Synthetic', legalLastName: 'Medicare',
+    primaryPayer: 'Medicare', coverageRecords: [{ payer: 'CMS', medicareMbi: '1EG4-TE5-MK73' }],
+  });
+  assert.equal(patient.medicareMbi, '1EG4TE5MK73');
 });

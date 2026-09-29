@@ -10,7 +10,13 @@
 
 const https = require("https");
 const { getSession, json } = require("./_lib");
-const { cloudRequest, listCloudPatients } = require("./lib/cloud-patients");
+const {
+  cloudRequest,
+  listCloudPatients,
+  normalizeMedicareMbi,
+  isValidMedicareMbi,
+  resolveMedicareMbi,
+} = require("./lib/cloud-patients");
 const BHW_NPI = "1306511597";
 const AWV_CODES = ["G0402", "G0438", "G0439"];
 
@@ -68,7 +74,7 @@ function shapePatient(patient) {
     first: patient.legalFirstName || "",
     last: patient.legalLastName || "",
     dob: patient.dob || patient.dateOfBirth || "",
-    mbi: String(patient.medicareMbi || "").replace(/[^A-Za-z0-9]/g, ""),
+    mbi: resolveMedicareMbi(patient),
     insurance: patient.primaryPayer || patient.insurance || "",
     status: patient.patientStatus || patient.status || "",
     source: patient,
@@ -203,8 +209,8 @@ exports.handler = async (event) => {
   try {
     if (b.action === "set-mbi") {
       if (!b.patientId || !b.mbi) return json(400, { error: "Patient and MBI required" });
-      const clean = String(b.mbi).replace(/[^A-Za-z0-9]/g, "").toUpperCase();
-      if (clean.length !== 11) return json(400, { error: "An MBI is 11 characters (letters and numbers, no dashes needed)" });
+      const clean = normalizeMedicareMbi(b.mbi);
+      if (!isValidMedicareMbi(clean)) return json(400, { error: "Enter a valid 11-character Medicare MBI" });
       const patients = await listCloudPatients(session);
       const patient = patients.find((item) => item.bhwPatientId === String(b.patientId).toUpperCase());
       if (!patient) return json(404, { error: "Patient not found in the Patient Registry" });
