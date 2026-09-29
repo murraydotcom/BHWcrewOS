@@ -251,13 +251,15 @@ exports.handler = async (event) => {
       )).map((profile) => ({
         id: profile.id || profile.bhwPatientId,
         patient: profile.bhwPatientId,
-        lastChecked: String(profile.updatedAt || "").slice(0, 10),
+        lastChecked: String(profile.coverageCheckedAt || profile.updatedAt || "").slice(0, 10),
         coverage: profile.coverage || "",
         planType: profile.planType || "",
         maName: profile.medicareAdvantagePlanName || "",
         awvLast: profile.awvLastDate || "",
         awvNext: profile.awvNextEligibleDate || "",
         awvStatus: profile.awvStatus || "Unknown",
+        sourceSystem: profile.sourceSystem || "",
+        coverageError: /^Stedi\s+\d+/i.test(profile.coverageNotes || "") ? String(profile.coverageNotes).slice(0, 240) : "",
       }));
     }
  

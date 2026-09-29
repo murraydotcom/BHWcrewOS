@@ -81,6 +81,11 @@ nav.rail{position:sticky;top:22px;align-self:start;display:flex;flex-direction:c
 .card h2{font-size:15px;font-weight:800;letter-spacing:.02em;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .card h2 .grow{flex:1}
 .card .lede{font-size:12.5px;color:var(--ink-soft);margin:6px 0 16px}
+.division-collapse-controls{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin:-10px 0 16px}
+.collapsible-card .card-collapse-toggle{margin-left:auto}
+.collapsible-card.is-collapsed{padding-bottom:18px}
+.collapsible-card.is-collapsed h2{margin-bottom:0}
+.collapsible-card.is-collapsed .collapsible-card-body{display:none}
 .prog-head{display:flex;gap:16px;margin-bottom:22px;align-items:flex-start}
 .prog-head .bar{width:4px;border-radius:4px;background:linear-gradient(var(--pc),transparent);align-self:stretch}
 .prog-head h1{font-size:27px;font-weight:300;letter-spacing:-.01em}
@@ -432,6 +437,8 @@ function focusRequestedRecord(){
   if(!requestId) return;
   const record = [...document.querySelectorAll("[data-request-id]")].find(node=>node.dataset.requestId===requestId && node.closest(".view.active"));
   if(!record) return;
+  const collapsedCard = record.closest(".collapsible-card.is-collapsed");
+  if(collapsedCard) setDivisionCardCollapsed(collapsedCard, false);
   setTimeout(()=>{
     record.scrollIntoView({behavior:"smooth",block:"center"});
     record.style.outline="3px solid var(--warn)";
@@ -449,7 +456,54 @@ function buildViews(){
   for(const e of PAGE_EMBEDS) html += embedView(e);
   html += mySpaceView();
   host.innerHTML = html;
+  installDivisionCollapsibles();
   setTimeout(checkEmbeds, 100);
+}
+
+const COLLAPSIBLE_DIVISION_VIEWS = ["view-primary-care", "view-care-management"];
+function collapseStorageGet(key){ try{return sessionStorage.getItem(key);}catch{return null;} }
+function collapseStorageSet(key,value){ try{sessionStorage.setItem(key,value);}catch{} }
+function setDivisionCardCollapsed(card, collapsed, persist=true){
+  if(!card) return;
+  card.classList.toggle("is-collapsed", collapsed);
+  const toggle = card.querySelector(":scope > h2 .card-collapse-toggle");
+  if(toggle){
+    toggle.textContent = collapsed ? "Expand" : "Collapse";
+    toggle.setAttribute("aria-expanded", String(!collapsed));
+  }
+  if(persist && card.dataset.collapseKey) collapseStorageSet(card.dataset.collapseKey, collapsed ? "1" : "0");
+}
+function installDivisionCollapsibles(){
+  COLLAPSIBLE_DIVISION_VIEWS.forEach((viewId)=>{
+    const view = document.getElementById(viewId);
+    if(!view) return;
+    const cards = [...view.children].filter((node)=>node.classList?.contains("card") && node.querySelector(":scope > h2"));
+    if(!cards.length) return;
+    cards.forEach((card,index)=>{
+      const heading = card.querySelector(":scope > h2");
+      const body = document.createElement("div");
+      const bodyId = `${viewId}-section-${index+1}`;
+      body.className = "collapsible-card-body";
+      body.id = bodyId;
+      [...card.children].filter((node)=>node!==heading).forEach((node)=>body.appendChild(node));
+      card.appendChild(body);
+      card.classList.add("collapsible-card");
+      card.dataset.collapseKey = `bhw-crewos-collapse:${viewId}:${index}`;
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "btn sm sec card-collapse-toggle";
+      toggle.setAttribute("aria-controls", bodyId);
+      toggle.addEventListener("click", ()=>setDivisionCardCollapsed(card, !card.classList.contains("is-collapsed")));
+      heading.appendChild(toggle);
+      setDivisionCardCollapsed(card, collapseStorageGet(card.dataset.collapseKey)==="1", false);
+    });
+    const controls = document.createElement("div");
+    controls.className = "division-collapse-controls";
+    controls.innerHTML = '<button type="button" class="btn sm sec" data-collapse-all>Collapse all sections</button><button type="button" class="btn sm sec" data-expand-all>Expand all sections</button>';
+    controls.querySelector("[data-collapse-all]").addEventListener("click", ()=>cards.forEach((card)=>setDivisionCardCollapsed(card,true)));
+    controls.querySelector("[data-expand-all]").addEventListener("click", ()=>cards.forEach((card)=>setDivisionCardCollapsed(card,false)));
+    view.querySelector(".prog-head")?.insertAdjacentElement("afterend", controls);
+  });
 }
 
 /* ---------- division page ---------- */
@@ -2397,6 +2451,27 @@ async function phGoalsSave(id){
 
 /* ============ Medicare Prevention Tracker (Stedi → HETS) ============ */
 const API_STEDI = "/.netlify/functions/stedi";
+let STEDI_STATUS = null, STEDI_STATUS_LOADING = false;
+
+function stediConnectionSummary(){
+  const successful = (D.prevention||[]).filter((row)=>row.sourceSystem==="Stedi HETS" && row.lastChecked && !row.coverageError && ["Active","Inactive"].includes(row.coverage));
+  const lastSuccessful = successful.map((row)=>row.lastChecked).sort().at(-1) || "";
+  if(STEDI_STATUS===null){ stediStatusEnsure(); return '<span class="pill gray">Checking Stedi setup…</span>'; }
+  if(STEDI_STATUS.error) return '<span class="pill warn">Stedi status unavailable</span>';
+  if(!STEDI_STATUS.configured) return '<span class="pill alert">Stedi setup required</span>';
+  return `<span class="pill ok">Stedi credentials configured</span> ${lastSuccessful
+    ? `<span class="pill gray">Last successful response ${esc(lastSuccessful)}</span>`
+    : '<span class="pill warn">No successful eligibility response recorded yet</span>'}`;
+}
+async function stediStatusEnsure(){
+  if(STEDI_STATUS!==null || STEDI_STATUS_LOADING) return;
+  STEDI_STATUS_LOADING = true;
+  try{ STEDI_STATUS = await api(API_STEDI, {action:"status"}); }
+  catch(e){ STEDI_STATUS = {configured:false,error:e.message}; }
+  STEDI_STATUS_LOADING = false;
+  const active = document.querySelector(".tab.active")?.dataset.view;
+  try{ buildViews(); activate(active || cssId(D.user.landing)); }catch(_){ }
+}
 
 function prevCard(){
   if(!D.prevention) return "";
@@ -2419,7 +2494,7 @@ function prevCard(){
   const due = rows.filter(x=>x.r && x.r.awvStatus==="Due now").length;
   return `<div class="card">
     <h2>Medicare prevention — AWV work queue <span class="grow"></span>${due?`<span class="pill alert">${due} due now</span>`:""}<button class="btn sm" onclick="prevBatch()">⟳ Run batch check</button></h2>
-    <p class="lede">Live from CMS (HETS) via Stedi: coverage, plan type, and AWV eligibility per Medicare patient. Due patients are one tap from the AWV wizard.</p>
+    <p class="lede">CMS HETS eligibility is routed through Stedi for coverage, plan type, and AWV eligibility. ${stediConnectionSummary()} Due patients are one tap from the AWV wizard.</p>
     ${rows.length ? `<div class="tbl-wrap"><table><thead><tr><th>Patient</th><th>Coverage</th><th>Plan</th><th>AWV</th><th>Gaps</th><th>Checked</th><th></th></tr></thead><tbody>
       ${rows.map(({p,r})=>`<tr>
         <td><b>${esc(p.name)}</b> ${!p.hasMbi?'<span class="pill warn">MBI needed</span>':""}</td>

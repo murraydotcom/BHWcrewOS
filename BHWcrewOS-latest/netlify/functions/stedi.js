@@ -3,6 +3,7 @@
 // Netlify secret scanning — same pattern as the bhw-rcm platform).
 //
 // Actions (POST, logged-in staff only):
+//   { action:"status" }                  → report whether credentials are configured; no eligibility request
 //   { action:"check",  patientId }        → run one eligibility check, upsert tracker
 //   { action:"batch",  offset }           → check up to 4 Medicare patients per call; loop with nextOffset
 //   { action:"set-mbi", patientId, mbi }  → save an MBI onto the patient record
@@ -188,9 +189,15 @@ exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return json(405, { error: "POST only" });
   const session = getSession(event);
   if (!session) return json(401, { error: "Sign in first" });
-  if (!stediKey()) return json(503, { error: "Stedi key not set — add STEDI_KEY_PREFIX and STEDI_KEY_SUFFIX in Netlify environment variables" });
   let b;
   try { b = JSON.parse(event.body || "{}"); } catch { return json(400, { error: "Bad JSON" }); }
+  if (b.action === "status") return json(200, {
+    configured: Boolean(stediKey()),
+    provider: "Stedi",
+    product: "CMS HETS 270/271 eligibility",
+    checksPatientData: false,
+  });
+  if (!stediKey()) return json(503, { error: "Stedi key not set — add STEDI_KEY_PREFIX and STEDI_KEY_SUFFIX in Netlify environment variables" });
   const clientIp = event.headers["x-nf-client-connection-ip"] || (event.headers["x-forwarded-for"] || "").split(",")[0].trim() || "";
 
   try {
