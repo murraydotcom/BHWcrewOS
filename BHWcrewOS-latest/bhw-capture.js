@@ -1248,7 +1248,18 @@ import {
       $("installBtn").style.display = "none";
     };
     window.addEventListener("appinstalled", function () { $("installBtn").style.display = "none"; });
-    if ("serviceWorker" in navigator) navigator.serviceWorker.register("/bhw-capture-sw.js").catch(function () {});
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function (registrations) {
+        return Promise.all(registrations.map(function (registration) {
+          var worker = registration.active || registration.waiting || registration.installing;
+          var legacyRootScope = new URL(registration.scope).pathname === "/";
+          var captureWorker = worker && new URL(worker.scriptURL).pathname === "/bhw-capture-sw.js";
+          return legacyRootScope && captureWorker ? registration.unregister() : false;
+        }));
+      }).then(function () {
+        return navigator.serviceWorker.register("/bhw-capture-sw.js", { scope: "/bhw-capture" });
+      }).catch(function () {});
+    }
   }
 
   function startLocalCache() {
