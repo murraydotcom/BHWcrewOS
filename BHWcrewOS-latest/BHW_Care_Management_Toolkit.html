@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Care Management Compliance Toolkit — BHW Medical Group</title>
+<script src="/crew-provider-gate.js"></script>
+<script src="/staff-chat-launcher.js" defer></script>
+<script src="/billing-toolkit-audit.js" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
@@ -1012,6 +1015,7 @@ function showTab(name){
   document.getElementById('tab-'+name).classList.add('active');
   document.getElementById('tabbtn-'+name).classList.add('active');
   if(name==='audit') recomputeDashboard();
+  window.BhwBillingToolkitAudit?.sectionViewed(name);
 }
 function showSubtab(name){
   document.querySelectorAll('.subtab-content').forEach(el=>el.classList.remove('active'));
@@ -1019,6 +1023,7 @@ function showSubtab(name){
   document.getElementById('subtab-'+name).classList.add('active');
   event.target.classList.add('active');
   if(name==='dashboard') recomputeDashboard();
+  window.BhwBillingToolkitAudit?.sectionViewed(name);
 }
 
 function resetTemplate(){
@@ -1774,8 +1779,13 @@ function countRows(bodyId, opts){
 }
 
 function recomputeDashboard(){
+  const summary = {audited:0, pass:0, review:0, error:0};
   [['apcm','apcmBody'], ['bhi','bhiBody'], ['rpm','rpmBody'], ['ccm','ccmBody'], ['pcm','pcmBody'], ['cocm','cocmBody']].forEach(([prefix,bodyId])=>{
     const r = countRows(bodyId);
+    summary.audited += r.audited;
+    summary.pass += r.pass;
+    summary.review += r.review;
+    summary.error += r.error;
     document.getElementById(prefix+'-audited').textContent = r.audited;
     document.getElementById(prefix+'-pass').textContent = r.pass;
     document.getElementById(prefix+'-review').textContent = r.review;
@@ -1784,14 +1794,23 @@ function recomputeDashboard(){
   });
 
   const o = countRows('overlapBody');
+  summary.audited += o.audited;
+  summary.pass += o.pass;
+  summary.review += o.review;
+  summary.error += o.error;
   document.getElementById('ov-logged').textContent = o.audited;
   document.getElementById('ov-ok').textContent = o.pass;
   document.getElementById('ov-error').textContent = o.error;
 
   const s = countRows('stackingBody');
+  summary.audited += s.audited;
+  summary.pass += s.pass;
+  summary.review += s.review;
+  summary.error += s.error;
   document.getElementById('stacking-logged').textContent = s.audited;
   document.getElementById('stacking-ok').textContent = s.pass;
   document.getElementById('stacking-error').textContent = s.error;
+  window.BhwBillingToolkitAudit?.auditCalculated(summary);
 }
 
 /* wire generic req-cell change (delegated) to recalc for the six requirement-scored tables */

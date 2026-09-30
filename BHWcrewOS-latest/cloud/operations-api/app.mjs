@@ -13,6 +13,7 @@ import {
 } from "./schema.mjs";
 import { buildPatientRequestBundle } from "./domain.mjs";
 import { verifyCrewToken, verifyIntakeClient, verifyPatientIdentityClient } from "./auth.mjs";
+import { buildBillingToolkitAuditEvent } from "./billing-toolkit-audit.mjs";
 import {
   patientIdentityReference,
   patientPortalAccessForStaff,
@@ -396,6 +397,19 @@ export function createOperationsApp({
       }
 
       const actor = staffActor(request, environment, now);
+      if (url.pathname === "/v1/staff-activity/billing-toolkit" && request.method === "POST") {
+        if (typeof repository.recordStaffActivity !== "function") {
+          throw apiError(503, "staff_activity_not_configured", "staff activity audit is not configured");
+        }
+        const event = buildBillingToolkitAuditEvent(await readJson(request), actor, { now: now() });
+        const result = await repository.recordStaffActivity(event);
+        return json(result.replayed ? 200 : 201, {
+          ok: true,
+          replayed: result.replayed,
+          auditEventId: result.event.auditEventId,
+          occurredAt: result.event.occurredAt,
+        }, cors);
+      }
       if (url.pathname === "/v1/site-content" && request.method === "GET") {
         if (typeof repository.listWebsiteContent !== "function") throw apiError(503, "site_content_not_configured", "website content is not configured");
         return json(200, { ok: true, websiteContent: await repository.listWebsiteContent(queryFilters(url)) }, cors);

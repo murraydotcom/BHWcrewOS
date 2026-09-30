@@ -129,6 +129,16 @@ export class FirestoreOperationsRepository {
     return projectPublishedWebsiteContent(records, siteId, options);
   }
 
+  async recordStaffActivity(event) {
+    const ref = this.auditEvents.doc(event.auditEventId);
+    return this.db.runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(ref);
+      if (snapshot.exists) return { event: snapshot.data(), replayed: true };
+      transaction.create(ref, event);
+      return { event, replayed: false };
+    });
+  }
+
   async resolvePatientIdentity(identity, { identityReference, now = new Date().toISOString() } = {}) {
     const attemptRef = this.verificationEvents.doc(identityReference);
     const attemptDoc = await attemptRef.get();
