@@ -408,6 +408,7 @@ function buildRail(){
   html += `<button class="tab" data-view="front-desk" style="--spine:var(--blue)">Front Desk OS</button>`;
   html += `<div class="rail-label">Pages</div>`;
   html += `<button class="tab" data-view="pg-guide" style="--spine:var(--clay)">Staff Guide</button>`;
+  html += `<button class="tab" data-view="pg-care-sop" style="--spine:var(--sage)">Care Program SOP</button>`;
   html += `<button class="tab" data-view="pg-panel" style="--spine:var(--teal)">Population Health</button>`;
   html += `<button class="tab" data-view="pg-caredue" style="--spine:var(--alert,#B4544B)">CM — Due This Week</button>`;
   html += `<button class="tab" data-view="pg-carelog" style="--spine:var(--ok,#1F6961)">Care Management Log</button>`;
@@ -793,6 +794,7 @@ function frontDeskView(){
 
 const PAGE_EMBEDS = [
   {id:"pg-guide",    title:"Staff Guide",         src:"/bhw-staff-guide.html",              blurb:"Where everything is and how to use it — searchable, printable."},
+  {id:"pg-care-sop", title:"Care Program SOP",    src:"/bhw-care-program-sop.html",          blurb:"Intake, enrollment, care plans, documentation, billing readiness, risk scoring, and 2026 Baltimore Medicare fee references."},
   {id:"pg-panel",    title:"Population Health",    src:"/bhw-panel-performance.html",        blurb:"One Registry-connected view of utilization, CRISP/TCM follow-up, care programs, and quality evidence."},
   {id:"pg-hormone",  title:"Hormone Analysis",     src:"/bhw-hormone-analysis.html",         blurb:"Lab-based hormone interpretation tool."},
   {id:"pg-ana",      title:"Positive ANA?",        src:"/bhw-positive-ana.html",             blurb:"Analyze a result, then immune patterns, cells, antibody mechanisms, 100 conditions, management protocols and integrative levers."},

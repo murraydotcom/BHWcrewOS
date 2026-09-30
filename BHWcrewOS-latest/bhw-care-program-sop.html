@@ -1,0 +1,637 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Care Program Intake &amp; Enrollment SOP · BHW CrewOS</title><script src="/crew-provider-gate.js"></script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"><link rel="stylesheet" href="/assets/bhw-tokens.css"><style>
+@page { size: Letter; margin: 0.92in 0.75in 0.88in; }
+* { box-sizing: border-box; }
+html { background: white; }
+body { margin: 0; color: #2A3038; font-family: Montserrat, Arial, sans-serif; font-size: 9.5pt; line-height: 1.22; }
+body::before { content: ''; position: fixed; z-index: -2; inset: 0; background: linear-gradient(145deg,#f9fbf8 0%,#f4f7f2 48%,#e5f0ef 100%); }
+.running-header { position: fixed; bottom: -0.75in; left: 0; right: 0; height: 0.29in; display: grid; grid-template-columns: 4.35in 2.65in; color: white; font-size: 7.2pt; z-index: 2; border-bottom: 4pt solid #93AB86; }
+.running-header .left { background: #637A67; padding: 5pt 7pt; font-size: 9.2pt; font-weight: 700; }
+.running-header .right { background: #527D82; padding: 6pt 7pt; text-align: right; }
+.running-footer { position: fixed; top: -0.80in; left: 0; right: 0; height: 0.27in; display: flex; justify-content: space-between; padding: 5pt 6pt 0; background: #E5EDDF; border-top: 3pt solid #93AB86; font-size: 7.5pt; z-index: 2; }
+.running-footer .page::after { content: counter(page); }
+.page-break { break-before: page; }
+.cover-logo { text-align: center; margin: 15pt 0 9pt; }
+.cover-logo img { width: 2.55in; height: auto; }
+h1, h2, h3 { break-after: avoid; page-break-after: avoid; break-inside: avoid; page-break-inside: avoid; }
+h1 { color: #000; font-size: 18pt; line-height: 1.05; margin: 8pt 0 12pt; padding: 4pt 8pt; background: #E5EDDF; border-left: 3pt solid #637A67; }
+h1.title { color: #2A3038; font-size: 27pt; line-height: 1.04; text-align: center; background: none; border: none; padding: 0; margin: 0 0 10pt; }
+h2 { color: #527D82; font-size: 12.5pt; margin: 13pt 0 5pt; }
+h3 { color: #527D82; font-size: 10.5pt; margin: 9pt 0 4pt; }
+p { margin: 0 0 6pt; orphans: 3; widows: 3; }
+.title + p { color: #B07A55; text-align: center; font-size: 13.5pt; font-weight: 700; margin-bottom: 12pt; }
+.title + p + p { color: #527D82; text-align: center; font-size: 10.5pt; font-weight: 700; margin-bottom: 4pt; }
+.title + p + p + p { color: #6B727B; text-align: center; margin-bottom: 4pt; }
+.title + p + p + p + p { text-align: center; margin-bottom: 3pt; }
+.title + p + p + p + p + p { color: #B07A55; text-align: center; font-weight: 700; margin-bottom: 13pt; }
+p.bullet { margin-left: 0.28in; text-indent: -0.18in; margin-bottom: 3pt; line-height: 1.18; }
+p.bullet::before { content: '• '; }
+p.number { margin-left: 0.28in; }
+table { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 5pt 0 9pt; font-size: 8.35pt; break-inside: auto; }
+tr { break-inside: avoid; page-break-inside: avoid; }
+th, td { border: 0.6pt solid #DCC8B1; padding: 4.5pt 5pt; vertical-align: middle; text-align: left; overflow-wrap: anywhere; line-height: 1.04; }
+th { background: #637A67; color: white; font-weight: 700; text-align: center; }
+tr:nth-child(odd) td { background: #E5F0EF; }
+@media screen {
+  html{scroll-behavior:smooth;background:#f7f5f2}
+  body{max-width:1180px;margin:0 auto;padding:96px 28px 72px;font-size:14px;line-height:1.62;background:rgba(255,255,255,.88);box-shadow:0 0 48px rgba(49,68,61,.10)}
+  body::before{position:fixed}
+  .sop-toolbar{position:fixed;z-index:20;left:0;right:0;top:0;display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px max(18px,calc((100vw - 1180px)/2 + 28px));background:rgba(247,245,242,.96);border-bottom:1px solid #d9e2d6;box-shadow:0 5px 18px rgba(49,68,61,.08);backdrop-filter:blur(12px)}
+  .sop-toolbar a,.sop-toolbar button{border:1px solid #cfd9cd;border-radius:999px;background:#fff;color:#2A3038;padding:9px 14px;font:700 12px Montserrat,Arial,sans-serif;text-decoration:none;cursor:pointer}
+  .sop-toolbar .primary{background:#527D82;color:#fff;border-color:#527D82}
+  .sop-toolbar input{min-width:230px;flex:1;border:1px solid #cfd9cd;border-radius:999px;background:#fff;padding:9px 14px;font:500 12px Montserrat,Arial,sans-serif}
+  .sop-toolbar label{font-size:11px;font-weight:700;color:#637A67;white-space:nowrap}
+  .sop-notice{margin:0 0 22px;padding:13px 16px;border:1px solid #DCC8B1;border-left:5px solid #B07A55;border-radius:12px;background:#fffaf3;color:#5c4636;font-size:12px}
+  .cover-logo{margin-top:16px}
+  h1{scroll-margin-top:100px;border-radius:7px;padding:9px 12px;margin-top:28px}
+  h1.title{font-size:38px;max-width:900px;margin:0 auto 12px}
+  h2{font-size:18px;margin-top:22px}
+  h3{font-size:15px}
+  p{margin-bottom:10px}
+  .page-break{display:none}
+  table{font-size:12px;line-height:1.35;margin:12px 0 18px}
+  th,td{padding:8px 9px;line-height:1.35}
+  .table-scroll{overflow-x:auto;border-radius:12px;box-shadow:0 1px 0 rgba(0,0,0,.04)}
+  .table-scroll table{min-width:760px}
+  .sop-section{padding-top:2px}
+  .sop-section[hidden]{display:none}
+  .no-results{display:none;margin:24px 0;padding:22px;border:1px dashed #B07A55;border-radius:12px;text-align:center;color:#6B727B}
+  .no-results.show{display:block}
+  a.cms-link{color:#356c70;font-weight:700}
+}
+@media(max-width:720px){
+  body{padding:150px 16px 56px}
+  .sop-toolbar{align-items:stretch}
+  .sop-toolbar label{width:100%}
+  .sop-toolbar input{min-width:100%;order:2}
+  h1.title{font-size:29px}
+}
+@media print{
+  .sop-toolbar,.sop-notice,.no-results{display:none!important}
+  body{max-width:none;padding:0;background:transparent}
+  body::before{background:linear-gradient(145deg,#fff 0%,#f4f7f2 55%,#e5f0ef 100%)}
+  a{color:inherit;text-decoration:none}
+}
+</style></head><body><nav class="sop-toolbar" aria-label="Care program SOP tools"><label for="sopSearch">Care Program SOP</label><input id="sopSearch" type="search" placeholder="Search APCM, consent, care plan, billing, risk…"><a href="/crewos" target="_top">CrewOS</a><a href="/bhw-care-management.html">Care Management Log</a><a class="primary" href="/docs/BHW_Care_Program_Intake_Enrollment_SOP_2026.docx" download>Download Word SOP</a><button type="button" onclick="window.print()">Print / Save PDF</button></nav><main id="sopContent"><div class="sop-notice"><b>Internal education and workflow reference.</b> Guidance is current through September 29, 2026. Current CMS and payer rules, the treating practitioner, and BHW RCM remain controlling. A green readiness result is not authorization to submit a claim.</div><div class="cover-logo"><img src="/assets/bhw-medical-logo.png" alt="BHW Medical Group" onerror="this.style.display='none'"></div><h1 class="title">Care Program Intake and Enrollment Assessment SOP</h1>
+<p>Crew training and Medicare fee for service billing readiness</p>
+<p>BHW Medical Group</p>
+<p>Guidance current through September 29 2026</p>
+<p>Owner  Clinical Operations and Revenue Cycle Management</p>
+<p>Approval  Medical Director and Compliance review required before adoption</p>
+<p>This SOP teaches staff how to screen, enroll, document, and route Medicare care-program work. Staff may identify a patient as potentially eligible, but the billing practitioner confirms clinical eligibility and the Revenue Cycle Management team confirms claim readiness. The patient record must remain cumulative when coverage changes or a program ends.</p>
+<p>Medicare fee for service is the base rule set. Medicare Advantage, Maryland Medicaid and MCOs, CareFirst, UHC, and other payers may use different coverage, authorization, staffing, coding, or combination rules. The payer-specific matrix must be checked before activation and before each claim.</p>
+<div class="page-break"></div>
+<h1>Document Control</h1>
+<table><tr><th>Field</th><th>Standard</th></tr><tr><td>Document owner</td><td>Clinical Operations and Revenue Cycle Management</td></tr><tr><td>Clinical authority</td><td>Billing practitioner and Medical Director</td></tr><tr><td>Billing authority</td><td>BHW Revenue Cycle Management and current payer policy</td></tr><tr><td>Effective date</td><td>Enter after approval</td></tr><tr><td>Review cadence</td><td>At least annually and after a CMS final rule, CPT or HCPCS update, payer notice, denial trend, or workflow change</td></tr><tr><td>Source scope</td><td>CMS and Medicare fee for service guidance current through September 29 2026</td></tr><tr><td>Applies to</td><td>Staff who refer, screen, enroll, coordinate, document, supervise, review, code, or bill care-program services</td></tr><tr><td>Does not authorize</td><td>Independent diagnosis, automatic enrollment, code selection by unapproved staff, claim submission without attestation, or use outside staff scope of practice</td></tr></table>
+<h1>How to Use This SOP</h1>
+<p>Use Sections 1 through 6 for daily intake and enrollment. Use the program playbooks in Section 7 when a patient is being assessed for one or more programs. Use Sections 8 through 11 for care planning, monthly documentation, billing review, and exceptions. The appendices contain the question set, readiness checklist, patient explanation, and source verification list.</p>
+<h1>Contents</h1>
+<p class="bullet">1 Purpose and scope</p>
+<p class="bullet">2 Nonnegotiable rules</p>
+<p class="bullet">3 Roles and accountability</p>
+<p class="bullet">4 Care Program Intake and Enrollment workflow</p>
+<p class="bullet">5 Common assessment requirements</p>
+<p class="bullet">6 Program comparison</p>
+<p class="bullet">7 Program playbooks</p>
+<p class="bullet">8 Whole Person Care Plan standard</p>
+<p class="bullet">9 Monthly activity documentation and status lights</p>
+<p class="bullet">10 Program combinations and duplicate billing safeguards</p>
+<p class="bullet">11 Monthly billing workflow</p>
+<p class="bullet">12 Quality controls and metrics</p>
+<p class="bullet">13 Exceptions and escalation</p>
+<p class="bullet">Appendices A through F</p>
+<div class="page-break"></div>
+<h1>1 Purpose and Scope</h1>
+<p>This SOP establishes one intake and enrollment process for APCM, CCM, PCM, General BHI, psychiatric CoCM, CHI, PIN, PIN peer support, RPM, and RTM. TCM is included as a linked discharge workflow because it is triggered by a qualifying transition rather than annual program enrollment.</p>
+<p>The operating record is patient centered. Each program has its own eligibility, consent, care-plan module, responsible practitioner, enrollment history, monthly activity, and billing history. The shared record prevents staff from rebuilding the same patient story in separate lists.</p>
+<h2>Intended outcomes</h2>
+<p class="bullet">Identify potentially appropriate programs without treating a screening result as a clinical decision.</p>
+<p class="bullet">Explain the program, cost sharing, assigned care-team person, communication methods, after-hours limits, and right to stop before activation.</p>
+<p class="bullet">Create one versioned Whole Person Care Plan with the modules required by each active program.</p>
+<p class="bullet">Show exactly which required element is missing before enrollment or billing.</p>
+<p class="bullet">Preserve the cumulative roster, care-plan versions, communications, monthly work, claims, declines, pauses, and end dates.</p>
+<h2>Scope boundaries</h2>
+<p class="bullet">The Patient Registry and Patient 360 remain the authoritative identity and longitudinal patient record. Do not create a second patient identity to solve a workflow problem.</p>
+<p class="bullet">CrewOS may project work queues, assessment status, communications, and readiness evidence. Clinical facts and signed plans must read back to the protected clinical record.</p>
+<p class="bullet">BHW RCM remains the authoritative charge and claim ledger. A green program line is a pre-review result, not permission to transmit a claim.</p>
+<p class="bullet">Only the practitioner acting within scope confirms diagnoses, medical necessity, eligibility, plan of care, supervision, and final billing attestation.</p>
+<h1>2 Nonnegotiable Rules</h1>
+<p class="number">Verify the patient against the existing Registry record before assessment, enrollment, care-plan creation, time logging, or messaging.</p>
+<p class="number">Record potential eligibility separately from active enrollment and separately from monthly billability.</p>
+<p class="number">Verify payer, coverage dates, product, coordination of benefits, and known participation in a CMS model before using Medicare fee for service rules.</p>
+<p class="number">Keep program-specific consent evidence and the BHW annual review date. Do not assume every Medicare consent expires annually.</p>
+<p class="number">Do not activate a program until the required practitioner review, initiating visit, consent, care plan, staff assignment, and patient instructions are complete.</p>
+<p class="number">Do not count the same minute, device day, interaction, or work product toward more than one service.</p>
+<p class="number">Do not count scheduling-only work, clerical work, transcription, translation, training unrelated to the patient, or general administration as patient-specific billable time.</p>
+<p class="number">Preserve prior coverage, program, care-plan, consent, activity, claim, decline, pause, and termination history. Correct records through an auditable amendment.</p>
+<p class="number">Place claims on hold when required documentation is missing, inconsistent, unsigned, outside scope, or not read back from the protected record.</p>
+<p class="number">Use 911 or emergency services for emergencies and 988 for suicide or behavioral-health crisis support when appropriate. Care-program messaging is not an emergency service.</p>
+<h2>Readiness status</h2>
+<table><tr><th>Status</th><th>Meaning</th><th>Required action</th></tr><tr><td>Red</td><td>A required enrollment or billing element is absent, expired, contradictory, or failed validation.</td><td>Do not activate or send the claim. Route to the named owner and keep the reason visible.</td></tr><tr><td>Amber</td><td>The patient may qualify, but evidence is incomplete; or the month has not yet met the applicable activity, time, data, interaction, or review rule.</td><td>Continue work or obtain review. Keep the record prospective or pending; do not represent it as bill-ready.</td></tr><tr><td>Green</td><td>Required intake evidence is present, and the monthly record has passed the applicable automated checks.</td><td>Send to the billing practitioner and RCM for attestation and final claim review. Green is not a payment guarantee.</td></tr></table>
+<div class="page-break"></div>
+<h1>3 Roles and Accountability</h1>
+<table><tr><th>Role</th><th>Responsible work</th><th>May not do independently</th></tr><tr><td>Referral source or front desk</td><td>Identify an existing Registry patient, record reason for referral, payer information, and objective screening information within training.</td><td>Confirm clinical eligibility, promise coverage, select a billing code, or activate a program.</td></tr><tr><td>Care coordinator or trained auxiliary personnel</td><td>Complete assigned assessment sections, explain the approved patient script, document consent when allowed, perform assigned care coordination, maintain the care plan, and escalate findings.</td><td>Diagnose, change treatment, attest medical necessity, or count work outside scope and supervision.</td></tr><tr><td>Behavioral health care manager</td><td>Perform BHI or CoCM assessment, measurement-based follow-up, care-plan work, registry tracking, brief interventions within competency, and consultation workflow.</td><td>Substitute for the psychiatric consultant or treating practitioner, or choose a claim without review.</td></tr><tr><td>Psychiatric consultant</td><td>Conduct systematic CoCM caseload review and give documented recommendations to the treating practitioner through the approved workflow.</td><td>Assume direct treatment responsibility unless a separate clinical relationship is established.</td></tr><tr><td>Billing practitioner</td><td>Confirm eligibility, medical necessity, initiating visit, care plan, supervision, continued need, and monthly attestation; make clinical decisions.</td><td>Delegate the final attestation without an approved legal and payer basis.</td></tr><tr><td>RCM or coding reviewer</td><td>Verify payer rules, code family, time or device thresholds, combinations, diagnosis linkage, dates, modifiers when applicable, and claim readiness.</td><td>Alter provider narrative, plan, signature, or clinical facts.</td></tr><tr><td>Medical Director or Compliance</td><td>Approve policy, staff qualifications, supervision model, exceptions, annual updates, and corrective action.</td><td>Treat an automated status as proof of coverage or payment.</td></tr></table>
+<h2>RACI summary</h2>
+<table><tr><th>Process</th><th>Responsible</th><th>Accountable</th><th>Consulted or informed</th></tr><tr><td>Registry identity and payer verification</td><td>Intake staff</td><td>Operations lead</td><td>Patient and RCM</td></tr><tr><td>Potential eligibility screen</td><td>Trained assessor</td><td>Billing practitioner</td><td>Care coordinator</td></tr><tr><td>Clinical eligibility and initiating visit</td><td>Billing practitioner</td><td>Billing practitioner</td><td>Care team</td></tr><tr><td>Consent and patient education</td><td>Practitioner or permitted staff</td><td>Billing practitioner</td><td>Patient or representative</td></tr><tr><td>Care plan and program modules</td><td>Care team</td><td>Billing practitioner</td><td>Patient, caregiver, specialists</td></tr><tr><td>Monthly activity record</td><td>Person performing work</td><td>Supervising practitioner</td><td>Care coordinator</td></tr><tr><td>Claim readiness review</td><td>RCM</td><td>Authorized claim approver</td><td>Billing practitioner</td></tr><tr><td>Policy and payer matrix update</td><td>Compliance and RCM</td><td>Medical Director</td><td>Operations</td></tr></table>
+<h1>4 Care Program Intake and Enrollment Workflow</h1>
+<p>Complete one assessment that opens program-specific branches. A patient may screen as potentially eligible for several programs. Each program still requires its own decision, consent record when applicable, module, status, and billing review.</p>
+<p>1. Select the existing Registry patient. Confirm at least two approved identity elements before opening the assessment.</p>
+<p>2. Verify current payer, plan, effective dates, secondary coverage, and whether another organization is already furnishing the same care-management service.</p>
+<p>3. Record the referral source, concern, diagnoses already on record, recent utilization, medications, specialists, barriers, caregiver involvement, communication preferences, and patient goals.</p>
+<p>4. Select every program that may be appropriate. The system labels each selection Potential until the billing practitioner reviews it.</p>
+<p>5. Complete the common assessment and each selected program branch. A referral source may supply objective information, but the patient or authorized representative must receive the program explanation and provide patient-specific goals and preferences.</p>
+<p>6. Route the assessment to the billing practitioner. The practitioner records Potentially meets, More information needed, or Does not currently meet, with a reason.</p>
+<p>7. Verify or complete the program&#x27;s initiating visit. Link the visit date, practitioner, encounter identifier, and required findings.</p>
+<p>8. Explain cost sharing, one-practitioner rules when applicable, expected communication, assigned care-team person, privacy, emergency limitations, and the right to stop. Record written or verbal consent exactly as permitted for that program.</p>
+<p>9. Create the Whole Person Care Plan and the selected program modules. Give the patient or caregiver a copy when CMS requires it and record how and when it was delivered.</p>
+<p>10. Assign the care-team person, supervising practitioner, contact cadence, Care Connect instructions, escalation plan, and next contact.</p>
+<p>11. Activate each approved program separately. Add the patient to the cumulative roster without removing older programs or coverage periods.</p>
+<p>12. At every month end, evaluate each active program against the applicable non-time, time, device, data, interaction, and documentation rules before RCM review.</p>
+<h2>Required patient program record</h2>
+<p class="bullet">Program and potential-eligibility reason; payer and coverage effective dates; eligibility-screening result and practitioner decision.</p>
+<p class="bullet">Billing practitioner, supervising practitioner when different, assigned care-team person, and staff qualification evidence.</p>
+<p class="bullet">Consent content, method, date, person obtaining it, CMS or payer renewal rule, BHW annual review date, and revocation date if applicable.</p>
+<p class="bullet">Initiating-visit rule, date, practitioner, encounter identifier, and documented findings.</p>
+<p class="bullet">Care-plan version, approval date, patient-copy delivery, revisions, and program-module status.</p>
+<p class="bullet">Potential, active, paused, declined, ended, and reactivated dates with reasons.</p>
+<p class="bullet">Risk score, clinical override, last meaningful contact, next contact, escalation status, and patient communication preferences.</p>
+<p class="bullet">Monthly activity, device or data evidence, time, interactive communication, practitioner review, billing result, denial, appeal, and payment history.</p>
+<h1>5 Common Assessment Requirements</h1>
+<table><tr><th>Domain</th><th>Minimum information</th></tr><tr><td>Identity and coverage</td><td>Registry ID; legal name; date of birth; payer; product; member ID; effective dates; secondary payer; QMB status when relevant; other care-management vendor or practitioner.</td></tr><tr><td>Clinical picture</td><td>Active diagnoses; duration and expected course; stability; recent ED, hospital, SNF, and urgent visits; specialist care; pending tests; symptoms; functional and cognitive needs.</td></tr><tr><td>Medication and treatment</td><td>Medication reconciliation source and date; adherence; access; side effects; treatment changes; durable medical equipment; current devices; self-management ability.</td></tr><tr><td>Behavioral health</td><td>Identified condition; functional effect; safety concerns; validated measures when appropriate; current treatment; response; substance use; behavioral-health clinicians.</td></tr><tr><td>Social and access needs</td><td>Food, housing, transportation, utilities, financial strain, health literacy, language, technology, caregiving, community resources, and the way each need interferes with diagnosis or treatment.</td></tr><tr><td>Patient priorities</td><td>Goals in the patient&#x27;s words; preferred contact method and time; caregiver permissions; readiness; concerns about cost; expected support; reasons for declining.</td></tr><tr><td>Communication and safety</td><td>Assigned person; normal hours; after-hours instructions; secure messaging or Care Connect use; urgent escalation; 988 and 911 education when relevant.</td></tr><tr><td>Program history</td><td>Current and previous programs; consent; enrollment; reason for ending; prior payer; prior practitioner; prior billing; duplicate-service check.</td></tr></table>
+<h2>Assessment output</h2>
+<p class="bullet">Potentially meets. Required screening facts are present and the practitioner must confirm eligibility and medical necessity.</p>
+<p class="bullet">Information missing. The record names each missing item and its owner. The patient stays prospective or pending.</p>
+<p class="bullet">Does not currently meet. Record the specific reason, date, decision maker, and whether reassessment is appropriate.</p>
+<p class="bullet">Declined. Preserve the offered program, explanation, patient response, and whether the patient permits future outreach.</p>
+<div class="page-break"></div>
+<h1>6 Program Comparison</h1>
+<table><tr><th>Program</th><th>Potential qualification</th><th>Billing basis</th><th>Consent and start</th></tr><tr><td>APCM</td><td>Primary-care focal point; level selected by chronic-condition burden and QMB status.</td><td>G0556, G0557, or G0558 once per calendar month; not time based.</td><td>Written or verbal consent before start, generally once; initiating-visit exception rules apply.</td></tr><tr><td>CCM</td><td>At least 2 chronic conditions expected at least 12 months or until death and associated risk.</td><td>99490 or 99491 base; 99439 or 99437 add-on; complex CCM 99487 and 99489.</td><td>Consent once unless billing practitioner changes; initiating visit for new or not seen within 1 year.</td></tr><tr><td>PCM</td><td>One high-risk chronic condition expected at least 3 months with qualifying risk and disease-specific management need.</td><td>99424 or 99426 first 30 minutes; 99425 or 99427 additional 30 minutes.</td><td>Document consent before start; new initiating visit after 1 year of continued PCM.</td></tr><tr><td>General BHI</td><td>Identified behavioral, mental, psychiatric, or substance-use condition needing assessment, planning, monitoring, and intervention.</td><td>99484 at least 20 minutes; G0323 for eligible clinical psychologist or clinical social worker pathway.</td><td>Consent once unless billing practitioner changes; qualifying initiating visit.</td></tr><tr><td>CoCM</td><td>Behavioral-health condition suited to the three-person collaborative model, often with incomplete response to usual care.</td><td>99492 first 70 minutes; 99493 subsequent 60; 99494 each additional 30; G2214 first 30.</td><td>Consent once unless billing practitioner changes; initiating visit; BH care manager, psychiatric consultant, registry, and weekly caseload review.</td></tr><tr><td>CHI</td><td>Unmet upstream driver significantly limits the practitioner&#x27;s ability to diagnose or treat the addressed problem.</td><td>G0019 first 60 minutes; G0022 each additional 30 minutes.</td><td>Advance consent once unless billing practitioner changes; qualifying initiating visit by same billing practitioner.</td></tr><tr><td>PIN</td><td>One serious high-risk condition expected at least 3 months requiring disease-specific navigation.</td><td>G0023 first 60 minutes; G0024 each additional 30 minutes.</td><td>Consent at start and annually; new consent if practitioner changes; qualifying initiating visit.</td></tr><tr><td>PIN peer support</td><td>PIN-eligible condition where trained peer support is clinically appropriate, commonly severe mental illness or substance-use disorder.</td><td>G0140 first 60 minutes; G0146 each additional 30 minutes.</td><td>Consent at start and annually; trained peer support personnel and qualifying initiating visit.</td></tr><tr><td>RPM</td><td>Acute or chronic condition requiring physiologic monitoring with an internet-connected medical device that automatically transmits data.</td><td>Setup 99453; device supply 99445 for 2 to 15 days or 99454 for 16 to 30 days; management 99470 or 99457 and 99458 as applicable.</td><td>Consent at start or when furnished; medical necessity, device, data days, review, and interactive communication must support selected code. Current BHW gate: hold as Prospective until a qualifying automatic device-data pipeline is active; manual check-ins do not count as device days.</td></tr><tr><td>RTM</td><td>Condition requiring remote monitoring of nonphysiologic therapeutic data using an appropriate device and treatment plan.</td><td>Setup 98975; supply codes by data type and days; management 98979 or 98980 and 98981 as applicable.</td><td>Document consent and order or plan requirements; verify 2026 code descriptors, device, data days, and interaction. Current BHW gate: hold as Prospective until an eligible RTM device or software pathway and clinical use case are approved.</td></tr><tr><td>TCM</td><td>Qualifying discharge from an approved inpatient or partial-hospital setting to a community setting.</td><td>99495 moderate MDM with visit within 14 days; 99496 high MDM with visit within 7 days.</td><td>Not an annual enrollment. Contact within 2 business days and medication reconciliation by the face-to-face visit.</td></tr></table>
+<p>Code selection must use the current-year code descriptor, Medicare fee schedule, NCCI edits, payer policy, and the actual personnel and work furnished. The comparison above is a screening and documentation aid, not a substitute for coding review.</p>
+<div class="page-break"></div>
+<h1>7 Program Playbooks</h1>
+<h2>7.1 Advanced Primary Care Management</h2>
+<p>Medicare basis: CMS Advanced Primary Care Management Services and CY 2026 PFS guidance [1, 8]</p>
+<h3>Who may qualify</h3>
+<p class="bullet">The billing physician or qualified practitioner is responsible for all primary care and is the continuing focal point for all needed health care.</p>
+<p class="bullet">G0556 applies to the lower-complexity level, generally 0 or 1 chronic condition; G0557 requires at least 2 qualifying chronic conditions; G0558 requires at least 2 qualifying chronic conditions and Qualified Medicare Beneficiary status.</p>
+<p class="bullet">For G0557 and G0558, conditions are expected to last at least 12 months or until death and place the patient at significant risk of death, acute exacerbation or decompensation, or functional decline.</p>
+<h3>Before activation</h3>
+<p class="bullet">Obtain written or verbal consent before services. Explain one APCM provider per calendar month, possible cost sharing, and the right to stop. CMS generally requires consent once.</p>
+<p class="bullet">Conduct a separately payable initiating visit for a new patient unless the patient was seen by the practice within 3 years or received APCM, CCM, or PCM from the practice within the prior year. The responsible practitioner may use an AWV when it qualifies.</p>
+<p class="bullet">Confirm practice-level capabilities for 24-hour access, real-time information, continuity, electronic care planning, transition follow-up, enhanced communication, population management, and performance reporting.</p>
+<h3>Care plan and monthly record</h3>
+<p class="bullet">Maintain an electronic patient-centered care plan that the care team can access and update; give the patient or caregiver a copy.</p>
+<p class="bullet">Document medical and psychosocial assessment, preventive gaps, medication reconciliation and self-management, referrals, community-based coordination, and transition work when clinically appropriate.</p>
+<p class="bullet">Document timely electronic exchange and clinically indicated follow-up within 7 days after ED or facility discharge.</p>
+<p class="bullet">Record population risk stratification and the performance-reporting pathway used by the practice.</p>
+<h3>Billing and claim controls</h3>
+<p class="bullet">Bill one APCM base code per patient per calendar month. APCM is not time based, so a minute threshold must not be invented.</p>
+<p class="bullet">Treat APCM as the primary bundled pathway for services already included in APCM, including CCM, PCM, TCM, and several communication services. Hold separate bundled-service claims unless RCM verifies a current exception.</p>
+<p class="bullet">For 2026 APCM behavioral-health integration, use G0568 or G0569 for CoCM or G0570 for General BHI only when the same practitioner reports the APCM base code in the same month and all add-on requirements are met. These add-ons are not time based.</p>
+<h3>Line lights red or amber when</h3>
+<p class="bullet">The practitioner is not the continuing primary-care focal point; the wrong complexity level is selected; QMB status is unverified; consent or initiating-visit evidence is absent.</p>
+<p class="bullet">The care plan is missing, unavailable to the team, not delivered to the patient, or not current; required practice capabilities are not documented.</p>
+<p class="bullet">A bundled care-management claim or standard BHI or CoCM code is proposed for the same month without RCM confirmation of the correct APCM pathway.</p>
+<h2>7.2 Chronic Care Management</h2>
+<p>Medicare basis: CMS Chronic Care Management Services MLN booklet [2]</p>
+<h3>Who may qualify</h3>
+<p class="bullet">The patient has at least 2 chronic conditions expected to last at least 12 months or until death.</p>
+<p class="bullet">The conditions place the patient at significant risk of death, acute exacerbation or decompensation, or functional decline.</p>
+<p class="bullet">The practitioner determines that ongoing non-face-to-face care coordination is reasonable and necessary.</p>
+<h3>Before activation</h3>
+<p class="bullet">Complete an E/M, AWV, or IPPE initiating visit for a new patient or a patient not seen by the billing practitioner within the prior year, and document that CCM was discussed.</p>
+<p class="bullet">Obtain written or verbal consent before billing. Explain availability, possible cost sharing, one billing practitioner per month, and the right to stop at month end. Consent remains valid unless the CCM practitioner changes or the patient revokes it.</p>
+<p class="bullet">Verify staff qualifications, employment or contract relationship, general supervision, and state scope of practice.</p>
+<h3>Care plan and monthly record</h3>
+<p class="bullet">Build the care plan from physical, mental, cognitive, psychosocial, functional, environmental, caregiver, and resource assessments.</p>
+<p class="bullet">Include problem list, prognosis, measurable goals, symptom and medication management, planned interventions, preventive needs, outside practitioners, resources, and periodic review.</p>
+<p class="bullet">Provide 24-hour access, continuity with a designated team member, secure communication, comprehensive coordination, and transition management.</p>
+<p class="bullet">For complex CCM, document moderate- or high-complexity medical decision making by the billing practitioner.</p>
+<h3>Billing and claim controls</h3>
+<p class="bullet">99490 records the first 20 minutes of qualifying clinical-staff or practitioner time under the clinical-staff pathway; 99439 records each additional 20 minutes when allowed.</p>
+<p class="bullet">99491 records the first 30 minutes personally provided by the physician or other qualified professional; 99437 records each additional 30 minutes.</p>
+<p class="bullet">99487 records the first 60 minutes of complex CCM clinical-staff time and requires moderate- or high-complexity MDM; 99489 records each additional 30 minutes.</p>
+<p class="bullet">Do not count the same practitioner time under both the clinical-staff and practitioner-only pathways. Apply current CPT time rules and payer unit limits.</p>
+<h3>Line lights red or amber when</h3>
+<p class="bullet">Fewer than 2 qualifying chronic conditions; duration or risk not documented; initiating visit or consent missing.</p>
+<p class="bullet">Care plan, 24-hour access, designated team member, medication review, or transition process is absent.</p>
+<p class="bullet">Time is below threshold, includes nonqualifying administration, lacks date or performer, overlaps another service, or is not linked to the care plan.</p>
+<p class="bullet">Complex CCM lacks the required MDM documentation.</p>
+<h2>7.3 Principal Care Management</h2>
+<p>Medicare basis: CMS Chronic Care Management Services MLN booklet and Medicare care-management policy [2, 12]</p>
+<h3>Who may qualify</h3>
+<p class="bullet">The patient has one serious, high-risk chronic condition expected to last at least 3 months.</p>
+<p class="bullet">The condition creates significant risk of hospitalization, acute exacerbation or decompensation, functional decline, or death.</p>
+<p class="bullet">The condition requires a disease-specific plan and ongoing management rather than a general multi-condition CCM plan.</p>
+<h3>Before activation</h3>
+<p class="bullet">Verify the initiating visit and repeat the required initial visit after 1 year of continued PCM.</p>
+<p class="bullet">Obtain and document patient consent before services under the applicable Medicare and payer rules. BHW completes an annual program review even when the payer does not require annual re-consent.</p>
+<p class="bullet">Choose the practitioner-personal or clinical-staff pathway based on who will perform the work and the supervision structure.</p>
+<h3>Care plan and monthly record</h3>
+<p class="bullet">Create a disease-specific care plan with condition status, prognosis, measurable goals, medication or treatment regimen, monitoring, triggers, specialists, caregiver role, and escalation plan.</p>
+<p class="bullet">Document meaningful patient-specific management, care-plan revision, treatment coordination, and outcomes each month.</p>
+<h3>Billing and claim controls</h3>
+<p class="bullet">99424 is the first 30 minutes personally provided by the physician or qualified professional; 99425 is each additional 30 minutes.</p>
+<p class="bullet">99426 is the first 30 minutes of clinical-staff time directed by the billing practitioner; 99427 is each additional 30 minutes.</p>
+<p class="bullet">Do not bill a PCM month below the applicable 30-minute base threshold. Apply current CPT time rules to add-on units.</p>
+<h3>Line lights red or amber when</h3>
+<p class="bullet">The condition does not meet duration or risk requirements, or the need is better described by multi-condition CCM.</p>
+<p class="bullet">The disease-specific plan, annual initiating visit, consent, supervision, or assigned staff pathway is missing.</p>
+<p class="bullet">Qualifying time is below threshold, duplicated, or not connected to the disease-specific plan.</p>
+<h2>7.4 General Behavioral Health Integration</h2>
+<p>Medicare basis: CMS Behavioral Health Integration Services MLN booklet and BHI FAQs [3, 4]</p>
+<h3>Who may qualify</h3>
+<p class="bullet">The patient has an identified mental, behavioral, psychiatric, or substance-use condition and needs behavioral-health assessment, care planning, intervention, or follow-up.</p>
+<p class="bullet">A second physical chronic condition is not required. The billing practitioner uses clinical judgment to select General BHI rather than CoCM.</p>
+<h3>Before activation</h3>
+<p class="bullet">Complete a qualifying AWV, IPPE, comprehensive E/M, TCM, or other permitted initiating visit that establishes the relationship and assessment.</p>
+<p class="bullet">Obtain written or verbal consent before services. Explain cost sharing and permission to consult relevant specialists. Repeat consent if the billing practitioner changes.</p>
+<p class="bullet">Assign a continuous care-team contact. A behavioral-health care manager or psychiatric consultant may participate but is not required for 99484.</p>
+<h3>Care plan and monthly record</h3>
+<p class="bullet">Record initial assessment and follow-up monitoring with applicable validated measures.</p>
+<p class="bullet">Maintain a behavioral-health care plan with diagnosis or working condition, functional effect, symptoms and measures, goals, interventions, medication or psychotherapy coordination, safety plan when indicated, response, and revision when progress is inadequate.</p>
+<p class="bullet">Document continuity with the appointed care-team member and coordination of psychotherapy, pharmacotherapy, counseling, or psychiatric consultation.</p>
+<h3>Billing and claim controls</h3>
+<p class="bullet">99484 requires at least 20 minutes of qualifying clinical-staff time per calendar month under the billing practitioner&#x27;s direction.</p>
+<p class="bullet">G0323 is a separate General BHI pathway for qualifying clinical psychologist or clinical social worker services and also requires at least 20 minutes; RCM verifies practitioner eligibility and setting.</p>
+<p class="bullet">Do not bill General BHI and CoCM by the same practitioner for the same patient in the same month. General BHI may be billed with CCM only when each service is separately necessary, separately consented, fully met, and no time or effort is counted twice.</p>
+<h3>Line lights red or amber when</h3>
+<p class="bullet">The behavioral-health condition, functional need, initiating visit, consent, or designated contact is missing.</p>
+<p class="bullet">The monthly assessment, measure, care-plan work, intervention, coordination, or outcome is not documented.</p>
+<p class="bullet">Time is below 20 minutes, includes administration, overlaps CCM or another service, or General BHI and CoCM are both proposed for the month.</p>
+<h2>7.5 Psychiatric Collaborative Care Model</h2>
+<p>Medicare basis: CMS Behavioral Health Integration Services MLN booklet and BHI FAQs [3, 4]</p>
+<h3>Who may qualify</h3>
+<p class="bullet">The patient has a behavioral-health condition appropriate for the collaborative model, particularly when usual treatment is not producing adequate progress.</p>
+<p class="bullet">The practice can provide the required three-person team: treating practitioner, qualified behavioral-health care manager, and psychiatric consultant.</p>
+<p class="bullet">The practice can use a patient registry, validated measures, proactive follow-up, brief evidence-based interventions, and weekly psychiatric caseload consultation.</p>
+<h3>Before activation</h3>
+<p class="bullet">Complete a qualifying initiating visit and obtain documented written or verbal consent, including cost sharing and specialist consultation permission. Repeat if the billing practitioner changes.</p>
+<p class="bullet">Record the behavioral-health care manager&#x27;s qualifications and relationship to the billing practitioner. Record the psychiatric consultant&#x27;s qualifications and contract or employment relationship.</p>
+<p class="bullet">Add the patient to the CoCM registry and establish baseline validated measures and an individualized treatment plan.</p>
+<h3>Care plan and monthly record</h3>
+<p class="bullet">Track symptoms, functioning, adherence, tolerability, and clinical response with validated measures.</p>
+<p class="bullet">Document weekly systematic caseload review, consultant recommendations, treating-practitioner decisions, plan changes, brief interventions, care coordination, and relapse-prevention or discharge planning.</p>
+<p class="bullet">Keep consultant recommendations and practitioner actions distinct. Escalate urgent risk immediately outside the routine registry process.</p>
+<h3>Billing and claim controls</h3>
+<p class="bullet">99492 requires 70 minutes of behavioral-health care-manager activities in the initial calendar month; 99493 requires 60 minutes in a subsequent month; 99494 represents each additional 30 minutes with the applicable base code.</p>
+<p class="bullet">G2214 describes the first 30 minutes in an initial or subsequent month when its requirements are met.</p>
+<p class="bullet">General BHI and CoCM are not both reported by the same practitioner for the same patient in the same month. Do not count psychiatric-consultant time, practitioner time, or care-manager time outside the applicable code rules without RCM verification.</p>
+<p class="bullet">For APCM patients in 2026, use the applicable non-time-based APCM CoCM add-on pathway G0568 or G0569 with the same-practitioner APCM base code instead of assuming standard CoCM time codes apply.</p>
+<h3>Line lights red or amber when</h3>
+<p class="bullet">Any of the three required roles, registry, validated measures, weekly caseload review, initiating visit, or consent is missing.</p>
+<p class="bullet">The individualized plan, consultant recommendation, practitioner response, patient outreach, intervention, or outcome monitoring is absent.</p>
+<p class="bullet">The time threshold is not met, time is duplicated, or the record mixes General BHI and CoCM for the same practitioner and month.</p>
+<h2>7.6 Community Health Integration</h2>
+<p>Medicare basis: CMS Health Related Social Needs FAQ [5]</p>
+<h3>Who may qualify</h3>
+<p class="bullet">The billing practitioner identifies one or more unmet upstream drivers that significantly limit the practitioner&#x27;s ability to diagnose or treat the medical problem addressed at the initiating visit.</p>
+<p class="bullet">The service is medically tied to resolving the specific barrier to clinical care. A general request for social services without this link does not establish CHI eligibility.</p>
+<h3>Before activation</h3>
+<p class="bullet">The same practitioner who will bill CHI personally performs a qualifying initiating E/M, AWV, TCM-linked E/M, psychiatric diagnostic evaluation, or permitted health-behavior service and documents the interfering upstream driver.</p>
+<p class="bullet">Obtain advance written or verbal consent. Explain cost sharing and that only one practitioner per month may bill CHI. Repeat if the billing practitioner changes.</p>
+<p class="bullet">Verify that auxiliary personnel meet Maryland requirements and the CMS competency expectations for communication, relationship building, capacity building, coordination, navigation, advocacy, assessment, ethics, and local resources.</p>
+<h3>Care plan and monthly record</h3>
+<p class="bullet">Document a person-centered assessment of the barrier, its effect on diagnosis or treatment, patient goals and strengths, the action plan, community resources, referrals, follow-through, and closed-loop outcome.</p>
+<p class="bullet">Use applicable Z55 through Z65 codes when appropriate, but keep the narrative connection between the upstream driver and the medical problem.</p>
+<p class="bullet">Record the amount of auxiliary-personnel time and the activities performed in relation to the practitioner&#x27;s plan. The billing practitioner reviews and verifies the documentation.</p>
+<h3>Billing and claim controls</h3>
+<p class="bullet">G0019 represents the first 60 minutes of qualifying CHI services per calendar month; G0022 represents each additional 30 minutes under the current descriptor and time rules.</p>
+<p class="bullet">CHI may be reported with other care-management services only when separately reasonable and necessary and no time or effort is counted twice.</p>
+<h3>Line lights red or amber when</h3>
+<p class="bullet">The barrier is documented but its significant interference with diagnosis or treatment is not; the initiating visit was performed by someone else; or consent is absent.</p>
+<p class="bullet">The staff qualification, supervision, person-centered plan, referral action, outcome, time, or practitioner verification is missing.</p>
+<p class="bullet">The service is general community assistance unrelated to the addressed medical problem or duplicates another billed service.</p>
+<h2>7.7 Principal Illness Navigation</h2>
+<p>Medicare basis: CMS Health Related Social Needs FAQ and CCM MLN booklet [5, 2]</p>
+<h3>Who may qualify</h3>
+<p class="bullet">The patient has one serious, high-risk condition expected to last at least 3 months and creating significant risk of hospitalization, nursing-home placement, acute exacerbation or decompensation, functional decline, or death.</p>
+<p class="bullet">The condition requires development, monitoring, or revision of a disease-specific care plan and may require frequent treatment changes or substantial caregiver assistance.</p>
+<p class="bullet">Examples may include cancer, COPD, heart failure, dementia, HIV or AIDS, severe mental illness, or substance-use disorder, but the practitioner must document the individual patient&#x27;s risk and need.</p>
+<h3>Before activation</h3>
+<p class="bullet">The same practitioner who will bill PIN performs a qualifying initiating visit and establishes the treatment plan that includes navigation.</p>
+<p class="bullet">Obtain written or verbal consent before or when services begin and annually thereafter. Obtain new consent if the billing practitioner changes.</p>
+<p class="bullet">Verify that the navigator meets Maryland requirements and CMS competencies, including condition-specific training.</p>
+<h3>Care plan and monthly record</h3>
+<p class="bullet">Document the disease-specific plan, patient goals, treatment milestones, specialists, appointments, medication or treatment changes, caregiver support, barriers, education, navigation actions, and outcomes.</p>
+<p class="bullet">Record time and each activity in relation to the practitioner&#x27;s plan. The billing practitioner reviews and verifies the record and ongoing need.</p>
+<h3>Billing and claim controls</h3>
+<p class="bullet">G0023 represents the first 60 minutes of qualifying PIN services per calendar month; G0024 represents each additional 30 minutes.</p>
+<p class="bullet">One practitioner may not bill separate PIN services for multiple conditions for the same patient. PIN and PIN peer support must not be billed concurrently for the same serious condition.</p>
+<p class="bullet">Separate practitioners may furnish PIN for distinct conditions only when the services do not address the same condition and all requirements are met. RCM must review for duplication.</p>
+<h3>Line lights red or amber when</h3>
+<p class="bullet">The condition, expected duration, individual risk, disease-specific plan, initiating visit, annual consent, or navigator qualifications are missing.</p>
+<p class="bullet">Time is below threshold, duplicated, or unsupported by patient-specific navigation activities.</p>
+<p class="bullet">PIN and PIN peer support are proposed for the same condition and month, or one practitioner proposes separate PIN claims for multiple conditions.</p>
+<h2>7.8 Principal Illness Navigation Peer Support</h2>
+<p>Medicare basis: CMS Health Related Social Needs FAQ [5]</p>
+<h3>Who may qualify</h3>
+<p class="bullet">The patient meets PIN criteria for a serious high-risk condition and peer support is reasonable and necessary within the condition-specific navigation plan.</p>
+<p class="bullet">This pathway is especially relevant to behavioral-health conditions, severe mental illness, or substance-use disorder when lived-experience support is appropriate.</p>
+<h3>Before activation</h3>
+<p class="bullet">Complete the same-practitioner initiating-visit and treatment-plan requirements used for PIN.</p>
+<p class="bullet">Obtain consent at the beginning and annually thereafter; obtain new consent when the billing practitioner changes.</p>
+<p class="bullet">Verify state requirements and peer-support training consistent with SAMHSA&#x27;s National Model Standards for Peer Support Certification.</p>
+<h3>Care plan and monthly record</h3>
+<p class="bullet">Document peer goals, engagement, navigation, self-advocacy, recovery support, treatment connection, barriers, safety escalation, and progress within the practitioner&#x27;s plan.</p>
+<p class="bullet">Separate peer support from psychotherapy, clinical diagnosis, and treatment decisions unless the person separately holds and is acting under the required credential and service rules.</p>
+<h3>Billing and claim controls</h3>
+<p class="bullet">G0140 represents the first 60 minutes of qualifying PIN peer-support services per calendar month; G0146 represents each additional 30 minutes.</p>
+<p class="bullet">Do not report PIN and PIN peer support concurrently for the same serious high-risk condition.</p>
+<h3>Line lights red or amber when</h3>
+<p class="bullet">PIN eligibility, initiating visit, annual consent, peer qualification, supervision, plan linkage, or time evidence is missing.</p>
+<p class="bullet">The note describes generic support without condition-specific navigation, or the work duplicates psychotherapy, PIN, or another service.</p>
+<h2>7.9 Remote Physiologic Monitoring</h2>
+<p>Medicare basis: CMS Remote Patient Monitoring page and CY 2026 coding updates [6, 10]</p>
+<h3>Who may qualify</h3>
+<p class="bullet">The patient has an acute or chronic condition that the practitioner determines requires remote physiologic monitoring.</p>
+<p class="bullet">The device meets the FDA definition of a medical device, is internet connected, and automatically uploads physiologic data.</p>
+<p class="bullet">The patient or caregiver can use the device or has an achievable support plan, and the data will be used to manage treatment.</p>
+<h3>Before activation</h3>
+<p class="bullet">Record the order or treatment plan, medical necessity, parameter, device, expected range, alert thresholds, escalation plan, responsible reviewer, and consent at start or when the service is furnished.</p>
+<p class="bullet">Provide and document device setup and patient or caregiver education when reporting 99453.</p>
+<p class="bullet">Confirm that the platform retains dated transmissions, data days, reviews, alerts, actions, and interactive communications.</p>
+<h3>BHW current state and in house model</h3>
+<p class="bullet">Until BHW activates a qualifying connected-device data pathway, keep RPM and RTM as Prospective - infrastructure not active. Manual readings, HTML check-ins, and patient messages may support clinical care, but they do not count as qualifying device-data days and do not release RPM or RTM billing.</p>
+<p class="bullet">Recommended model: BHW owns enrollment, consent, setup support, clinical review, communication, escalation, documentation, Patient 360 display, and billing controls. Purchase qualifying devices and connectivity from a manufacturer or distributor that can deliver secure automatic data; this is a supply relationship, not outsourced clinical management.</p>
+<p class="bullet">Begin with a limited RPM hypertension pilot using an automatically transmitting blood-pressure device. Add weight or pulse oximetry only after BHW defines the related care pathway. Defer RTM until BHW selects a specific respiratory, musculoskeletal, or cognitive-behavioral use case and verifies the eligible professional and benefit category.</p>
+<p class="bullet">Keep BHW software limited initially to secure transfer, storage, display, work queues, audit logs, and clinician-authored thresholds. Obtain regulatory review before the system interprets data, makes autonomous treatment recommendations, or is marketed as a medical-device function.</p>
+<h3>Care plan and monthly record</h3>
+<p class="bullet">Maintain an RPM module with device identifiers, parameter and units, baseline, target, alert thresholds, frequency, data sufficiency, adherence, review findings, treatment decisions, patient contacts, and replacement or discontinuation.</p>
+<p class="bullet">Document how abnormal findings were addressed. Device data alone does not establish treatment-management billing.</p>
+<h3>Billing and claim controls</h3>
+<p class="bullet">99453 covers initial setup and patient education when requirements are met. 99445 is the 2026 device-supply pathway for 2 to 15 days in a 30-day period; 99454 is the 16-to-30-day pathway.</p>
+<p class="bullet">99470 is the 2026 treatment-management pathway for the first 10 minutes; 99457 remains the first 20-minute pathway and 99458 each additional 20 minutes. Use the current descriptor and do not stack mutually exclusive base thresholds.</p>
+<p class="bullet">At least one required real-time interactive communication with the patient or caregiver must be documented for the applicable treatment-management code family. RCM verifies who may furnish and count the time.</p>
+<p class="bullet">99091 is a separate practitioner data-collection and interpretation pathway with its own 30-minute and other requirements. Do not combine code families without current coding review.</p>
+<h3>Line lights red or amber when</h3>
+<p class="bullet">Medical necessity, consent, device qualification, setup education, parameter, plan, or automatic transmission evidence is missing.</p>
+<p class="bullet">The month lacks the data-day threshold for the proposed supply code, or the record uses self-entered information without an eligible connected-device transmission.</p>
+<p class="bullet">Management time, interactive communication, data review, treatment decision, or performer role is missing or duplicated with another service.</p>
+<h2>7.10 Remote Therapeutic Monitoring</h2>
+<p>Medicare basis: CMS CY 2026 therapy-code update and care-management guidance [9, 12]</p>
+<h3>Who may qualify</h3>
+<p class="bullet">The treatment plan requires remote monitoring of nonphysiologic therapeutic data such as therapy adherence, therapy response, or data for a covered respiratory, musculoskeletal, or cognitive-behavioral treatment pathway.</p>
+<p class="bullet">The device, software, data source, and practitioner are eligible under the current code descriptor, benefit category, and payer rule.</p>
+<h3>Before activation</h3>
+<p class="bullet">Record the order or treatment plan, monitored data, clinical purpose, device or software, patient capability, expected use, alert or nonadherence threshold, and escalation plan.</p>
+<p class="bullet">Document consent and setup or education. Verify which professional or therapy discipline may report the selected code in the patient&#x27;s setting.</p>
+<h3>Care plan and monthly record</h3>
+<p class="bullet">Maintain an RTM module with the therapeutic parameter, data source, data days, adherence, response, treatment-management time, interactive communication, decisions, and plan changes.</p>
+<p class="bullet">Keep RTM data distinct from RPM physiologic data and from ordinary patient messaging.</p>
+<h3>Billing and claim controls</h3>
+<p class="bullet">98975 covers initial setup and education when requirements are met. The 16-to-30-day supply family includes 98976, 98977, and 98978 by therapeutic category; 2026 added 98984, 98985, and 98986 for 2 to 15 days by category.</p>
+<p class="bullet">98979 is the 2026 first-10-minute treatment-management pathway; 98980 is the first-20-minute pathway and 98981 each additional 20 minutes. Apply the current descriptor and interactive-communication rule; do not stack mutually exclusive base thresholds.</p>
+<p class="bullet">RCM must confirm whether therapy modifiers, plan-of-care rules, or discipline-specific restrictions apply.</p>
+<h3>Line lights red or amber when</h3>
+<p class="bullet">The therapeutic data type, device or software, treatment plan, eligible practitioner or discipline, setup, consent, or patient use is not documented.</p>
+<p class="bullet">The month lacks the data-day or treatment-management threshold for the proposed code.</p>
+<p class="bullet">Interactive communication or clinical action is missing, or the same data and work are also counted as RPM or another service.</p>
+<h2>7.11 Transitional Care Management</h2>
+<p>Medicare basis: CMS Transitional Care Management Services MLN booklet [7]</p>
+<h3>Who may qualify</h3>
+<p class="bullet">The patient is discharged from a qualifying inpatient or partial-hospital setting to home, domiciliary, nursing facility, or assisted living setting.</p>
+<p class="bullet">An eligible physician or nonphysician practitioner accepts responsibility for the 30-day transition period.</p>
+<h3>Before activation</h3>
+<p class="bullet">Open a TCM episode from the verified discharge date, facility, discharge disposition, and source document.</p>
+<p class="bullet">Begin interactive contact with the patient or caregiver within 2 business days. Scheduling-only contact is insufficient. If unsuccessful, document at least 2 timely attempts and continue trying.</p>
+<p class="bullet">Set the face-to-face due date based on expected MDM: within 14 calendar days for 99495 or within 7 calendar days for 99496.</p>
+<h3>Care plan and monthly record</h3>
+<p class="bullet">Review the discharge summary, pending tests, treatments, specialists, referrals, community resources, self-management, adherence, functional needs, and caregiver needs.</p>
+<p class="bullet">Perform medication reconciliation and management on or before the face-to-face visit date.</p>
+<p class="bullet">Document the contact content, patient status, new or unresolved needs, responsible person, appointments, and escalation. BHW may use a stricter 24-hour operational outreach target, but the CMS billing rule is 2 business days.</p>
+<h3>Billing and claim controls</h3>
+<p class="bullet">99495 requires contact within 2 business days, at least moderate MDM during the service period, and a face-to-face visit within 14 calendar days. 99496 requires contact within 2 business days, high MDM, and a visit within 7 calendar days.</p>
+<p class="bullet">Do not separately report the included TCM face-to-face visit. Only one TCM service is paid for the 30-day period.</p>
+<p class="bullet">When another care-management service is furnished concurrently, it must be separately reasonable and necessary and time or effort must not be counted more than once. APCM already bundles TCM functions.</p>
+<h3>Line lights red or amber when</h3>
+<p class="bullet">Discharge setting or disposition is not qualifying; discharge date or source is unverified; interactive contact is late or insufficiently documented.</p>
+<p class="bullet">Face-to-face visit misses the 7- or 14-day deadline; MDM does not support the proposed code; medication reconciliation is late.</p>
+<p class="bullet">Another practitioner is furnishing TCM, the episode overlaps a bundled APCM pathway, or work is duplicated.</p>
+<div class="page-break"></div>
+<h1>8 Whole Person Care Plan Standard</h1>
+<p>BHW uses one versioned Whole Person Care Plan with program modules. The shared core prevents conflicting plans; each active module holds the elements that make the program clinically and operationally distinct.</p>
+<h2>Shared core</h2>
+<p class="bullet">Patient priorities and goals in the patient&#x27;s own words; strengths, preferences, language, accessibility, health literacy, caregiver permissions, and cultural considerations.</p>
+<p class="bullet">Active problems, expected course, prognosis when appropriate, symptoms, function, cognition, behavioral-health needs, social barriers, recent utilization, and risk level.</p>
+<p class="bullet">Medication list, allergies, reconciliation date and source, adherence, access, side effects, high-risk medicines, and self-management needs.</p>
+<p class="bullet">Measurable goals, planned interventions, responsible person, target date, status, follow-up cadence, and escalation triggers.</p>
+<p class="bullet">Primary-care practitioner, specialists, facilities, home and community providers, assigned care-team person, and after-hours instructions.</p>
+<p class="bullet">Care transitions, preventive services, referrals, resources, closed-loop outcomes, next review, version, approving practitioner, and delivery to the patient or caregiver.</p>
+<h2>Program modules</h2>
+<table><tr><th>Module</th><th>Required focus</th></tr><tr><td>APCM</td><td>Primary-care focal-point responsibility; medical and psychosocial needs; prevention; medication self-management; transitions; enhanced communication; population-risk and performance pathway.</td></tr><tr><td>CCM</td><td>Multiple chronic conditions; physical, mental, cognitive, psychosocial, functional, environmental, caregiver, and resource assessment; prognosis; goals; 24-hour access; coordination.</td></tr><tr><td>PCM</td><td>Single high-risk condition; condition-specific prognosis, monitoring, treatment adjustments, specialist coordination, caregiver support, triggers, and milestones.</td></tr><tr><td>General BHI</td><td>Behavioral condition, function, validated measures when applicable, goals, intervention, treatment coordination, designated contact, response, safety, and revisions.</td></tr><tr><td>CoCM</td><td>Baseline and follow-up measures, registry status, individualized treatment, brief interventions, weekly psychiatric review, recommendations, practitioner decisions, relapse prevention, and discharge.</td></tr><tr><td>CHI</td><td>Upstream driver and its direct effect on diagnosis or treatment; patient strengths; resource plan; Z-code support when appropriate; referral owner; closed-loop outcome.</td></tr><tr><td>PIN or PIN peer support</td><td>Serious high-risk condition, treatment milestones, navigation steps, condition-specific education, caregiver support, peer goals where applicable, barriers, and specialist connections.</td></tr><tr><td>RPM</td><td>Device and parameter, baseline, target, transmission schedule, data sufficiency, thresholds, alert response, reviewer, interactive communication, and treatment action.</td></tr><tr><td>RTM</td><td>Therapeutic data category, device or software, adherence or response targets, data days, nonadherence triggers, interactive communication, and treatment plan changes.</td></tr><tr><td>TCM</td><td>Discharge source and date, contact attempts and content, medication reconciliation, pending tests, appointments, functional or social needs, visit deadline, MDM, and 30-day transition outcome.</td></tr></table>
+<h2>Care plan version control</h2>
+<p class="number">Assign a version identifier and effective date. Preserve the prior version.</p>
+<p class="number">Record what changed, why it changed, who reviewed it, and when the patient or caregiver received the update.</p>
+<p class="number">Link each monthly activity to at least one current goal, intervention, barrier, device threshold, or transition task.</p>
+<p class="number">Require practitioner review when diagnoses, medical necessity, treatment, thresholds, urgent risk, or program eligibility changes.</p>
+<h1>9 Monthly Activity Documentation and Status Lights</h1>
+<h2>Required activity fields</h2>
+<p class="bullet">Patient Registry ID; program; service month; date; start and end time or total qualifying minutes when permitted; timezone when relevant.</p>
+<p class="bullet">Staff member, credential or role, employer or contract relationship, supervising and billing practitioner.</p>
+<p class="bullet">Patient-specific work performed, source communication or request, care-plan goal addressed, assessment or data reviewed, findings, action, outcome, and next step.</p>
+<p class="bullet">Whether contact was synchronous, asynchronous, face to face, patient facing, caregiver facing, interprofessional, device review, or noncontact care coordination.</p>
+<p class="bullet">Qualifying, nonqualifying, or pending-review classification with the reason; duplicate-time check; program-combination check; practitioner verification when required.</p>
+<h2>What counts only after review</h2>
+<p class="bullet">Clinical or auxiliary staff work that is within the code elements, staff scope, supervision, and patient-specific plan.</p>
+<p class="bullet">Time that is actually furnished in the calendar month and is not counted under another service.</p>
+<p class="bullet">Device-supply months supported by the selected data-day threshold and eligible transmission method.</p>
+<p class="bullet">Treatment-management months supported by applicable time, data review, required interaction, and a documented clinical management action.</p>
+<h2>What does not count</h2>
+<p class="bullet">Unsuccessful work that is purely clerical, scheduling without assessment, general staff meetings, copying or transcription, translation alone, training, marketing, or routine system maintenance.</p>
+<p class="bullet">Time outside the staff member&#x27;s scope, without required supervision, without patient-specific work, or without documentation of what was done and why.</p>
+<p class="bullet">A portal message, form response, device upload, or automated alert by itself. The record must show the qualifying review, intervention, coordination, communication, or clinical action required by the selected service.</p>
+<h2>Missing requirement logic</h2>
+<table><tr><th>Check</th><th>Red when</th><th>Amber when</th><th>Green when</th></tr><tr><td>Identity and payer</td><td>No verified Registry identity, inactive coverage, or wrong patient.</td><td>Coverage or coordination of benefits awaits confirmation.</td><td>Identity and applicable coverage are verified for the service month.</td></tr><tr><td>Eligibility</td><td>Required clinical criterion is absent or practitioner documents not eligible.</td><td>Screen suggests potential eligibility but practitioner decision or evidence is pending.</td><td>Practitioner confirms eligibility and medical necessity.</td></tr><tr><td>Consent</td><td>Required consent is missing, revoked, expired, or tied to a different practitioner.</td><td>Explanation given but evidence or annual renewal is pending.</td><td>Program-specific consent rule is satisfied.</td></tr><tr><td>Initiating visit</td><td>Required visit missing, too old, performed by the wrong practitioner, or lacks required findings.</td><td>Visit scheduled or documentation pending.</td><td>Visit rule and required findings are verified.</td></tr><tr><td>Care plan</td><td>Required plan or module missing, unsigned, inaccessible, or contradictory.</td><td>Draft or patient-copy delivery pending.</td><td>Current plan is approved, available, and delivered when required.</td></tr><tr><td>Monthly service</td><td>Required non-time element, time, MDM, data days, interaction, or activity is absent.</td><td>Work is in progress or threshold not yet met.</td><td>All applicable monthly elements and thresholds are met.</td></tr><tr><td>Combination and duplication</td><td>Same work is counted twice or a prohibited combination is proposed.</td><td>Another program or external practitioner is suspected and needs review.</td><td>Services are distinct and combination rules are verified.</td></tr><tr><td>Attestation and claim</td><td>Practitioner signature, RCM review, exact record version, or claim approval is missing.</td><td>Pre-review complete but final approvals pending.</td><td>Authorized practitioner and RCM approvals are complete for the exact version.</td></tr></table>
+<div class="page-break"></div>
+<h1>10 Program Combinations and Duplicate Billing Safeguards</h1>
+<table><tr><th>Combination</th><th>Default Medicare FFS handling</th><th>Required review</th></tr><tr><td>APCM plus CCM, PCM, TCM, or bundled communication services</td><td>Treat APCM as the base bundled pathway. Do not separately bill services included in APCM unless current CMS and payer policy clearly permit the specific service.</td><td>RCM documents the rule, code edit, and service-month decision.</td></tr><tr><td>APCM plus General BHI or CoCM</td><td>Use the 2026 APCM behavioral-health add-on pathway when the same practitioner reports the APCM base code and all add-on requirements are met.</td><td>Choose G0570 for General BHI or G0568 or G0569 for CoCM as applicable; do not assume standard timed codes.</td></tr><tr><td>CCM plus General BHI or CoCM</td><td>May be separately reportable when both are reasonable and necessary, separately consented, fully documented, and time and effort are not counted twice.</td><td>RCM maps each activity to one program and verifies one CCM practitioner.</td></tr><tr><td>General BHI plus CoCM</td><td>Do not report both by the same practitioner for the same patient and month.</td><td>Select the model actually furnished and document the decision.</td></tr><tr><td>CHI or PIN plus another care-management service</td><td>May be separately reportable when each service is medically necessary and time and effort are distinct.</td><td>Show different plan goals, activities, personnel when applicable, and minutes.</td></tr><tr><td>PIN plus PIN peer support</td><td>Do not report both for the same serious high-risk condition in the same month.</td><td>Verify condition, practitioner, personnel, and scope.</td></tr><tr><td>RPM or RTM plus another care program</td><td>May be reportable when device, data, management, interaction, time, and care-management work each independently meet requirements.</td><td>Do not count the same review or communication twice. Confirm RPM versus RTM data type.</td></tr><tr><td>Any service plus a CMS Innovation model or external care-management vendor</td><td>The model payment or other practitioner&#x27;s service may replace or prohibit separate billing.</td><td>Check attribution, participation list, contract, claims history, and payer portal before activation and claim.</td></tr></table>
+<h1>11 Monthly Billing Workflow</h1>
+<p class="number">Freeze the service-month activity snapshot after month end without deleting late corrections. Every correction retains the original value, author, reason, and timestamp.</p>
+<p class="number">Run the automated readiness checks for identity, coverage, program eligibility, consent, initiating visit, care plan, staff qualification, supervision, monthly elements, thresholds, duplication, and combination rules.</p>
+<p class="number">The care coordinator resolves documentation gaps that are factual and within role. Clinical gaps route to the billing practitioner. Coverage and coding gaps route to RCM.</p>
+<p class="number">The billing practitioner reviews the exact service-month record, confirms continued medical necessity, reviews required staff documentation, and signs or attests according to the approved policy.</p>
+<p class="number">RCM selects the final code from the current-year code set, verifies units, modifiers, diagnosis linkage, place of service, NCCI edits, payer-specific policy, and other claims for the period.</p>
+<p class="number">RCM records Ready, Hold, or Not billable. A hold names the missing element, owner, deadline, and whether the deficiency can be corrected without changing what was actually furnished.</p>
+<p class="number">An authorized approver releases the exact approved charge to the BHW RCM claim ledger. Any later material change invalidates approval and returns the item to review.</p>
+<p class="number">Post adjudication, record acceptance, denial, payment, patient responsibility, correction, appeal, and lesson learned without changing the clinical source record.</p>
+<h2>Claim hold reasons</h2>
+<p class="bullet">Eligibility or medical necessity not confirmed; coverage not active; another practitioner or vendor is furnishing the same monthly service.</p>
+<p class="bullet">Consent, initiating visit, patient explanation, care plan, patient-copy delivery, or annual renewal is absent when required.</p>
+<p class="bullet">Staff qualification, employment or contract relationship, scope, supervision, or practitioner verification is missing.</p>
+<p class="bullet">Time, data days, MDM, interactive communication, device evidence, weekly consultation, plan activity, or other code element is below threshold or unsupported.</p>
+<p class="bullet">Work is duplicated across programs, a code combination is not allowed, the wrong APCM pathway is used, or the patient is in a model that prohibits separate payment.</p>
+<p class="bullet">Clinical documentation is unsigned, altered after approval, linked to the wrong patient or month, or not read back from the protected record.</p>
+<h1>12 Quality Controls and Metrics</h1>
+<table><tr><th>Measure</th><th>Definition</th><th>Owner and cadence</th></tr><tr><td>Assessment completeness</td><td>Percent of new assessments with verified identity, payer, common domains, selected branches, and practitioner disposition.</td><td>Operations lead, weekly</td></tr><tr><td>Time to practitioner decision</td><td>Median hours from completed screen to practitioner eligibility decision.</td><td>Clinical operations, weekly</td></tr><tr><td>Consent and care-plan readiness</td><td>Percent of active programs with valid consent, initiating visit, current care plan, assigned person, and patient instructions.</td><td>Care coordinator, weekly</td></tr><tr><td>Monthly documentation completion</td><td>Percent of monthly records complete by the internal cutoff, separated by program.</td><td>Program lead, monthly</td></tr><tr><td>Claim hold rate</td><td>Percent of proposed patient-months held and top reason categories.</td><td>RCM, monthly</td></tr><tr><td>Duplicate-time exception rate</td><td>Number of activities blocked or corrected for overlapping minutes, interactions, or work.</td><td>Compliance and RCM, monthly</td></tr><tr><td>Denial and correction rate</td><td>Denials and corrections by program, code, payer, reason, and preventability.</td><td>RCM, monthly</td></tr><tr><td>Care-plan delivery</td><td>Percent of required care plans delivered and acknowledged, with method and date.</td><td>Care coordinator, monthly</td></tr><tr><td>Patient engagement</td><td>Reached, participating, declined, paused, unable to reach, and ended counts with reasons.</td><td>Operations, monthly</td></tr><tr><td>Annual review completion</td><td>Percent of active patient-program records with completed BHW annual program review and any payer-required re-consent.</td><td>Program lead, monthly</td></tr></table>
+<h2>Audit sample</h2>
+<p>Review at least a risk-based sample each month and all new staff, high-dollar outliers, unusual add-on use, denials, manual overrides, overlapping programs, and post-discharge deadlines. The audit compares the claim to the exact patient identity, coverage, eligibility decision, consent, initiating visit, care plan, activity detail, staff role, supervision, monthly requirements, practitioner attestation, and transmitted claim.</p>
+<h1>13 Exceptions and Escalation</h1>
+<table><tr><th>Situation</th><th>Immediate action</th><th>Decision owner</th></tr><tr><td>Urgent clinical or safety concern</td><td>Stop routine workflow, use the clinical escalation policy, and direct emergencies to 911 or the appropriate crisis pathway. Document the handoff.</td><td>Licensed clinician or emergency responder</td></tr><tr><td>Patient identity conflict</td><td>Do not merge, message, enroll, or bill. Hold the record and complete protected identity reconciliation.</td><td>Registry steward and Compliance</td></tr><tr><td>Coverage or payer rule unclear</td><td>Keep the program prospective or the claim on hold. Obtain current written payer guidance or portal evidence.</td><td>RCM or payer-contract owner</td></tr><tr><td>Staff qualification unclear</td><td>Do not count the work as billable. Verify Maryland requirements, scope, training, contract, exclusion status, and supervision.</td><td>Compliance and Medical Director</td></tr><tr><td>Threshold missed</td><td>Do not backfill or estimate work. Record Not billable or choose another valid pathway only if the actual furnished service supports it.</td><td>Billing practitioner and RCM</td></tr><tr><td>Patient revokes or declines</td><td>Stop future services as required, record effective date, notify the team, preserve history, and explain any final-month effect.</td><td>Program lead and billing practitioner</td></tr><tr><td>Record changed after approval</td><td>Invalidate the approval and return the exact revised version to practitioner and RCM review.</td><td>RCM</td></tr><tr><td>Claim denied</td><td>Post the denial, protect the clinical record, determine whether correction or appeal is supported, and update the payer matrix and training if needed.</td><td>RCM and Compliance</td></tr></table>
+<div class="page-break"></div>
+<h1>Appendix A Care Program Intake and Enrollment Assessment</h1>
+<p>Use these questions in one assessment with program-specific branches. The system should show Not asked, Patient declined, Unknown, and Not applicable separately. A blank answer is not the same as a negative answer.</p>
+<h2>A1 Identity and referral</h2>
+<p class="bullet">Which Registry patient is this, and which two approved identifiers were verified?</p>
+<p class="bullet">Who referred the patient, on what date, and for what concern?</p>
+<p class="bullet">What is the patient&#x27;s preferred name, language, communication method, accessibility need, and best contact time?</p>
+<h2>A2 Coverage and duplication</h2>
+<p class="bullet">What payer, plan, member ID, effective dates, secondary coverage, and QMB status are verified?</p>
+<p class="bullet">Is another practitioner, health system, vendor, ACO, model, or plan already providing care management, navigation, BHI, CoCM, RPM, or RTM?</p>
+<p class="bullet">Has coverage changed during the year? Preserve every coverage period and related program decision.</p>
+<h2>A3 Goals and care team</h2>
+<p class="bullet">What matters most to the patient now? What outcome would make the program worthwhile?</p>
+<p class="bullet">Who are the PCP, specialists, behavioral-health clinicians, pharmacy, home-health or community providers, and caregivers?</p>
+<p class="bullet">Who may receive information and participate in decisions? Record authorization rather than assuming caregiver access.</p>
+<h2>A4 Clinical and utilization</h2>
+<p class="bullet">Which conditions are active, how long are they expected to last, and what individual risks or instability exist?</p>
+<p class="bullet">What ED visits, hospitalizations, SNF stays, urgent visits, missed follow-ups, or transitions occurred in the past year?</p>
+<p class="bullet">What symptoms, functional decline, cognitive needs, pending tests, or treatment changes require coordination?</p>
+<h2>A5 Medication and self-management</h2>
+<p class="bullet">When and from what source was medication reconciliation completed?</p>
+<p class="bullet">Are there adherence, affordability, access, side-effect, high-risk medication, or health-literacy concerns?</p>
+<p class="bullet">What can the patient manage independently, and what support does the caregiver provide?</p>
+<h2>A6 Behavioral health</h2>
+<p class="bullet">What mental, behavioral, psychiatric, or substance-use condition is identified, and how does it affect function or medical care?</p>
+<p class="bullet">Which validated measures are appropriate, what are the scores and dates, and how has the patient responded to current treatment?</p>
+<p class="bullet">Is there a current safety concern? Follow the urgent pathway rather than waiting for routine program enrollment.</p>
+<h2>A7 Social and access needs</h2>
+<p class="bullet">Which food, housing, transportation, utility, financial, language, technology, caregiving, safety, or resource need exists?</p>
+<p class="bullet">How does that need significantly interfere with diagnosis, treatment, medication access, follow-up, or the prevention plan?</p>
+<p class="bullet">What has already been tried, and which resources or closed-loop referrals are needed?</p>
+<h2>A8 Participation and education</h2>
+<p class="bullet">Does the patient understand the program purpose, assigned person, expected contacts, cost sharing, privacy, and right to stop?</p>
+<p class="bullet">Can the patient use Care Connect, secure messages, HTML check-ins, or a connected device? What training or caregiver help is needed?</p>
+<p class="bullet">Does the patient know normal hours, after-hours limits, when to call BHW, and when to use 988 or 911?</p>
+<h2>Program branches</h2>
+<table><tr><th>Branch</th><th>Questions that must be answered</th></tr><tr><td>APCM</td><td>Is BHW the continuing focal point for all primary care? How many qualifying chronic conditions exist? Is QMB status verified? Can the practice meet every APCM capability? Which non-time-based level is supported?</td></tr><tr><td>CCM</td><td>Are at least 2 chronic conditions expected at least 12 months or until death? What individual death, exacerbation, decompensation, or functional-decline risk is present? Why is ongoing monthly coordination needed?</td></tr><tr><td>PCM</td><td>What single high-risk condition is expected at least 3 months? What qualifying risk and disease-specific management need exist? Why is PCM preferable to CCM?</td></tr><tr><td>General BHI</td><td>What condition and functional need require integrated support? Which assessment, monitoring, plan, intervention, designated contact, and coordination will be used?</td></tr><tr><td>CoCM</td><td>Is the condition appropriate for CoCM? Is response inadequate? Are the care manager, psychiatric consultant, registry, weekly review, validated measure, brief intervention, and treating-practitioner workflow operational?</td></tr><tr><td>CHI</td><td>What upstream driver significantly limits diagnosis or treatment? Which initiating-visit problem is affected? What person-centered resource and closed-loop plan will address it?</td></tr><tr><td>PIN</td><td>What one serious high-risk condition meets the 3-month and risk tests? What disease-specific plan, treatment changes, caregiver help, and navigation milestones are required?</td></tr><tr><td>PIN peer support</td><td>Why is trained peer support clinically appropriate? Is the peer qualified? How will peer work remain within the practitioner plan and distinct from psychotherapy?</td></tr><tr><td>RPM</td><td>What physiologic parameter and clinical decision will be supported? Is the device eligible and automatically connected? Can the patient use it? What data-day, alert, review, interaction, and escalation plan applies?</td></tr><tr><td>RTM</td><td>What nonphysiologic therapeutic data and treatment plan are monitored? Which device or software, category, data days, interactive communication, and practitioner or therapy discipline apply?</td></tr><tr><td>TCM</td><td>What was the qualifying setting and discharge date? Was interactive contact started within 2 business days? What status and needs were found? Which 7- or 14-day visit deadline and MDM level apply?</td></tr></table>
+<div class="page-break"></div>
+<h1>Appendix B Program Readiness Checklist</h1>
+<p>☐  Registry identity verified and no duplicate patient record</p>
+<p>☐  Payer, plan, effective dates, secondary coverage, QMB status, and model participation checked</p>
+<p>☐  Other practitioner or vendor duplication checked</p>
+<p>☐  Potential eligibility reason and full program branch completed</p>
+<p>☐  Billing practitioner decision and medical necessity documented</p>
+<p>☐  Initiating visit rule satisfied and linked to the correct practitioner and encounter</p>
+<p>☐  Program-specific patient explanation and cost-sharing discussion documented</p>
+<p>☐  Consent method, date, required renewal, annual BHW review, and revocation status documented</p>
+<p>☐  Assigned care-team person, qualifications, contract or employment, supervision, and scope verified</p>
+<p>☐  Whole Person Care Plan and required program module approved and current</p>
+<p>☐  Patient or caregiver received the care plan when required</p>
+<p>☐  Communication, business-hours, after-hours, 988, 911, privacy, and Care Connect instructions delivered</p>
+<p>☐  Monthly activities are patient specific and linked to current plan goals</p>
+<p>☐  Time, MDM, data days, device, interaction, registry review, consultation, or non-time elements meet the selected pathway</p>
+<p>☐  No double-counted time, device data, interaction, or work</p>
+<p>☐  Program combination and external claim conflicts reviewed</p>
+<p>☐  Billing practitioner reviewed and attested to the exact service-month record</p>
+<p>☐  RCM verified current code, units, payer rule, NCCI edits, place of service, and claim status</p>
+<h1>Appendix C Patient Explanation Script</h1>
+<p>Use plain language and personalize the bracketed fields. Do not promise coverage or a particular out-of-pocket amount.</p>
+<p>We think you may benefit from [program name]. It is designed to help with [patient-specific purpose]. [Assigned person&#x27;s name and role] will be your main contact for this program, and [billing practitioner&#x27;s name] remains responsible for the clinical plan.</p>
+<p>We expect to contact you [cadence and method]. You can also use [Care Connect or secure method] for routine updates, forms, medication assistance requests, or resource requests. These messages are reviewed during our normal workflow and are not an emergency service.</p>
+<p>Medicare Part B cost sharing may apply, and another practitioner may not be able to bill the same monthly service at the same time. We will check your coverage, but your plan makes the final payment decision. You may decline or stop the program. Tell us if another organization is providing similar care management.</p>
+<p>During normal business hours, contact [approved contact method]. For urgent concerns after hours, follow [approved after-hours instructions]. Call 988 for suicide or behavioral-health crisis support when appropriate. Call 911 or go to the emergency department for an emergency.</p>
+<p>Do you understand what the program provides, who will contact you, possible cost sharing, how to stop, and how your information will be used? What questions or concerns do you have? What goal would you like us to include in your care plan?</p>
+<h1>Appendix D CMS Sources and Annual Verification</h1>
+<p>The document uses official CMS sources. Before the SOP becomes effective and at each annual review, RCM and Compliance must verify current-year code descriptors, the Medicare Physician Fee Schedule, NCCI edits, the local Medicare Administrative Contractor, payer-specific rules, and BHW participation in any CMS payment model.</p>
+<table><tr><th>No</th><th>Source</th><th>Official link</th><th>Used for</th></tr><tr><td>1</td><td>Advanced Primary Care Management Services</td><td>Open CMS source</td><td>APCM eligibility, consent, initiating visit, capabilities, care plan, transitions, population management</td></tr><tr><td>2</td><td>Chronic Care Management Services MLN909188</td><td>Open CMS source</td><td>CCM eligibility, consent, care plan, time pathways, PCM summary</td></tr><tr><td>3</td><td>Behavioral Health Integration Services MLN909432</td><td>Open CMS source</td><td>BHI and CoCM eligibility, roles, consent, care components, time thresholds, 2026 APCM add-ons</td></tr><tr><td>4</td><td>Frequently Asked Questions About Billing Medicare for BHI Services</td><td>Open CMS source</td><td>BHI and CoCM combination rules and CCM concurrent billing</td></tr><tr><td>5</td><td>Health Related Social Needs FAQ</td><td>Open CMS source</td><td>CHI, PIN, PIN peer support, consent, initiating visits, staff qualifications, documentation, combinations</td></tr><tr><td>6</td><td>Remote Patient Monitoring</td><td>Open CMS source</td><td>RPM eligibility, connected-device requirements, data, and components</td></tr><tr><td>7</td><td>Transitional Care Management Services MLN908628</td><td>Open CMS source</td><td>TCM settings, 2-business-day contact, visits, MDM, medication reconciliation, concurrent services</td></tr><tr><td>8</td><td>CY 2026 Medicare Physician Fee Schedule Final Rule Summary MM14315</td><td>Open CMS source</td><td>2026 APCM BHI and CoCM add-on policy</td></tr><tr><td>9</td><td>Therapy Code List 2026 Annual Update MM14250</td><td>Open CMS source</td><td>2026 RTM codes for 2 to 15 data days and first 10 minutes</td></tr><tr><td>10</td><td>CY 2026 Claims Processing Code Update R13575CP</td><td>Open CMS source</td><td>2026 RPM code 99445 and 99470 and RTM code additions</td></tr><tr><td>11</td><td>Care Management Resource Hub</td><td>Open CMS source</td><td>Current CMS care-management publications and replacement documents</td></tr><tr><td>12</td><td>Medicare Benefit Policy Manual Chapter 13</td><td>Open CMS source</td><td>Care-management policy and program definitions; use the office-setting PFS rules unless BHW becomes an RHC or FQHC</td></tr></table>
+<h2>Annual verification checklist</h2>
+<p class="bullet">Confirm that every URL above is current and replace superseded CMS booklets.</p>
+<p class="bullet">Update CPT and HCPCS codes, code descriptors, time rules, data-day thresholds, add-on limits, and deleted codes for the new year.</p>
+<p class="bullet">Review NCCI edits, the Medicare Physician Fee Schedule, local MAC guidance, and any national or local coverage policies.</p>
+<p class="bullet">Update the payer matrix for Medicare Advantage, Maryland Medicaid and MCOs, CareFirst, UHC, and other active products.</p>
+<p class="bullet">Confirm BHW practice type and any participation in ACO, AHEAD, GUIDE, MCP, Primary Care First, or another model that changes separate billing.</p>
+<p class="bullet">Reapprove staff qualifications, scope, supervision, contracts, exclusion checks, and training requirements.</p>
+<p class="bullet">Review denials, overpayments, patient complaints, audit findings, duplicate-time exceptions, and status-light overrides, then revise training and controls.</p>
+<p>Copyright note  CPT codes and abbreviated descriptions are included only to identify the billing pathways discussed in CMS materials. Current CPT descriptors and coding rules must be obtained from the licensed current-year code set and verified by RCM.</p>
+<h1>Appendix E 2026 Medicare Fee Schedule Reference</h1>
+<p>This reference uses the CMS CY 2026 standard non-QP carrier file for MAC 12302, locality 01, which covers Baltimore City and Anne Arundel, Baltimore, Carroll, Harford, and Howard Counties. The amounts are the full Medicare Physician Fee Schedule amounts before beneficiary cost sharing, sequestration, QP differential payment, modifier adjustments, payer edits, or other claim-level changes.</p>
+<p>Non-facility generally reflects an office or other noninstitutional setting. Facility generally reflects services furnished in a hospital or other institutional setting. These figures are planning references, not payment guarantees. RCM must verify the current CMS lookup, place of service, practitioner status, coverage, code combinations, units, and payer policy before releasing a charge.</p>
+<p>The descriptions below are BHW operational shorthand and not official CPT descriptors. The CMS carrier source page labels the standard non-QP file as updated December 29, 2025; BHW accessed it on September 29, 2026.</p>
+<h2>Baltimore locality amounts</h2>
+<table><tr><th>Program</th><th>Code</th><th>BHW shorthand</th><th>Non-facility</th><th>Facility</th></tr><tr><td>APCM</td><td>G0556</td><td>Base level 1</td><td>$17.19</td><td>$11.46</td></tr><tr><td>APCM</td><td>G0557</td><td>Base level 2</td><td>$56.51</td><td>$35.01</td></tr><tr><td>APCM</td><td>G0558</td><td>Base level 3</td><td>$123.27</td><td>$75.61</td></tr><tr><td>APCM</td><td>G0568</td><td>CoCM add-on, initial pathway</td><td>$170.70</td><td>$85.05</td></tr><tr><td>APCM</td><td>G0569</td><td>CoCM add-on, subsequent pathway</td><td>$153.54</td><td>$93.33</td></tr><tr><td>APCM</td><td>G0570</td><td>General BHI add-on pathway</td><td>$60.56</td><td>$40.13</td></tr><tr><td>CCM</td><td>99490</td><td>Clinical-staff pathway, first 20 minutes</td><td>$69.44</td><td>$45.43</td></tr><tr><td>CCM</td><td>99439</td><td>Clinical-staff pathway, each additional 20 minutes</td><td>$53.06</td><td>$31.91</td></tr><tr><td>CCM</td><td>99491</td><td>Practitioner pathway, first 30 minutes</td><td>$93.33</td><td>$67.88</td></tr><tr><td>CCM</td><td>99437</td><td>Practitioner pathway, each additional 30 minutes</td><td>$66.22</td><td>$45.43</td></tr><tr><td>CCM</td><td>99487</td><td>Complex CCM, first 60 minutes</td><td>$152.09</td><td>$82.20</td></tr><tr><td>CCM</td><td>99489</td><td>Complex CCM, each additional 30 minutes</td><td>$82.34</td><td>$45.43</td></tr><tr><td>PCM</td><td>99424</td><td>Practitioner pathway, first 30 minutes</td><td>$91.74</td><td>$67.37</td></tr><tr><td>PCM</td><td>99425</td><td>Practitioner pathway, each additional 30 minutes</td><td>$64.42</td><td>$45.79</td></tr><tr><td>PCM</td><td>99426</td><td>Clinical-staff pathway, first 30 minutes</td><td>$71.23</td><td>$45.79</td></tr><tr><td>PCM</td><td>99427</td><td>Clinical-staff pathway, each additional 30 minutes</td><td>$56.98</td><td>$32.61</td></tr><tr><td>General BHI</td><td>99484</td><td>Clinical-staff pathway, at least 20 minutes</td><td>$60.20</td><td>$40.13</td></tr><tr><td>General BHI</td><td>G0323</td><td>Clinical psychologist or clinical social worker pathway</td><td>$60.45</td><td>$38.95</td></tr><tr><td>CoCM</td><td>99492</td><td>Initial month, first 70 minutes</td><td>$169.22</td><td>$85.35</td></tr><tr><td>CoCM</td><td>99493</td><td>Subsequent month, first 60 minutes</td><td>$152.41</td><td>$92.91</td></tr><tr><td>CoCM</td><td>99494</td><td>Each additional 30 minutes</td><td>$64.71</td><td>$37.47</td></tr><tr><td>CoCM</td><td>G2214</td><td>First 30-minute pathway</td><td>$64.09</td><td>$35.06</td></tr><tr><td>CHI</td><td>G0019</td><td>First 60 minutes</td><td>$90.94</td><td>$45.79</td></tr><tr><td>CHI</td><td>G0022</td><td>Each additional 30 minutes</td><td>$57.00</td><td>$31.91</td></tr><tr><td>PIN</td><td>G0023</td><td>First 60 minutes</td><td>$92.02</td><td>$46.15</td></tr><tr><td>PIN</td><td>G0024</td><td>Each additional 30 minutes</td><td>$57.36</td><td>$32.27</td></tr><tr><td>PIN peer</td><td>G0140</td><td>Peer-support pathway, first 60 minutes</td><td>$94.17</td><td>$46.15</td></tr><tr><td>PIN peer</td><td>G0146</td><td>Peer-support pathway, each additional 30 minutes</td><td>$56.23</td><td>$31.50</td></tr><tr><td>RPM</td><td>99453</td><td>Initial setup and patient education</td><td>$23.41</td><td>$23.41</td></tr><tr><td>RPM</td><td>99445</td><td>Device supply, 2 to 15 days</td><td>$55.96</td><td>$55.96</td></tr><tr><td>RPM</td><td>99454</td><td>Device supply, 16 to 30 days</td><td>$55.96</td><td>$55.96</td></tr><tr><td>RPM</td><td>99470</td><td>Treatment management, first 10 minutes</td><td>$27.47</td><td>$13.86</td></tr><tr><td>RPM</td><td>99457</td><td>Treatment management, first 20 minutes</td><td>$54.61</td><td>$27.37</td></tr><tr><td>RPM</td><td>99458</td><td>Treatment management, each additional 20 minutes</td><td>$43.50</td><td>$27.37</td></tr><tr><td>RPM</td><td>99091</td><td>Practitioner data collection and interpretation, 30 minutes</td><td>$57.78</td><td>$49.18</td></tr><tr><td>RTM</td><td>98975</td><td>Initial setup and patient education</td><td>$23.41</td><td>$23.41</td></tr><tr><td>RTM</td><td>98984</td><td>Respiratory device supply, 2 to 15 days</td><td>$55.96</td><td>$55.96</td></tr><tr><td>RTM</td><td>98985</td><td>Musculoskeletal device supply, 2 to 15 days</td><td>$55.25</td><td>$55.25</td></tr><tr><td>RTM</td><td>98986</td><td>Cognitive-behavioral device supply, 2 to 15 days</td><td>Not listed</td><td>Not listed</td></tr><tr><td>RTM</td><td>98976</td><td>Respiratory device supply, 16 to 30 days</td><td>$55.96</td><td>$55.96</td></tr><tr><td>RTM</td><td>98977</td><td>Musculoskeletal device supply, 16 to 30 days</td><td>$55.25</td><td>$55.25</td></tr><tr><td>RTM</td><td>98978</td><td>Cognitive-behavioral device supply, 16 to 30 days</td><td>Not listed</td><td>Not listed</td></tr><tr><td>RTM</td><td>98979</td><td>Treatment management, first 10 minutes</td><td>$27.78</td><td>$11.65</td></tr><tr><td>RTM</td><td>98980</td><td>Treatment management, first 20 minutes</td><td>$57.04</td><td>$26.58</td></tr><tr><td>RTM</td><td>98981</td><td>Treatment management, each additional 20 minutes</td><td>$43.44</td><td>$26.24</td></tr><tr><td>TCM</td><td>99495</td><td>Moderate-complexity pathway with visit within 14 days</td><td>$231.93</td><td>$126.92</td></tr><tr><td>TCM</td><td>99496</td><td>High-complexity pathway with visit within 7 days</td><td>$314.50</td><td>$172.58</td></tr></table>
+<p>Codes 98978 and 98986 do not appear with a standard amount in the CMS Baltimore non-QP carrier file used for this reference. Keep those cognitive-behavioral RTM pathways on hold until RCM confirms current MAC pricing, coverage, benefit category, eligible professional, and payer policy.</p>
+<h2>How CrewOS should use this schedule</h2>
+<p class="bullet">Store fee-schedule year, MAC, locality, QP or non-QP status, place of service, source release, and access date with every imported amount.</p>
+<p class="bullet">Show the amount as a projected allowed amount only after the proposed code and unit count are selected; never treat it as guaranteed revenue or patient responsibility.</p>
+<p class="bullet">Recalculate the projection when the code, units, place of service, practitioner, service month, coverage, or payer changes.</p>
+<p class="bullet">Keep the claim on hold when the code is not listed, the current CMS amount has not been verified, or any eligibility, documentation, combination, supervision, or attestation requirement remains incomplete.</p>
+<h2>Official CMS fee sources</h2>
+<p class="bullet">CMS All States 2026 carrier-specific files</p>
+<p class="bullet">CMS Physician Fee Schedule locality key</p>
+<p class="bullet">CMS Physician Fee Schedule Look-Up Tool overview</p>
+<h1>Appendix F Operational Risk Score and CrewOS Implementation</h1>
+<p>The BHW operational risk score helps the care team prioritize follow-up after intake and enrollment. It does not establish Medicare eligibility, medical necessity, enrollment approval, billability, or an emergency disposition. Acute clinical or safety concerns bypass the score and enter the approved urgent-response pathway.</p>
+<h2>Calculation</h2>
+<p>Rate each domain from 0 through 4, where 0 means no current added risk, 1 means mild, 2 means moderate, 3 means high, and 4 means very high. Calculate each weighted contribution as domain rating divided by 4, multiplied by the domain weight. Round the sum to the nearest whole number. The maximum score is 100.</p>
+<p>Risk score = 25% clinical instability + 20% utilization and transitions + 15% medication complexity + 15% behavioral-health needs + 15% social and access barriers + 10% engagement difficulty</p>
+<table><tr><th>Domain</th><th>Weight</th><th>Evidence to consider</th><th>Required record</th></tr><tr><td>Clinical instability</td><td>25</td><td>Severity and change in active conditions; complications; abnormal trends; symptoms; functional or cognitive decline; clinician concern.</td><td>Rating, reason, supporting date or source, and reviewer.</td></tr><tr><td>Utilization and transitions</td><td>20</td><td>Recent ED, hospital, observation, SNF, or other unplanned care; repeated use; discharge needs; pending transition follow-up.</td><td>Events, dates, unresolved needs, and transition status.</td></tr><tr><td>Medication complexity</td><td>15</td><td>Polypharmacy; high-risk medicines; reconciliation gaps; access, adherence, side effects, interaction, or self-management concerns.</td><td>Medication source, reconciliation date, issue, and action owner.</td></tr><tr><td>Behavioral-health needs</td><td>15</td><td>Symptoms and function; validated measures when applicable; safety; substance use; treatment response; need for integrated support.</td><td>Assessment date, measure or findings, safety status, and plan.</td></tr><tr><td>Social and access barriers</td><td>15</td><td>Food, housing, transportation, utilities, language, digital access, caregiving, affordability, or another barrier affecting diagnosis or treatment.</td><td>Barrier, clinical effect, resource plan, owner, and closed-loop status.</td></tr><tr><td>Engagement difficulty</td><td>10</td><td>Unable to reach; missed care; health-literacy, accessibility, communication, self-management, or caregiver-support difficulty.</td><td>Contact attempts, patient preference, support need, and next step.</td></tr></table>
+<h2>Suggested outreach tiers</h2>
+<table><tr><th>Score</th><th>Default operational cadence</th><th>CrewOS handling</th></tr><tr><td>0 to 24</td><td>Routine or program-defined</td><td>Use the applicable program schedule and care-plan due dates.</td></tr><tr><td>25 to 49</td><td>At least monthly</td><td>Create a suggested next-contact date no later than 30 days unless the clinician sets an earlier date.</td></tr><tr><td>50 to 74</td><td>Approximately every 2 weeks</td><td>Create a suggested next-contact date within 14 days and surface unresolved high-weight domains.</td></tr><tr><td>75 to 100</td><td>Weekly or clinician-adjusted</td><td>Create a suggested next-contact date within 7 days and require clinician review of the outreach plan.</td></tr></table>
+<h2>Scoring safeguards and reassessment</h2>
+<p class="bullet">Do not convert Unknown, Not asked, Patient declined, or Not applicable to zero. If a required domain lacks sufficient information, show Risk score incomplete and identify the missing domain.</p>
+<p class="bullet">Require a short patient-specific reason and dated source for every nonzero rating. Preserve each score version, component rating, author, confirmation, and timestamp.</p>
+<p class="bullet">Calculate the score at enrollment, at each care-plan review, after an ED visit or facility transition, and when a material clinical, medication, behavioral-health, social, caregiver, engagement, or coverage change occurs. BHW may also require a quarterly operational refresh; this is not a Medicare billing rule.</p>
+<p class="bullet">Allow an authorized clinician to increase or decrease the suggested cadence with a reason, effective date, review date, and responsible person. The override changes the outreach plan, not the underlying component evidence.</p>
+<p class="bullet">Urgent symptoms, suicide or violence risk, abuse or neglect concerns, severe medication problems, or another time-sensitive clinical concern bypass the routine score and trigger the approved emergency or same-day escalation pathway.</p>
+<p class="bullet">Do not use the score by itself to enroll or remove a patient, select a billing code, count an activity, release a claim, deny care, or send an automated clinical message.</p>
+<h2>CrewOS implementation contract</h2>
+<p class="bullet">Extend the existing Patient Registry patient-program record; do not create a parallel patient identity or a separate clinical record.</p>
+<p class="bullet">Display all 6 component ratings, weights, evidence dates, total score, completeness status, suggested tier, clinician-adjusted cadence, last meaningful contact, next contact, and escalation status together.</p>
+<p class="bullet">Use the states Incomplete, Calculated, Clinician adjusted, and Urgent override. A calculated score is not the same as practitioner eligibility confirmation or program activation.</p>
+<p class="bullet">Permit trained staff to record objective information within role. Require the billing practitioner or an authorized clinician to confirm clinical eligibility, medical necessity, care-plan decisions, risk overrides, and urgent dispositions.</p>
+<p class="bullet">Write every approved update to BHW Cloud and read it back before showing Saved. Preserve the prior version and show Saved on this device only or Not saved when protected persistence is unavailable.</p>
+<p class="bullet">Project the confirmed record to Patient 360 and Care Connect according to role and patient-safe presentation rules. Keep clinical details in the protected source record and show only the appropriate patient-facing explanation.</p>
+<p class="bullet">Create follow-up tasks and internal notifications from confirmed due dates, missing requirements, and risk changes. Do not auto-send patient messages, auto-enroll, auto-bill, or auto-close an urgent task from the score.</p>
+<p class="bullet">Retain declines, pauses, ended programs, coverage changes, prior care plans, communications, activity history, score versions, overrides, and billing outcomes for review after closure.</p></main><div id="noResults" class="no-results" role="status">No SOP section matches that search. Try a program name, requirement, code, or workflow term.</div><script>
+(function(){
+  var content=document.getElementById("sopContent");
+  var nodes=Array.from(content.children);
+  var section=null;
+  nodes.forEach(function(node){
+    if(node.tagName==="H1"){
+      section=document.createElement("section");
+      section.className="sop-section";
+      content.insertBefore(section,node);
+    }
+    if(section) section.appendChild(node);
+  });
+  content.querySelectorAll("table").forEach(function(table){
+    var wrap=document.createElement("div");
+    wrap.className="table-scroll";
+    table.parentNode.insertBefore(wrap,table);
+    wrap.appendChild(table);
+  });
+  var cmsSources={
+    "1":"https://www.cms.gov/medicare/payment/fee-schedules/physician-fee-schedule/advanced-primary-care-management-services",
+    "2":"https://www.cms.gov/files/document/chroniccaremanagement.pdf",
+    "3":"https://www.cms.gov/files/document/mln909432-behavioral-health-integration-services.pdf",
+    "4":"https://www.cms.gov/medicare/medicare-fee-for-service-payment/physicianfeesched/downloads/behavioral-health-integration-faqs.pdf",
+    "5":"https://www.cms.gov/files/document/health-related-social-needs-faq.pdf",
+    "6":"https://www.cms.gov/medicare/coverage/telehealth/remote-patient-monitoring",
+    "7":"https://www.cms.gov/files/document/mln908628-transitional-care-management-services.pdf",
+    "8":"https://www.cms.gov/files/document/mm14315-medicare-physician-fee-schedule-final-rule-summary-cy-2026.pdf",
+    "9":"https://www.cms.gov/files/document/mm14250-therapy-code-list-2026-annual-update.pdf",
+    "10":"https://www.cms.gov/files/document/r13575cp.pdf",
+    "11":"https://www.cms.gov/medicare/payment/fee-schedules/physician/care-management",
+    "12":"https://www.cms.gov/regulations-and-guidance/guidance/manuals/downloads/bp102c13.pdf"
+  };
+  content.querySelectorAll("tr").forEach(function(row){
+    var cells=row.querySelectorAll("td");
+    if(cells.length>2 && cmsSources[cells[0].textContent.trim()] && cells[2].textContent.trim()==="Open CMS source"){
+      cells[2].innerHTML='<a class="cms-link" target="_blank" rel="noopener noreferrer" href="'+cmsSources[cells[0].textContent.trim()]+'">Open official CMS source ↗</a>';
+    }
+  });
+  var search=document.getElementById("sopSearch");
+  var noResults=document.getElementById("noResults");
+  search.addEventListener("input",function(){
+    var query=search.value.trim().toLowerCase();
+    var shown=0;
+    content.querySelectorAll(".sop-section").forEach(function(item){
+      var match=!query || item.textContent.toLowerCase().indexOf(query)>-1;
+      item.hidden=!match;
+      if(match) shown++;
+    });
+    noResults.classList.toggle("show",shown===0);
+  });
+})();
+</script><script type="module" src="/bhw-alert-center.mjs"></script><script src="/staff-chat-launcher.js" defer></script></body></html>
