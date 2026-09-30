@@ -11,8 +11,9 @@ const careLogData = require("../netlify/functions/care-log-data.js")._test;
 test("monthly care-log preparation recognizes every care-management program shown in CrewOS", () => {
   assert.deepEqual(careImport.normalizedPrograms([
     "Chronic Care Management", "APCM", "Principal Care Management", "Remote Patient Monitoring", "RTM",
-    "Behavioral Health Integration", "Collaborative Care", "CharmEd Minds",
-  ]), ["CCM", "APCM", "PCM", "RPM", "RTM", "BHI", "COCM", "CHARMED MINDS"]);
+    "Behavioral Health Integration", "Collaborative Care", "Community Health Integration",
+    "Principal Illness Navigation", "Principal Illness Navigation Peer Support", "CharmEd Minds",
+  ]), ["CCM", "APCM", "PCM", "RPM", "RTM", "BHI", "COCM", "CHI", "PIN-PS", "PIN", "CHARMED MINDS"]);
 });
 
 test("recent monthly enrollment is recovered for no more than two months", () => {
@@ -37,11 +38,53 @@ test("Care Management uses a rolling 30-day window and builds prior-month close 
   assert.deepEqual(careLogData.monthsInWindow("2026-08-30", "2026-09-28"), ["2026-08", "2026-09"]);
   assert.equal(careLogData.previousMonth("2026-09-28"), "2026-08");
   assert.equal(careLogData.monthEnd("2026-02"), "2026-02-28");
-  assert.deepEqual(careLogData.documentationGaps({ program: "TCM", status: "Open" }), ["activity/documentation", "first contact", "visit date", "next follow-up"]);
-  const page = await readFile(new URL("../bhw-care-management.html", import.meta.url), "utf8");
+  assert.deepEqual(careLogData.documentationGaps({ program: "TCM", status: "Open" }), [
+    "activity/documentation", "TCM code/MDM level", "first contact", "visit date",
+    "coverage verification", "provider review", "next follow-up",
+  ]);
+  const apcmGaps = careLogData.documentationGaps({
+    program: "APCM", status: "Open", activities: "Monthly review",
+    billingReadinessEvidence: {
+      eligibilityStatus: "confirmed", consentStatus: "current", coverageStatus: "verified",
+      initiatingVisitStatus: "not-required", carePlanStatus: "active", carePlanShared: true,
+      assignedPerson: "Synthetic Coordinator", patientInstructionsProvided: true,
+      monthlyRequirementsMet: true, providerReviewStatus: "approved", billingPath: "G0556",
+    },
+  });
+  assert.doesNotMatch(apcmGaps.join(" "), /minute|time/);
+  const ccmGaps = careLogData.documentationGaps({
+    program: "CCM", minutes: 12, activities: "Synthetic coordination", nextFollowUp: "2026-09-30",
+    billingReadinessEvidence: {
+      eligibilityStatus: "confirmed", consentStatus: "current", coverageStatus: "verified",
+      initiatingVisitStatus: "complete", carePlanStatus: "active", carePlanShared: true,
+      assignedPerson: "Synthetic Coordinator", patientInstructionsProvided: true,
+      monthlyRequirementsMet: true, providerReviewStatus: "approved", billingPath: "99490",
+    },
+  });
+  assert.ok(ccmGaps.includes("20-minute threshold"));
+  const rpmGaps = careLogData.documentationGaps({
+    program: "RPM", minutes: 10, activities: "Synthetic device review", nextFollowUp: "2026-09-30",
+    billingReadinessEvidence: {
+      eligibilityStatus: "confirmed", consentStatus: "current", coverageStatus: "verified",
+      initiatingVisitStatus: "not-required", carePlanStatus: "active", carePlanShared: true,
+      assignedPerson: "Synthetic Coordinator", patientInstructionsProvided: true,
+      monthlyRequirementsMet: true, providerReviewStatus: "approved", billingPath: "99470",
+      interactiveCommunicationCompleted: false,
+    },
+  });
+  assert.ok(rpmGaps.includes("interactive communication"));
+  const [page, actionSource] = await Promise.all([
+    readFile(new URL("../bhw-care-management.html", import.meta.url), "utf8"),
+    readFile(new URL("../netlify/functions/action.js", import.meta.url), "utf8"),
+  ]);
   assert.match(page, /Rolling day-to-day tracking/);
   assert.match(page, /documentation &amp; claim close/);
   assert.match(page, /First \/ last contact/);
+  assert.match(page, /Update missing items/);
+  assert.match(page, /No minute threshold/);
+  assert.match(page, /Code-specific device \+ time/);
+  assert.match(page, /billingReadinessEvidence/);
+  assert.match(actionSource, /"billingReadinessEvidence"/);
   const scripts = [...page.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)].map((match) => match[1]);
   for (const script of scripts) assert.doesNotThrow(() => new Function(script));
 });

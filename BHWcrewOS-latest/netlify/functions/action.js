@@ -494,7 +494,7 @@ exports.handler = async (event) => {
       case "care-log-save": {
         if (!b.id) return json(400, { error: "Missing entry id" });
         const updates = {};
-        for (const key of ["minutes", "activities", "referrals", "nextFollowUp", "followUpStage", "status", "lastContact", "notes"]) {
+        for (const key of ["minutes", "activities", "referrals", "nextFollowUp", "followUpStage", "status", "lastContact", "notes", "billingReadinessEvidence"]) {
           if (b[key] !== undefined) updates[key] = b[key];
         }
         if (!Object.keys(updates).length) return json(400, { error: "Nothing to update" });

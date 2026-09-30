@@ -45,14 +45,74 @@ function monthsInWindow(start, end) {
   return months;
 }
 
+const ENROLLMENT_PROGRAMS = new Set(["APCM", "CCM", "PCM", "BHI", "COCM", "CHI", "PIN", "PIN-PS", "RPM", "RTM"]);
+const TIME_PROGRAMS = new Set(["CCM", "PCM", "BHI", "COCM", "CHI", "PIN", "PIN-PS"]);
+const REMOTE_PROGRAMS = new Set(["RPM", "RTM"]);
+const CODE_REQUIREMENTS = Object.freeze({
+  "99490": { minutes: 20 }, "99491": { minutes: 30 }, "99487": { minutes: 60 },
+  "99424": { minutes: 30 }, "99426": { minutes: 30 }, "99484": { minutes: 20 },
+  "99492": { minutes: 70 }, "99493": { minutes: 60 }, "G2214": { minutes: 30 },
+  "G0019": { minutes: 60 }, "G0023": { minutes: 60 }, "G0140": { minutes: 60 },
+  "99445": { deviceDays: 2 }, "99454": { deviceDays: 16 }, "99470": { minutes: 10, interactive: true },
+  "99457": { minutes: 20, interactive: true }, "98984": { deviceDays: 2 }, "98985": { deviceDays: 2 },
+  "98986": { deviceDays: 2 }, "98976": { deviceDays: 16 }, "98977": { deviceDays: 16 },
+  "98978": { deviceDays: 16 }, "98979": { minutes: 10, interactive: true }, "98980": { minutes: 20, interactive: true },
+});
+
+function codeRequirement(path) {
+  const code = String(path || "").toUpperCase().match(/\b(?:G\d{4}|\d{5})\b/)?.[0] || "";
+  return { code, ...(CODE_REQUIREMENTS[code] || {}) };
+}
+
 function documentationGaps(log = {}) {
   const gaps = [];
   const program = String(log.program || "").toUpperCase();
   const status = String(log.status || "Open").toLowerCase();
+  const evidence = log.billingReadinessEvidence || {};
   if (!String(log.activities || "").trim()) gaps.push("activity/documentation");
-  if (["CCM", "PCM", "RPM", "RTM", "BHI", "COCM"].includes(program) && !(Number(log.minutes) > 0)) gaps.push("time");
-  if (program === "TCM" && !isoDate(log.lastContact)) gaps.push("first contact");
-  if (program === "TCM" && !isoDate(log.nextFollowUp)) gaps.push("visit date");
+  if (ENROLLMENT_PROGRAMS.has(program)) {
+    if (evidence.eligibilityStatus !== "confirmed") gaps.push("eligibility confirmation");
+    if (evidence.consentStatus !== "current") gaps.push("consent");
+    if (evidence.consentStatus === "current" && !isoDate(evidence.consentDate)) gaps.push("consent date");
+    if (evidence.consentStatus === "current" && !isoDate(evidence.consentReviewDue)) gaps.push("consent review due");
+    if (evidence.consentStatus === "current" && isoDate(evidence.consentReviewDue) && isoDate(evidence.consentReviewDue) < new Date().toISOString().slice(0, 10)) gaps.push("consent renewal");
+    if (evidence.coverageStatus !== "verified") gaps.push("coverage verification");
+    if (evidence.coverageStatus === "verified" && !isoDate(evidence.coverageCheckedAt)) gaps.push("coverage check date");
+    if (["", "missing"].includes(evidence.initiatingVisitStatus || "missing")) gaps.push("initiating visit decision");
+    if (evidence.initiatingVisitStatus === "complete" && !isoDate(evidence.initiatingVisitDate)) gaps.push("initiating visit date");
+    if (evidence.carePlanStatus !== "active") gaps.push("active care plan");
+    if (evidence.carePlanShared !== true) gaps.push("care plan shared");
+    if (!String(evidence.assignedPerson || "").trim()) gaps.push("assigned person");
+    if (evidence.patientInstructionsProvided !== true) gaps.push("patient instructions");
+    if (evidence.monthlyRequirementsMet !== true) gaps.push("monthly requirements");
+    if (evidence.providerReviewStatus !== "approved") gaps.push("provider review");
+    if (evidence.providerReviewStatus === "approved" && !isoDate(evidence.providerReviewedAt)) gaps.push("provider review date");
+  }
+  if (TIME_PROGRAMS.has(program) || REMOTE_PROGRAMS.has(program)) {
+    if (!String(evidence.billingPath || "").trim()) gaps.push("billing code/path");
+    const requirement = codeRequirement(evidence.billingPath);
+    const requiredMinutes = Number(evidence.requiredMinutes) || Number(requirement.minutes) || 0;
+    const requiredDeviceDays = Number(evidence.requiredDeviceDays) || Number(requirement.deviceDays) || 0;
+    if (TIME_PROGRAMS.has(program) && !(requiredMinutes > 0)) gaps.push("minute threshold selection");
+    if (requiredMinutes > 0 && Number(log.minutes) < requiredMinutes) gaps.push(`${requiredMinutes}-minute threshold`);
+    if (requiredDeviceDays > 0 && Number(evidence.deviceDataDays) < requiredDeviceDays) gaps.push(`${requiredDeviceDays} device-data days`);
+    if ((requirement.interactive || (requiredMinutes > 0 && REMOTE_PROGRAMS.has(program))) && evidence.interactiveCommunicationCompleted !== true) {
+      gaps.push("interactive communication");
+    }
+    if (REMOTE_PROGRAMS.has(program) && String(evidence.billingPath || "").trim() && !requiredMinutes && !requiredDeviceDays && !["99453", "98975"].includes(requirement.code)) {
+      gaps.push("code requirements");
+    }
+  }
+  if (program === "APCM" && !String(evidence.billingPath || "").trim()) gaps.push("APCM level/code");
+  if (program === "TCM") {
+    if (!String(evidence.billingPath || "").trim()) gaps.push("TCM code/MDM level");
+    if (!isoDate(log.lastContact)) gaps.push("first contact");
+    if (!isoDate(log.nextFollowUp)) gaps.push("visit date");
+    if (evidence.coverageStatus !== "verified") gaps.push("coverage verification");
+    if (evidence.coverageStatus === "verified" && !isoDate(evidence.coverageCheckedAt)) gaps.push("coverage check date");
+    if (evidence.providerReviewStatus !== "approved") gaps.push("provider review");
+    if (evidence.providerReviewStatus === "approved" && !isoDate(evidence.providerReviewedAt)) gaps.push("provider review date");
+  }
   if (!["complete", "billed"].includes(status) && !isoDate(log.nextFollowUp)) gaps.push("next follow-up");
   if (status === "complete") gaps.push("claim processing");
   return [...new Set(gaps)];
@@ -110,6 +170,7 @@ exports.handler = async (event) => {
         payer: patient?.payer || "",
         rosterLinked: Boolean(patient),
         edited: log.updatedAt || "",
+        gaps: documentationGaps(log),
       };
     });
     const activityById = new Map();
@@ -176,4 +237,4 @@ exports.handler = async (event) => {
   }
 };
 
-exports._test = { documentationGaps, isoDate, monthEnd, monthsInWindow, previousMonth, shiftDate };
+exports._test = { codeRequirement, documentationGaps, isoDate, monthEnd, monthsInWindow, previousMonth, shiftDate };
