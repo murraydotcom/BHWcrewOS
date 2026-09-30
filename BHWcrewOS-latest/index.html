@@ -167,6 +167,15 @@ a.res .star{color:var(--clay);margin-right:6px}
 .awv-q input{width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:10px;background:#fff}
 .empty{color:var(--ink-soft);font-size:13px;padding:8px 2px}
 .view{display:none}.view.active{display:block}
+.embed-toolbar{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin:0 0 8px}
+.embed-toolbar .embed-note{margin-right:auto;color:var(--ink-soft);font-size:11.5px}
+.embed-card{padding:8px}
+.view.embed-expanded{position:fixed;inset:0;z-index:320;display:flex!important;flex-direction:column;background:var(--bg);padding:12px;overflow:hidden}
+.view.embed-expanded .prog-head{display:none}
+.view.embed-expanded .embed-card{display:flex;flex:1;min-height:0;flex-direction:column;margin:0}
+.view.embed-expanded .embed-toolbar{flex:none}
+.view.embed-expanded iframe{flex:1;height:100%!important;min-height:0!important}
+body.embed-open{overflow:hidden}
 .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .cal-title{font-size:15px;font-weight:800;letter-spacing:.02em}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
@@ -245,6 +254,18 @@ const API_REFTPL = "/.netlify/functions/referral-templates";
 const API_GAPS = "/.netlify/functions/care-gaps";
 const API_PATIENTS = "/.netlify/functions/patients"; // Master Patient List search (register picker)
 let REF_TEMPLATES = null; // lazy-loaded cache of destination referral templates
+
+// Older BHW Capture installs used a root-wide scope, which could make CrewOS
+// appear inside a window labelled "BHW Capture". Retire only that legacy
+// Capture registration; the narrowed Capture registration remains untouched.
+if("serviceWorker" in navigator && navigator.serviceWorker.getRegistrations){
+  navigator.serviceWorker.getRegistrations().then(registrations=>Promise.all(registrations.map(registration=>{
+    const worker=registration.active||registration.waiting||registration.installing;
+    const legacyRootScope=new URL(registration.scope).pathname==="/";
+    const captureWorker=worker&&new URL(worker.scriptURL).pathname==="/bhw-capture-sw.js";
+    return legacyRootScope&&captureWorker?registration.unregister():false;
+  }))).catch(()=>{});
+}
 
 const DIV_COLORS = {
   "Primary Care":"var(--pc-primary)", "CharmEd Minds":"var(--pc-charmed)",
@@ -427,11 +448,36 @@ function buildRail(){
 }
 
 function activate(viewId){
+  closeExpandedEmbed();
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.view===viewId));
   document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id==="view-"+viewId));
   window.scrollTo({top:0});
   focusRequestedRecord();
 }
+
+function closeExpandedEmbed(){
+  document.querySelectorAll(".view.embed-expanded").forEach(view=>{
+    view.classList.remove("embed-expanded");
+    const button=view.querySelector("[data-expand-embed]");
+    if(button){ button.textContent="Expand view"; button.setAttribute("aria-expanded","false"); }
+  });
+  document.body.classList.remove("embed-open");
+}
+
+function toggleEmbedExpanded(viewId,button){
+  const view=document.getElementById(viewId);
+  if(!view) return;
+  const expanding=!view.classList.contains("embed-expanded");
+  closeExpandedEmbed();
+  if(expanding){
+    view.classList.add("embed-expanded");
+    document.body.classList.add("embed-open");
+    button.textContent="Exit expanded view";
+    button.setAttribute("aria-expanded","true");
+  }
+}
+
+document.addEventListener("keydown",event=>{ if(event.key==="Escape") closeExpandedEmbed(); });
 
 function focusRequestedRecord(){
   const requestId = new URLSearchParams(location.search).get("request") || "";
@@ -803,7 +849,7 @@ const PAGE_EMBEDS = [
   {id:"pg-billing",  title:"Billing Toolkit",      src:"/BHW_Care_Management_Toolkit.html",  blurb:"Care management and primary care billing codes."},
   {id:"pg-discharges", title:"CRISP Flow", src:"/bhw-discharges.html",         blurb:"CRISP ADT feed — admissions, discharges, ED visits, and the TCM clock (99495/99496)."},
   {id:"pg-caredue",  title:"CM — Due This Week",    src:"/bhw-care-due.html",                 blurb:"One worklist: overdue / today / this-week follow-ups, TCM contacts, not-started patients, and open inbound requests."},
-  {id:"pg-carelog",  title:"Care Management Log",  src:"/bhw-care-management.html",          blurb:"CCM/APCM/TCM worklog — time, activities, referrals completed, and the follow-up clock (1d/4d/2wk/1mo), per patient per month."},
+  {id:"pg-carelog",  title:"Care Management Log",  src:"/bhw-care-management.html",          blurb:"Care-program worklog — enrollment and billing evidence, time when applicable, activities, referrals, follow-up, and Care Connect monitoring references."},
   {id:"pg-crewcare", title:"BHWCrewCare Portal",   src:"/bhw-crewcare-portal.html",          blurb:"Provider side — inbox, care plan builder, results, panel."},
   {id:"pg-portal",   title:"Primary Care Portal",  src:"/bhw-patient-portal-mockup.html",    blurb:"Patient-side design preview — sample data."},
   {id:"pg-charmed",  title:"CharmEd Minds",        src:"/bhw-charmed-patient-mockup.html",   blurb:"My Strategy Hub — patient-side preview."},
@@ -828,7 +874,8 @@ function checkEmbeds(){
 function embedView(e){
   return `<section class="view" id="view-${e.id}" style="--pc:var(--clay)">
     <div class="prog-head"><div class="bar"></div><div><h1>${e.title}</h1><p>${e.blurb}</p></div></div>
-    <div class="card" style="padding:8px">
+    <div class="card embed-card">
+      <div class="embed-toolbar"><span class="embed-note">Expand stays in this signed-in CrewOS tab.</span><button class="btn sec sm" type="button" data-expand-embed aria-expanded="false" onclick="toggleEmbedExpanded('view-${e.id}',this)">Expand view</button><a class="btn sec sm" href="${e.src}" target="_blank" style="text-decoration:none">Open in new tab</a></div>
       <div id="fb-${e.id}" style="display:none;padding:44px 26px;text-align:center">
         <div style="font-size:14.5px;font-weight:600;margin-bottom:8px">This page can't display inside the app yet.</div>
         <div style="font-size:13px;color:var(--ink-soft);max-width:520px;margin:0 auto 16px">The site's frame protection is still set to <b>DENY</b>. Fix it in <b>netlify.toml</b> — change <code>X-Frame-Options = "DENY"</code> to <code>"SAMEORIGIN"</code> — then redeploy. Until then, use the button below.</div>
@@ -836,7 +883,6 @@ function embedView(e){
       </div>
       <iframe id="if-${e.id}" data-fb="fb-${e.id}" src="${e.src}" title="${e.title}" style="width:100%;height:calc(100vh - 240px);min-height:620px;border:0;border-radius:12px;background:#fff"></iframe>
     </div>
-    <p style="margin-top:10px;font-size:12.5px"><a href="${e.src}" target="_blank" rel="noopener" style="color:var(--clay-deep);font-weight:700">Open full-screen ↗</a></p>
   </section>`;
 }
 
