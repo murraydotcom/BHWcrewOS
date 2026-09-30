@@ -11,7 +11,15 @@ const TYPE_LABELS = Object.freeze({
   billing: "Billing request",
   billing_rcm: "Billing request",
   rcm: "Billing request",
+  clinical_review: "Clinical review",
   general: "Patient request",
+});
+
+const ROLE_ROUTES = Object.freeze({
+  "front-desk": Object.freeze(["front_desk", "patient_access", "referrals"]),
+  "ma-bha": Object.freeze(["medication", "authorizations", "clinical"]),
+  "care-manager": Object.freeze(["referrals", "care_coordination", "clinical"]),
+  rcm: Object.freeze(["rcm", "revenue_cycle", "authorizations"]),
 });
 
 const clean = (value, max = 160) => String(value ?? "").trim().slice(0, max);
@@ -29,13 +37,45 @@ function crewWorkflow(request = {}) {
 }
 
 export function isProviderActor(actor = {}) {
-  const access = clean(actor.access).toLowerCase();
-  if (/admin|administrator|executive|owner|office manager|director/.test(access)) return false;
   const role = clean(actor.role).toLowerCase();
   return /crnp|pmhnp|fnp|\bnp\b|\bmd\b|\bdo\b|physician|provider|prescriber|psychiatrist/.test(role);
 }
 
+export function normalizeAlertRole(actor = {}) {
+  const role = clean(actor.role).toLowerCase().replaceAll("&", "and").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  if (isProviderActor(actor)) return "provider";
+  if (/^(medical-assistant|behavioral-health-assistant|bh-assistant|bha|ma|ma-bha)$/.test(role)) return "ma-bha";
+  if (/care-manager|care-coordinator|chronic-care|bh-coordinator|behavioral-health-coordinator|behavioral-health/.test(role)) return "care-manager";
+  if (/billing|biller|revenue-cycle|\brcm\b/.test(role)) return "rcm";
+  if (/front-desk|frontdesk|patient-access|reception|porter-house-admin/.test(role)) return "front-desk";
+  if (/owner|chief-executive|\bceo\b|executive/.test(role)) return "executive";
+  if (/operations|office-manager|administrator|admin|director/.test(role)) return "operations-manager";
+  const access = clean(actor.access).toLowerCase();
+  if (/admin|administrator|executive|owner|office manager|director/.test(access)) return "operations-manager";
+  return role;
+}
+
+export function isFaxRequest(request = {}) {
+  return [request.requestType, request.type, request.source, request.sourceChannel]
+    .map(normalized)
+    .some((value) => value === "fax" || value === "ifax" || value.includes("inbound_fax"));
+}
+
+export function isClinicalRequest(request = {}) {
+  if (isFaxRequest(request)) return false;
+  const type = normalized(request.requestType || request.type || "general");
+  if (["billing", "billing_rcm", "rcm"].includes(type)) return false;
+  const routes = [request.assignedTeam, request.serviceLine].map(normalized);
+  const status = normalized(request.status || request.statusCategory);
+  return ["medication", "refill", "medication_refill", "referral", "prior_auth", "prior_authorization", "pa", "clinical_review"].includes(type)
+    || routes.some((route) => ["clinical", "medication", "authorizations", "referrals", "care_coordination"].includes(route))
+    || /triage|provider_question|provider_review|clinician_question|clinician_review|waiting_on_clinician/.test(status)
+    || (Array.isArray(request.safetyFlags) && request.safetyFlags.length > 0);
+}
+
 export function requiresProviderAlert(request = {}, actor = {}) {
+  if (isAssignedTo(request, actor)) return true;
+  if (!isClinicalRequest(request)) return false;
   const status = normalized(request.status || request.statusCategory);
   const category = normalized(request.statusCategory);
   const priority = normalized(request.priority);
@@ -47,8 +87,7 @@ export function requiresProviderAlert(request = {}, actor = {}) {
     || Boolean(request.escalatedAt || request.escalationReason)
     || status === "waiting_on_clinician"
     || /triage|provider_question|provider_review|clinician_question|clinician_review/.test(status)
-    || /triage|provider_review/.test(route)
-    || isAssignedTo(request, actor);
+    || /triage|provider_review/.test(route);
 }
 
 export function decodeSession(token) {
@@ -70,10 +109,10 @@ export function decodeSession(token) {
 }
 
 export function roleRoutes(actor = {}) {
-  const role = `${clean(actor.role)} ${clean(actor.access)}`.toLowerCase();
-  if (/admin|administrator|executive|owner|office manager|director/.test(role)) return ["*"];
-  if (isProviderActor(actor)) return ["provider_attention"];
-  return role.trim() ? ["*"] : [];
+  const role = normalizeAlertRole(actor);
+  if (role === "provider") return ["provider_attention"];
+  if (["operations-manager", "executive"].includes(role)) return ["manager_attention"];
+  return [...(ROLE_ROUTES[role] || [])];
 }
 
 function isAssignedTo(request, actor) {
@@ -87,6 +126,36 @@ function isAssignedTo(request, actor) {
 
 function routeFor(request) {
   return normalized(request.assignedTeam || request.serviceLine || "general");
+}
+
+function routesFor(request) {
+  return [request.assignedTeam, request.serviceLine].map(normalized).filter(Boolean);
+}
+
+function managerAttention(request = {}) {
+  const status = normalized(request.status || request.statusCategory);
+  const category = normalized(request.statusCategory);
+  const priority = normalized(request.priority);
+  return ["urgent", "emergency"].includes(priority)
+    || (Array.isArray(request.safetyFlags) && request.safetyFlags.length > 0)
+    || status === "escalated"
+    || category === "escalated"
+    || Boolean(request.escalatedAt || request.escalationReason);
+}
+
+export function isRoleRelevantRequest(request = {}, actor = {}) {
+  if (isFaxRequest(request)) return false;
+  if (isAssignedTo(request, actor) || request.teamNoteMentioned === true) return true;
+  const role = normalizeAlertRole(actor);
+  if (role === "provider") return requiresProviderAlert(request, actor);
+  if (["operations-manager", "executive"].includes(role)) return managerAttention(request);
+  const workflow = crewWorkflow(request);
+  const destination = divisionName(request.workflowContext?.toDivision);
+  const actorDivisions = Array.isArray(actor.divisions) ? actor.divisions.map(divisionKey) : [];
+  if (workflow && destination && ["front-desk", "ma-bha", "care-manager"].includes(role)
+      && actorDivisions.includes(divisionKey(destination))) return true;
+  const routes = roleRoutes(actor);
+  return routesFor(request).some((route) => routes.includes(route));
 }
 
 function isCompleted(request) {
@@ -115,11 +184,11 @@ export function safeAlertForRequest(request, actor = {}, now = Date.now()) {
   const teamNoteMentioned = teamNoteUnread && request.teamNoteMentioned === true;
   const providerAttention = requiresProviderAlert(request, actor) || teamNoteMentioned;
   if (providerOnly && !providerAttention) return null;
+  if (!isRoleRelevantRequest(request, actor)) return null;
   const workflow = crewWorkflow(request);
   const destination = divisionName(request.workflowContext?.toDivision);
-  const actorIsAdmin = roleRoutes(actor).includes("*") && /admin|administrator|executive|owner|office manager|director/i.test(`${clean(actor.role)} ${clean(actor.access)}`);
   const actorDivisions = Array.isArray(actor.divisions) ? actor.divisions.map(divisionKey) : [];
-  if (workflow && destination && !actorIsAdmin && !assignedToMe && !actorDivisions.includes(divisionKey(destination))) return null;
+  if (workflow && destination && !assignedToMe && !teamNoteMentioned && !actorDivisions.includes(divisionKey(destination))) return null;
 
   let reason = "";
   let severity = "routine";
@@ -133,10 +202,6 @@ export function safeAlertForRequest(request, actor = {}, now = Date.now()) {
   else if (workflow && unassigned && ["received", "new", ""].includes(category)) { reason = workflow === "handoff" ? "New warm handoff" : "New referral"; }
   else if (unassigned && ["received", "new", ""].includes(category)) { reason = "Needs an owner"; }
   else return null;
-
-  const actorRoutes = roleRoutes(actor);
-  const canSeeRoute = providerOnly ? providerAttention : actorRoutes.includes("*") || actorRoutes.includes(route);
-  if (!assignedToMe && !canSeeRoute) return null;
 
   const type = normalized(request.requestType || request.type || "general");
   const changedAt = clean(request.updatedAt || request.createdAt, 80);
@@ -230,15 +295,15 @@ function createUi() {
   injectStyles();
   const root = document.createElement("section");
   root.className = "bhw-alert-root";
-  root.setAttribute("aria-label", "CrewOS alerts");
+  root.setAttribute("aria-label", "CrewOS clinical alerts");
   root.innerHTML = `
-    <label class="bhw-alert-toggle-wrap" title="Choose whether CrewOS alerts appear on this device"><input class="bhw-alert-toggle" type="checkbox" checked><span>Notifications on</span></label>
-    <button class="bhw-alert-bell" type="button" aria-label="Open CrewOS alerts" aria-expanded="false">
+    <label class="bhw-alert-toggle-wrap" title="Choose whether role-relevant clinical alerts appear on this device"><input class="bhw-alert-toggle" type="checkbox" checked><span>Notifications on</span></label>
+    <button class="bhw-alert-bell" type="button" aria-label="Open CrewOS clinical alerts" aria-expanded="false">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
       <span class="bhw-alert-count" hidden>0</span>
     </button>
     <div class="bhw-alert-panel" hidden>
-      <div class="bhw-alert-head"><b>CrewOS alerts</b><span>Role routed</span></div>
+      <div class="bhw-alert-head"><b>Clinical alerts</b><span>Role routed</span></div>
       <div class="bhw-alert-list"></div>
       <div class="bhw-alert-foot"><a href="/bhw-requests.html">Open Patient Requests →</a></div>
     </div>`;
@@ -297,14 +362,14 @@ function startAlertCenter(token) {
     const notRead = unread();
     ui.badge.textContent = notRead.length > 99 ? "99+" : String(notRead.length);
     ui.badge.hidden = !notificationsEnabled || notRead.length === 0;
-    ui.button.setAttribute("aria-label", !notificationsEnabled ? "Open CrewOS alerts, notifications off" : notRead.length ? `Open CrewOS alerts, ${notRead.length} unread` : "Open CrewOS alerts");
+    ui.button.setAttribute("aria-label", !notificationsEnabled ? "Open CrewOS clinical alerts, notifications off" : notRead.length ? `Open CrewOS clinical alerts, ${notRead.length} unread` : "Open CrewOS clinical alerts");
     ui.toggle.checked = notificationsEnabled;
     ui.toggleText.textContent = notificationsEnabled ? "Notifications on" : "Notifications off";
     ui.list.innerHTML = !notificationsEnabled ? '<div class="bhw-alert-empty"><b>Notifications are off on this device.</b><br>You can turn them back on at any time.</div>' : current.length ? current.map((alert) => `
       <a class="bhw-alert-item ${escapeHtml(alert.severity)}" href="${escapeHtml(alert.href)}" data-alert-key="${escapeHtml(alert.key)}">
         <span class="bhw-alert-top"><span class="bhw-alert-type">${escapeHtml(alert.label)}</span><span class="bhw-alert-reason">${escapeHtml(alert.reason)}</span></span>
         <span class="bhw-alert-meta">${escapeHtml(alert.status)} · ${escapeHtml(alert.route)}</span>
-      </a>`).join("") : '<div class="bhw-alert-empty">No routed alerts need your attention.</div>';
+      </a>`).join("") : '<div class="bhw-alert-empty">No role-relevant clinical alerts need your attention.</div>';
   }
   function applyRequests(requests) {
     ui.root.hidden = false;
