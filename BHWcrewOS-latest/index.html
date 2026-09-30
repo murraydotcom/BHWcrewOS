@@ -1352,7 +1352,7 @@ async function awvGapsLoad(patientId){
   if(!box) return;
   const p = (D.patients||[]).find(x=>x.id===patientId) || {};
   try{
-    const r = await api(API_GAPS, {action:"for", memberId:p.memberId||"", name:p.name||""});
+    const r = await api(API_GAPS, {action:"for", bhwPatientId:p.id||"", memberId:p.memberId||"", name:p.name||""});
     if(document.getElementById("awv-gaps")!==box) return; // modal moved on
     if(!r.matched){
       box.innerHTML = `<div class="awv-l">Open care gaps <span class="pill gray">payer report</span></div><div class="lede" style="margin:0">No matching row in the Medicare Wellness Report ${p.memberId?"for this Member ID":"by name"}. Upload this month's report to the Gaps in Care page if it's missing.</div>`;
@@ -2541,8 +2541,8 @@ function prevCard(){
     });
   const due = rows.filter(x=>x.r && x.r.awvStatus==="Due now").length;
   return `<div class="card">
-    <h2>Medicare prevention — AWV work queue <span class="grow"></span>${due?`<span class="pill alert">${due} due now</span>`:""}<button class="btn sm" onclick="prevBatch()">⟳ Run batch check</button></h2>
-    <p class="lede">CMS HETS eligibility is routed through Stedi for coverage, plan type, and AWV eligibility. ${stediConnectionSummary()} Due patients are one tap from the AWV wizard.</p>
+    <h2>Medicare prevention — AWV work queue <span class="grow"></span>${due?`<span class="pill alert">${due} due now</span>`:""}<button class="btn sm sec" onclick="gapsRefresh()">⟳ Refresh gaps</button><button class="btn sm" onclick="prevBatch()">⟳ Run eligibility check</button></h2>
+    <p class="lede">Coverage and AWV eligibility come from CMS HETS through Stedi. Open care gaps come from the reviewed payer gap feed in BHW Cloud. ${stediConnectionSummary()} Both Primary Care and Care Management read this same patient-linked queue; payer gaps never change the clinical chart without provider review.</p>
     ${rows.length ? `<div class="tbl-wrap"><table><thead><tr><th>Patient</th><th>Coverage</th><th>Plan</th><th>AWV</th><th>Gaps</th><th>Checked</th><th></th></tr></thead><tbody>
       ${rows.map(({p,r})=>`<tr>
         <td><b>${esc(p.name)}</b> ${!p.hasMbi?'<span class="pill warn">MBI needed</span>':""}</td>
@@ -2560,26 +2560,33 @@ function prevCard(){
 }
 
 // ---- Care gaps from the payer Medicare Wellness Report (one cached list read) ----
-// CARE_GAPS: null = not yet loaded, "err" = load failed, else { byId, byName }.
-let CARE_GAPS = null, CARE_GAPS_LOADING = false;
+// CARE_GAPS: null = not yet loaded, "err" = load failed, else
+// { byPatientId, byId, byName, updated }. BHW patient identity is authoritative;
+// member ID and name remain bounded fallbacks for older imported rows.
+let CARE_GAPS = null, CARE_GAPS_LOADING = false, CARE_GAPS_ERROR = "";
 const gapKey = (s) => String(s||"").toLowerCase().split(",").reverse().join(" ").replace(/[^a-z0-9]/g,"");
 function gapsFor(p){
   if(!CARE_GAPS || CARE_GAPS==="err") return null;
-  return (p.memberId && CARE_GAPS.byId[p.memberId.toLowerCase()]) || CARE_GAPS.byName[gapKey(p.name)] || null;
+  return CARE_GAPS.byPatientId[String(p.id||"").toUpperCase()]
+    || (p.memberId && CARE_GAPS.byId[p.memberId.toLowerCase()])
+    || CARE_GAPS.byName[gapKey(p.name)]
+    || null;
 }
 async function gapsEnsure(){
   if(CARE_GAPS!==null || CARE_GAPS_LOADING) return;
   CARE_GAPS_LOADING = true;
+  CARE_GAPS_ERROR = "";
   try{
     const r = await api(API_GAPS, {action:"list"});
-    const byId = {}, byName = {};
+    const byPatientId = {}, byId = {}, byName = {};
     for(const pt of (r.patients||[])){
       const rec = { ...pt, open: pt.gaps.filter(g=>g.open) };
+      if(pt.bhwPatientId) byPatientId[String(pt.bhwPatientId).toUpperCase()] = rec;
       if(pt.memberId) byId[pt.memberId.toLowerCase()] = rec;
       if(pt.name) byName[gapKey(pt.name)] = rec;
     }
-    CARE_GAPS = { byId, byName };
-  }catch(e){ CARE_GAPS = "err"; }
+    CARE_GAPS = { byPatientId, byId, byName, updated:r.updated||"" };
+  }catch(e){ CARE_GAPS = "err"; CARE_GAPS_ERROR = e.message||"Gap feed unavailable"; }
   CARE_GAPS_LOADING = false;
   // Repaint the current view so the Gaps column fills in.
   const active = document.querySelector(".tab.active")?.dataset.view;
@@ -2587,11 +2594,18 @@ async function gapsEnsure(){
 }
 function gapsCell(p){
   if(CARE_GAPS===null){ gapsEnsure(); return '<span class="pill gray">…</span>'; }
-  if(CARE_GAPS==="err") return '<span class="pill gray">—</span>';
+  if(CARE_GAPS==="err") return `<button class="btn sm warn" onclick="gapsRefresh()" title="${esc(CARE_GAPS_ERROR)}">Gap feed unavailable</button>`;
   const rec = gapsFor(p);
-  if(!rec) return '<span class="pill gray">—</span>';
+  if(!rec) return '<span class="pill gray">No payer row</span>';
   const open = rec.open.length;
   return `<button class="btn sm ${open?"warn":"sec"}" onclick="gapsDetail('${p.id}')">${open?`${open} open`:"none open"}</button>`;
+}
+async function gapsRefresh(){
+  CARE_GAPS = null;
+  CARE_GAPS_ERROR = "";
+  await gapsEnsure();
+  if(CARE_GAPS==="err") toast("⚠ Could not refresh payer gaps: "+CARE_GAPS_ERROR);
+  else toast(`✓ Payer gaps refreshed${CARE_GAPS.updated?` · ${new Date(CARE_GAPS.updated).toLocaleString()}`:""}`);
 }
 function gapsDetail(patientId){
   const p = (D.patients||[]).find(x=>x.id===patientId) || {};
@@ -2615,14 +2629,14 @@ async function prevCheck(patientId){
     const r = await api(API_STEDI, {action:"check", patientId});
     if(r.error) toast("⚠ "+r.error);
     else toast(`✓ Checked — coverage ${r.active?"active":"inactive"}, AWV: ${r.awvStatus}`);
-    refreshSoft();
+    await refreshSoft();
   }catch(e){ toast("⚠ "+e.message); }
 }
 function prevMbi(patientId){
   const mbi = prompt("Medicare Beneficiary Identifier (11 characters, from the red-white-blue card):");
   if(!mbi) return;
   api(API_STEDI, {action:"set-mbi", patientId, mbi})
-    .then(()=>{ toast("MBI saved"); refreshSoft(); })
+    .then(async()=>{ toast("MBI saved"); await refreshSoft(); })
     .catch(e=>toast("⚠ "+e.message));
 }
 async function prevBatch(){
@@ -2637,7 +2651,7 @@ async function prevBatch(){
       offset = r.nextOffset;
     }
     toast(`✓ Batch complete — ${checked} patient${checked===1?"":"s"} checked`);
-    refreshSoft();
+    await refreshSoft();
   }catch(e){ toast("⚠ Batch stopped: "+e.message); }
   if(total===0) toast("No Medicare patients with an MBI on file yet — add MBIs first");
 }
@@ -3126,6 +3140,11 @@ async function act(body, okMsg, rethrow){
 async function refreshSoft(){
   const active = document.querySelector(".tab.active")?.dataset.view;
   D = await api(API_DATA);
+  // A payer report, Stedi check, or Registry reconciliation may have changed
+  // the patient-linked gap rows. Never keep the old gap projection on either
+  // the Primary Care or Care Management copy of this shared queue.
+  CARE_GAPS = null;
+  CARE_GAPS_ERROR = "";
   buildRail(); buildViews();
   activate(active || cssId(D.user.landing));
 }
