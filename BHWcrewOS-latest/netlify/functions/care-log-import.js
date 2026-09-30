@@ -55,6 +55,16 @@ function enrolledPrograms(patient, profile, recent) {
   ])];
 }
 
+function rosterEvidence(registryPrograms, profilePrograms, program, serviceMonth) {
+  if (registryPrograms.has(program)) {
+    return { source: "patient-registry", program, effectiveMonth: serviceMonth, status: "active" };
+  }
+  if (profilePrograms.has(program)) {
+    return { source: "population-health", program, effectiveMonth: serviceMonth, status: "active" };
+  }
+  return { source: "recent-care-log", program, effectiveMonth: serviceMonth, status: "needs-review" };
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return json(405, { error: "POST only" });
   let body;
@@ -101,6 +111,7 @@ exports.handler = async (event) => {
             registryPrograms.has(program) ? "source: BHW Cloud Patient Registry" : profilePrograms.has(program)
               ? "source: Population Health enrollment" : "source: recent BHW Cloud care-log enrollment",
           ].join(" · "),
+          rosterObservation: rosterEvidence(registryPrograms, profilePrograms, program, serviceMonth),
         };
         const current = existing.get(key);
         if (current) {
@@ -127,4 +138,4 @@ exports.handler = async (event) => {
   }
 };
 
-exports._test = { enrolledPrograms, monthDistance, normalizedPrograms, recentPrograms };
+exports._test = { enrolledPrograms, monthDistance, normalizedPrograms, recentPrograms, rosterEvidence };

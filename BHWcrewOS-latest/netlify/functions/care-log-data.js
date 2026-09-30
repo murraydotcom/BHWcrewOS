@@ -64,6 +64,14 @@ function codeRequirement(path) {
   return { code, ...(CODE_REQUIREMENTS[code] || {}) };
 }
 
+function currentRosterObservation(log = {}, program = "") {
+  const serviceMonth = String(log.serviceMonth || "").slice(0, 10);
+  const observations = (Array.isArray(log.rosterHistory) ? log.rosterHistory : []).filter((item) =>
+    String(item?.program || "").toUpperCase() === program
+      && String(item?.effectiveMonth || "").slice(0, 10) === serviceMonth);
+  return observations.length ? observations[observations.length - 1] : null;
+}
+
 function documentationGaps(log = {}) {
   const gaps = [];
   const program = String(log.program || "").toUpperCase();
@@ -71,6 +79,10 @@ function documentationGaps(log = {}) {
   const evidence = log.billingReadinessEvidence || {};
   if (!String(log.activities || "").trim()) gaps.push("activity/documentation");
   if (ENROLLMENT_PROGRAMS.has(program)) {
+    if (evidence.intakeStatus !== "accepted") gaps.push("governed intake decision");
+    if (evidence.intakeStatus === "accepted" && (!isoDate(evidence.intakeReviewedAt) || !String(evidence.intakeReviewedBy || "").trim())) gaps.push("intake review audit");
+    const rosterObservation = currentRosterObservation(log, program);
+    if (!rosterObservation || rosterObservation.status !== "active") gaps.push("current roster evidence");
     if (evidence.eligibilityStatus !== "confirmed") gaps.push("eligibility confirmation");
     if (evidence.consentStatus !== "current") gaps.push("consent");
     if (evidence.consentStatus === "current" && !isoDate(evidence.consentDate)) gaps.push("consent date");
@@ -114,6 +126,7 @@ function documentationGaps(log = {}) {
     if (evidence.providerReviewStatus === "approved" && !isoDate(evidence.providerReviewedAt)) gaps.push("provider review date");
   }
   if (!["complete", "billed"].includes(status) && !isoDate(log.nextFollowUp)) gaps.push("next follow-up");
+  if (status !== "billed" && evidence.billingHoldStatus !== "ready-for-rcm-review") gaps.push("billing hold / RCM review route");
   if (status === "complete") gaps.push("claim processing");
   return [...new Set(gaps)];
 }
@@ -260,4 +273,4 @@ exports.handler = async (event) => {
   }
 };
 
-exports._test = { codeRequirement, documentationGaps, isoDate, monthEnd, monthsInWindow, previousMonth, shiftDate };
+exports._test = { codeRequirement, currentRosterObservation, documentationGaps, isoDate, monthEnd, monthsInWindow, previousMonth, shiftDate };

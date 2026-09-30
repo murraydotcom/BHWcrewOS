@@ -29,6 +29,16 @@ test("recent monthly enrollment is recovered for no more than two months", () =>
   assert.equal(recent.has("BHW0004"), false);
 });
 
+test("monthly preparation records governed roster evidence without treating recovered history as current enrollment", () => {
+  assert.deepEqual(careImport.rosterEvidence(new Set(["CCM"]), new Set(), "CCM", "2026-09-01"), {
+    source: "patient-registry", program: "CCM", effectiveMonth: "2026-09-01", status: "active",
+  });
+  assert.deepEqual(careImport.rosterEvidence(new Set(), new Set(["RPM"]), "RPM", "2026-09-01"), {
+    source: "population-health", program: "RPM", effectiveMonth: "2026-09-01", status: "active",
+  });
+  assert.equal(careImport.rosterEvidence(new Set(), new Set(), "BHI", "2026-09-01").status, "needs-review");
+});
+
 test("CM Due excludes fax rows without changing the shared Front Desk queue", () => {
   assert.equal(careDue.isFaxRequest({ requestType: "fax", source: "iFax" }), true);
   assert.equal(careDue.isFaxRequest({ requestType: "referral", source: "phone" }), false);
@@ -40,7 +50,7 @@ test("Care Management uses a rolling 30-day window and builds prior-month close 
   assert.equal(careLogData.monthEnd("2026-02"), "2026-02-28");
   assert.deepEqual(careLogData.documentationGaps({ program: "TCM", status: "Open" }), [
     "activity/documentation", "TCM code/MDM level", "first contact", "visit date",
-    "coverage verification", "provider review", "next follow-up",
+    "coverage verification", "provider review", "next follow-up", "billing hold / RCM review route",
   ]);
   const apcmGaps = careLogData.documentationGaps({
     program: "APCM", status: "Open", activities: "Monthly review",
@@ -73,6 +83,20 @@ test("Care Management uses a rolling 30-day window and builds prior-month close 
     },
   });
   assert.ok(rpmGaps.includes("interactive communication"));
+  const governedGaps = careLogData.documentationGaps({
+    program: "CCM", serviceMonth: "2026-09-01", minutes: 20, activities: "Synthetic coordination",
+    nextFollowUp: "2099-10-01",
+    rosterHistory: [{ program: "CCM", effectiveMonth: "2026-09-01", status: "active" }],
+    billingReadinessEvidence: {
+      intakeStatus: "accepted", intakeReviewedAt: "2026-09-30", intakeReviewedBy: "synthetic-care-manager",
+      eligibilityStatus: "confirmed", consentStatus: "current", consentDate: "2026-01-15", consentReviewDue: "2099-01-15",
+      coverageStatus: "verified", coverageCheckedAt: "2026-09-30", initiatingVisitStatus: "not-required",
+      carePlanStatus: "active", carePlanShared: true, assignedPerson: "Synthetic Coordinator",
+      patientInstructionsProvided: true, monthlyRequirementsMet: true, providerReviewStatus: "approved",
+      providerReviewedAt: "2026-09-30", billingPath: "99490", billingHoldStatus: "ready-for-rcm-review",
+    },
+  });
+  assert.deepEqual(governedGaps, []);
   const [page, actionSource] = await Promise.all([
     readFile(new URL("../bhw-care-management.html", import.meta.url), "utf8"),
     readFile(new URL("../netlify/functions/action.js", import.meta.url), "utf8"),
@@ -84,6 +108,9 @@ test("Care Management uses a rolling 30-day window and builds prior-month close 
   assert.match(page, /No minute threshold/);
   assert.match(page, /Code-specific device \+ time/);
   assert.match(page, /billingReadinessEvidence/);
+  assert.match(page, /Governed intake and roster evidence/);
+  assert.match(page, /Ready for BHW RCM review/);
+  assert.doesNotMatch(page, /value="released"/);
   assert.match(actionSource, /"billingReadinessEvidence"/);
   const scripts = [...page.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)].map((match) => match[1]);
   for (const script of scripts) assert.doesNotThrow(() => new Function(script));
