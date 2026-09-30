@@ -142,7 +142,7 @@ exports.handler = async (event) => {
       return cloudRequest(`/v1/care-management/logs?${params}`, { actor: session })
         .then((result) => [requestedMonth, Array.isArray(result.logs) ? result.logs : []]);
     });
-    const [logResults, roster, activityResult] = await Promise.all([
+    const [logResults, roster, activityResult, enrollmentResult] = await Promise.all([
       Promise.all(logRequests),
       listCloudPatients(session),
       Promise.all([
@@ -153,11 +153,22 @@ exports.handler = async (event) => {
         requests: responses.flatMap((response) => response.requests || response.patientRequests || []),
         warning: "",
       })).catch((error) => ({ requests: [], warning: String(error.message || error) })),
+      cloudRequest("/v1/care-program-enrollments", { actor: session })
+        .then((result) => ({ enrollments: result.enrollments || [], warning: "" }))
+        .catch((error) => ({ enrollments: [], warning: String(error.message || error) })),
     ]);
     const logsByMonth = new Map(logResults);
     const resultLogs = [...new Map(windowMonths.flatMap((value) => logsByMonth.get(value) || [])
       .map((log) => [log.id, log])).values()];
     const byId = new Map(roster.map((patient) => [patient.bhwPatientId, patient]));
+    const enrollments = enrollmentResult.enrollments.map((enrollment) => {
+      const patient = byId.get(enrollment.bhwPatientId);
+      return {
+        ...enrollment,
+        patientName: patient?.name || enrollment.bhwPatientId,
+        payer: patient?.payer || enrollment.intake?.coverageDuplication?.payer || "",
+      };
+    });
     const entries = resultLogs.map((log) => {
       const patient = byId.get(log.bhwPatientId);
       return {
@@ -211,6 +222,17 @@ exports.handler = async (event) => {
     });
     return json(200, {
       entries,
+      enrollments,
+      patients: roster.filter((patient) => patient.selectable && /^BHW\d{4}$/.test(patient.bhwPatientId) && patient.bhwPatientId !== "BHW0000").map((patient) => ({
+        bhwPatientId: patient.bhwPatientId,
+        name: patient.name,
+        dob: patient.dob,
+        preferredName: patient.preferredName || "",
+        payer: patient.payer || "",
+        insurance: patient.insurance || "",
+        memberId: patient.memberId || "",
+        programs: patient.programs || [],
+      })),
       activity,
       count: entries.length,
       activityCount: activity.length,
@@ -230,6 +252,7 @@ exports.handler = async (event) => {
         },
       },
       activityWarning: activityResult.warning,
+      enrollmentWarning: enrollmentResult.warning,
       storage: "BHW Cloud",
     });
   } catch (error) {
