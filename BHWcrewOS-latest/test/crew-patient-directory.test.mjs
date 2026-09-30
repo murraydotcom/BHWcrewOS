@@ -48,3 +48,11 @@ test("nested Registry MBI status reaches every CrewHQ chart through the shared d
   })]);
   assert.equal(result.patients[0].hasMbi, true);
 });
+
+test("carrier-branded Medicare plans remain in the Medicare prevention queue", () => {
+  const result = buildPatientDirectory([
+    cloud({ bhwPatientId: "BHW0001", primaryPayer: "United Healthcare Medicare" }),
+    cloud({ bhwPatientId: "BHW0002", primaryPayer: "Aetna Medicare Advantage" }),
+  ]);
+  assert.deepEqual(result.patients.map((patient) => patient.insurance), ["Medicare", "Medicare"]);
+});

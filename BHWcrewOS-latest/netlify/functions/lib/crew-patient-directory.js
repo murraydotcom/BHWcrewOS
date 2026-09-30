@@ -5,6 +5,10 @@ const normalizeId = (value) => String(value || "").trim().toUpperCase();
 function insuranceCategory(patient) {
   const value = `${patient?.primaryPayer || patient?.payer || ""} ${patient?.insurancePlanName || patient?.insurance || ""}`.toLowerCase();
   if (/dual|qmb|medicare.*medicaid|medicaid.*medicare/.test(value)) return "Medicare + Medicaid";
+  // Keep the program classification ahead of the carrier name. A Registry row
+  // such as "United Healthcare Medicare" or "Aetna Medicare Advantage" still
+  // belongs in the shared Medicare prevention queue.
+  if (/medicare/.test(value)) return "Medicare";
   if (/cigna/.test(value)) return "Cigna";
   if (/aetna/.test(value)) return "Aetna";
   if (/united|uhc|optum/.test(value)) return "UnitedHealthcare";
@@ -12,7 +16,6 @@ function insuranceCategory(patient) {
   if (/hopkins|ehp|priority partners/.test(value)) return "Johns Hopkins EHP";
   if (/carefirst|bcbs|blue\s*cross|bluechoice/.test(value)) return "CareFirst BCBS";
   if (/medicaid|physicians care|amerigroup|molina/.test(value)) return "Medicaid";
-  if (/medicare/.test(value)) return "Medicare";
   if (/self.?pay|cash/.test(value)) return "Self-Pay";
   return patient?.insurance || patient?.insurancePlanName || patient?.primaryPayer || "";
 }

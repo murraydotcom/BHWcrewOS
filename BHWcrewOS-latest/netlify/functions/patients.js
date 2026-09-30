@@ -16,6 +16,9 @@ const { listCloudPatients, searchCloudPatients, resolveMedicareMbi } = require("
 function mapInsurance(payer, plan) {
   const s = `${payer || ""} ${plan || ""}`.toLowerCase();
   if (/dual|qmb|medicare.*medicaid|medicaid.*medicare/.test(s)) return "Medicare + Medicaid";
+  // Program wins over carrier branding so Medicare Advantage patients are not
+  // silently categorized as ordinary commercial Aetna/UHC patients.
+  if (/medicare/.test(s)) return "Medicare";
   if (/cigna/.test(s)) return "Cigna";
   if (/aetna/.test(s)) return "Aetna";
   if (/united|uhc|optum/.test(s)) return "UnitedHealthcare";
@@ -23,7 +26,6 @@ function mapInsurance(payer, plan) {
   if (/hopkins|ehp|priority partners/.test(s)) return "Johns Hopkins EHP";
   if (/carefirst|bcbs|blue\s*cross|bluechoice/.test(s)) return "CareFirst BCBS";
   if (/medicaid|physicians care|amerigroup|molina/.test(s)) return "Medicaid";
-  if (/medicare/.test(s)) return "Medicare";
   if (/self.?pay|cash/.test(s)) return "Self-Pay";
   return "";
 }

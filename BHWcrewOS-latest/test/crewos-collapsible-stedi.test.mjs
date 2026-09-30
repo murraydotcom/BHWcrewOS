@@ -75,3 +75,16 @@ test("AWV connection copy separates configured credentials from successful eligi
   assert.match(stedi, /resolveMedicareMbi\(patient\)/);
   assert.match(html, /\(div==="Care Management"\|\|div==="Primary Care"\) \? prevCard\(\) : ""/);
 });
+
+test("shared AWV queue links payer gaps by authoritative patient ID and refreshes both views", async () => {
+  const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
+  assert.match(html, /bhwPatientId:p\.id\|\|""/);
+  assert.match(html, /byPatientId\[String\(pt\.bhwPatientId\)\.toUpperCase\(\)\]/);
+  assert.match(html, /CARE_GAPS\.byPatientId\[String\(p\.id\|\|""\)\.toUpperCase\(\)\]/);
+  assert.match(html, /function gapsRefresh\(\)/);
+  assert.match(html, /CARE_GAPS = null;\s+CARE_GAPS_ERROR = "";\s+buildRail\(\); buildViews\(\);/);
+  assert.match(html, /Open care gaps come from the reviewed payer gap feed in BHW Cloud/);
+  assert.match(html, /payer gaps never change the clinical chart without provider review/);
+  assert.match(html, /No payer row/);
+  assert.match(html, /Gap feed unavailable/);
+});
