@@ -5,7 +5,11 @@ import {
   alertKey,
   collectSafeAlerts,
   decodeSession,
+  isClinicalRequest,
+  isFaxRequest,
   isPageExcludedRequest,
+  isRoleRelevantRequest,
+  normalizeAlertRole,
   pageAlertExclusions,
   requiresProviderAlert,
   roleRoutes,
@@ -29,19 +33,42 @@ const synthetic = (overrides = {}) => ({
   ...overrides,
 });
 
-test("non-provider staff can receive every request type while providers receive attention-only alerts", () => {
-  assert.deepEqual(roleRoutes({ role: "Medical Assistant" }), ["*"]);
-  assert.ok(roleRoutes({ role: "Office Manager" }).includes("*"));
+test("alerts are limited to the clinical work routes relevant to each role", () => {
+  assert.deepEqual(roleRoutes({ role: "Medical Assistant" }), ["medication", "authorizations", "clinical"]);
+  assert.deepEqual(roleRoutes({ role: "Care Coordinator" }), ["referrals", "care_coordination", "clinical"]);
+  assert.deepEqual(roleRoutes({ role: "Front Desk" }), ["front_desk", "patient_access", "referrals"]);
+  assert.deepEqual(roleRoutes({ role: "RCM" }), ["rcm", "revenue_cycle", "authorizations"]);
+  assert.deepEqual(roleRoutes({ role: "Office Manager" }), ["manager_attention"]);
   assert.equal(
     collectSafeAlerts([synthetic()], { staffId: "synthetic-ma", name: "Synthetic MA", role: "Medical Assistant" }).length,
-    1,
+    0,
+    "patient-access work does not alert clinical support",
   );
+  assert.equal(collectSafeAlerts([synthetic({ requestType: "refill", assignedTeam: "medication", serviceLine: "clinical" })], { role: "Medical Assistant" }).length, 1);
+  assert.equal(collectSafeAlerts([synthetic({ requestType: "billing_rcm", assignedTeam: "rcm", serviceLine: "revenue-cycle" })], { role: "Medical Assistant" }).length, 0);
+  assert.equal(collectSafeAlerts([synthetic({ requestType: "billing_rcm", assignedTeam: "rcm", serviceLine: "revenue-cycle" })], { role: "RCM" }).length, 1);
+  assert.equal(collectSafeAlerts([synthetic()], { role: "Office Manager", access: "Admin" }).length, 0, "managers are not alerted for every routine request");
+  assert.equal(collectSafeAlerts([synthetic({ priority: "urgent", safetyFlags: ["synthetic"] })], { role: "Office Manager", access: "Admin" }).length, 1);
   const provider = { staffId: "synthetic-provider", name: "Synthetic Provider", role: "CRNP" };
   assert.deepEqual(roleRoutes(provider), ["provider_attention"]);
   assert.equal(collectSafeAlerts([synthetic()], provider).length, 0, "routine work does not alert a provider");
-  assert.equal(collectSafeAlerts([synthetic({ status: "escalated", statusCategory: "escalated" })], provider).length, 1);
-  assert.equal(collectSafeAlerts([synthetic({ escalationReason: "Synthetic escalation" })], provider).length, 1);
+  assert.equal(collectSafeAlerts([synthetic({ requestType: "clinical_review", assignedTeam: "clinical", serviceLine: "clinical", status: "escalated", statusCategory: "escalated" })], provider).length, 1);
+  assert.equal(collectSafeAlerts([synthetic({ requestType: "clinical_review", assignedTeam: "clinical", serviceLine: "clinical", escalationReason: "Synthetic escalation" })], provider).length, 1);
   assert.equal(requiresProviderAlert(synthetic({ status: "waiting_on_clinician", statusCategory: "waiting" }), provider), true);
+});
+
+test("clinical identity wins over broad Admin access and raw fax alerts stay in Front Desk OS", () => {
+  const providerAdmin = { staffId: "synthetic-provider", role: "CRNP/FNP", access: "Admin" };
+  assert.equal(normalizeAlertRole(providerAdmin), "provider");
+  assert.deepEqual(roleRoutes(providerAdmin), ["provider_attention"]);
+  const billing = synthetic({ requestType: "billing_rcm", assignedTeam: "rcm", serviceLine: "revenue-cycle", priority: "urgent" });
+  assert.equal(requiresProviderAlert(billing, providerAdmin), false);
+  assert.equal(safeAlertForRequest(billing, providerAdmin), null);
+  const fax = synthetic({ requestType: "general", source: "iFax", priority: "urgent", safetyFlags: ["synthetic"] });
+  assert.equal(isFaxRequest(fax), true);
+  assert.equal(isClinicalRequest(fax), false);
+  assert.equal(isRoleRelevantRequest(fax, { role: "Front Desk" }), false);
+  assert.equal(safeAlertForRequest(fax, { role: "Front Desk" }), null);
 });
 
 test("CrewOS two-part signed sessions initialize the alert center identity", () => {
@@ -119,9 +146,11 @@ test("page-scoped fax exclusions leave Front Desk alerts available elsewhere", (
   assert.equal(isPageExcludedRequest(synthetic({ requestType: "fax", source: "iFax" }), []), false, "Front Desk has no page exclusion");
 });
 
-test("team-note alerts reach all staff, but providers only when explicitly mentioned", () => {
-  const staffAlert = safeAlertForRequest(synthetic({ teamNoteUnread: true }), { staffId: "synthetic-ma", role: "Medical Assistant" });
-  assert.equal(staffAlert.reason, "New team note");
+test("team-note alerts remain role relevant, while explicit mentions always reach the named staff member", () => {
+  const ma = { staffId: "synthetic-ma", role: "Medical Assistant" };
+  assert.equal(safeAlertForRequest(synthetic({ teamNoteUnread: true }), ma), null);
+  const staffAlert = safeAlertForRequest(synthetic({ teamNoteUnread: true, teamNoteMentioned: true }), ma);
+  assert.equal(staffAlert.reason, "Mentioned in team note");
   const provider = { staffId: "synthetic-provider", role: "CRNP" };
   assert.equal(safeAlertForRequest(synthetic({ teamNoteUnread: true }), provider), null);
   assert.equal(safeAlertForRequest(synthetic({ teamNoteUnread: true, teamNoteMentioned: true }), provider).reason, "Mentioned in team note");

@@ -51,7 +51,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
 <header>
   <img src="/assets/bhw-medical-logo.png" alt="BHW Medical" onerror="this.style.display='none'">
   <div><h1>Staff Guide — Where Everything Is</h1><div class="sub">BHW Medical Group · BHWcrewOS</div></div>
-  <div class="updated">Updated September 27, 2026<br>Patient Requests + Team Notes + Staff Chat + Website Content + Document Builder + BHW Capture</div>
+  <div class="updated">Updated September 30, 2026<br>Patient Requests + Role-routed Clinical Alerts + Team Notes + Staff Chat + Website Content + Document Builder + BHW Capture</div>
 </header>
 
 <button class="print" onclick="window.print()">Print this guide</button>
@@ -86,7 +86,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
     <tr><td><b>Admin Master</b></td><td>Every division at once — open referrals, aging, full schedule, minutes rollup</td><td>Owner, operations lead</td></tr>
     <tr><td><b>My Space</b></td><td>Your role &amp; responsibilities, the office calendar, your availability</td><td>Everyone</td></tr>
     <tr><td><b>Patient Requests</b></td><td>The authoritative staff work queue for patient calls, texts, portal messages, voicemails, referrals, prior authorizations, medication requests, billing requests, and general follow-up</td><td>Everyone, filtered by role and service line</td></tr>
-    <tr><td><b>🔔 CrewOS alerts</b></td><td>Optional alerts for new unassigned, assigned-to-you, urgent, overdue, and escalated requests. Open the bell and use <b>Notifications on/off</b> for that device. Providers receive provider-attention items only.</td><td>Every signed-in staff member chooses</td></tr>
+    <tr><td><b>🔔 CrewOS clinical alerts</b></td><td>Optional, minimum-necessary alerts for clinical work routed to your role. Front Desk receives patient-access and referral work; MA/BHA receives medication, authorization, and clinical-review work; Care Coordination receives referrals and care-review work; RCM receives billing and authorization work. Providers receive provider-attention items only. Managers receive urgent, safety, and escalated items instead of every open request. Raw fax alerts stay in Front Desk OS. Open the bell and use <b>Notifications on/off</b> for that device.</td><td>Every signed-in staff member chooses</td></tr>
     <tr><td><b>Front Desk OS</b></td><td>Patient lookup, referral finder/generator, fax tools, and front-desk operational snapshots. Work communication requests in Patient Requests so they are not duplicated.</td><td>Front desk role</td></tr>
     <tr><td><b>Panel &amp; Discharges</b></td><td>Utilization, HEDIS scorecard, hospital discharge tracking</td><td>Owner, care coordination role</td></tr>
     <tr><td><b>Positive ANA?</b></td><td>Analyze an ANA result, immune patterns, 100 conditions, management protocols</td><td>Providers</td></tr>
@@ -187,7 +187,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
 
 <div class="sec" data-k="patient requests command center assign start milestone resolve escalate notify patient communications delivery status">
   <h3>How to work a request <span class="who">Assigned role</span></h3>
-  <div class="tip"><b>Visibility and alerts are separate:</b> every signed-in staff member, including providers, can view the shared Patient Requests queue. Providers receive alerts and work controls only for triage/provider questions, items assigned to them, waiting-on-clinician work, urgent or safety concerns, and escalations. Other requests remain visible as view-only for provider oversight.</div>
+  <div class="tip"><b>Visibility and alerts are separate:</b> every signed-in staff member, including providers, can view the shared Patient Requests queue. The bell shows only role-relevant clinical work, direct assignments, and explicit mentions. Providers receive alerts and work controls only for clinical triage/provider questions, items assigned to them, waiting-on-clinician work, clinical safety concerns, and escalations. Other requests remain visible as view-only for provider oversight. Billing urgency and raw fax intake do not become provider alerts; those remain in their appropriate workspaces.</div>
   <ol>
     <li><b>Check the category mix or use the request-type filter</b>, then select the request in the left work queue. The right side shows status history, route, owner, communications, and delivery results.</li>
     <li>If it is unclaimed, tap <b>Assign to me</b>. Tap <b>Start</b> when you begin the work.</li>
@@ -212,7 +212,7 @@ footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);font-si
     <li>Open the request and use <b>Team Notes</b> below its status and patient-communication sections.</li>
     <li>Write the coordination update and select one or more teammates under <b>Mention teammates</b> when their attention is needed.</li>
     <li>Choose <b>Add team note</b> and wait for <b>Saved to BHW Cloud</b>. The author and timestamp are recorded automatically.</li>
-    <li>A <b>New team note</b> marker appears for unread discussion. An explicitly mentioned provider can receive a <b>Mentioned in team note</b> CrewOS alert without changing routine provider alert routing.</li>
+    <li>A <b>New team note</b> marker appears for unread discussion inside the request. The bell alerts staff only when the request is relevant to their role or they were explicitly mentioned. An explicit <b>Mentioned in team note</b> alert does not widen routine role routing.</li>
     <li>Choose <b>Mark notes read</b> after reviewing. Use <b>Load older notes</b> for earlier history. A reply does not automatically mark other notes read.</li>
     <li>If a save is not confirmed, use <b>Retry save</b> without retyping it. The same send key prevents a duplicate. Drafts remain only in the open page; save before leaving.</li>
   </ol>
