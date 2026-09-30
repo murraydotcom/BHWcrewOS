@@ -69,6 +69,8 @@ async function cloudRequest(path, { actor, method = "GET", body } = {}) {
   if (!response.ok) {
     const error = new Error(data.error || `Google Cloud patient registry returned ${response.status}`);
     error.status = response.status;
+    error.details = data;
+    if (Array.isArray(data.gaps)) error.gaps = data.gaps;
     throw error;
   }
   return data;
@@ -125,6 +127,7 @@ function legacyPatient(p) {
     medicareMbi: resolveMedicareMbi(p),
     program: programs.join(" · "),
     programs,
+    careProgramEnrollmentIds: Array.isArray(p.sourceRelations?.careProgramEnrollments) ? p.sourceRelations.careProgramEnrollments : [],
     status,
     selectable: !["deceased", "transferred"].includes(String(status).toLowerCase()),
     snapshot: snapshot.updatedAt || "",

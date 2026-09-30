@@ -16,7 +16,7 @@ test('Cloud patient adapter exposes canonical picker fields without a legacy pat
     bhwPatientId: 'BHW0140', legalFirstName: 'Ella', legalLastName: 'Ballard', dateOfBirth: '1980-01-02',
     phone: '(443) 555-1212', primaryPayer: 'Medicare', memberId: 'MEM-1',
     programEnrollment: ['APCM'], source: { recordId: 'notion-row', recordUrl: 'https://notion.so/row' },
-    sourceRelations: { carePlans: ['plan-1'] }, clinicalSnapshot: { allergies: 'Penicillin' },
+    sourceRelations: { carePlans: ['plan-1'], careProgramEnrollments: ['BHW0140:APCM'] }, clinicalSnapshot: { allergies: 'Penicillin' },
   });
   assert.equal(patient.id, 'BHW0140');
   assert.equal(patient.name, 'Ella Ballard');
@@ -28,6 +28,7 @@ test('Cloud patient adapter exposes canonical picker fields without a legacy pat
   assert.equal(patient.payer, 'Medicare');
   assert.equal(patient.member, 'MEM-1');
   assert.deepEqual(patient.programs, ['APCM']);
+  assert.deepEqual(patient.careProgramEnrollmentIds, ['BHW0140:APCM']);
   assert.equal(patient.allergies, 'Penicillin');
 });
 
