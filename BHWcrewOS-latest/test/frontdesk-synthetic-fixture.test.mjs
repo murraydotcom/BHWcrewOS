@@ -52,6 +52,47 @@ test('Front Desk resolves BHW0000 direct lookup without querying a live patient 
   assert.equal(body.patient.name, 'Synthetic QA');
 });
 
+test('Front Desk specialist directory includes the address used by the referral form', async () => {
+  const previousFetch = global.fetch;
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      results: [{
+        properties: {
+          Specialist: { title: [{ plain_text: 'Synthetic Specialist' }] },
+          Specialty: { select: { name: 'Endocrinology' } },
+          'Practice / Institution': { rich_text: [{ plain_text: 'Synthetic Specialty Group' }] },
+          Address: { rich_text: [{ plain_text: '100 Test Avenue, Baltimore, MD 21201' }] },
+          Phone: { phone_number: '410-555-0100' },
+          Fax: { phone_number: '410-555-0101' },
+          'Networks Accepted': { multi_select: [{ name: 'Synthetic Plan' }] },
+          '⭐ Preferred': { checkbox: true },
+          'Accepting New Patients': { checkbox: true },
+          'Typical Wait': { select: { name: '1 week' } },
+          Notes: { rich_text: [] },
+        },
+      }],
+      has_more: false,
+      next_cursor: null,
+    }),
+  });
+
+  try {
+    const response = await handler({
+      httpMethod: 'GET',
+      headers: signedHeaders(),
+      queryStringParameters: { dir: '1' },
+    });
+
+    assert.equal(response.statusCode, 200);
+    const body = JSON.parse(response.body);
+    assert.equal(body.specialists.length, 1);
+    assert.equal(body.specialists[0].address, '100 Test Avenue, Baltimore, MD 21201');
+  } finally {
+    global.fetch = previousFetch;
+  }
+});
+
 test('an accepted Front Desk text moves the request to the communication log exactly once', async () => {
   const previousUrl = process.env.OPERATIONS_CLOUD_API_URL;
   const previousSecret = process.env.CREWOS_OPERATIONS_TOKEN_SECRET;
