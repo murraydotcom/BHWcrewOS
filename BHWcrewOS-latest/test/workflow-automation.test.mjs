@@ -4,6 +4,7 @@ import {
   applyPatientRequestAction,
   buildGoogleChatCard,
   canActOnRequest,
+  canCreateRequest,
   canViewRequest,
   defaultNotificationRules,
   normalizeStaffRole,
@@ -45,6 +46,42 @@ test("non-provider staff can work every request type while providers retain focu
   assert.equal(canActOnRequest({ ...referral, escalationReason: "Synthetic escalation" }, { role: "CRNP", sub: "crew:provider" }), true);
   assert.equal(canViewRequest(referral, { role: "CRNP", sub: "crew:provider" }), true);
   assert.equal(canViewRequest(referral, {}), false);
+});
+
+test("providers can create internal CrewOS referrals and handoffs without gaining receiving-queue access", async () => {
+  const provider = { sub: "crew:synthetic-provider", name: "Synthetic Provider", role: "CRNP" };
+  const referral = sanitizePatientRequest({
+    id: "crew-referral-synthetic-provider",
+    bhwPatientId: "BHW0000",
+    requestType: "referral",
+    source: "crewos",
+    summary: "Synthetic internal referral",
+    workflowContext: { kind: "referral", fromDivision: "Primary Care", toDivision: "Care Management" },
+  }, { user: provider, now: NOON });
+  const handoff = sanitizePatientRequest({
+    id: "crew-handoff-synthetic-provider",
+    bhwPatientId: "BHW0000",
+    requestType: "general",
+    source: "crewos",
+    summary: "Synthetic internal warm handoff",
+    workflowContext: { kind: "handoff", fromDivision: "Primary Care", toDivision: "CharmEd Minds" },
+  }, { user: provider, now: NOON });
+
+  assert.equal(canCreateRequest(referral, provider), true);
+  assert.equal(canCreateRequest(handoff, provider), true);
+  assert.equal(canActOnRequest(referral, provider), false);
+  assert.equal(canActOnRequest(handoff, provider), false);
+  assert.equal(canCreateRequest({ ...referral, source: "synthetic-test" }, provider), false);
+  assert.equal(canCreateRequest({ ...handoff, workflowContext: { ...handoff.workflowContext, toDivision: "" } }, provider), false);
+
+  const repository = inMemoryRepository();
+  const service = createWorkflowService(repository, {
+    environment: { PATIENT_WORKFLOW_AUTOMATION_ENABLED: "false" },
+    clock: () => NOON,
+  });
+  await service.createRequest(referral, provider);
+  await service.createRequest(handoff, provider);
+  assert.equal(repository.requests.size, 2);
 });
 
 function syntheticRequest(requestType, id = `synthetic-${requestType.replaceAll("_", "-")}`) {

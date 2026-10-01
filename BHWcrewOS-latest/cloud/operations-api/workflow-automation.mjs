@@ -311,6 +311,20 @@ export function canActOnRequest(request, user = {}) {
   return false;
 }
 
+function isCrewOsDivisionCoordination(request = {}) {
+  const kind = slug(request.workflowContext?.kind);
+  const fromDivision = cleanText(request.workflowContext?.fromDivision, 80);
+  const toDivision = cleanText(request.workflowContext?.toDivision, 80);
+  if (request.source !== "crewos" || !fromDivision || !toDivision) return false;
+  return (request.requestType === "referral" && kind === "referral")
+    || (request.requestType === "general" && kind === "handoff");
+}
+
+export function canCreateRequest(request, user = {}) {
+  if (isProviderRole(user.role) && isCrewOsDivisionCoordination(request)) return true;
+  return canActOnRequest(request, user);
+}
+
 export function canViewRequest(_request, user = {}) {
   // Patient Request endpoints already require a verified CrewOS staff token.
   // Notification routing and action authorization are narrower concerns and
