@@ -222,6 +222,7 @@ exports.handler = async (event) => {
             name,
             specialty: sel(p['Specialty']),
             org: text(p['Practice / Institution']),
+            address: text(p['Address']),
             phone: p['Phone']?.phone_number || '',
             fax: p['Fax']?.phone_number || '',
             networks: (p['Networks Accepted']?.multi_select || []).map(m => m.name),
