@@ -4,6 +4,7 @@ import {
   applyPatientRequestAction,
   buildGoogleChatCard,
   canActOnRequest,
+  canCreateRequest,
   canViewRequest,
   defaultNotificationRules,
   deterministicId,
@@ -454,7 +455,7 @@ export function createWorkflowService(repository, {
       throw Object.assign(new Error("BHW Patient ID was not found in the Patient Registry"), { status: 404 });
     }
     const sourceIsPatient = request.source === "patient-portal" || request.source === "care-connect" || request.source.startsWith("dialpad");
-    if (!sourceIsPatient && !canActOnRequest(request, user)) {
+    if (!sourceIsPatient && !canCreateRequest(request, user)) {
       throw Object.assign(new Error("role is not authorized to create this service-line request"), { status: 403 });
     }
     const saved = await repository.createPatientRequest(request, user);
