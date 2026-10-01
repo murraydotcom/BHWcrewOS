@@ -90,6 +90,12 @@ td select{width:100%;min-width:90px}
     <div class="dialog-head"><div><h2 id="requirementsTitle">Update missing items</h2><p id="requirementsPatient"></p></div><button class="btn sec sm" type="button" onclick="closeRequirements()">Close</button></div>
     <div class="dialog-body">
       <input type="hidden" id="reqId">
+      <div class="form-section"><h3>Governed intake and roster evidence</h3><p>CrewOS records the operational review and roster source. It cannot activate clinical care or release billing.</p><div class="form-grid">
+        <div class="field"><label for="reqIntakeStatus">Intake decision</label><select id="reqIntakeStatus"><option value="not-started">Not started</option><option value="in-review">In review</option><option value="needs-information">Needs information</option><option value="accepted">Accepted for operational follow-through</option><option value="declined">Declined</option></select></div>
+        <div class="field"><label for="reqIntakeSource">Intake evidence source</label><select id="reqIntakeSource"><option value="manual-reviewed">Manual staff review</option><option value="patient-registry">BHW Cloud Patient Registry</option><option value="population-health">Population Health enrollment</option><option value="recent-care-log">Prior care-log enrollment</option></select></div>
+        <div class="field"><label>Intake review audit</label><div id="reqIntakeAudit">Not reviewed</div></div>
+        <div class="field"><label>Append-only roster history</label><div id="reqRosterHistory">No roster evidence recorded</div></div>
+      </div></div>
       <div class="form-section"><h3>Work completed for this period</h3><div class="form-grid">
         <div class="field"><label for="reqMinutes">Minutes documented</label><input id="reqMinutes" type="number" min="0"></div>
         <div class="field"><label for="reqLastContact">First / last contact date</label><input id="reqLastContact" type="date"></div>
@@ -120,10 +126,14 @@ td select{width:100%;min-width:90px}
         <div class="field"><label for="reqRequiredDeviceDays">Required device-data days</label><input id="reqRequiredDeviceDays" type="number" min="0" max="31"></div>
         <div class="field"><label for="reqProviderReview">Provider review</label><select id="reqProviderReview"><option value="pending">Pending</option><option value="approved">Approved</option><option value="held">Held</option></select></div>
         <div class="field"><label for="reqProviderDate">Provider review date</label><input id="reqProviderDate" type="date"></div>
+        <div class="field"><label for="reqBillingHold">Billing hold</label><select id="reqBillingHold"><option value="held">Held</option><option value="review-required">Review required</option><option value="ready-for-rcm-review">Ready for BHW RCM review</option></select></div>
+        <div class="field"><label>Hold review audit</label><div id="reqBillingHoldAudit">Not reviewed</div></div>
       </div><div class="check-grid"><label class="check"><input id="reqInteractive" type="checkbox">Required real-time interactive communication completed</label></div>
+      <div class="field" style="margin-top:9px"><label for="reqBillingHoldReason">Billing hold reason / RCM routing note</label><textarea id="reqBillingHoldReason" placeholder="Explain why this row remains held or what BHW RCM must review."></textarea></div>
+      <p>“Ready for BHW RCM review” is not claim approval and does not create a superbill, patient invoice, payment request, claim, or Stedi 837.</p>
       <div class="field" style="margin-top:9px"><label for="reqNotes">Billing/readiness notes</label><textarea id="reqNotes" placeholder="Document code selection, payer-specific review, holds, and supporting details."></textarea></div></div>
     </div>
-    <div class="dialog-actions"><span class="save-state" id="requirementsSaveState"></span><button class="btn sec" type="button" onclick="closeRequirements()">Cancel</button><button class="btn" id="requirementsSave" type="submit">Save missing items</button></div>
+    <div class="dialog-actions"><span class="save-state" id="requirementsSaveState"></span><button class="btn sec" type="button" onclick="closeRequirements()">Cancel</button><button class="btn" id="requirementsSave" type="submit">Save readiness and hold</button></div>
   </form>
 </div>
 
@@ -408,6 +418,11 @@ function openRequirements(id){
   reqEl("reqNextFollowUp").value=dateOnly(entry.nextFollowUp);
   reqEl("reqActivities").value=entry.activities||"";
   reqEl("reqReferrals").value=entry.referrals||"";
+  reqEl("reqIntakeStatus").value=evidence.intakeStatus||"not-started";
+  reqEl("reqIntakeSource").value=evidence.intakeSource||"manual-reviewed";
+  reqEl("reqIntakeAudit").textContent=evidence.intakeReviewedAt?evidence.intakeReviewedAt+" · "+(evidence.intakeReviewedBy||"staff identity unavailable"):"Not reviewed";
+  var rosterHistory=Array.isArray(entry.rosterHistory)?entry.rosterHistory:[];
+  reqEl("reqRosterHistory").innerHTML=rosterHistory.length?rosterHistory.slice(-5).reverse().map(function(item){return '<div><b>'+esc(item.status||"needs-review")+'</b> · '+esc(item.program||"")+" · "+esc(dateOnly(item.effectiveMonth))+" · "+esc(String(item.source||"").replaceAll("-"," "))+'</div>';}).join(""):"No roster evidence recorded";
   reqEl("reqEligibility").value=evidence.eligibilityStatus||"potential";
   reqEl("reqConsent").value=evidence.consentStatus||"missing";
   reqEl("reqConsentDate").value=dateOnly(evidence.consentDate);
@@ -427,6 +442,9 @@ function openRequirements(id){
   reqEl("reqInteractive").checked=evidence.interactiveCommunicationCompleted===true;
   reqEl("reqProviderReview").value=evidence.providerReviewStatus||"pending";
   reqEl("reqProviderDate").value=dateOnly(evidence.providerReviewedAt);
+  reqEl("reqBillingHold").value=evidence.billingHoldStatus||"held";
+  reqEl("reqBillingHoldReason").value=evidence.billingHoldReason||"";
+  reqEl("reqBillingHoldAudit").textContent=evidence.billingHoldReviewedAt?evidence.billingHoldReviewedAt+" · "+(evidence.billingHoldReviewedBy||"staff identity unavailable"):"Not reviewed";
   reqEl("reqNotes").value=evidence.notes||"";
   var options='<option value="">Select the code or billing path…</option>'+rule.options.map(function(option){return '<option value="'+esc(option.code)+'">'+esc(option.label)+'</option>';}).join("");
   if(evidence.billingPath&&!rule.options.some(function(option){return option.code===evidence.billingPath;})) options+='<option value="'+esc(evidence.billingPath)+'">'+esc(evidence.billingPath)+' · existing recorded path</option>';
@@ -469,6 +487,8 @@ async function saveRequirements(event){
     lastContact:reqEl("reqLastContact").value,
     nextFollowUp:reqEl("reqNextFollowUp").value,
     billingReadinessEvidence:{
+      intakeStatus:reqEl("reqIntakeStatus").value,
+      intakeSource:reqEl("reqIntakeSource").value,
       eligibilityStatus:reqEl("reqEligibility").value,
       consentStatus:reqEl("reqConsent").value,
       consentDate:reqEl("reqConsentDate").value,
@@ -489,13 +509,15 @@ async function saveRequirements(event){
       requiredDeviceDays:Number(reqEl("reqRequiredDeviceDays").value)||0,
       providerReviewStatus:reqEl("reqProviderReview").value,
       providerReviewedAt:reqEl("reqProviderDate").value,
+      billingHoldStatus:reqEl("reqBillingHold").value,
+      billingHoldReason:reqEl("reqBillingHoldReason").value,
       notes:reqEl("reqNotes").value
     }
   };
   var button=reqEl("requirementsSave");
   button.disabled=true; button.textContent="Saving…"; reqEl("requirementsSaveState").textContent="Saving to BHW Cloud…";
   var res=await api("action",payload);
-  button.disabled=false; button.textContent="Save missing items";
+  button.disabled=false; button.textContent="Save readiness and hold";
   if(res.status===401){closeRequirements();gate("Your session expired — sign in to crewOS again.");return;}
   if(!res.ok||!res.d.ok){reqEl("requirementsSaveState").textContent="Not saved · "+(res.d.error||res.status);return;}
   var when=res.d.savedAt?new Date(res.d.savedAt).toLocaleString():"now";
