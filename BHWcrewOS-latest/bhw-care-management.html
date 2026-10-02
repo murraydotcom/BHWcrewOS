@@ -330,7 +330,7 @@ function rollingMarkup(rows,activity){
   activity.forEach(function(item){var date=String(item.occurredAt||"").slice(0,10);if(counts[date]!=null)counts[date]++;});
   var today=todayISO();
   var cells=Object.keys(counts).map(function(date){var d=new Date(date+"T12:00:00");var count=counts[date];return '<div class="day'+(date===today?' today':'')+(count?' has':'')+'" title="'+esc(date)+' · '+count+' tracked event'+(count===1?'':'s')+'"><div class="d">'+d.toLocaleDateString([],{weekday:'short'}).slice(0,1)+'</div><div class="n">'+d.getDate()+'</div><div class="m">'+count+'</div></div>';}).join("");
-  return '<section class="rolling"><div class="rolling-head"><div><h2>Rolling day-to-day tracking</h2><p>'+esc(WINDOW.start)+' through '+esc(WINDOW.end)+' · the small number is contacts, follow-ups, saves, and patient activity on that day.</p></div><span class="badge">30 days</span></div><div class="days">'+cells+'</div></section>';
+  return '<section class="rolling"><div class="rolling-head"><div><h2>Rolling day-to-day tracking</h2><p>'+esc(WINDOW.start)+' through '+esc(WINDOW.end)+' · the small number is contacts, follow-ups, saves, and patient activity on that day.</p></div><span class="badge">30 days</span></div><div class="days" data-long-chart>'+cells+'</div></section>';
 }
 
 function monthCloseMarkup(){
