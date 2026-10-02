@@ -19,6 +19,7 @@ const {
 } = require("./lib/cloud-patients");
 const BHW_NPI = "1306511597";
 const AWV_CODES = ["G0402", "G0438", "G0439"];
+const STEDI_ELIGIBILITY_PATH = "/2026-06-01/eligibility-check";
 
 function stediKey() {
   const pre = (process.env.STEDI_KEY_PREFIX || "").trim();
@@ -67,6 +68,66 @@ const dashDate = (d) => {
 };
 const today = () => new Date().toISOString().slice(0, 10);
 
+function planBenefitEntries(response) {
+  const entries = [];
+  for (const plan of Array.isArray(response.plans) ? response.plans : []) {
+    const benefits = plan && typeof plan.benefits === "object" ? plan.benefits : {};
+    const invalidEntries = benefits.invalidEntries && typeof benefits.invalidEntries === "object"
+      ? benefits.invalidEntries : {};
+    for (const [type, items] of Object.entries(benefits)) {
+      if (type === "invalidEntries" || !Array.isArray(items)) continue;
+      for (const benefit of items) {
+        if (benefit && typeof benefit === "object") entries.push({ type, benefit, plan });
+      }
+    }
+    // The legacy endpoint passed through invalid payer data. Keep those entries visible
+    // so the migration does not silently discard an AWV date or MA plan indicator.
+    for (const [type, items] of Object.entries(invalidEntries)) {
+      if (!Array.isArray(items)) continue;
+      for (const benefit of items) {
+        if (benefit && typeof benefit === "object") entries.push({ type, benefit, plan });
+      }
+    }
+  }
+  return entries;
+}
+
+function benefitDates(dates, prefix = "") {
+  const found = [];
+  if (!dates || typeof dates !== "object") return found;
+  for (const [key, value] of Object.entries(dates)) {
+    const kind = prefix ? `${prefix}.${key}` : key;
+    if (typeof value === "string") {
+      const date = dashDate(value);
+      if (date) found.push({ kind, date });
+    } else if (value && typeof value === "object") {
+      found.push(...benefitDates(value, kind));
+    }
+  }
+  return found;
+}
+
+function serviceIs(benefit, system, value) {
+  const service = benefit && benefit.service;
+  return String(service?.system || "").toUpperCase() === system &&
+    String(service?.value || "").toUpperCase() === value;
+}
+
+function entityName(entity) {
+  if (!entity) return "";
+  if (typeof entity.name === "string") return entity.name;
+  if (entity.name?.organization) return entity.name.organization;
+  if (entity.name?.person) {
+    return [entity.name.person.firstName, entity.name.person.lastName].filter(Boolean).join(" ");
+  }
+  return entity.entityName || "";
+}
+
+function displayEnum(value) {
+  return String(value || "").toLowerCase().split("_").filter(Boolean)
+    .map((part) => part[0].toUpperCase() + part.slice(1)).join(" ");
+}
+
 function shapePatient(patient) {
   return {
     id: patient.bhwPatientId,
@@ -84,47 +145,65 @@ function shapePatient(patient) {
 function parse271(r) {
   const out = { active: null, planType: "Unknown", maName: "", awvLast: null, awvNext: null,
                 services: [], deductible: "", note: "" };
-  const bi = Array.isArray(r.benefitsInformation) ? r.benefitsInformation : [];
-  if (r.planStatus && r.planStatus.length) {
-    out.active = r.planStatus.some((s) => String(s.statusCode) === "1");
-  } else if (bi.length) {
-    out.active = bi.some((b) => String(b.code) === "1");
+  const entries = planBenefitEntries(r);
+  const statuses = entries.filter(({ type }) => type === "statuses");
+  const coverageStatuses = statuses.filter(({ benefit }) => serviceIs(benefit, "STC", "30"));
+  const relevantStatuses = coverageStatuses.length ? coverageStatuses : statuses;
+  if (relevantStatuses.some(({ benefit }) => String(benefit.status || "").startsWith("ACTIVE"))) {
+    out.active = true;
+  } else if (relevantStatuses.some(({ benefit }) => String(benefit.status || "").startsWith("INACTIVE"))) {
+    out.active = false;
+  } else if (entries.some(({ type, benefit }) =>
+    !["cannotProcess", "exclusions", "nonCovered"].includes(type) && serviceIs(benefit, "STC", "30"))) {
+    out.active = true;
   }
-  // Medicare Advantage detection: HETS reports MA enrollment via related entities / insurance type text
-  for (const b of bi) {
-    const t = `${b.insuranceType || ""} ${b.planCoverage || ""} ${(b.serviceTypes || []).join(" ")}`.toLowerCase();
-    if (t.includes("medicare advantage") || (b.insuranceTypeCode && ["HM","HN","IN","PR","PS"].includes(b.insuranceTypeCode))) {
-      out.planType = "Medicare Advantage";
-      const ent = (b.benefitsRelatedEntities || b.benefitsRelatedEntity ? [].concat(b.benefitsRelatedEntities || b.benefitsRelatedEntity) : [])[0];
-      if (ent && (ent.entityName || ent.name)) out.maName = ent.entityName || ent.name || "";
-    }
-    // deductible remaining (Part B): code C + remaining time qualifier
-    if (String(b.code) === "C" && b.benefitAmount !== undefined && !out.deductible) {
-      const tq = (b.timeQualifier || "").toLowerCase();
-      out.deductible = `$${b.benefitAmount}${tq ? " (" + b.timeQualifier + ")" : ""}`;
-    }
-    // preventive service dates by HCPCS
-    const code = (b.procedureCode || "").toUpperCase();
-    if (code) {
-      const dates = [];
-      const bd = b.benefitsDateInformation || {};
-      for (const k of Object.keys(bd)) {
-        const v = bd[k];
-        if (typeof v === "string") { const dd = dashDate(v); if (dd) dates.push({ kind: k, date: dd }); }
-        else if (v && typeof v === "object") {
-          for (const kk of Object.keys(v)) { const dd = dashDate(v[kk]); if (dd) dates.push({ kind: `${k}.${kk}`, date: dd }); }
-        }
-      }
-      out.services.push({ code, info: (b.serviceTypes || []).join("; ") || b.name || "", dates });
-      if (AWV_CODES.includes(code)) {
-        for (const d of dates) {
-          if (d.date > today()) { if (!out.awvNext || d.date < out.awvNext) out.awvNext = d.date; }
-          else { if (!out.awvLast || d.date > out.awvLast) out.awvLast = d.date; }
-        }
+
+  // CMS identifies Medicare Advantage through a service-30 contact entry carrying
+  // the MA Bill Option Code and a PRIMARY_PAYER related entity.
+  const payerId = String(r.payerId || r.payer?.identification || "").toUpperCase();
+  const cmsMa = entries.find(({ type, benefit }) => type === "contactFollowingEntityForInformation" &&
+    serviceIs(benefit, "STC", "30") &&
+    (benefit.messages || []).some((message) => /MA\s+Bill\s+Option\s+Code/i.test(String(message))));
+  if (payerId === "CMS" && cmsMa) {
+    out.planType = "Medicare Advantage";
+    const entities = Array.isArray(cmsMa.benefit.relatedEntities) ? cmsMa.benefit.relatedEntities : [];
+    out.maName = entityName(entities.find((entity) => entity.type === "PRIMARY_PAYER") || entities[0]);
+  }
+
+  const deductibles = entries.filter(({ type }) => type === "deductible");
+  const partBDeductibles = deductibles.filter(({ benefit }) => serviceIs(benefit, "STC", "30"));
+  const deductiblePool = partBDeductibles.length ? partBDeductibles : deductibles;
+  const deductible = deductiblePool.find(({ benefit }) => benefit.timePeriod === "REMAINING") || deductiblePool[0];
+  if (deductible && deductible.benefit.amount !== undefined) {
+    const period = displayEnum(deductible.benefit.timePeriod);
+    out.deductible = `$${deductible.benefit.amount}${period ? ` (${period})` : ""}`;
+  }
+
+  for (const { type, benefit } of entries) {
+    const service = benefit.service || {};
+    const system = String(service.system || "").toUpperCase();
+    const code = String(service.value || "").toUpperCase();
+    if (!code || (system === "STC" && !AWV_CODES.includes(code))) continue;
+    const dates = benefitDates(benefit.dates);
+    out.services.push({
+      code,
+      info: service.definition || (benefit.messages || []).join("; ") || displayEnum(type),
+      dates,
+    });
+    if (!AWV_CODES.includes(code)) continue;
+    for (const date of dates) {
+      if (date.kind.startsWith("latestVisit") && date.date <= today()) {
+        if (!out.awvLast || date.date > out.awvLast) out.awvLast = date.date;
+      } else if (!date.kind.endsWith(".end") && date.date > today()) {
+        if (!out.awvNext || date.date < out.awvNext) out.awvNext = date.date;
       }
     }
   }
-  if (r.errors && r.errors.length) out.note = r.errors.map((e) => e.description || e.code).join(" · ").slice(0, 800);
+  if (r.errors && r.errors.length) {
+    out.note = r.errors.map((error) => error.description || error.message || error.code)
+      .filter(Boolean).join(" · ").slice(0, 800);
+    if (!out.note) out.note = "Eligibility request rejected by payer";
+  }
   return out;
 }
 
@@ -168,25 +247,38 @@ async function upsertTracker(patient, parsed, errNote, session) {
 async function runCheck(patient, clientIp, session) {
   if (!patient.mbi) return { skipped: "no-mbi" };
   if (!patient.dob) return { skipped: "no-dob" };
+  const dateOfBirth = dashDate(patient.dob);
+  if (!dateOfBirth) return { skipped: "invalid-dob" };
   const payload = {
-    controlNumber: String(Math.floor(100000000 + Math.random() * 899999999)),
-    tradingPartnerServiceId: "CMS",
-    provider: { organizationName: "BALTIMORE HEALTHCARE AND WELLNESS LLC", npi: BHW_NPI },
+    payerId: "CMS",
+    provider: {
+      name: { organization: "BALTIMORE HEALTHCARE AND WELLNESS LLC" },
+      npi: BHW_NPI,
+    },
     subscriber: {
       memberId: patient.mbi,
-      firstName: patient.first.toUpperCase(),
-      lastName: patient.last.toUpperCase(),
-      dateOfBirth: patient.dob.replace(/-/g, ""),
+      name: {
+        person: {
+          firstName: patient.first.toUpperCase(),
+          lastName: patient.last.toUpperCase(),
+        },
+      },
+      dateOfBirth,
     },
-    encounter: { serviceTypeCodes: ["30"] },
+    encounter: { services: [{ system: "STC", value: "30" }] },
   };
-  const res = await stediRequest("/2024-04-01/change/medicalnetwork/eligibility/v3", payload, clientIp);
+  const res = await stediRequest(STEDI_ELIGIBILITY_PATH, payload, clientIp);
   if (!res.ok) {
     const msg = (res.data && (res.data.message || JSON.stringify(res.data))) || `HTTP ${res.status}`;
     await upsertTracker(patient, parse271({}), `Stedi ${res.status}: ${String(msg).slice(0, 700)}`, session);
     return { error: `Stedi ${res.status}` };
   }
   const parsed = parse271(res.data);
+  if (parsed.note) {
+    // Stedi advises ignoring stub benefit data when the payer returns AAA errors.
+    await upsertTracker(patient, parse271({}), `Stedi ${res.status}: ${parsed.note}`, session);
+    return { error: `Stedi ${res.status}` };
+  }
   await upsertTracker(patient, parsed, "", session);
   return { ok: true, active: parsed.active, awvStatus: awvStatus(parsed), awvNext: parsed.awvNext, awvLast: parsed.awvLast };
 }
