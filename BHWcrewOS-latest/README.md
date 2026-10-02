@@ -31,3 +31,18 @@ bridge verifies `DIALPAD_WEBHOOK_SECRET` and forwards only to
 The Care Connect bridge additionally requires `CARE_CONNECT_INTAKE_SECRET`.
 Missing Cloud configuration fails closed instead of writing to a legacy Notion
 queue.
+
+## Billing Toolkit to Health Core synthetic handoff
+
+The Billing Toolkit loads patients from the protected Patient Registry, but only
+`BHW0000` may be transferred to Health Core. A coordinator preparation
+attestation is not a provider signature. Health Core requires a separate source
+review and preparation attestation before saving, then the assigned provider
+must sign the exact saved revision and content hash.
+
+For synthetic acceptance, Netlify requires the existing `SESSION_SECRET`,
+`OPERATIONS_CLOUD_API_URL`, and `CREWOS_OPERATIONS_TOKEN_SECRET`, plus
+`SYNTHETIC_BILLING_TOOLKIT_PROVIDER_STAFF_ID` and
+`SYNTHETIC_BILLING_TOOLKIT_PROVIDER_NAME`. The provider ID must be the exact
+CrewHQ staff ID that should receive the internal mention. Real-patient handoff
+and provider routing are blocked in code; no environment flag enables them.
