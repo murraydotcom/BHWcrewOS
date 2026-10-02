@@ -4,6 +4,7 @@ const PATIENT_FIELDS = [
   "bhwPatientId", "legalFirstName", "legalLastName", "nameSuffix", "preferredName", "dateOfBirth",
   "phone", "email", "patientStatus", "primaryPayer", "memberId", "coverageStatus",
   "referralSource", "responsibleStaff", "lastVerifiedAt",
+  "primaryCareProvider", "primaryCareProviderVerificationAttestation",
 ];
 const CONSENT_FIELDS = [
   "sourceType", "signedAt", "formVersion", "evidenceReference", "status",
@@ -133,6 +134,98 @@ function patientId(value) {
   return id;
 }
 
+function billingToolkitPatientId(value) {
+  const id = String(value || "").trim().toUpperCase();
+  if (!/^BHW\d{4}$/.test(id)) throw Object.assign(new Error("A BHW Patient ID is required"), { status: 400 });
+  return id;
+}
+
+export function validateHealthCoreDraftReceipt(value = {}) {
+  const receipt = {
+    handoffId: String(value.handoffId || "").trim().slice(0, 100),
+    bhwPatientId: billingToolkitPatientId(value.bhwPatientId),
+    noteId: String(value.noteId || "").trim().slice(0, 100),
+    revision: Number(value.revision),
+    contentHash: String(value.contentHash || "").trim().toLowerCase(),
+    savedAt: String(value.savedAt || "").trim(),
+  };
+  if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{7,99}$/.test(receipt.handoffId)
+    || !/^[A-Za-z0-9][A-Za-z0-9._:-]{7,99}$/.test(receipt.noteId)
+    || !Number.isInteger(receipt.revision) || receipt.revision < 1
+    || !/^[a-f0-9]{64}$/.test(receipt.contentHash)
+    || !Number.isFinite(Date.parse(receipt.savedAt))) {
+    throw Object.assign(new Error("A verified Health Core encounter-note draft receipt is required"), { status: 400 });
+  }
+  return receipt;
+}
+
+export function providerReviewRequestId(receipt) {
+  return `billing-note-${crypto.createHash("sha256")
+    .update([receipt.bhwPatientId, receipt.noteId, receipt.revision, receipt.contentHash].join("\u001f"))
+    .digest("hex")
+    .slice(0, 40)}`;
+}
+
+function syntheticProviderAssignment() {
+  return {
+    crewStaffId: env("SYNTHETIC_BILLING_TOOLKIT_PROVIDER_STAFF_ID").trim(),
+    name: env("SYNTHETIC_BILLING_TOOLKIT_PROVIDER_NAME").trim(),
+    verificationStatus: "verified",
+  };
+}
+
+async function providerAssignmentFor(receipt, session) {
+  if (receipt.bhwPatientId === "BHW0000") {
+    const provider = syntheticProviderAssignment();
+    if (!provider.crewStaffId || !provider.name) {
+      throw Object.assign(new Error("Synthetic Billing Toolkit provider assignment is not configured"), { status: 503 });
+    }
+    return provider;
+  }
+  throw Object.assign(new Error("Real-patient Billing Toolkit routing is not activated"), { status: 403 });
+}
+
+async function createProviderReviewAlert(receipt, provider, session) {
+  const requestId = providerReviewRequestId(receipt);
+  const sourceReference = `health-core:${receipt.noteId}:r${receipt.revision}`;
+  let requestRecord;
+  try {
+    const existing = await operationsRequest(`/v1/patient-requests/${encodeURIComponent(requestId)}`, session);
+    requestRecord = existing.request || existing.patientRequest;
+  } catch (error) {
+    if (Number(error.status) !== 404) throw error;
+  }
+  if (!requestRecord) {
+    const created = await operationsRequest("/v1/patient-requests", session, {
+      method: "POST",
+      body: {
+        id: requestId,
+        bhwPatientId: receipt.bhwPatientId,
+        requestType: "clinical_review",
+        source: "billing-toolkit-health-core",
+        sourceReference,
+        summary: "Health Core encounter-note draft is ready for the assigned PCP to review.",
+        priority: "routine",
+        notificationMode: "none",
+      },
+    });
+    requestRecord = created.request || created.patientRequest;
+  }
+  if (!requestRecord?.id || requestRecord.bhwPatientId !== receipt.bhwPatientId
+    || requestRecord.sourceReference !== sourceReference) {
+    throw Object.assign(new Error("Provider review request could not be verified after creation"), { status: 502 });
+  }
+  await operationsRequest(`/v1/patient-requests/${encodeURIComponent(requestRecord.id)}/team-notes`, session, {
+    method: "POST",
+    body: {
+      content: `Health Core encounter-note draft revision ${receipt.revision} is ready for PCP review. Open Health Core Clinical Documentation; no clinical content is copied into CrewHQ.`,
+      mentions: [{ staffId: provider.crewStaffId, name: provider.name }],
+      idempotencyKey: `billing-toolkit-provider-review:${requestId}`,
+    },
+  });
+  return { requestId: requestRecord.id, providerStaffId: provider.crewStaffId, providerName: provider.name };
+}
+
 function pick(source, fields) {
   return Object.fromEntries(fields.filter((field) => source?.[field] !== undefined).map((field) => [field, source[field]]));
 }
@@ -157,6 +250,16 @@ export default async (request) => {
         const patient = pick(body.patient, PATIENT_FIELDS);
         patient.bhwPatientId = patientId(patient.bhwPatientId);
         return response(200, await cloudRequest(`/v1/patients/${encodeURIComponent(patient.bhwPatientId)}`, session, { method: "PUT", body: patient }));
+      }
+      case "notify-billing-toolkit-provider": {
+        const receipt = validateHealthCoreDraftReceipt(body.receipt);
+        const provider = await providerAssignmentFor(receipt, session);
+        const notification = await createProviderReviewAlert(receipt, provider, session);
+        return response(200, {
+          ok: true,
+          receipt: { handoffId: receipt.handoffId, noteId: receipt.noteId, revision: receipt.revision, contentHash: receipt.contentHash, savedAt: receipt.savedAt },
+          notification: { ...notification, status: "created", channel: "crewhq-provider-mention" },
+        });
       }
       case "recording-consent": {
         const id = patientId(body.bhwPatientId);

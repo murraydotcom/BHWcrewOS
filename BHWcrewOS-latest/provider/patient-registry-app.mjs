@@ -51,6 +51,11 @@ function patientFields(patient = {}, prefix = "d", includeId = false) {
     field(`${prefix}Coverage`, "Coverage status", patient.coverageStatus || "unknown", "select", COVERAGE_OPTIONS),
     field(`${prefix}Referral`, "Referral source", patient.referralSource || ""),
     field(`${prefix}Staff`, "Responsible staff", patient.responsibleStaff || "Operations Manager"),
+    field(`${prefix}PcpStaffId`, "Main PCP CrewHQ staff ID", patient.primaryCareProvider?.crewStaffId || ""),
+    field(`${prefix}PcpProfileId`, "Main PCP Health Core profile ID", patient.primaryCareProvider?.clinicalStaffProfileId || ""),
+    field(`${prefix}PcpName`, "Main PCP name", patient.primaryCareProvider?.name || ""),
+    field(`${prefix}PcpCredential`, "Main PCP credential", patient.primaryCareProvider?.credential || ""),
+    `<label class="attestation"><input id="${prefix}PcpVerified" type="checkbox"><span><b>Verify this main PCP identity</b><small>Required only when assigning or changing the PCP. Confirm the exact CrewHQ and Health Core identities before saving.</small></span></label>`,
   ].join("");
 }
 
@@ -70,6 +75,13 @@ function readPatient(prefix, bhwPatientId = "") {
     coverageStatus: $(`${prefix}Coverage`).value,
     referralSource: $(`${prefix}Referral`).value.trim(),
     responsibleStaff: $(`${prefix}Staff`).value.trim(),
+    primaryCareProvider: {
+      crewStaffId: $(`${prefix}PcpStaffId`).value.trim(),
+      clinicalStaffProfileId: $(`${prefix}PcpProfileId`).value.trim(),
+      name: $(`${prefix}PcpName`).value.trim(),
+      credential: $(`${prefix}PcpCredential`).value.trim(),
+    },
+    primaryCareProviderVerificationAttestation: $(`${prefix}PcpVerified`).checked,
     lastVerifiedAt: new Date().toISOString(),
   };
 }
@@ -293,6 +305,13 @@ function renderDetail() {
       const fields = ["legalFirstName", "legalLastName", "nameSuffix", "preferredName", "dateOfBirth", "phone", "email", "patientStatus", "primaryPayer", "memberId", "coverageStatus", "referralSource", "responsibleStaff"];
       if (!current || fields.some((key) => String(current[key] || "") !== String(next[key] || ""))) {
         throw new Error("The patient update could not be verified in the current Cloud registry.");
+      }
+      const providerFields = ["crewStaffId", "clinicalStaffProfileId", "name", "credential"];
+      if (providerFields.some((key) => String(current.primaryCareProvider?.[key] || "") !== String(next.primaryCareProvider?.[key] || ""))) {
+        throw new Error("The main PCP assignment could not be verified in the current Cloud registry.");
+      }
+      if (next.primaryCareProvider?.crewStaffId && current.primaryCareProvider?.verificationStatus !== "verified") {
+        throw new Error("The main PCP assignment was saved without verified identity status.");
       }
       registryFormDirty = false;
       showToast(`Saved to BHW Cloud at ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}.`);

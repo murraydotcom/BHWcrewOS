@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import test from "node:test";
-import registryHandler from "../netlify/functions/patient-registry.mjs";
+import registryHandler, {
+  providerReviewRequestId,
+  validateHealthCoreDraftReceipt,
+} from "../netlify/functions/patient-registry.mjs";
 import { createPatientRegistryClient } from "../provider/patient-registry-client.mjs";
 
 function signedCrewToken(secret = "synthetic-session-secret") {
@@ -161,5 +164,88 @@ test("Patient Registry proxy rejects unauthenticated and unknown requests", asyn
     assert.equal(unknown.status, 400);
   } finally {
     globalThis.Netlify = priorNetlify;
+  }
+});
+
+test("saved synthetic Health Core draft creates an idempotent PCP mention without copying note content", async () => {
+  const receipt = validateHealthCoreDraftReceipt({
+    handoffId: "handoff-synthetic-1",
+    bhwPatientId: "BHW0000",
+    noteId: "synthetic-note-1",
+    revision: 1,
+    contentHash: "b".repeat(64),
+    savedAt: "2026-10-02T12:00:00.000Z",
+  });
+  const environment = new Map([
+    ["SESSION_SECRET", "synthetic-session-secret"],
+    ["CREWOS_OPERATIONS_TOKEN_SECRET", "synthetic-operations-secret"],
+    ["OPERATIONS_CLOUD_API_URL", "https://operations.example.test"],
+    ["SYNTHETIC_BILLING_TOOLKIT_PROVIDER_STAFF_ID", "synthetic-provider"],
+    ["SYNTHETIC_BILLING_TOOLKIT_PROVIDER_NAME", "Synthetic Provider"],
+  ]);
+  const priorNetlify = globalThis.Netlify;
+  const priorFetch = globalThis.fetch;
+  const outbound = [];
+  globalThis.Netlify = { env: { get: (key) => environment.get(key) || "" } };
+  globalThis.fetch = async (url, options) => {
+    outbound.push({ url, options, body: options.body ? JSON.parse(options.body) : null });
+    if (options.method === "GET") return Response.json({ error: "not found" }, { status: 404 });
+    if (url.endsWith("/team-notes")) return Response.json({ ok: true, replayed: false });
+    const body = JSON.parse(options.body);
+    return Response.json({ ok: true, request: { ...body, id: body.id } }, { status: 201 });
+  };
+  try {
+    const response = await registryHandler(new Request("https://bhwcrewos.example/.netlify/functions/patient-registry", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${signedCrewToken()}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "notify-billing-toolkit-provider", receipt }),
+    }));
+    const result = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(result.notification.providerStaffId, "synthetic-provider");
+    assert.equal(result.notification.requestId, providerReviewRequestId(receipt));
+    assert.equal(outbound[1].body.requestType, "clinical_review");
+    assert.equal(outbound[1].body.notificationMode, "none");
+    assert.equal(outbound[2].body.mentions[0].staffId, "synthetic-provider");
+    assert.match(outbound[2].body.content, /no clinical content is copied/i);
+    assert.doesNotMatch(JSON.stringify(outbound), /Synthetic monthly care-management documentation/);
+  } finally {
+    globalThis.Netlify = priorNetlify;
+    globalThis.fetch = priorFetch;
+  }
+});
+
+test("real-patient provider routing stays server-blocked even if a legacy-looking flag is present", async () => {
+  const environment = new Map([
+    ["SESSION_SECRET", "synthetic-session-secret"],
+    ["BILLING_TOOLKIT_REAL_PATIENT_ENABLED", "true"],
+  ]);
+  const priorNetlify = globalThis.Netlify;
+  const priorFetch = globalThis.fetch;
+  let externalCalls = 0;
+  globalThis.Netlify = { env: { get: (key) => environment.get(key) || "" } };
+  globalThis.fetch = async () => { externalCalls += 1; return Response.json({ ok: true }); };
+  try {
+    const response = await registryHandler(new Request("https://bhwcrewos.example/.netlify/functions/patient-registry", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${signedCrewToken()}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "notify-billing-toolkit-provider",
+        receipt: {
+          handoffId: "handoff-real-patient-1",
+          bhwPatientId: "BHW0557",
+          noteId: "real-note-1",
+          revision: 1,
+          contentHash: "c".repeat(64),
+          savedAt: "2026-10-02T12:00:00.000Z",
+        },
+      }),
+    }));
+    assert.equal(response.status, 403);
+    assert.match((await response.json()).error, /not activated/);
+    assert.equal(externalCalls, 0);
+  } finally {
+    globalThis.Netlify = priorNetlify;
+    globalThis.fetch = priorFetch;
   }
 });

@@ -7,6 +7,7 @@
 <script src="/crew-provider-gate.js"></script>
 <script src="/staff-chat-launcher.js" defer></script>
 <script src="/billing-toolkit-audit.js" defer></script>
+<script type="module" src="/billing-toolkit-health-core.mjs"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
@@ -326,10 +327,11 @@
       <div class="card">
         <div class="field-grid cols-3">
           <div class="field"><label>Practice / organization</label><input type="text" value="BHW Medical Group" data-field="practice"></div>
-          <div class="field"><label>Billing provider (name &amp; credentials)</label><input type="text" data-field="provider"></div>
+          <div class="field"><label>Patient Registry record</label><select id="billingPatientSelect"><option>Loading protected Patient Registry…</option></select></div>
+          <div class="field"><label>Billing provider / main PCP</label><input type="text" data-field="provider" readonly></div>
           <div class="field"><label>Billing provider NPI</label><input type="text" data-field="npi"></div>
-          <div class="field"><label>Patient name</label><input type="text" data-field="patient"></div>
-          <div class="field"><label>Patient DOB / MRN</label><input type="text" data-field="dobmrn"></div>
+          <div class="field"><label>Patient name</label><input type="text" data-field="patient" readonly></div>
+          <div class="field"><label>Patient DOB / BHW ID</label><input type="text" data-field="dobmrn" readonly></div>
           <div class="field"><label>Service month / year</label><input type="text" placeholder="MM/YYYY" data-field="svcmonth"></div>
         </div>
       </div>
@@ -622,14 +624,15 @@
         </div>
       </div>
 
-      <h2 class="section-header"><span class="num">15.</span>Provider attestation</h2>
-      <p class="body-text">I attest that the care-management services documented above (APCM, BHI, RPM, CCM, PCM, and/or CoCM, as checked) were furnished as described, meet all applicable Medicare requirements for the code(s) selected, that no time or activity was counted toward more than one program, and that this documentation is complete and accurate as of the date signed.</p>
+      <h2 class="section-header"><span class="num">15.</span>Coordinator preparation &amp; provider review</h2>
+      <p class="body-text">The coordinator may attest that the draft is prepared for review. This is not a provider signature, clinical approval, medical-necessity attestation, or claim authorization. The assigned PCP must review and sign the exact saved revision in Health Core.</p>
       <div class="card">
         <div class="field-grid cols-3">
-          <div class="field"><label>Provider signature</label><input type="text" data-field="attest-signature"></div>
-          <div class="field"><label>Printed name &amp; credentials</label><input type="text" data-field="attest-name"></div>
-          <div class="field"><label>Date</label><input type="date" data-field="attest-date"></div>
+          <div class="field"><label>Prepared by</label><input type="text" data-field="prepared-by" readonly></div>
+          <div class="field"><label>Coordinator role</label><input type="text" data-field="prepared-role" readonly></div>
+          <div class="field"><label>Documentation date</label><input type="date" data-field="prepared-date"></div>
         </div>
+        <div class="check-row"><input type="checkbox" id="coordinatorPreparationAttestation"><label for="coordinatorPreparationAttestation"><b>I prepared and reviewed this draft and it is ready for the assigned PCP's review.</b> I understand this does not sign the encounter note or authorize billing.</label></div>
       </div>
 
       <h2 class="section-header"><span class="num">16.</span>Chart note summary</h2>
@@ -637,9 +640,11 @@
       <div class="btn-row no-print">
         <button class="btn btn-solid" onclick="generateChartNote()">Generate chart note</button>
         <button class="btn" id="copyNoteBtn" onclick="copyChartNote()">Copy to clipboard</button>
+        <button class="btn btn-solid" id="sendToHealthCore" type="button" disabled>Open synthetic draft in Health Core</button>
       </div>
       <textarea id="chartNoteOutput" readonly placeholder="Click “Generate chart note” to build a copy-paste-ready summary from the fields above." style="width:100%; min-height:320px; font-family:'Montserrat',sans-serif; font-size:0.82rem; line-height:1.5; padding:14px 16px; border:1px solid var(--bhw-sand); border-radius:4px; background:#fff; color:var(--bhw-ink); white-space:pre-wrap;"></textarea>
       <p class="small" id="copyStatus" style="opacity:0.7; margin-top:6px;">&nbsp;</p>
+      <p class="small" id="healthCoreHandoffStatus" role="status" aria-live="polite">Loading Patient Registry and Health Core handoff status…</p>
     </div>
 
     <!-- ================= TAB 2: AUDITING TOOL ================= -->
@@ -1365,12 +1370,15 @@ function generateChartNote(){
     }
   }
 
-  /* Attestation */
-  const attestName = fv('[data-field="attest-name"]');
-  const attestDate = fv('[data-field="attest-date"]');
-  if(attestName || attestDate){
-    lines.push('PROVIDER ATTESTATION');
-    lines.push(`- Attested by ${attestName || '[name not entered]'}${attestDate ? ' on '+attestDate : ''}`);
+  /* Coordinator preparation — never a provider signature */
+  const preparedBy = fv('[data-field="prepared-by"]');
+  const preparedRole = fv('[data-field="prepared-role"]');
+  const preparedDate = fv('[data-field="prepared-date"]');
+  if(preparedBy || preparedDate || isChecked('#coordinatorPreparationAttestation')){
+    lines.push('COORDINATOR PREPARATION');
+    lines.push(`- Prepared by ${preparedBy || '[authenticated preparer]'}${preparedRole ? ' ('+preparedRole+')' : ''}${preparedDate ? ' on '+preparedDate : ''}`);
+    lines.push(`- Preparation attestation: ${isChecked('#coordinatorPreparationAttestation') ? 'completed' : 'not completed'}`);
+    lines.push('- Provider review and signature of the exact Health Core revision remain required.');
     lines.push('');
   }
 
