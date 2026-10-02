@@ -245,6 +245,7 @@ body.embed-open{overflow:hidden}
 <div id="modal" role="dialog" aria-modal="true"><div class="mcard" id="mcard"></div></div>
 <div id="toast" role="status"></div>
 
+<script src="/assets/bhw-long-chart-controls.js"></script>
 <script>
 /* ============ BHWcrewOS front end ============ */
 const API_AUTH = "/.netlify/functions/auth";
@@ -472,7 +473,7 @@ function toggleEmbedExpanded(viewId,button){
   if(expanding){
     view.classList.add("embed-expanded");
     document.body.classList.add("embed-open");
-    button.textContent="Exit expanded view";
+    button.textContent="Condense view";
     button.setAttribute("aria-expanded","true");
   }
 }
@@ -504,6 +505,7 @@ function buildViews(){
   html += mySpaceView();
   host.innerHTML = html;
   installDivisionCollapsibles();
+  window.BHWLongCharts?.install(document);
   setTimeout(checkEmbeds, 100);
 }
 
@@ -860,13 +862,17 @@ function checkEmbeds(){
   document.querySelectorAll("iframe[data-fb]").forEach(function(f){
     var fb=document.getElementById(f.dataset.fb);
     if(!fb) return;
+    var installLongCharts=function(){
+      try{ window.BHWLongCharts?.install(f.contentDocument); }catch(err){}
+    };
     var verdict=function(){
       var ok=false;
       try{ ok = !!(f.contentDocument && f.contentDocument.body && f.contentDocument.body.children.length); }catch(err){ ok=false; }
       if(!ok){ fb.style.display="block"; f.style.display="none"; }
-      else { fb.style.display="none"; f.style.display="block"; }
+      else { fb.style.display="none"; f.style.display="block"; installLongCharts(); }
     };
-    f.addEventListener("load", function(){ setTimeout(verdict, 250); });
+    f.addEventListener("load", function(){ installLongCharts(); setTimeout(verdict, 250); });
+    installLongCharts();
     setTimeout(verdict, 3500);
   });
 }
