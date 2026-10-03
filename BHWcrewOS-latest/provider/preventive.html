@@ -22,9 +22,14 @@
   <aside class="sidebar"><div class="brand"><h1>BHW Provider</h1><div>Clinical Intelligence</div></div><nav class="nav"><a href="patient-360.html">Patient 360</a><a href="risk.html">Risk &amp; Quality</a><span class="active">Preventive Services</span><a href="tcm.html">CRISP Flow</a><a href="../index.html">CrewOS</a></nav><div class="side-note">CRISP Population Explorer evidence enters Health Core only after exact patient matching and provider review.</div></aside>
   <main class="main"><div class="topbar"><div class="crumb">Health Core · CRISP · <b>Preventive Services</b></div><div class="actions"><span class="state" id="saveState">Not saved</span><button class="btn" id="themeBtn">Theme</button></div></div>
     <div class="content">
-      <div class="page-head"><h2>Preventive Services Intake</h2><p>Preview CRISP Population Explorer evidence, resolve every patient match, then save reviewed completions to Health Core and Patient 360.</p></div>
-      <div class="notice"><b>Protected clinical workflow.</b> The workbook is parsed inside the authenticated BHW connection and is not retained. Unmatched, ambiguous, unmapped, or incomplete rows stop for review. Saving evidence never creates an order or referral automatically.</div>
-      <div class="grid">
+      <div class="page-head"><h2>Preventive Services Review</h2><p>Review normalized CMS HETS benefit evidence or import CRISP completion evidence, then attach only the provider-reviewed clinical measure to Health Core.</p></div>
+      <div class="notice"><b>Protected clinical workflow.</b> HETS coverage is not a diagnosis, overdue determination, or completed-service record. CRISP files are parsed inside the authenticated BHW connection and are not retained. Saving evidence never creates an order or referral automatically.</div>
+      <section class="card hidden" id="hetsCard" style="margin-bottom:16px"><h3>CMS HETS benefit review</h3><div class="mini">One row is shown per clinical measure. Alternate HCPCS/CPT codes stay attached as payer evidence; they do not become separate care gaps. This release remains restricted to `BHW0000`.</div>
+        <div id="hetsStatus" class="mini" style="margin-top:12px">Loading reviewed HETS evidence…</div>
+        <div id="hetsTable"></div>
+        <div class="review hidden" id="hetsReview"><p class="review-help">Choose the clinical disposition. Anything beyond “needs review” requires a short clinical basis. HETS eligibility alone can never supply that basis.</p><label class="check"><input type="checkbox" id="hetsReviewCheck"><span>I am the reviewing BHW provider. I verified the clinical disposition for every measure selected below.</span></label><div class="field"><label for="hetsReviewNote">Review note (optional)</label><textarea id="hetsReviewNote" maxlength="500" placeholder="Document any source limitation or reconciliation note."></textarea></div><div class="actions"><button class="btn primary" id="hetsSaveBtn" disabled>Preview and save reviewed measures</button><a class="btn" href="../index.html">Return to CrewOS chart</a></div></div>
+      </section>
+      <div class="grid" id="crispGrid">
         <section class="card"><h3>1 · Choose the CRISP export</h3><div class="mini">In CRISP Population Explorer, select <b>Baltimore Healthcare and Wellness - Panel (MD_BMOREHW)</b>, then choose Export. Include Date of Birth and the nine Preventive Services fields: Category, Code, Data Source, Description, Document Evidence Date, Event Date, Facility Name, Results, and Test Name. This first release is restricted to the synthetic `BHW0000` acceptance test.</div>
           <div class="drop" id="drop"><b id="fileLabel">Drop the Preventive Services export here</b><span class="mini">or choose a .xlsx, .csv, .tsv, or .txt file under 4 MB</span></div>
           <input type="file" id="fileInput" accept=".xlsx,.csv,.tsv,.txt" hidden>
@@ -48,7 +53,10 @@
 const $=(id)=>document.getElementById(id);
 const esc=(value)=>String(value??"").replace(/[&<>"']/g,(char)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
 const API="/api/crisp-preventive-import";
+const HETS_API="/api/hets-preventive-review";
+const CARE_GAPS_API="/.netlify/functions/care-gaps";
 let selectedFile=null, clinicalToken="", clinicalExpiresAt=0, preview=null, pendingAction=null, chartSaveComplete=false;
+let hetsRecord=null;
 
 (function theme(){const key="bhw-theme";const set=(value)=>document.documentElement.setAttribute("data-theme",value);try{set(localStorage.getItem(key)||"light")}catch{}$("themeBtn").onclick=()=>{const value=document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark";set(value);try{localStorage.setItem(key,value)}catch{}}})();
 $("sourceDate").value=new Date().toISOString().slice(0,10);
@@ -68,6 +76,60 @@ $("drop").addEventListener("drop",(event)=>choose(event.dataTransfer.files[0]));
 
 function fileBase64(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(",").at(-1));reader.onerror=()=>reject(new Error("The workbook could not be read"));reader.readAsDataURL(file)})}
 async function call(body){const res=await fetch(API,{method:"POST",headers:{Authorization:`Bearer ${clinicalToken}`,"Content-Type":"application/json"},body:JSON.stringify(body)});const data=await res.json().catch(()=>({}));if(!res.ok){if(data.clinicalReauthenticationRequired){clinicalToken="";clinicalExpiresAt=0}throw new Error(data.error||`Protected intake returned ${res.status}`)}return data}
+async function callHets(body){const res=await fetch(HETS_API,{method:"POST",headers:{Authorization:`Bearer ${clinicalToken}`,"Content-Type":"application/json"},body:JSON.stringify(body)});const data=await res.json().catch(()=>({}));if(!res.ok){if(data.clinicalReauthenticationRequired){clinicalToken="";clinicalExpiresAt=0}throw new Error(data.error||`Protected HETS review returned ${res.status}`)}return data}
+
+function renderHets(){
+  const gaps=hetsRecord?.gaps||[];
+  const measures=gaps.filter((gap)=>gap.healthCoreMeasureId&&(gap.hetsSourceCodes||[]).length);
+  if(!measures.length){$("hetsStatus").textContent="No normalized HETS measures are available. Run the chart eligibility check first.";return}
+  $("hetsStatus").textContent=`${measures.length} normalized measure${measures.length===1?"":"s"} · source ${hetsRecord.patient?.payer||"CMS HETS"} · not saved to Health Core`;
+  $("hetsTable").innerHTML=`<div class="table-wrap"><table class="table"><thead><tr><th>Clinical measure</th><th>Codes returned</th><th>Provider disposition</th><th>Clinical basis</th></tr></thead><tbody>${measures.map((measure,index)=>`<tr data-hets-row="${index}"><td><b>${esc(measure.label)}</b><div class="mini">${esc(measure.codeGuidance||"")}</div></td><td>${esc((measure.hetsSourceCodes||[]).join(", "))}</td><td><select data-hets-disposition><option value="needs-review">Needs clinical review</option><option value="due">Due</option><option value="up-to-date">Up to date</option><option value="ordered">Ordered</option><option value="referral-in-progress">Referral in progress</option><option value="declined">Declined</option><option value="not-applicable">Not applicable</option></select></td><td><input data-hets-basis maxlength="500" placeholder="Required unless needs review"></td></tr>`).join("")}</tbody></table></div>`;
+  $("hetsReview").classList.remove("hidden");
+  $("hetsReviewCheck").onchange=()=>{$("hetsSaveBtn").disabled=!$("hetsReviewCheck").checked};
+}
+
+async function loadHets(){
+  const params=new URLSearchParams(location.search);
+  if(params.get("source")!=="hets")return;
+  $("hetsCard").classList.remove("hidden");
+  $("crispGrid").classList.add("hidden");
+  const bhwPatientId=String(params.get("patient")||"").toUpperCase();
+  if(bhwPatientId!=="BHW0000"){$("hetsStatus").textContent="The current Health Core HETS review gate is restricted to BHW0000.";return}
+  const token=regularToken();
+  if(!token){location.href=`/crewos?next=${encodeURIComponent(location.pathname+location.search)}`;return}
+  try{
+    const response=await fetch(CARE_GAPS_API,{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json"},body:JSON.stringify({action:"for",bhwPatientId})});
+    const body=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(body.error||`Care-gap read returned ${response.status}`);
+    if(!body.matched)throw new Error("No exact BHW0000 HETS profile was found");
+    hetsRecord=body;
+    renderHets();
+  }catch(error){$("hetsStatus").textContent=error.message;setState("error","Not saved")}
+}
+
+async function saveHets(){
+  if(!hetsRecord)return;
+  const source=(hetsRecord.gaps||[]).filter((gap)=>gap.healthCoreMeasureId&&(gap.hetsSourceCodes||[]).length);
+  const rows=[...document.querySelectorAll("[data-hets-row]")];
+  const measures=rows.map((row,index)=>{
+    const measure=source[index];
+    return {...measure,sourceCodes:measure.hetsSourceCodes,clinicalDisposition:row.querySelector("[data-hets-disposition]").value,clinicalBasis:row.querySelector("[data-hets-basis]").value.trim()};
+  });
+  const missing=measures.find((measure)=>measure.clinicalDisposition!=="needs-review"&&!measure.clinicalBasis);
+  if(missing){$("hetsStatus").textContent=`Add a clinical basis for ${missing.label}.`;return}
+  $("hetsSaveBtn").disabled=true;setState("saving","Previewing…");
+  try{
+    const prepared=await callHets({action:"preview",bhwPatientId:hetsRecord.patient.bhwPatientId,sourceUpdatedAt:hetsRecord.sourceUpdatedAt||new Date().toISOString(),measures});
+    if(prepared.preview?.issues?.length)throw new Error(`Health Core stopped ${prepared.preview.issues.length} measure${prepared.preview.issues.length===1?"":"s"} for correction.`);
+    if(!prepared.preview?.records?.length)throw new Error("No reviewed HETS measures are ready to save.");
+    if(!confirm(`Attach ${prepared.preview.records.length} provider-reviewed HETS measure${prepared.preview.records.length===1?"":"s"} to BHW0000 Health Core? No order, referral, claim, or invoice will be created.`)){setState("","Not saved");return}
+    const saved=await callHets({action:"commit",records:prepared.preview.records,previewToken:prepared.previewToken,reviewAttestation:{reviewed:true,note:$("hetsReviewNote").value}});
+    setState("saved",`Saved to BHW Cloud · ${new Date(saved.savedAt).toLocaleString()}`);
+    $("hetsStatus").textContent=`${saved.verifiedCount} normalized measure${saved.verifiedCount===1?"":"s"} saved and read back from Health Core. No automatic order was created.`;
+  }catch(error){setState("error","Not saved");$("hetsStatus").textContent=error.message}finally{$("hetsSaveBtn").disabled=!$("hetsReviewCheck").checked}
+}
+$("hetsSaveBtn").onclick=()=>ensureClinical(saveHets);
+loadHets();
 
 function measureLabel(id){return({"breast-cancer-screening":"Breast cancer screening","colorectal-cancer-screening":"Colorectal cancer screening"})[id]||id}
 function issueLabel(reason){return String(reason||"").replaceAll("-"," ")}
