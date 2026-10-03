@@ -65,3 +65,38 @@ test("program identifiers are normalized and unsupported programs fail closed", 
   assert.equal(helpers.normalizeProgram("cocm"), "COCM");
   assert.throws(() => helpers.normalizeProgram("TCM"), /supported care-management program/);
 });
+
+test("reserved synthetic enrollment is admin-only, explicit, and cannot activate", () => {
+  assert.equal(helpers.syntheticAcceptanceAllowed({
+    bhwPatientId: "BHW0000",
+    record: { status: "potential" },
+    session: { access: "Admin" },
+    requested: true,
+  }), true);
+  assert.equal(helpers.syntheticAcceptanceAllowed({
+    bhwPatientId: "BHW0000",
+    record: { status: "active" },
+    session: { access: "Admin" },
+    requested: true,
+  }), false);
+  assert.equal(helpers.syntheticAcceptanceAllowed({
+    bhwPatientId: "BHW0000",
+    record: { status: "potential" },
+    session: { access: "Staff" },
+    requested: true,
+  }), false);
+});
+
+test("synthetic patient is absent from ordinary enrollment pickers and explicit for Admin acceptance", () => {
+  const careLog = require("../netlify/functions/care-log-data.js")._test;
+  const roster = [{ bhwPatientId: "BHW0557", name: "Registry Patient", selectable: true }];
+  assert.deepEqual(careLog.careEnrollmentPatients(roster).map((patient) => patient.bhwPatientId), ["BHW0557"]);
+  assert.deepEqual(
+    careLog.careEnrollmentPatients(roster, { includeSynthetic: true, access: "Admin" }).map((patient) => patient.bhwPatientId),
+    ["BHW0000", "BHW0557"],
+  );
+  assert.deepEqual(
+    careLog.careEnrollmentPatients(roster, { includeSynthetic: true, access: "Staff" }).map((patient) => patient.bhwPatientId),
+    ["BHW0557"],
+  );
+});
