@@ -18,6 +18,13 @@ function monthStart(value = new Date()) {
   return Number.isFinite(date.getTime()) ? `${date.toISOString().slice(0, 7)}-01` : "";
 }
 
+function syntheticAcceptanceAllowed({ bhwPatientId = "", record = {}, session = {}, requested = false } = {}) {
+  return bhwPatientId === "BHW0000"
+    && requested === true
+    && session.access === "Admin"
+    && String(record.status || "").trim().toLowerCase() === "potential";
+}
+
 function enrollmentEvidence(enrollment = {}) {
   return {
     enrollmentStatus: enrollment.status || "potential",
@@ -98,18 +105,26 @@ exports.handler = async (event) => {
 
     if (body.action !== "save") return json(400, { error: "Unknown action" });
     const bhwPatientId = String(body.bhwPatientId || "").trim().toUpperCase();
-    if (!/^BHW\d{4}$/.test(bhwPatientId) || bhwPatientId === "BHW0000") {
+    const syntheticAcceptance = syntheticAcceptanceAllowed({
+      bhwPatientId,
+      record: body.record || {},
+      session,
+      requested: body.syntheticAcceptance,
+    });
+    if (!/^BHW\d{4}$/.test(bhwPatientId) || (bhwPatientId === "BHW0000" && !syntheticAcceptance)) {
       return json(400, { error: "Choose a real patient from the protected Patient Registry." });
     }
     const program = normalizeProgram(body.program);
-    const patients = await listCloudPatients(session);
-    const patient = patients.find((item) => item.bhwPatientId === bhwPatientId && item.selectable);
+    const patients = syntheticAcceptance ? [] : await listCloudPatients(session);
+    const patient = syntheticAcceptance
+      ? { bhwPatientId: "BHW0000", name: "Synthetic Patient", memberId: "", icds: [] }
+      : patients.find((item) => item.bhwPatientId === bhwPatientId && item.selectable);
     if (!patient) return json(404, { error: "The patient is not available for enrollment in the protected Patient Registry." });
 
     const result = await cloudRequest(`/v1/patients/${encodeURIComponent(bhwPatientId)}/care-program-enrollments/${encodeURIComponent(program)}`, {
       actor: session,
       method: "PUT",
-      body: { ...(body.record || {}), bhwPatientId, program },
+      body: { ...(body.record || {}), bhwPatientId, program, syntheticAcceptance },
     });
     const enrollment = result.enrollment;
     if (!result.verified || !enrollment?.id) throw Object.assign(new Error("Enrollment was not verified after the BHW Cloud save."), { status: 502 });
@@ -130,4 +145,4 @@ exports.handler = async (event) => {
   }
 };
 
-exports._test = { enrollmentEvidence, ensureMonthlyLog, monthStart, normalizeProgram };
+exports._test = { enrollmentEvidence, ensureMonthlyLog, monthStart, normalizeProgram, syntheticAcceptanceAllowed };

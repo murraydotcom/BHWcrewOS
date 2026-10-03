@@ -45,6 +45,37 @@ function monthsInWindow(start, end) {
   return months;
 }
 
+function careEnrollmentPatients(roster = [], { includeSynthetic = false, access = "" } = {}) {
+  const patients = roster.filter((patient) => (
+    patient.selectable
+      && /^BHW\d{4}$/.test(patient.bhwPatientId)
+      && patient.bhwPatientId !== "BHW0000"
+  ));
+  if (includeSynthetic === true && String(access || "").toLowerCase() === "admin") {
+    patients.unshift({
+      bhwPatientId: "BHW0000",
+      name: "Synthetic Patient",
+      dob: "",
+      preferredName: "Synthetic",
+      payer: "Synthetic coverage",
+      insurance: "Synthetic coverage",
+      memberId: "",
+      programs: [],
+      selectable: true,
+    });
+  }
+  return patients.map((patient) => ({
+    bhwPatientId: patient.bhwPatientId,
+    name: patient.name,
+    dob: patient.dob,
+    preferredName: patient.preferredName || "",
+    payer: patient.payer || "",
+    insurance: patient.insurance || "",
+    memberId: patient.memberId || "",
+    programs: patient.programs || [],
+  }));
+}
+
 const ENROLLMENT_PROGRAMS = new Set(["APCM", "CCM", "PCM", "BHI", "COCM", "CHI", "PIN", "PIN-PS", "RPM", "RTM"]);
 const TIME_PROGRAMS = new Set(["CCM", "PCM", "BHI", "COCM", "CHI", "PIN", "PIN-PS"]);
 const REMOTE_PROGRAMS = new Set(["RPM", "RTM"]);
@@ -174,11 +205,14 @@ exports.handler = async (event) => {
     const resultLogs = [...new Map(windowMonths.flatMap((value) => logsByMonth.get(value) || [])
       .map((log) => [log.id, log])).values()];
     const byId = new Map(roster.map((patient) => [patient.bhwPatientId, patient]));
-    const enrollments = enrollmentResult.enrollments.map((enrollment) => {
+    const includeSynthetic = body.includeSynthetic === true && session.access === "Admin";
+    const enrollments = enrollmentResult.enrollments.filter((enrollment) => (
+      enrollment.bhwPatientId !== "BHW0000" || includeSynthetic
+    )).map((enrollment) => {
       const patient = byId.get(enrollment.bhwPatientId);
       return {
         ...enrollment,
-        patientName: patient?.name || enrollment.bhwPatientId,
+        patientName: patient?.name || (enrollment.bhwPatientId === "BHW0000" ? "Synthetic Patient" : enrollment.bhwPatientId),
         payer: patient?.payer || enrollment.intake?.coverageDuplication?.payer || "",
       };
     });
@@ -236,16 +270,7 @@ exports.handler = async (event) => {
     return json(200, {
       entries,
       enrollments,
-      patients: roster.filter((patient) => patient.selectable && /^BHW\d{4}$/.test(patient.bhwPatientId) && patient.bhwPatientId !== "BHW0000").map((patient) => ({
-        bhwPatientId: patient.bhwPatientId,
-        name: patient.name,
-        dob: patient.dob,
-        preferredName: patient.preferredName || "",
-        payer: patient.payer || "",
-        insurance: patient.insurance || "",
-        memberId: patient.memberId || "",
-        programs: patient.programs || [],
-      })),
+      patients: careEnrollmentPatients(roster, { includeSynthetic: body.includeSynthetic === true, access: session.access }),
       activity,
       count: entries.length,
       activityCount: activity.length,
@@ -273,4 +298,4 @@ exports.handler = async (event) => {
   }
 };
 
-exports._test = { codeRequirement, currentRosterObservation, documentationGaps, isoDate, monthEnd, monthsInWindow, previousMonth, shiftDate };
+exports._test = { careEnrollmentPatients, codeRequirement, currentRosterObservation, documentationGaps, isoDate, monthEnd, monthsInWindow, previousMonth, shiftDate };
