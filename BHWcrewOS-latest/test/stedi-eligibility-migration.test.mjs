@@ -175,7 +175,7 @@ test("Stedi eligibility check uses the redesigned request and preserves the BHW 
   assert.equal(tracker.options.body.awvNextEligibleDate, "2099-01-15");
   assert.equal(tracker.options.body.sourceSystem, "Stedi HETS");
   assert.equal(tracker.options.body.coverageNotes, "");
-  assert.equal(tracker.options.body.sourceRulesVersion, "cms-hets-2026-1-v15.0");
+  assert.equal(tracker.options.body.sourceRulesVersion, "cms-hets-2026-2-v15.1");
   assert.deepEqual(tracker.options.body.preventiveServices.map(({ code }) => code), ["G0439", "G0402"]);
 });
 

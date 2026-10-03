@@ -180,14 +180,16 @@ function parse271(r) {
     out.deductible = `$${deductible.benefit.amount}${period ? ` (${period})` : ""}`;
   }
 
+  const supportedStcEvidence = new Set(["67", "CQ", "80", "CO", "BD"]);
   for (const { type, benefit } of entries) {
     const service = benefit.service || {};
     const system = String(service.system || "").toUpperCase();
     const code = String(service.value || "").toUpperCase();
-    if (!code || (system === "STC" && !AWV_CODES.includes(code))) continue;
+    if (!code || (system === "STC" && !supportedStcEvidence.has(code))) continue;
     const dates = benefitDates(benefit.dates);
     out.services.push({
-      code,
+      code: system === "STC" ? `STC:${code}` : code,
+      serviceSystem: system,
       info: service.definition || (benefit.messages || []).join("; ") || displayEnum(type),
       dates,
     });
@@ -243,7 +245,7 @@ async function upsertTracker(patient, parsed, errNote, session) {
       deductibleRemaining: parsed.deductible,
       coverageNotes: (errNote || parsed.note || "").slice(0, 4000),
       sourceSystem: "Stedi HETS",
-      sourceRulesVersion: "cms-hets-2026-1-v15.0",
+      sourceRulesVersion: "cms-hets-2026-2-v15.1",
     },
   });
   return result.profile?.id || patient.id;
