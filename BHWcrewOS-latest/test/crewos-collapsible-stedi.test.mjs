@@ -71,7 +71,8 @@ test("AWV connection copy separates configured credentials from successful eligi
   assert.match(opsData, /sourceSystem: profile\.sourceSystem/);
   assert.match(opsData, /coverageError:/);
   assert.match(stedi, /hostname: "healthcare\.us\.stedi\.com"/);
-  assert.match(stedi, /medicalnetwork\/eligibility\/v3/);
+  assert.match(stedi, /\/2026-06-01\/eligibility-check/);
+  assert.doesNotMatch(stedi, /medicalnetwork\/eligibility\/v3/);
   assert.match(stedi, /resolveMedicareMbi\(patient\)/);
   assert.match(html, /\(div==="Care Management"\|\|div==="Primary Care"\) \? prevCard\(\) : ""/);
 });
