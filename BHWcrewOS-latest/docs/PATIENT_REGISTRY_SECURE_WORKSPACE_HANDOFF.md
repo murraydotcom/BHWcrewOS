@@ -2,15 +2,15 @@
 
 ## Outcome
 
-Patient Registry is the authoritative patient-selection front door for the real-patient provider workspaces in CrewHQ.
+Patient Registry is the authoritative patient-selection front door for real-patient provider workspaces in CrewHQ.
 
 From an active Patient Registry record, staff may request a destination-specific launch for:
 
-1. BHW Whole-Person Clinical Map
+1. BHW Patient 360
 2. Body-System Atlas
 3. Patient Operations / Patient Worklist
 
-Health Core Chart Summary remains visibly unavailable for a real-patient cross-domain launch until Health Core accepts and validates the same governed context. BHW0000 remains the separate synthetic preview path.
+Patient 360 is the selected-patient longitudinal workspace inside Provider 360. Health Core Clinical Access remains the current-encounter documentation workflow and the canonical clinical record. Real-patient cross-domain launch to Health Core remains unavailable until Health Core accepts and validates the same governed context. BHW0000 remains the separate synthetic preview path.
 
 ## Security contract
 
@@ -37,22 +37,33 @@ After successful redemption, CrewHQ retains a 15-minute tab-scoped context in `s
 
 ## Application responsibilities
 
+### Provider 360
+
+- is the provider environment and home;
+- provides access to Patient Registry, Health Core Clinical Access, Patient 360, program lenses, and operational work; and
+- does not become a second canonical chart.
+
 ### Patient Registry
 
 - verifies the active patient master record;
 - creates the treatment-purpose launch;
-- presents the workspace choices; and
+- presents Patient 360 and operational workspace choices; and
 - remains the route back when context expires.
 
-### Whole-Person Clinical Map
+Assigned BHW provider, enrolled-program fields, and Registry program-lens launch controls are required next-phase work; they are not implemented by this naming release.
+
+### Patient 360
 
 - provides PSCM longitudinal synthesis and the connected body-system, timeline, mechanism, context, reserve, and feasible-plan views;
+- presents All Care and the appropriate program lenses: Primary Care, Flow, Mind & Mood Recovery, CharmEd Minds, and chronic care;
 - reads the patient already selected in Patient Registry; and
-- does not become a second canonical chart.
+- does not become a second canonical chart or a current-encounter note editor.
+
+The technical destination key `clinical-map`, scope `clinical-map.read`, and `patient-360*.html` routes remain compatibility identifiers. Their user-facing label is Patient 360.
 
 ### Body-System Atlas
 
-- uses the same tab context as the Clinical Map;
+- uses the same tab context as Patient 360;
 - retains its existing draft and provider-approval workflow; and
 - does not accept a visible real BHW Patient ID as authorization.
 
@@ -64,9 +75,23 @@ After successful redemption, CrewHQ retains a 15-minute tab-scoped context in `s
 
 ### Health Core
 
+- provides Clinical Access for the current visit and current-day documentation;
 - remains canonical for encounters, signed notes, problems, medications, allergies, results, orders, justifications, interpretations, care plans, versions, and approvals;
 - remains linked for BHW0000 synthetic review; and
-- requires a separate cross-domain acceptance release before real-patient Chart Summary launch is enabled.
+- requires a separate cross-domain acceptance release before real-patient Clinical Access launch is enabled.
+
+### Care Connect
+
+- receives only provider-approved, patient-safe information intended for the patient; and
+- does not expose provider-only synthesis, drafts, or operational worklists.
+
+## Verified route status
+
+- **Patient Registry → Patient 360:** secure launch route is built; real-patient activation remains off.
+- **Patient 360 internal views:** Overview, Body-System Atlas, Clinical Timeline, PSCM Mechanism Map, Context & Exposures, Current Snapshot & Plan, Clinical Data, and Sources & Provenance keep the selected tab context.
+- **Patient Registry → Patient Operations:** secure launch route is built; real-patient activation remains off.
+- **Patient Registry → Health Core Clinical Access:** intentionally locked until Health Core accepts the governed cross-domain context.
+- **Program lenses:** All Care, Primary Care, Flow, Mind & Mood Recovery, CharmEd Minds, and chronic care are the approved lens set, but Registry enrollment fields and lens-specific routes are not yet wired. There is no Trauma program.
 
 ## Activation gate
 
@@ -93,7 +118,7 @@ Merging the code does not activate the real-patient handoff. Activation requires
 This release does not:
 
 - put a real patient ID or PHI in the cross-application URL;
-- authorize Health Core real-patient Chart Summary launch;
+- authorize Health Core real-patient Clinical Access launch;
 - connect Nutrition Intelligence to the new token flow;
 - create a clinical write, signature, order, referral, message, billing event, or patient delivery;
 - replace downstream role checks, Patient Registry authorization, MFA, or existing application audit controls; or
