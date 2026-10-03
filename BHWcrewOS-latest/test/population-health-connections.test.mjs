@@ -30,13 +30,53 @@ test("recent monthly enrollment is recovered for no more than two months", () =>
 });
 
 test("monthly preparation records governed roster evidence without treating recovered history as current enrollment", () => {
-  assert.deepEqual(careImport.rosterEvidence(new Set(["CCM"]), new Set(), "CCM", "2026-09-01"), {
+  assert.deepEqual(careImport.rosterEvidence(new Set(["CCM"]), new Set(), new Set(), "CCM", "2026-09-01"), {
     source: "patient-registry", program: "CCM", effectiveMonth: "2026-09-01", status: "active",
   });
-  assert.deepEqual(careImport.rosterEvidence(new Set(), new Set(["RPM"]), "RPM", "2026-09-01"), {
+  assert.deepEqual(careImport.rosterEvidence(new Set(), new Set(["RPM"]), new Set(), "RPM", "2026-09-01"), {
     source: "population-health", program: "RPM", effectiveMonth: "2026-09-01", status: "active",
   });
-  assert.equal(careImport.rosterEvidence(new Set(), new Set(), "BHI", "2026-09-01").status, "needs-review");
+  assert.deepEqual(careImport.rosterEvidence(new Set(), new Set(), new Set(["BHI"]), "BHI", "2026-09-01"), {
+    source: "care-program-enrollment", program: "BHI", effectiveMonth: "2026-09-01", status: "active",
+  });
+  assert.equal(careImport.rosterEvidence(new Set(), new Set(), new Set(), "BHI", "2026-09-01").status, "needs-review");
+});
+
+test("new monthly rows carry durable enrollment facts but reset monthly billing work", () => {
+  const prior = {
+    bhwPatientId: "BHW0557", program: "CCM", type: "Monthly", serviceMonth: "2026-09-01",
+    nextFollowUp: "2026-10-12",
+    billingReadinessEvidence: {
+      intakeStatus: "accepted", intakeSource: "patient-registry", intakeReviewedAt: "2026-01-15",
+      intakeReviewedBy: "support-staff", eligibilityStatus: "confirmed", consentStatus: "current",
+      consentDate: "2026-01-15", consentReviewDue: "2027-01-15", initiatingVisitStatus: "complete",
+      initiatingVisitDate: "2026-01-15", carePlanStatus: "active", carePlanShared: true,
+      assignedPerson: "Care Support", patientInstructionsProvided: true, billingPath: "99490",
+      requiredMinutes: 20, coverageStatus: "verified", coverageCheckedAt: "2026-09-01",
+      monthlyRequirementsMet: true, interactiveCommunicationCompleted: true, deviceDataDays: 16,
+      providerReviewStatus: "approved", providerReviewedAt: "2026-09-30",
+      billingHoldStatus: "ready-for-rcm-review", notes: "September-only work",
+    },
+  };
+  const evidence = careImport.monthlyCarryForwardEvidence({
+    priorLog: prior, month: "2026-10", now: new Date("2026-10-01T12:00:00Z"),
+  });
+  assert.equal(evidence.consentStatus, "current");
+  assert.equal(evidence.carePlanStatus, "active");
+  assert.equal(evidence.assignedPerson, "Care Support");
+  assert.equal(evidence.billingPath, "99490");
+  assert.equal(evidence.requiredMinutes, 20);
+  assert.equal(evidence.coverageStatus, "unknown");
+  assert.equal(evidence.monthlyRequirementsMet, false);
+  assert.equal(evidence.interactiveCommunicationCompleted, false);
+  assert.equal(evidence.deviceDataDays, 0);
+  assert.equal(evidence.providerReviewStatus, "pending");
+  assert.equal(evidence.billingHoldStatus, "held");
+  assert.equal(evidence.notes, undefined);
+  assert.equal(evidence.carryForwardSource, "prior-month-care-log");
+  assert.equal(evidence.carryForwardSourceMonth, "2026-09");
+  assert.equal(careImport.carriedNextFollowUp(null, prior, "2026-10-01"), "2026-10-12");
+  assert.equal(careImport.latestPriorMonthlyLog([prior], "BHW0557", "CCM", "2026-10"), prior);
 });
 
 test("CM Due excludes fax rows without changing the shared Front Desk queue", () => {
@@ -105,6 +145,8 @@ test("Care Management uses a rolling 30-day window and builds prior-month close 
   assert.match(page, /documentation &amp; claim close/);
   assert.match(page, /First \/ last contact/);
   assert.match(page, /Update missing items/);
+  assert.match(page, /Actions and communication completed this month/);
+  assert.match(page, /Enrollment evidence carried forward/);
   assert.match(page, /No minute threshold/);
   assert.match(page, /Code-specific device \+ time/);
   assert.match(page, /billingReadinessEvidence/);
