@@ -8,6 +8,7 @@ const {
   carriedNextFollowUp,
   latestPriorMonthlyLog,
   monthlyCarryForwardEvidence,
+  monthlyRowAllowsCarryForward,
 } = require("./lib/care-monthly-evidence");
 
 const PROGRAM_PATTERNS = Object.freeze([
@@ -112,7 +113,7 @@ exports.handler = async (event) => {
     const history = recentPrograms(allLogs, month);
     const summary = {
       month, created: 0, updated: 0, skipped: 0, recoveredPrograms: 0,
-      carriedForward: 0, activeEnrollmentPrograms: activeEnrollmentRecords.length,
+      carriedForward: 0, backfilledUntouched: 0, activeEnrollmentPrograms: activeEnrollmentRecords.length,
       patientRegistryCount: roster.length,
       ...(enrollmentResult.warning ? { enrollmentWarning: enrollmentResult.warning } : {}),
     };
@@ -146,10 +147,24 @@ exports.handler = async (event) => {
         };
         const current = existing.get(key);
         if (current) {
+          const update = { ...source };
+          if (monthlyRowAllowsCarryForward(current)) {
+            const billingReadinessEvidence = monthlyCarryForwardEvidence({
+              enrollment: activeEnrollment,
+              priorLog,
+              month,
+            });
+            if (billingReadinessEvidence.carryForwardSource) {
+              update.billingReadinessEvidence = billingReadinessEvidence;
+              if (!current.nextFollowUp) update.nextFollowUp = carriedNextFollowUp(activeEnrollment, priorLog, serviceMonth);
+              summary.carriedForward += 1;
+              summary.backfilledUntouched += 1;
+            }
+          }
           await cloudRequest(`/v1/care-management/logs/${encodeURIComponent(current.id)}`, {
             actor,
             method: "PUT",
-            body: source,
+            body: update,
           });
           summary.updated += 1;
         } else {
@@ -187,6 +202,7 @@ exports._test = {
   latestPriorMonthlyLog,
   monthDistance,
   monthlyCarryForwardEvidence,
+  monthlyRowAllowsCarryForward,
   normalizedPrograms,
   recentPrograms,
   rosterEvidence,

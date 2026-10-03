@@ -578,7 +578,8 @@ async function importNow(){
     var s = res.d.summary || {};
     alert("BHW Cloud preparation complete for "+(res.d.month||"")+":\n"+
       (s.created||0)+" created · "+(s.updated||0)+" refreshed from "+(s.patientRegistryCount||0)+" Registry records"+
-      ((s.carriedForward||0)?" · "+s.carriedForward+" new row"+(s.carriedForward===1?"":"s")+" carried forward":"")+
+      ((s.carriedForward||0)?" · "+s.carriedForward+" row"+(s.carriedForward===1?"":"s")+" received carry-forward":"")+
+      ((s.backfilledUntouched||0)?" (including "+s.backfilledUntouched+" untouched current row"+(s.backfilledUntouched===1?"":"s")+")":"")+
       ((s.recoveredPrograms||0)?" · "+s.recoveredPrograms+" recent enrollment"+(s.recoveredPrograms===1?"":"s")+" recovered":"")+
       (s.enrollmentWarning?"\n\nCumulative enrollment connection warning: "+s.enrollmentWarning:""));
     load();

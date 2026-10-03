@@ -77,6 +77,21 @@ test("new monthly rows carry durable enrollment facts but reset monthly billing 
   assert.equal(evidence.carryForwardSourceMonth, "2026-09");
   assert.equal(careImport.carriedNextFollowUp(null, prior, "2026-10-01"), "2026-10-12");
   assert.equal(careImport.latestPriorMonthlyLog([prior], "BHW0557", "CCM", "2026-10"), prior);
+  assert.equal(careImport.monthlyRowAllowsCarryForward({
+    minutes: 0, activities: "", referrals: "", lastContact: "",
+    billingReadinessEvidence: {
+      intakeStatus: "not-started", intakeSource: "manual-reviewed", eligibilityStatus: "potential",
+      consentStatus: "missing", coverageStatus: "unknown", initiatingVisitStatus: "missing",
+      carePlanStatus: "missing", providerReviewStatus: "pending", billingHoldStatus: "held",
+    },
+  }), true);
+  assert.equal(careImport.monthlyRowAllowsCarryForward({
+    activities: "Called patient and reviewed medication list",
+    billingReadinessEvidence: { intakeStatus: "not-started" },
+  }), false);
+  assert.equal(careImport.monthlyRowAllowsCarryForward({
+    billingReadinessEvidence: { intakeStatus: "accepted", consentStatus: "current" },
+  }), false);
 });
 
 test("CM Due excludes fax rows without changing the shared Front Desk queue", () => {

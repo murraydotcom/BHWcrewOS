@@ -125,11 +125,49 @@ function carriedNextFollowUp(enrollment, priorLog, serviceMonth) {
   return candidates.find((value) => value >= serviceMonth) || "";
 }
 
+function monthlyRowAllowsCarryForward(log = {}) {
+  const evidence = log.billingReadinessEvidence || {};
+  const blank = (value) => !String(value || "").trim();
+  return !Number(log.minutes)
+    && blank(log.activities)
+    && blank(log.referrals)
+    && blank(log.lastContact)
+    && blank(evidence.carryForwardSource)
+    && ["", "not-started"].includes(String(evidence.intakeStatus || ""))
+    && ["", "manual-reviewed"].includes(String(evidence.intakeSource || ""))
+    && blank(evidence.intakeReviewedAt)
+    && blank(evidence.intakeReviewedBy)
+    && ["", "potential"].includes(String(evidence.eligibilityStatus || ""))
+    && ["", "missing"].includes(String(evidence.consentStatus || ""))
+    && blank(evidence.consentDate)
+    && blank(evidence.consentReviewDue)
+    && ["", "unknown"].includes(String(evidence.coverageStatus || ""))
+    && blank(evidence.coverageCheckedAt)
+    && ["", "missing"].includes(String(evidence.initiatingVisitStatus || ""))
+    && blank(evidence.initiatingVisitDate)
+    && ["", "missing"].includes(String(evidence.carePlanStatus || ""))
+    && evidence.carePlanShared !== true
+    && blank(evidence.assignedPerson)
+    && evidence.patientInstructionsProvided !== true
+    && evidence.monthlyRequirementsMet !== true
+    && evidence.interactiveCommunicationCompleted !== true
+    && !Number(evidence.deviceDataDays)
+    && blank(evidence.billingPath)
+    && !Number(evidence.requiredMinutes)
+    && !Number(evidence.requiredDeviceDays)
+    && ["", "pending"].includes(String(evidence.providerReviewStatus || ""))
+    && blank(evidence.providerReviewedAt)
+    && ["", "held"].includes(String(evidence.billingHoldStatus || ""))
+    && blank(evidence.billingHoldReason)
+    && blank(evidence.notes);
+}
+
 module.exports = {
   DURABLE_EVIDENCE_FIELDS,
   carriedNextFollowUp,
   enrollmentEvidence,
   latestPriorMonthlyLog,
   monthlyCarryForwardEvidence,
+  monthlyRowAllowsCarryForward,
   pickDurableEvidence,
 };
