@@ -71,7 +71,8 @@ exports.handler = async (event) => {
         sourceMetadata: { sourceRecordId: String(body.submissionId || "").slice(0, 160), sourcePage: "care-connect-patient-page" },
       },
     });
-    const requestId = out?.patientRequest?.patientRequestId || out?.patientRequest?.id || "";\n    return res(200, { ok: true, matched: false, reference: requestId, requestId }, origin);
+    const requestId = out?.patientRequest?.patientRequestId || out?.patientRequest?.id || "";
+    return res(200, { ok: true, matched: false, reference: requestId, requestId }, origin);
   } catch {
     return res(502, { error: "Couldn't send right now — please call the office." }, origin);
   }

@@ -42,7 +42,9 @@ test("Care Connect browser bridge forwards synthetic intake through the server-s
   });
 
   assert.equal(response.statusCode, 200);
-  const receipt = JSON.parse(response.body);\n  assert.equal(receipt.reference, "REQ-synthetic-0001");\n  assert.equal(receipt.requestId, "REQ-synthetic-0001");
+  const receipt = JSON.parse(response.body);
+  assert.equal(receipt.reference, "REQ-synthetic-0001");
+  assert.equal(receipt.requestId, "REQ-synthetic-0001");
   assert.equal(calls.length, 1);
   assert.equal(calls[0].url, "https://operations.example.test/v1/intake/patient-requests");
   assert.equal(calls[0].options.headers.Authorization, "Bearer synthetic-intake-secret");
