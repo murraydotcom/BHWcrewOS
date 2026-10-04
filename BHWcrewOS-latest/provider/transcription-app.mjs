@@ -10,6 +10,7 @@ const SYNTHETIC_PATIENT_ID = "BHW0000";
 const SYNTHETIC_CONSENT = "synthetic-role-play";
 const LIVE_CONSENT = "session-recording-confirmed";
 const DEFAULT_MAX_AUDIO_BYTES = 9 * 1024 * 1024;
+const ACTIVE_MEET_SESSION_KEY = "bhw_active_telehealth_session_v1";
 const $ = (id) => document.getElementById(id);
 let cloudClient = null;
 let longRecordingEnabled = false;
@@ -36,6 +37,9 @@ let verifiedConsent = null;
 let consentLookupVersion = 0;
 let crewSessionChannel = null;
 let wakeWarningState = "";
+let telehealthEnabled = false;
+let activeTelehealthSession = null;
+let telehealthCreationKey = "";
 
 function showToast(message) {
   $("toast").textContent = message;
@@ -94,6 +98,71 @@ function localDateTimeValue(value = "") {
   if (!date || !Number.isFinite(date.getTime())) return "";
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
   return local.toISOString().slice(0, 16);
+}
+
+function initializeMeetSchedule() {
+  const start = new Date();
+  start.setSeconds(0, 0);
+  start.setMinutes(Math.ceil(start.getMinutes() / 15) * 15);
+  const end = new Date(start.getTime() + 45 * 60_000);
+  if (!$('meetStart').value) $('meetStart').value = localDateTimeValue(start);
+  if (!$('meetEnd').value) $('meetEnd').value = localDateTimeValue(end);
+}
+
+function telehealthConsentReady() {
+  if (!activeTelehealthSession?.transcriptionRequested) return true;
+  return Boolean(
+    $("previsitConsent").checked
+    && (isSynthetic() || hasVerifiedConsent())
+    && $("sessionConsent").checked,
+  );
+}
+
+function rememberMeetSession(id = "") {
+  try {
+    if (id) sessionStorage.setItem(ACTIVE_MEET_SESSION_KEY, id);
+    else sessionStorage.removeItem(ACTIVE_MEET_SESSION_KEY);
+  } catch { /* session storage unavailable */ }
+}
+
+function renderMeetSession() {
+  const panel = $("telehealthPanel");
+  panel.hidden = !telehealthEnabled;
+  if (!telehealthEnabled) return;
+  initializeMeetSchedule();
+  const session = activeTelehealthSession;
+  $("patient").disabled = Boolean(session) || visitActive || !cloudClient;
+  $("createMeet").disabled = !cloudClient || !selectedPatientId() || Boolean(session);
+  $("meetStart").disabled = Boolean(session);
+  $("meetEnd").disabled = Boolean(session);
+  $("meetTranscript").disabled = Boolean(session);
+  const uri = session?.meeting?.meetingUri || "";
+  $("openMeet").href = uri;
+  $("openMeet").setAttribute("aria-disabled", uri ? "false" : "true");
+  $("copyMeet").disabled = !uri;
+  const imported = Boolean(session?.encounterId);
+  $("importMeetTranscript").disabled = !session?.transcriptionRequested || !telehealthConsentReady() || imported;
+  $("newMeet").hidden = !imported;
+  if (!session) {
+    $("meetStatus").className = "telehealth-status";
+    $("meetStatus").textContent = selectedPatientId()
+      ? "Create an appointment-specific Meet. No patient identity is sent in the meeting-space request."
+      : "Select a patient, then create an appointment-specific Meet.";
+    return;
+  }
+  if (imported) {
+    $("meetStatus").className = "telehealth-status meet-ready";
+    $("meetStatus").innerHTML = `Transcript imported to <a href="workflow.html?encounter=${encodeURIComponent(session.encounterId)}">24-Hour Documentation · ${session.encounterId}</a>.`;
+  } else if (session.transcriptionRequested && !telehealthConsentReady()) {
+    $("meetStatus").className = "telehealth-status";
+    $("meetStatus").textContent = "Meet link ready. The visit may open, but do not start Meet transcription until both consent checks above are confirmed.";
+  } else if (session.transcriptionRequested) {
+    $("meetStatus").className = "telehealth-status meet-ready";
+    $("meetStatus").textContent = "Consent gates confirmed. Open Meet, start transcription, and keep video recording off.";
+  } else {
+    $("meetStatus").className = "telehealth-status meet-ready";
+    $("meetStatus").textContent = "Meet link ready with transcription disabled.";
+  }
 }
 
 function populateConsentVerification(result) {
@@ -308,6 +377,7 @@ function updateConsentCopy() {
   $("consentVerification").hidden = !selected || isSynthetic() || hasVerifiedConsent() || !$("previsitConsent").checked;
   $("sessionConsent").disabled = !selected;
   updateStartAvailability();
+  renderMeetSession();
 }
 
 async function refreshRecordingConsent() {
@@ -424,6 +494,9 @@ segmentQueue = createTranscriptionSegmentQueue({
 });
 
 $("patient").onchange = async () => {
+  activeTelehealthSession = null;
+  rememberMeetSession();
+  telehealthCreationKey = "";
   verifiedConsent = null;
   clearSession({ resetAttestations: true });
   await refreshRecordingConsent();
@@ -477,6 +550,82 @@ $("saveRecordingConsent").onclick = async () => {
     button.disabled = false;
     updateConsentCopy();
   }
+};
+
+$("createMeet").onclick = async () => {
+  const bhwPatientId = selectedPatientId();
+  if (!cloudClient || !telehealthEnabled || !bhwPatientId || activeTelehealthSession) return;
+  const start = new Date($("meetStart").value);
+  const end = new Date($("meetEnd").value);
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start) {
+    showToast("Enter a valid Meet start and end time.");
+    return;
+  }
+  telehealthCreationKey ||= `appointment-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`}`;
+  $("createMeet").disabled = true;
+  $("meetStatus").textContent = "Creating a protected appointment-specific Google Meet…";
+  try {
+    activeTelehealthSession = await cloudClient.createTelehealthSession({
+      creationKey: telehealthCreationKey,
+      bhwPatientId,
+      scheduledStart: start.toISOString(),
+      scheduledEnd: end.toISOString(),
+      transcriptionRequested: $("meetTranscript").checked,
+    });
+    if (!activeTelehealthSession?.id || !activeTelehealthSession?.meeting?.meetingUri) {
+      throw new Error("Google Meet did not return a usable appointment link.");
+    }
+    rememberMeetSession(activeTelehealthSession.id);
+    renderMeetSession();
+    showToast("Appointment-specific Google Meet created. Share only through an approved patient channel.");
+  } catch (error) {
+    $("createMeet").disabled = false;
+    $("meetStatus").textContent = error.message || "Google Meet could not be created.";
+    showToast(error.message || "Google Meet could not be created.");
+  }
+};
+
+$("copyMeet").onclick = async () => {
+  const uri = activeTelehealthSession?.meeting?.meetingUri || "";
+  if (!uri) return;
+  try {
+    await navigator.clipboard.writeText(uri);
+    showToast("Patient join link copied. Send it only through an approved patient channel.");
+  } catch {
+    showToast("The join link could not be copied. Open Meet and copy the link from Google.");
+  }
+};
+
+$("importMeetTranscript").onclick = async () => {
+  if (!cloudClient || !activeTelehealthSession?.id || !telehealthConsentReady()) return;
+  $("importMeetTranscript").disabled = true;
+  $("meetStatus").textContent = "Checking Google Meet for the completed transcript…";
+  try {
+    const result = await cloudClient.importTelehealthTranscript(activeTelehealthSession.id, {
+      sessionRecordingAgreement: true,
+    });
+    activeTelehealthSession = result.session || { ...activeTelehealthSession, encounterId: result.encounterId };
+    renderMeetSession();
+    showToast(`Meet transcript imported to encounter ${result.encounterId}.`);
+  } catch (error) {
+    renderMeetSession();
+    showToast(error.message || "The Meet transcript is not ready yet.");
+  }
+};
+
+$("newMeet").onclick = () => {
+  if (!activeTelehealthSession?.encounterId) return;
+  activeTelehealthSession = null;
+  rememberMeetSession();
+  telehealthCreationKey = "";
+  verifiedConsent = null;
+  $("patient").value = "";
+  $("meetStart").value = "";
+  $("meetEnd").value = "";
+  $("meetTranscript").checked = true;
+  clearSession({ resetAttestations: true });
+  updateConsentCopy();
+  showToast("Ready to create the next appointment Meet.");
 };
 
 $("start").onclick = async () => {
@@ -613,19 +762,46 @@ if ("BroadcastChannel" in globalThis) {
   };
 }
 
+async function restoreMeetSession() {
+  let sessionId = "";
+  try { sessionId = sessionStorage.getItem(ACTIVE_MEET_SESSION_KEY) || ""; } catch { /* storage unavailable */ }
+  if (!telehealthEnabled || !sessionId) {
+    renderMeetSession();
+    return;
+  }
+  try {
+    const session = await cloudClient.telehealthSession(sessionId);
+    const patientOption = [...$("patient").options].some((option) => option.value === session?.bhwPatientId);
+    if (!session?.id || !patientOption) throw new Error("The saved Meet session is no longer available in this patient list.");
+    activeTelehealthSession = session;
+    $("patient").value = session.bhwPatientId;
+    $("meetStart").value = localDateTimeValue(session.scheduledStart);
+    $("meetEnd").value = localDateTimeValue(session.scheduledEnd);
+    $("meetTranscript").checked = Boolean(session.transcriptionRequested);
+    await refreshRecordingConsent();
+    renderMeetSession();
+  } catch {
+    activeTelehealthSession = null;
+    rememberMeetSession();
+    renderMeetSession();
+  }
+}
+
 async function initialize() {
-  if (!navigator.mediaDevices?.getUserMedia || !globalThis.MediaRecorder) {
+  const microphoneSupported = Boolean(navigator.mediaDevices?.getUserMedia && globalThis.MediaRecorder);
+  if (!microphoneSupported) {
     $("cloudStatus").textContent = "Browser microphone unsupported";
     $("start").disabled = true;
-    return;
   }
   try {
     cloudClient = await createEncounterCloudClient();
     if (!cloudClient) throw new Error("Google Cloud is not configured for this site.");
-    const [patients, config] = await Promise.all([
+    const [patients, config, telehealth] = await Promise.all([
       cloudClient.listPatients(),
       cloudClient.transcriptionConfig(),
+      cloudClient.telehealthConfig().catch(() => ({ enabled: false })),
     ]);
+    telehealthEnabled = Boolean(telehealth.enabled);
     longRecordingEnabled = Boolean(config.longRecordingEnabled);
     maxAudioBytes = Math.max(1, Number(config.maxAudioBytes) || DEFAULT_MAX_AUDIO_BYTES);
     maxVisitSeconds = Math.max(SEGMENT_SECONDS, Number(config.maxVisitSeconds) || MAX_VISIT_SECONDS);
@@ -634,6 +810,12 @@ async function initialize() {
       Math.max(60, Number(config.segmentSeconds) || SEGMENT_SECONDS),
     );
     loadPatientOptions(patients, config);
+    await restoreMeetSession();
+    if (!microphoneSupported) {
+      $("cloudStatus").textContent = telehealthEnabled ? "Google Meet ready · microphone fallback unavailable" : "Browser microphone unsupported";
+      $("start").disabled = true;
+      return;
+    }
     if (!longRecordingEnabled) {
       $("cloudStatus").textContent = "Long recording setup incomplete";
       $("complianceNotice").innerHTML = "<b>Recording is temporarily locked.</b> Private temporary audio storage and immediate deletion must be configured before either short or long visit transcription can run.";
@@ -661,4 +843,3 @@ async function initialize() {
 }
 
 initialize();
-

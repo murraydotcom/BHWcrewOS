@@ -32,6 +32,16 @@ test("CrewHQ keeps its protected token exchange while using consent-aware transc
   const client = await createEncounterCloudClient(createFetch(requests));
 
   await client.transcriptionConfig();
+  await client.telehealthConfig();
+  await client.createTelehealthSession({
+    creationKey: "appointment-synthetic-0001",
+    bhwPatientId: "BHW1234",
+    scheduledStart: "2026-10-05T14:00:00.000Z",
+    scheduledEnd: "2026-10-05T14:45:00.000Z",
+    transcriptionRequested: true,
+  });
+  await client.telehealthSession("TEL-ABC/123");
+  await client.importTelehealthTranscript("TEL-ABC/123", { sessionRecordingAgreement: true });
   await client.patientVisitNotes("BHW12/34");
   await client.patientAtlas("BHW12/34");
   await client.savePatientAtlas("BHW12/34", { action: "save-draft", content: { primaryConcern: "Synthetic concern" } });
@@ -55,6 +65,18 @@ test("CrewHQ keeps its protected token exchange while using consent-aware transc
 
   const configRequest = requests.find(({ url }) => url.endsWith("/v1/transcription-config"));
   assert.equal(configRequest.options.headers.Authorization, "Bearer short-cloud-token");
+
+  const telehealthCreate = requests.find(({ url, options }) => url.endsWith("/v1/telehealth/sessions") && options.method === "POST");
+  assert.deepEqual(JSON.parse(telehealthCreate.options.body), {
+    creationKey: "appointment-synthetic-0001",
+    bhwPatientId: "BHW1234",
+    scheduledStart: "2026-10-05T14:00:00.000Z",
+    scheduledEnd: "2026-10-05T14:45:00.000Z",
+    transcriptionRequested: true,
+  });
+  assert.ok(requests.some(({ url }) => url.endsWith("/v1/telehealth/sessions/TEL-ABC%2F123")));
+  const transcriptImport = requests.find(({ url }) => url.endsWith("/v1/telehealth/sessions/TEL-ABC%2F123/import-transcript"));
+  assert.deepEqual(JSON.parse(transcriptImport.options.body), { sessionRecordingAgreement: true });
 
   const visitNotes = requests.find(({ url }) => url.endsWith("/v1/patients/BHW12%2F34/visit-notes"));
   assert.ok(visitNotes, "Patient 360 requests only the selected patient's visit-note projection");
@@ -232,13 +254,23 @@ test("CrewHQ frontend exposes verified consent, retry-safe segments, and the pro
   assert.doesNotMatch(app, /\.checked = hasVerifiedConsent/);
   assert.match(app, /\$\("sessionConsent"\)\.disabled = !selected/);
   assert.match(app, /Saved to BHW Cloud/);
+  assert.match(html, /BHW Virtual Care · Google Meet/);
+  assert.match(html, /video recording remains off/i);
+  assert.match(html, /id="createMeet"/);
+  assert.match(html, /id="importMeetTranscript"/);
+  assert.match(html, /id="newMeet"/);
+  assert.match(app, /createTelehealthSession/);
+  assert.match(app, /importTelehealthTranscript/);
+  assert.match(app, /sessionRecordingAgreement: true/);
+  assert.match(app, /Ready to create the next appointment Meet/);
+  assert.match(app, /do not start Meet transcription until both consent checks/i);
   assert.match(app, /longRecordingEnabled/);
   assert.match(html, /up to two hours/i);
   assert.match(html, /five-minute protected segments/i);
   assert.match(html, /failed audio remains in this open tab for Retry/i);
   assert.match(html, /id="wakeStatus"/);
   assert.match(html, /supported devices are asked to keep the screen awake/i);
-  assert.match(html, /transcription-app\.mjs\?v=20260902-3/);
+  assert.match(html, /transcription-app\.mjs\?v=20261004-2/);
   assert.match(app, /elapsedSeconds >= maxVisitSeconds/);
   assert.match(app, /segmentElapsedSeconds >= segmentSeconds/);
   assert.match(app, /beforeunload/);
@@ -265,4 +297,3 @@ test("CrewHQ frontend exposes verified consent, retry-safe segments, and the pro
   assert.match(app, /CREW_SESSION_EXPIRED/);
   assert.match(app, /crewos\?next=/);
 });
-

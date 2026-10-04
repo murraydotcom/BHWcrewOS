@@ -14,6 +14,7 @@
 </style>
 <style>
 .wake-status{display:inline-block;margin-top:9px;padding:5px 9px;border-radius:999px;background:#eef1f2;color:var(--muted);font-size:9.5px;font-weight:700}.wake-status[data-state="active"]{background:#e7f2e5;color:#3d7138}.wake-status[data-state="requesting"]{background:#e7f0f4;color:#426f82}.wake-status[data-state="hidden"],.wake-status[data-state="released"],.wake-status[data-state="unsupported"],.wake-status[data-state="unavailable"]{background:#fff2d8;color:#89610e}
+.telehealth-panel{margin:14px 0;padding:14px;border:1px solid rgba(95,139,157,.35);border-radius:12px;background:#f4f8f9}.telehealth-panel[hidden]{display:none}.telehealth-head{display:flex;align-items:start;justify-content:space-between;gap:12px}.telehealth-head h4{margin:0 0 4px;font-size:13px}.telehealth-head p{margin:0;color:var(--muted);font-size:9.5px;line-height:1.5}.telehealth-status{margin-top:10px;font-size:10px;line-height:1.5;color:var(--muted)}.btn[aria-disabled="true"]{opacity:.45;pointer-events:none}.meet-ready{color:#3d7138;font-weight:700}
 </style>
 </head>
 <body>
@@ -37,6 +38,16 @@
         <div class="controls"><button class="btn primary" id="saveRecordingConsent" type="button">Save and verify signed consent</button></div>
       </div>
       <label class="check"><input type="checkbox" id="sessionConsent" disabled><span id="sessionConsentText">Select a patient to confirm recording agreement for this visit.</span></label>
+      <div class="telehealth-panel" id="telehealthPanel" hidden>
+        <div class="telehealth-head"><div><h4>BHW Virtual Care · Google Meet</h4><p>Meet carries the video. BHW imports its native transcript into 24-Hour Documentation; video recording remains off.</p></div><span class="badge">Meet</span></div>
+        <div class="formgrid" style="margin-top:12px">
+          <div class="field"><label for="meetStart">Scheduled start</label><input id="meetStart" type="datetime-local"></div>
+          <div class="field"><label for="meetEnd">Scheduled end</label><input id="meetEnd" type="datetime-local"></div>
+        </div>
+        <label class="check"><input id="meetTranscript" type="checkbox" checked><span>Use Google Meet transcription after both consent checks above are confirmed. Do not turn on Meet recording.</span></label>
+        <div class="controls"><button class="btn primary" id="createMeet" type="button">Create appointment Meet</button><a class="btn" id="openMeet" href="" target="_blank" rel="noopener" aria-disabled="true">Open Google Meet</a><button class="btn" id="copyMeet" type="button" disabled>Copy patient join link</button><button class="btn" id="importMeetTranscript" type="button" disabled>Import completed transcript</button><button class="btn" id="newMeet" type="button" hidden>New appointment</button></div>
+        <div class="telehealth-status" id="meetStatus" role="status" aria-live="polite">Select a patient, then create an appointment-specific Meet.</div>
+      </div>
       <div class="meter"><div class="timer" id="timer">00:00</div><div class="state" id="state">Ready</div><div class="wake-status" id="wakeStatus" data-state="idle" role="status" aria-live="polite">Screen awake protection starts with recording</div></div>
       <div class="controls"><button class="btn primary" id="start" disabled>Start recording</button><button class="btn" id="pause" disabled>Pause</button><button class="btn" id="finish" disabled>Finish</button></div>
       <div class="controls"><button class="btn primary" id="transcribe" disabled>Retry retained audio</button><button class="btn" id="reauth" hidden>Open CrewHQ sign-in in a new tab</button><button class="btn danger" id="clear">Clear audio and draft</button></div>
@@ -48,8 +59,6 @@
     </div>
   </section>
 </div></main></div><div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script type="module" src="transcription-app.mjs?v=20260902-3"></script>
+<script type="module" src="transcription-app.mjs?v=20261004-2"></script>
 <script src="/staff-chat-launcher.js" defer></script>
 </body></html>
-
-
