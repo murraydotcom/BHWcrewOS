@@ -255,18 +255,7 @@ export function medicareMbiForPatient(patient = {}) {
 
 function legacyPayerName(primary = {}) {
   if (clean(primary.payerName)) return clean(primary.payerName);
-  if (clean(primary.planName)) return clean(primary.planName);
-  return ({
-    "original-medicare": "Medicare",
-    "medicare-advantage": "Medicare Advantage",
-    "medicaid-mco": "Medicaid / MCO",
-    commercial: "Commercial",
-    "medicare-supplement": "Medicare supplement",
-    tricare: "TRICARE",
-    "behavioral-health": "Behavioral health carve-out",
-    "self-pay": "Self-pay",
-    other: "Other",
-  })[primary.insuranceType] || "";
+  return "";
 }
 
 export function insuranceStorageForPatient(patient = {}, slotInput = null, mbiInput = undefined) {
@@ -298,6 +287,9 @@ export function insuranceValidationMessage(patient = {}) {
     if (seen.has(record.coverageOrder)) return `Only one ${record.coverageOrder} coverage record can be saved in this Registry view.`;
     seen.add(record.coverageOrder);
     if (!INSURANCE_TYPES.includes(record.insuranceType)) return `Choose a valid insurance type for ${record.coverageOrder} coverage.`;
+    if (record.coverageOrder === "primary" && hasCoverageIdentity(record) && !clean(record.payerName)) {
+      return "Enter the actual insurance or payer name for the primary coverage. The insurance classification cannot be used as the payer name.";
+    }
   }
   return "";
 }
@@ -307,6 +299,7 @@ export function insuranceReviewFlags(patient = {}) {
   const records = Object.values(slots).filter(hasCoverageIdentity);
   const flags = [];
   if (!hasCoverageIdentity(slots.primary)) flags.push("Primary insurance not recorded");
+  else if (!clean(slots.primary.payerName)) flags.push("Primary insurance name not recorded");
   for (const record of records) {
     if (!record.insuranceType) flags.push(`${record.coverageOrder[0].toUpperCase()}${record.coverageOrder.slice(1)} insurance is not classified`);
   }

@@ -66,10 +66,10 @@ function payerDirectoryStatus(value) {
   return `Directory classification: ${INSURANCE_TYPE_LABELS[entry.insuranceType]}.`;
 }
 
-function payerField(id, value = "") {
+function payerField(id, value = "", required = false) {
   const listId = `${id}Directory`;
   const options = PAYER_DIRECTORY_OPTIONS.map((option) => `<option value="${esc(option.name)}" label="${esc(INSURANCE_TYPE_LABELS[option.insuranceType] || "Classification required")}"></option>`).join("");
-  return `<div class="field"><label>Insurance / payer name</label><input id="${id}" type="text" value="${esc(value)}" list="${listId}" autocomplete="off"><datalist id="${listId}">${options}</datalist><div class="coverage-help" id="${id}DirectoryStatus">${esc(payerDirectoryStatus(value))}</div></div>`;
+  return `<div class="field"><label>${required ? "Actual primary insurance / payer name *" : "Insurance / payer name"}</label><input id="${id}" type="text" value="${esc(value)}" list="${listId}" autocomplete="off" ${required ? 'required aria-required="true"' : ""}><datalist id="${listId}">${options}</datalist><div class="coverage-help" id="${id}DirectoryStatus">${esc(payerDirectoryStatus(value))}</div></div>`;
 }
 
 function wireInsuranceDirectory(prefix) {
@@ -95,7 +95,7 @@ function coverageCard(patient, prefix, order) {
   const mspField = order === "secondary"
     ? `${labeledSelect(`${prefix}${key}MspReason`, "Medicare-secondary reason", coverage.medicareSecondaryReason, MSP_REASONS, MSP_REASON_LABELS)}<div class="coverage-help">Complete this only when Original Medicare or Medicare Advantage is secondary. Leave it “Not yet verified” rather than guessing.</div>`
     : "";
-  return `<section class="coverage-card" data-coverage-order="${order}"><div class="coverage-card-head"><div><b>${esc(title)}</b><span>${esc(order)}</span></div></div><div class="coverage-grid">${labeledSelect(`${prefix}${key}Type`, "Insurance classification", coverage.insuranceType, INSURANCE_TYPES, INSURANCE_TYPE_LABELS)}${payerField(`${prefix}${key}Payer`, coverage.payerName)}${field(`${prefix}${key}Plan`, "Plan / program name", coverage.planName)}${field(`${prefix}${key}Member`, "Member / policy ID", coverage.memberId)}${field(`${prefix}${key}Group`, "Group number", coverage.groupNumber)}${field(`${prefix}${key}PayerId`, "Electronic payer ID", coverage.payerId)}${field(`${prefix}${key}From`, "Effective from", coverage.effectiveFrom, "date")}${field(`${prefix}${key}To`, "Effective to", coverage.effectiveTo, "date")}${labeledSelect(`${prefix}${key}Coverage`, "Coverage status", coverage.coverageStatus, COVERAGE_STATUSES, {})}${mspField}</div></section>`;
+  return `<section class="coverage-card" data-coverage-order="${order}"><div class="coverage-card-head"><div><b>${esc(title)}</b><span>${esc(order)}</span></div></div><div class="coverage-grid">${labeledSelect(`${prefix}${key}Type`, "Insurance classification", coverage.insuranceType, INSURANCE_TYPES, INSURANCE_TYPE_LABELS)}${payerField(`${prefix}${key}Payer`, coverage.payerName, order === "primary")}${field(`${prefix}${key}Plan`, "Plan / program name", coverage.planName)}${field(`${prefix}${key}Member`, "Member / policy ID", coverage.memberId)}${field(`${prefix}${key}Group`, "Group number", coverage.groupNumber)}${field(`${prefix}${key}PayerId`, "Electronic payer ID", coverage.payerId)}${field(`${prefix}${key}From`, "Effective from", coverage.effectiveFrom, "date")}${field(`${prefix}${key}To`, "Effective to", coverage.effectiveTo, "date")}${labeledSelect(`${prefix}${key}Coverage`, "Coverage status", coverage.coverageStatus, COVERAGE_STATUSES, {})}${mspField}</div></section>`;
 }
 
 function insuranceFields(patient, prefix) {
@@ -103,7 +103,7 @@ function insuranceFields(patient, prefix) {
   const flagMarkup = flags.length
     ? `<div class="insurance-review"><b>Insurance review needed</b><ul>${flags.map((flag) => `<li>${esc(flag)}</li>`).join("")}</ul></div>`
     : `<div class="insurance-review complete"><b>Insurance structure complete</b><div>No structural insurance gaps are detected. Eligibility still requires payer verification.</div></div>`;
-  return `<section class="insurance-section"><div class="insurance-title"><div><h4>Insurance coverage</h4><p>Store the insurance name and its classification for each policy. Directory names are grouped as Original Medicare, Medicare Advantage, Medicaid / MCO, commercial, Medicare supplement, TRICARE, behavioral health, self-pay, or other. The MBI is never replaced by a Medicare Advantage plan member ID.</p></div></div><div class="mbi-row">${field(`${prefix}MedicareMbi`, "Medicare Beneficiary Identifier (MBI)", medicareMbiForPatient(patient))}<div class="coverage-help">Enter the patient’s 11-character MBI whenever Medicare is primary or secondary. Leave blank until verified.</div></div>${flagMarkup}<div class="coverage-cards">${COVERAGE_ORDERS.map((order) => coverageCard(patient, prefix, order)).join("")}</div></section>`;
+  return `<section class="insurance-section"><div class="insurance-title"><div><h4>Insurance coverage</h4><p>The primary coverage must show the actual insurance or payer name. Store its classification separately; “Commercial,” “Medicaid / MCO,” or “Medicare Advantage” is not the payer name. The MBI is never replaced by a Medicare Advantage plan member ID.</p></div></div><div class="mbi-row">${field(`${prefix}MedicareMbi`, "Medicare Beneficiary Identifier (MBI)", medicareMbiForPatient(patient))}<div class="coverage-help">Enter the patient’s 11-character MBI whenever Medicare is primary or secondary. Leave blank until verified.</div></div>${flagMarkup}<div class="coverage-cards">${COVERAGE_ORDERS.map((order) => coverageCard(patient, prefix, order)).join("")}</div></section>`;
 }
 
 function patientFields(patient = {}, prefix = "d", includeId = false) {
@@ -373,7 +373,9 @@ function renderRows() {
     const mbiStatus = Object.values(slots).some((coverage) => ["original-medicare", "medicare-advantage"].includes(coverage.insuranceType))
       ? (medicareMbiForPatient(patient) ? "MBI on file" : "MBI missing")
       : "";
-    return `<tr data-id="${esc(patient.bhwPatientId)}" class="${patient.bhwPatientId === selectedId ? "on" : ""}"><td><b>${esc(patient.bhwPatientId)}</b></td><td>${esc(name)}</td><td>${esc(patient.dateOfBirth)}</td><td>${esc(patient.phone || "—")}</td><td>${esc(patient.primaryPayer || "—")}${secondary ? `<div class="coverage-summary">Secondary: ${esc(secondary)}</div>` : ""}${mbiStatus ? `<div class="coverage-summary">${esc(mbiStatus)}</div>` : ""}<span class="badge ${coverageClass}">${esc(reviewFlags.length ? "needs review" : patient.coverageStatus)}</span></td><td>${esc(patient.patientStatus)}</td></tr>`;
+    const primaryName = slots.primary.payerName || patient.primaryPayer || "Insurance name missing";
+    const primaryClass = INSURANCE_TYPE_LABELS[slots.primary.insuranceType] || "Not classified";
+    return `<tr data-id="${esc(patient.bhwPatientId)}" class="${patient.bhwPatientId === selectedId ? "on" : ""}"><td><b>${esc(patient.bhwPatientId)}</b></td><td>${esc(name)}</td><td>${esc(patient.dateOfBirth)}</td><td>${esc(patient.phone || "—")}</td><td>${esc(primaryName)}<div class="coverage-summary">Classification: ${esc(primaryClass)}</div>${secondary ? `<div class="coverage-summary">Secondary: ${esc(secondary)}</div>` : ""}${mbiStatus ? `<div class="coverage-summary">${esc(mbiStatus)}</div>` : ""}<span class="badge ${coverageClass}">${esc(reviewFlags.length ? "needs review" : patient.coverageStatus)}</span></td><td>${esc(patient.patientStatus)}</td></tr>`;
   }).join("") : '<tr><td colspan="6"><div class="empty">No patient records match this view.</div></td></tr>';
   document.querySelectorAll("tr[data-id]").forEach((row) => { row.onclick = () => { selectedId = row.dataset.id; render(); }; });
 }

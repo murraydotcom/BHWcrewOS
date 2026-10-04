@@ -40,6 +40,15 @@ test("carrier-only payer names stay unclassified until the exact plan is known",
   assert.match(insuranceReviewFlags({ primaryPayer: "Aetna", memberId: "A-1" }).join(" "), /not classified/);
 });
 
+test("primary coverage requires an actual payer name and never substitutes a classification", () => {
+  const stored = insuranceStorageForPatient({}, {
+    primary: { insuranceType: "commercial", memberId: "PRIMARY-1", coverageStatus: "pending" },
+  });
+  assert.equal(stored.primaryPayer, "");
+  assert.match(insuranceValidationMessage(stored), /actual insurance or payer name/i);
+  assert.match(insuranceReviewFlags(stored).join(" "), /Primary insurance name not recorded/);
+});
+
 test("legacy primary payer and member ID remain a compatible primary coverage projection", () => {
   const patient = {
     primaryPayer: "CareFirst BCBS",
