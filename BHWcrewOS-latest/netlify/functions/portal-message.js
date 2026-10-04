@@ -3,7 +3,7 @@
 // office"). Writes ONE record to the Google Operations patientRequests queue.
 // It never falls back to the legacy Notion queue.
 //
-//   POST { name, phone, message, hp }  → { ok }
+//   POST { name, phone, message, hp }  → { ok, reference }
 //
 // Like screener-submit this browser-facing bridge is intentionally PUBLIC
 // (patients have no crewOS login) and hardened rather than gated: a hidden
@@ -71,7 +71,7 @@ exports.handler = async (event) => {
         sourceMetadata: { sourceRecordId: String(body.submissionId || "").slice(0, 160), sourcePage: "care-connect-patient-page" },
       },
     });
-    return res(200, { ok: true, matched: false, requestId: out?.patientRequest?.patientRequestId || out?.patientRequest?.id || "" }, origin);
+    const requestId = out?.patientRequest?.patientRequestId || out?.patientRequest?.id || "";\n    return res(200, { ok: true, matched: false, reference: requestId, requestId }, origin);
   } catch {
     return res(502, { error: "Couldn't send right now — please call the office." }, origin);
   }
