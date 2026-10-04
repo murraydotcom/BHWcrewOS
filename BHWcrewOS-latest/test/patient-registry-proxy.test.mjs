@@ -99,12 +99,39 @@ test("Patient Registry proxy verifies CrewOS and calls Google Cloud server-side"
         Authorization: `Bearer ${signedCrewToken()}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ action: "save-patient", patient: { bhwPatientId: "BHW9999", legalFirstName: "Synthetic", nameSuffix: "III", ignored: "drop-me" } }),
+      body: JSON.stringify({
+        action: "save-patient",
+        patient: {
+          bhwPatientId: "BHW9999",
+          legalFirstName: "Synthetic",
+          nameSuffix: "III",
+          medicareMbi: "1eg4-te5-mk73",
+          coverageRecords: [{
+            coverageOrder: "secondary",
+            insuranceType: "original-medicare",
+            payerName: "Medicare",
+            memberId: "1EG4TE5MK73",
+            coverageStatus: "verified",
+            medicareSecondaryReason: "12",
+            ignoredNested: "drop-me-too",
+          }],
+          ignored: "drop-me",
+        },
+      }),
     }));
     assert.equal(saveResponse.status, 200);
     assert.equal(outbound[1].url, "https://rcm.example.test/v1/patients/BHW9999");
     assert.equal(outbound[1].options.method, "PUT");
-    assert.deepEqual(JSON.parse(outbound[1].options.body), { bhwPatientId: "BHW9999", legalFirstName: "Synthetic", nameSuffix: "III" });
+    const savedPatient = JSON.parse(outbound[1].options.body);
+    assert.equal(savedPatient.bhwPatientId, "BHW9999");
+    assert.equal(savedPatient.legalFirstName, "Synthetic");
+    assert.equal(savedPatient.nameSuffix, "III");
+    assert.equal(savedPatient.medicareMbi, "1EG4TE5MK73");
+    assert.equal(savedPatient.coverageRecords[0].coverageOrder, "secondary");
+    assert.equal(savedPatient.coverageRecords[0].insuranceType, "original-medicare");
+    assert.equal(savedPatient.coverageRecords[0].medicareSecondaryReason, "12");
+    assert.equal(savedPatient.coverageRecords[0].ignoredNested, undefined);
+    assert.equal(savedPatient.ignored, undefined);
 
     const consentResponse = await registryHandler(new Request("https://bhwcrewos.example/.netlify/functions/patient-registry", {
       method: "POST",

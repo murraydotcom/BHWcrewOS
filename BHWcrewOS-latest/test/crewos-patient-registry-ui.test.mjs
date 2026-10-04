@@ -50,6 +50,12 @@ test("CrewHQ keeps patient maintenance tools inside the protected Patient Regist
   assert.match(registryApp, /invitationPreview/);
   assert.match(registryApp, /No invitation was sent/);
   assert.match(registryApp, /portalAccessStatus/);
+  assert.match(registryApp, /Primary insurance/);
+  assert.match(registryApp, /Secondary insurance/);
+  assert.match(registryApp, /Additional \/ other insurance/);
+  assert.match(registryApp, /Medicare Beneficiary Identifier \(MBI\)/);
+  assert.match(registryApp, /Medicare-secondary reason/);
+  assert.match(registryApp, /insuranceStorageForPatient/);
   assert.match(workflowApp, /patient\.nameSuffix/);
   assert.match(transcriptionApp, /patient\.nameSuffix/);
 });
