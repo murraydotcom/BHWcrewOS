@@ -171,6 +171,26 @@ export async function createEncounterCloudClient(fetchImpl = fetch) {
     async transcriptionConfig() {
       return request("/v1/transcription-config");
     },
+    async telehealthConfig() {
+      return request("/v1/telehealth/config");
+    },
+    async createTelehealthSession(input) {
+      const body = await request("/v1/telehealth/sessions", {
+        method: "POST",
+        body: JSON.stringify(input),
+      });
+      return body.session;
+    },
+    async telehealthSession(id) {
+      const body = await request(`/v1/telehealth/sessions/${encodeURIComponent(id)}`);
+      return body.session;
+    },
+    async importTelehealthTranscript(id, { sessionRecordingAgreement = false } = {}) {
+      return request(`/v1/telehealth/sessions/${encodeURIComponent(id)}/import-transcript`, {
+        method: "POST",
+        body: JSON.stringify({ sessionRecordingAgreement }),
+      });
+    },
     async recordingConsent(bhwPatientId) {
       return request(`/v1/patients/${encodeURIComponent(bhwPatientId)}/recording-consent`);
     },
@@ -305,4 +325,3 @@ export async function createEncounterCloudClient(fetchImpl = fetch) {
     async saveInsuranceRecords(records) { return request("/v1/insurance-records",{method:"PUT",body:JSON.stringify({records})}); },
   };
 }
-
