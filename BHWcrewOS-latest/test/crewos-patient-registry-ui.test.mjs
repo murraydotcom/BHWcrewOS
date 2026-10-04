@@ -56,6 +56,10 @@ test("CrewHQ keeps patient maintenance tools inside the protected Patient Regist
   assert.match(registryApp, /Medicare Beneficiary Identifier \(MBI\)/);
   assert.match(registryApp, /Medicare-secondary reason/);
   assert.match(registryApp, /insuranceStorageForPatient/);
+  assert.match(registryApp, /Insurance \/ payer name/);
+  assert.match(registryApp, /PAYER_DIRECTORY_OPTIONS/);
+  assert.match(registryApp, /Directory classification/);
+  assert.match(registryApp, /wireInsuranceDirectory/);
   assert.match(workflowApp, /patient\.nameSuffix/);
   assert.match(transcriptionApp, /patient\.nameSuffix/);
 });

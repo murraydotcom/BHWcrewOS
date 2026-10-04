@@ -6,19 +6,20 @@ import {
   INSURANCE_TYPE_LABELS,
   MSP_REASONS,
   MSP_REASON_LABELS,
+  PAYER_DIRECTORY,
   coverageSlotsForPatient,
   hasCoverageIdentity,
   insuranceReviewFlags,
   insuranceStorageForPatient,
   insuranceValidationMessage,
   medicareMbiForPatient,
+  payerDirectoryEntry,
 } from "../shared/patient-coverage.mjs";
 
 const THEME_KEY = "bhw_provider_theme_v1";
 const PENDING_PATIENT_KEY = "bhw_pending_encounter_patient_v1";
 const $ = (id) => document.getElementById(id);
 const esc = (value) => String(value ?? "").replace(/[&<>\"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[character]));
-const PAYERS = ["", "Medicare", "Medicare + QMB", "Maryland Medicaid", "CareFirst BCBS", "UnitedHealthcare Commercial", "UnitedHealthcare Medicare Advantage", "UnitedHealthcare Community Plan", "Aetna Commercial", "Aetna Better Health of Maryland", "Cigna", "Humana", "Maryland Physicians Care", "TRICARE", "Alterwood Advantage", "Self-pay", "Other"];
 const STATUS_OPTIONS = ["active", "prospective", "inactive", "transferred", "deceased"];
 const CONSENT_SOURCES = ["previsit-form", "new-patient-packet"];
 const CARE_API = "https://bhw-medication-api-343692256275.us-east4.run.app";
@@ -53,6 +54,40 @@ function labeledSelect(id, label, value, values, labels) {
   return `<div class="field"><label>${esc(label)}</label><select id="${id}">${optionValues.map((option) => `<option value="${esc(option)}" ${option === value ? "selected" : ""}>${esc(labels[option] || option || "Not selected")}</option>`).join("")}</select></div>`;
 }
 
+const PAYER_DIRECTORY_OPTIONS = PAYER_DIRECTORY.flatMap((entry) => [entry.name, ...(entry.aliases || [])]
+  .map((name) => ({ name, insuranceType: entry.insuranceType })))
+  .sort((left, right) => `${left.insuranceType} ${left.name}`.localeCompare(`${right.insuranceType} ${right.name}`));
+
+function payerDirectoryStatus(value) {
+  const entry = payerDirectoryEntry(value);
+  if (!value) return "Choose a payer from the directory or enter the exact payer name.";
+  if (!entry) return "Not in the payer directory. Select the classification after verifying the plan.";
+  if (!entry.insuranceType) return "Carrier name only; the plan classification still needs review.";
+  return `Directory classification: ${INSURANCE_TYPE_LABELS[entry.insuranceType]}.`;
+}
+
+function payerField(id, value = "") {
+  const listId = `${id}Directory`;
+  const options = PAYER_DIRECTORY_OPTIONS.map((option) => `<option value="${esc(option.name)}" label="${esc(INSURANCE_TYPE_LABELS[option.insuranceType] || "Classification required")}"></option>`).join("");
+  return `<div class="field"><label>Insurance / payer name</label><input id="${id}" type="text" value="${esc(value)}" list="${listId}" autocomplete="off"><datalist id="${listId}">${options}</datalist><div class="coverage-help" id="${id}DirectoryStatus">${esc(payerDirectoryStatus(value))}</div></div>`;
+}
+
+function wireInsuranceDirectory(prefix) {
+  for (const order of COVERAGE_ORDERS) {
+    const key = order[0].toUpperCase() + order.slice(1);
+    const payer = $(`${prefix}${key}Payer`);
+    const type = $(`${prefix}${key}Type`);
+    const status = $(`${prefix}${key}PayerDirectoryStatus`);
+    if (!payer || !type || !status) continue;
+    payer.addEventListener("input", () => {
+      const entry = payerDirectoryEntry(payer.value);
+      if (entry?.insuranceType) type.value = entry.insuranceType;
+      else if (entry && !entry.insuranceType) type.value = "";
+      status.textContent = payerDirectoryStatus(payer.value);
+    });
+  }
+}
+
 function coverageCard(patient, prefix, order) {
   const coverage = coverageSlotsForPatient(patient)[order];
   const title = ({ primary: "Primary insurance", secondary: "Secondary insurance", other: "Additional / other insurance" })[order];
@@ -60,7 +95,7 @@ function coverageCard(patient, prefix, order) {
   const mspField = order === "secondary"
     ? `${labeledSelect(`${prefix}${key}MspReason`, "Medicare-secondary reason", coverage.medicareSecondaryReason, MSP_REASONS, MSP_REASON_LABELS)}<div class="coverage-help">Complete this only when Original Medicare or Medicare Advantage is secondary. Leave it “Not yet verified” rather than guessing.</div>`
     : "";
-  return `<section class="coverage-card" data-coverage-order="${order}"><div class="coverage-card-head"><div><b>${esc(title)}</b><span>${esc(order)}</span></div></div><div class="coverage-grid">${labeledSelect(`${prefix}${key}Type`, "Insurance type", coverage.insuranceType, INSURANCE_TYPES, INSURANCE_TYPE_LABELS)}${field(`${prefix}${key}Payer`, "Payer name", coverage.payerName, "select", PAYERS)}${field(`${prefix}${key}Plan`, "Plan name", coverage.planName)}${field(`${prefix}${key}Member`, "Member / policy ID", coverage.memberId)}${field(`${prefix}${key}Group`, "Group number", coverage.groupNumber)}${field(`${prefix}${key}PayerId`, "Electronic payer ID", coverage.payerId)}${field(`${prefix}${key}From`, "Effective from", coverage.effectiveFrom, "date")}${field(`${prefix}${key}To`, "Effective to", coverage.effectiveTo, "date")}${labeledSelect(`${prefix}${key}Coverage`, "Coverage status", coverage.coverageStatus, COVERAGE_STATUSES, {})}${mspField}</div></section>`;
+  return `<section class="coverage-card" data-coverage-order="${order}"><div class="coverage-card-head"><div><b>${esc(title)}</b><span>${esc(order)}</span></div></div><div class="coverage-grid">${labeledSelect(`${prefix}${key}Type`, "Insurance classification", coverage.insuranceType, INSURANCE_TYPES, INSURANCE_TYPE_LABELS)}${payerField(`${prefix}${key}Payer`, coverage.payerName)}${field(`${prefix}${key}Plan`, "Plan / program name", coverage.planName)}${field(`${prefix}${key}Member`, "Member / policy ID", coverage.memberId)}${field(`${prefix}${key}Group`, "Group number", coverage.groupNumber)}${field(`${prefix}${key}PayerId`, "Electronic payer ID", coverage.payerId)}${field(`${prefix}${key}From`, "Effective from", coverage.effectiveFrom, "date")}${field(`${prefix}${key}To`, "Effective to", coverage.effectiveTo, "date")}${labeledSelect(`${prefix}${key}Coverage`, "Coverage status", coverage.coverageStatus, COVERAGE_STATUSES, {})}${mspField}</div></section>`;
 }
 
 function insuranceFields(patient, prefix) {
@@ -68,7 +103,7 @@ function insuranceFields(patient, prefix) {
   const flagMarkup = flags.length
     ? `<div class="insurance-review"><b>Insurance review needed</b><ul>${flags.map((flag) => `<li>${esc(flag)}</li>`).join("")}</ul></div>`
     : `<div class="insurance-review complete"><b>Insurance structure complete</b><div>No structural insurance gaps are detected. Eligibility still requires payer verification.</div></div>`;
-  return `<section class="insurance-section"><div class="insurance-title"><div><h4>Insurance coverage</h4><p>Store each policy separately. The MBI is never replaced by a Medicare Advantage plan member ID.</p></div></div><div class="mbi-row">${field(`${prefix}MedicareMbi`, "Medicare Beneficiary Identifier (MBI)", medicareMbiForPatient(patient))}<div class="coverage-help">Enter the patient’s 11-character MBI whenever Medicare is primary or secondary. Leave blank until verified.</div></div>${flagMarkup}<div class="coverage-cards">${COVERAGE_ORDERS.map((order) => coverageCard(patient, prefix, order)).join("")}</div></section>`;
+  return `<section class="insurance-section"><div class="insurance-title"><div><h4>Insurance coverage</h4><p>Store the insurance name and its classification for each policy. Directory names are grouped as Original Medicare, Medicare Advantage, Medicaid / MCO, commercial, Medicare supplement, TRICARE, behavioral health, self-pay, or other. The MBI is never replaced by a Medicare Advantage plan member ID.</p></div></div><div class="mbi-row">${field(`${prefix}MedicareMbi`, "Medicare Beneficiary Identifier (MBI)", medicareMbiForPatient(patient))}<div class="coverage-help">Enter the patient’s 11-character MBI whenever Medicare is primary or secondary. Leave blank until verified.</div></div>${flagMarkup}<div class="coverage-cards">${COVERAGE_ORDERS.map((order) => coverageCard(patient, prefix, order)).join("")}</div></section>`;
 }
 
 function patientFields(patient = {}, prefix = "d", includeId = false) {
@@ -353,6 +388,7 @@ function renderDetail() {
     control.addEventListener("input", () => { registryFormDirty = true; });
     control.addEventListener("change", () => { registryFormDirty = true; });
   });
+  wireInsuranceDirectory("d");
   $("savePatient").onclick = async () => {
     const next = readPatient("d", patient.bhwPatientId);
     const error = validationMessage(next);
@@ -447,7 +483,7 @@ $("theme").onclick = () => {
 };
 if (localStorage.getItem(THEME_KEY) === "dark") document.documentElement.dataset.theme = "dark";
 
-$("newPatient").onclick = () => { $("newPatientFields").innerHTML = patientFields({}, "n", true); $("modal").classList.add("on"); $("nId").focus(); };
+$("newPatient").onclick = () => { $("newPatientFields").innerHTML = patientFields({}, "n", true); wireInsuranceDirectory("n"); $("modal").classList.add("on"); $("nId").focus(); };
 $("cancel").onclick = () => $("modal").classList.remove("on");
 $("create").onclick = async () => {
   const patient = readPatient("n");

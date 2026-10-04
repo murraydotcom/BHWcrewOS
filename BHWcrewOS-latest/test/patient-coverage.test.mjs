@@ -1,15 +1,44 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  INSURANCE_TYPES,
+  PAYER_DIRECTORY,
   coverageSlotsForPatient,
+  inferInsuranceType,
   insuranceReviewFlags,
   insuranceStorageForPatient,
   insuranceValidationMessage,
   medicareMbiForPatient,
+  payerDirectoryEntry,
   sanitizeCoverageRecords,
 } from "../shared/patient-coverage.mjs";
 
 const VALID_MBI = "1EG4TE5MK73";
+
+test("payer directory keeps exact insurance names tied to supported classifications", () => {
+  const names = PAYER_DIRECTORY.map((entry) => entry.name.toLowerCase());
+  assert.equal(new Set(names).size, names.length);
+  for (const entry of PAYER_DIRECTORY) assert.ok(INSURANCE_TYPES.includes(entry.insuranceType));
+  const directoryKeys = PAYER_DIRECTORY.flatMap((entry) => [entry.name, ...(entry.aliases || [])])
+    .map((name) => name.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim());
+  assert.equal(new Set(directoryKeys).size, directoryKeys.length);
+
+  assert.equal(payerDirectoryEntry("Aetna Better Health of Maryland")?.insuranceType, "medicaid-mco");
+  assert.equal(payerDirectoryEntry("UnitedHealthcare Dual Complete")?.insuranceType, "medicare-advantage");
+  assert.equal(payerDirectoryEntry("TRICARE For Life")?.insuranceType, "tricare");
+  assert.equal(payerDirectoryEntry("Carelon Behavioral Health Maryland")?.insuranceType, "behavioral-health");
+  assert.equal(payerDirectoryEntry("Marylnd Physicians Care")?.insuranceType, "medicaid-mco");
+  assert.equal(payerDirectoryEntry("CareFirst BCBS - DC, National Capital Area")?.insuranceType, "commercial");
+  assert.equal(payerDirectoryEntry("UnitedHealthcare Community Plan / CA, DC,  DE, FL, GA, HI, IA, KY, LA, MA, MD, MS, NC, NE, NM, NY, OH, OK, PA, RI, TX, VA, WA, WI")?.insuranceType, "medicaid-mco");
+});
+
+test("carrier-only payer names stay unclassified until the exact plan is known", () => {
+  assert.equal(inferInsuranceType("Aetna"), "");
+  assert.equal(inferInsuranceType("UnitedHealthcare"), "");
+  assert.equal(inferInsuranceType("Cigna"), "");
+  assert.equal(inferInsuranceType("Cigna PPO"), "commercial");
+  assert.match(insuranceReviewFlags({ primaryPayer: "Aetna", memberId: "A-1" }).join(" "), /not classified/);
+});
 
 test("legacy primary payer and member ID remain a compatible primary coverage projection", () => {
   const patient = {
