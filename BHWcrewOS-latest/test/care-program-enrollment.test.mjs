@@ -23,6 +23,7 @@ test("direct enrollment carries approved evidence into an active monthly row wit
     risk: { score: 50, state: "Calculated", suggestedCadence: "Approximately every 2 weeks" },
   });
   assert.equal(evidence.enrollmentStatus, "active");
+  assert.equal(evidence.intakeStatus, "accepted");
   assert.equal(evidence.eligibilityStatus, "confirmed");
   assert.equal(evidence.monthlyRequirementsMet, false);
   assert.equal(evidence.operationalRiskScore, 50);
@@ -40,6 +41,7 @@ test("care-management enrollment workspace contains the complete SOP workflow an
   assert.match(careManagement, /Prospective, active, declined, paused, and ended program records stay reviewable/);
   assert.match(careManagement, /patient-360-data\.html\?patient=/);
   assert.match(enrollment, /One Registry patient, one cumulative record per program/);
+  assert.match(enrollment, /Signed-in support and care-management staff may maintain it/);
   for (const marker of [
     "Identity, referral, and communication",
     "Coverage and duplicate-service review",

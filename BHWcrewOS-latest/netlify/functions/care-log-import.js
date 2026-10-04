@@ -4,6 +4,12 @@
 
 const { getSession, json } = require("./_lib");
 const { cloudRequest, listCloudPatients } = require("./lib/cloud-patients");
+const {
+  carriedNextFollowUp,
+  latestPriorMonthlyLog,
+  monthlyCarryForwardEvidence,
+  monthlyRowAllowsCarryForward,
+} = require("./lib/care-monthly-evidence");
 
 const PROGRAM_PATTERNS = Object.freeze([
   ["CCM", /\bCCM\b|chronic care management/i],
@@ -47,15 +53,19 @@ function recentPrograms(logs, month) {
   return byPatient;
 }
 
-function enrolledPrograms(patient, profile, recent) {
+function enrolledPrograms(patient, profile, recent, activeEnrollments) {
   return [...new Set([
     ...normalizedPrograms(patient.programs),
     ...normalizedPrograms(profile?.program),
     ...[...(recent || [])],
+    ...[...(activeEnrollments || [])],
   ])];
 }
 
-function rosterEvidence(registryPrograms, profilePrograms, program, serviceMonth) {
+function rosterEvidence(registryPrograms, profilePrograms, enrollmentPrograms, program, serviceMonth) {
+  if (enrollmentPrograms.has(program)) {
+    return { source: "care-program-enrollment", program, effectiveMonth: serviceMonth, status: "active" };
+  }
   if (registryPrograms.has(program)) {
     return { source: "patient-registry", program, effectiveMonth: serviceMonth, status: "active" };
   }
@@ -80,25 +90,46 @@ exports.handler = async (event) => {
   const serviceMonth = `${month}-01`;
 
   try {
-    const [roster, existingResult, panelResult] = await Promise.all([
+    const [roster, existingResult, panelResult, enrollmentResult] = await Promise.all([
       listCloudPatients(actor),
       cloudRequest("/v1/care-management/logs", { actor }),
       cloudRequest("/v1/panel", { actor }).catch(() => ({ profiles: [] })),
+      cloudRequest("/v1/care-program-enrollments?status=active", { actor })
+        .catch((error) => ({ enrollments: [], warning: String(error.message || error) })),
     ]);
     const allLogs = Array.isArray(existingResult.logs) ? existingResult.logs : [];
     const existing = new Map(allLogs.filter((log) => String(log.serviceMonth || "").startsWith(month))
       .map((log) => [`${log.bhwPatientId}|${log.program}`, log]));
     const profiles = new Map((panelResult.profiles || []).map((profile) => [profile.bhwPatientId, profile]));
+    const activeEnrollmentRecords = (enrollmentResult.enrollments || [])
+      .filter((enrollment) => String(enrollment.status || "").toLowerCase() === "active");
+    const enrollmentsByPatient = new Map();
+    for (const enrollment of activeEnrollmentRecords) {
+      if (!enrollment.bhwPatientId) continue;
+      const records = enrollmentsByPatient.get(enrollment.bhwPatientId) || [];
+      records.push(enrollment);
+      enrollmentsByPatient.set(enrollment.bhwPatientId, records);
+    }
     const history = recentPrograms(allLogs, month);
-    const summary = { month, created: 0, updated: 0, skipped: 0, recoveredPrograms: 0, patientRegistryCount: roster.length };
+    const summary = {
+      month, created: 0, updated: 0, skipped: 0, recoveredPrograms: 0,
+      carriedForward: 0, backfilledUntouched: 0, activeEnrollmentPrograms: activeEnrollmentRecords.length,
+      patientRegistryCount: roster.length,
+      ...(enrollmentResult.warning ? { enrollmentWarning: enrollmentResult.warning } : {}),
+    };
 
     for (const patient of roster) {
       if (!patient.selectable) continue;
       const registryPrograms = new Set(normalizedPrograms(patient.programs));
       const profilePrograms = new Set(normalizedPrograms(profiles.get(patient.bhwPatientId)?.program));
-      for (const program of enrolledPrograms(patient, profiles.get(patient.bhwPatientId), history.get(patient.bhwPatientId))) {
+      const patientEnrollments = enrollmentsByPatient.get(patient.bhwPatientId) || [];
+      const enrollmentByProgram = new Map(patientEnrollments.map((enrollment) => [String(enrollment.program || "").toUpperCase(), enrollment]));
+      const enrollmentPrograms = new Set(enrollmentByProgram.keys());
+      for (const program of enrolledPrograms(patient, profiles.get(patient.bhwPatientId), history.get(patient.bhwPatientId), enrollmentPrograms)) {
         if (!registryPrograms.has(program) && !profilePrograms.has(program)) summary.recoveredPrograms += 1;
         const key = `${patient.bhwPatientId}|${program}`;
+        const activeEnrollment = enrollmentByProgram.get(program);
+        const priorLog = latestPriorMonthlyLog(allLogs, patient.bhwPatientId, program, month);
         const source = {
           entry: `${patient.name} — ${program} · ${month}`,
           program,
@@ -108,24 +139,51 @@ exports.handler = async (event) => {
           icd: (patient.icds || []).join(", "),
           notes: [
             `Payer: ${patient.payer || "not recorded"}`,
-            registryPrograms.has(program) ? "source: BHW Cloud Patient Registry" : profilePrograms.has(program)
-              ? "source: Population Health enrollment" : "source: recent BHW Cloud care-log enrollment",
+            activeEnrollment ? "source: cumulative care-program enrollment" : registryPrograms.has(program)
+              ? "source: BHW Cloud Patient Registry" : profilePrograms.has(program)
+                ? "source: Population Health enrollment" : "source: recent BHW Cloud care-log enrollment",
           ].join(" · "),
-          rosterObservation: rosterEvidence(registryPrograms, profilePrograms, program, serviceMonth),
+          rosterObservation: rosterEvidence(registryPrograms, profilePrograms, enrollmentPrograms, program, serviceMonth),
         };
         const current = existing.get(key);
         if (current) {
+          const update = { ...source };
+          if (monthlyRowAllowsCarryForward(current)) {
+            const billingReadinessEvidence = monthlyCarryForwardEvidence({
+              enrollment: activeEnrollment,
+              priorLog,
+              month,
+            });
+            if (billingReadinessEvidence.carryForwardSource) {
+              update.billingReadinessEvidence = billingReadinessEvidence;
+              if (!current.nextFollowUp) update.nextFollowUp = carriedNextFollowUp(activeEnrollment, priorLog, serviceMonth);
+              summary.carriedForward += 1;
+              summary.backfilledUntouched += 1;
+            }
+          }
           await cloudRequest(`/v1/care-management/logs/${encodeURIComponent(current.id)}`, {
             actor,
             method: "PUT",
-            body: source,
+            body: update,
           });
           summary.updated += 1;
         } else {
+          const billingReadinessEvidence = monthlyCarryForwardEvidence({
+            enrollment: activeEnrollment,
+            priorLog,
+            month,
+          });
+          if (billingReadinessEvidence.carryForwardSource) summary.carriedForward += 1;
           await cloudRequest("/v1/care-management/logs", {
             actor,
             method: "POST",
-            body: { ...source, bhwPatientId: patient.bhwPatientId, status: "Open" },
+            body: {
+              ...source,
+              bhwPatientId: patient.bhwPatientId,
+              status: "Open",
+              nextFollowUp: carriedNextFollowUp(activeEnrollment, priorLog, serviceMonth),
+              billingReadinessEvidence,
+            },
           });
           summary.created += 1;
         }
@@ -138,4 +196,14 @@ exports.handler = async (event) => {
   }
 };
 
-exports._test = { enrolledPrograms, monthDistance, normalizedPrograms, recentPrograms, rosterEvidence };
+exports._test = {
+  carriedNextFollowUp,
+  enrolledPrograms,
+  latestPriorMonthlyLog,
+  monthDistance,
+  monthlyCarryForwardEvidence,
+  monthlyRowAllowsCarryForward,
+  normalizedPrograms,
+  recentPrograms,
+  rosterEvidence,
+};

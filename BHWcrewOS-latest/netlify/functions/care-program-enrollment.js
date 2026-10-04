@@ -4,6 +4,7 @@
 
 const { getSession, json } = require("./_lib");
 const { cloudRequest, listCloudPatients } = require("./lib/cloud-patients");
+const { enrollmentEvidence } = require("./lib/care-monthly-evidence");
 
 const PROGRAMS = new Set(["APCM", "CCM", "PCM", "BHI", "COCM", "CHI", "PIN", "PIN-PS", "RPM", "RTM"]);
 
@@ -23,32 +24,6 @@ function syntheticAcceptanceAllowed({ bhwPatientId = "", record = {}, session = 
     && requested === true
     && session.access === "Admin"
     && String(record.status || "").trim().toLowerCase() === "potential";
-}
-
-function enrollmentEvidence(enrollment = {}) {
-  return {
-    enrollmentStatus: enrollment.status || "potential",
-    enrollmentRecordId: enrollment.id || "",
-    workflowVersion: enrollment.workflowVersion || "",
-    eligibilityStatus: enrollment.practitionerReview?.status === "approved" ? "confirmed" : "potential",
-    consentStatus: enrollment.consent?.status || "missing",
-    consentDate: enrollment.consent?.date || "",
-    consentReviewDue: enrollment.consent?.reviewDue || "",
-    coverageStatus: enrollment.intake?.coverageDuplication?.verificationStatus || "unknown",
-    coverageCheckedAt: enrollment.intake?.coverageDuplication?.checkedAt || "",
-    initiatingVisitStatus: enrollment.initiatingVisit?.status || "missing",
-    initiatingVisitDate: enrollment.initiatingVisit?.date || "",
-    carePlanStatus: enrollment.carePlan?.status || "missing",
-    carePlanShared: enrollment.carePlan?.shared === true,
-    assignedPerson: enrollment.assignment?.assignedPerson || "",
-    patientInstructionsProvided: enrollment.intake?.participationEducation?.patientInstructionsProvided === true,
-    monthlyRequirementsMet: false,
-    providerReviewStatus: enrollment.practitionerReview?.status === "approved" ? "approved" : "pending",
-    providerReviewedAt: enrollment.practitionerReview?.reviewedAt || "",
-    operationalRiskScore: enrollment.risk?.score,
-    operationalRiskState: enrollment.risk?.state || "Incomplete",
-    suggestedContactCadence: enrollment.risk?.override?.cadence || enrollment.risk?.suggestedCadence || "",
-  };
 }
 
 async function ensureMonthlyLog(enrollment, patient, actor, now = new Date()) {
