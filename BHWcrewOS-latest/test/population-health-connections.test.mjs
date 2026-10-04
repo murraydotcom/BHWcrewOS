@@ -138,6 +138,15 @@ test("Care Management uses a rolling 30-day window and builds prior-month close 
     },
   });
   assert.ok(rpmGaps.includes("interactive communication"));
+  const blocked = careLogData.billingReadiness({
+    program: "BHI", status: "Open", billingReadinessEvidence: {
+      eligibilityStatus: "confirmed", consentStatus: "declined", coverageStatus: "inactive",
+      providerReviewStatus: "pending",
+    },
+  }, { bhwPatientId: "BHW0001", patientStatus: "active", selectable: true });
+  assert.equal(blocked.state, "blocked");
+  assert.ok(blocked.blockers.includes("Program consent (declined)"));
+  assert.ok(blocked.blockers.includes("Active payer coverage"));
   const governedGaps = careLogData.documentationGaps({
     program: "CCM", serviceMonth: "2026-09-01", minutes: 20, activities: "Synthetic coordination",
     nextFollowUp: "2099-10-01",
@@ -167,6 +176,9 @@ test("Care Management uses a rolling 30-day window and builds prior-month close 
   assert.match(page, /billingReadinessEvidence/);
   assert.match(page, /Governed intake and roster evidence/);
   assert.match(page, /Ready for BHW RCM review/);
+  assert.match(page, /green rows have the recorded requirements for RCM review/);
+  assert.match(page, /readiness-incomplete/);
+  assert.match(page, /APCM is evaluated without a minute threshold/);
   assert.doesNotMatch(page, /value="released"/);
   assert.match(actionSource, /"billingReadinessEvidence"/);
   const scripts = [...page.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)].map((match) => match[1]);

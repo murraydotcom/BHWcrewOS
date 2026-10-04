@@ -35,6 +35,15 @@ table{border-collapse:collapse;width:100%;min-width:1050px;font-size:12.5px}
 th{text-align:left;font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--soft);font-weight:700;padding:9px 8px;border-bottom:2px solid var(--line);white-space:nowrap;position:sticky;top:0;background:#fff}
 td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
 tr:hover td{background:#faf8f5}
+tr.readiness-ready td{background:#eef8f3}
+tr.readiness-incomplete td{background:#fff8e8}
+tr.readiness-blocked td{background:#fceeed}
+tr.readiness-ready:hover td{background:#e5f3ec}
+tr.readiness-incomplete:hover td{background:#fff2d2}
+tr.readiness-blocked:hover td{background:#f8dfdc}
+tr.readiness-ready td:first-child{border-left:5px solid var(--ok)}
+tr.readiness-incomplete td:first-child{border-left:5px solid #C58A21}
+tr.readiness-blocked td:first-child{border-left:5px solid var(--urgent)}
 .pt{font-weight:700}
 .pt small{display:block;font-weight:500;color:var(--soft);font-size:10.5px}
 .badge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px;background:var(--linen);border:1px solid var(--line);color:var(--clay-deep);white-space:nowrap}
@@ -47,6 +56,10 @@ td select{width:100%;min-width:90px}
 .due{color:var(--urgent);font-weight:700}
 .rowsave{white-space:nowrap}
 .saved{color:var(--ok);font-size:11px;font-weight:700}
+.readiness-pill{display:inline-block;margin-top:5px;padding:2px 7px;border-radius:99px;font-size:9px;font-weight:800;white-space:nowrap}
+.readiness-pill.ready{background:#dbeee7;color:var(--ok)}
+.readiness-pill.incomplete{background:#f8e5b9;color:#805A0B}
+.readiness-pill.blocked{background:#f4d6d2;color:#8D352E}
 .msg{padding:24px;text-align:center;color:var(--soft)}
 .disc{background:#fdf6ec;border:1px solid var(--sand);border-radius:9px;padding:9px 13px;font-size:11.5px;color:var(--clay-deep);margin-bottom:12px}
 .gate{max-width:460px;margin:60px auto;background:#fff;border:1px solid var(--line);border-radius:14px;padding:26px;text-align:center}
@@ -273,17 +286,21 @@ function render(){
   var today = todayISO();
   var due = rows.filter(function(e){ return e.nextFollowUp && e.nextFollowUp <= today && e.status!=="Complete" && e.status!=="Billed"; }).length;
   var mins = rows.reduce(function(a,e){ return a + (e.minutes||0); }, 0);
-  var missing = rows.filter(function(e){ return (e.gaps||[]).length; }).length;
+  var blocked = rows.filter(function(e){ return e.billingReadiness&&e.billingReadiness.state==="blocked"; }).length;
+  var notReady = rows.filter(function(e){ return !e.billingReadiness||e.billingReadiness.state!=="ready"; }).length;
+  var ready = rows.length-notReady;
 
   var head =
-    '<div class="disc">This is a rolling 30-day Care Management view, not a calendar-month reset. Log each contact, activity, referral result, visit, and next follow-up. Every entry is linked to the protected Patient Registry and saved to BHW Cloud.</div>'+
+    '<div class="disc"><b>Billing evidence check:</b> green rows have the recorded requirements for RCM review, amber rows are missing information, and red rows have a blocking issue. APCM is evaluated without a minute threshold. This is a readiness aid—not automatic claim approval.<br>This is a rolling 30-day Care Management view, not a calendar-month reset. Every entry is linked to the protected Patient Registry and saved to BHW Cloud.</div>'+
     enrollmentRosterMarkup()+
     rulesKeyMarkup()+
     vitalsMarkup(rows,activity)+
     '<div class="kpis">'+
       kpi(rows.length,"patients")+
       kpi(due,"follow-ups due",due?"due":"")+
-      kpi(missing,"need updates",missing?"due":"")+
+      kpi(notReady,"need attention",notReady?"due":"")+
+      kpi(blocked,"blocked",blocked?"due":"")+
+      kpi(ready,"ready for RCM")+
       kpi(mins,"minutes logged")+
     '</div>'+rollingMarkup(rows,activity)+monthCloseMarkup();
 
@@ -293,9 +310,10 @@ function render(){
     var dueCls = (e.nextFollowUp && e.nextFollowUp<=today && e.status!=="Complete" && e.status!=="Billed") ? " due" : "";
     var gaps=e.gaps||[];
     var rule=programRule(e.program);
-    return '<tr data-id="'+esc(e.id)+'" class="'+(gaps.length?'needs-update':'')+'">'+
+    var readiness=e.billingReadiness||{state:"incomplete",label:(gaps.length+" missing")};
+    return '<tr data-id="'+esc(e.id)+'" class="readiness-'+esc(readiness.state)+'">'+
       '<td class="pt">'+esc(nameOf(e))+'<small>'+esc(e.ctlNo||"")+(e.coordinator?" · "+esc(e.coordinator):"")+'</small></td>'+
-      '<td><span class="badge">'+esc(e.program||"")+'</span></td>'+
+      '<td><span class="badge">'+esc(e.program||"")+'</span><div class="readiness-pill '+esc(readiness.state)+'">'+esc(readiness.label)+'</div></td>'+
       '<td>'+basisMarkup(e.program)+'</td>'+
       '<td class="icd">'+esc(e.icd||"—")+'</td>'+
       '<td class="min-cell"><input type="number" min="0" class="f-min" value="'+(e.minutes==null?"":e.minutes)+'"><small>'+(rule.kind==="none"||rule.kind==="milestone"?'Optional operations only':'Billable threshold follows code')+'</small></td>'+
@@ -338,7 +356,7 @@ function monthCloseMarkup(){
   var close=MONTH_CLOSE||{}, counts=close.counts||{}, entries=close.entries||[];
   if(!close.month)return "";
   var firstDay=todayISO().slice(-2)==="01";
-  var rows=entries.map(function(entry){var gaps=entry.gaps||[];var rule=programRule(entry.program);return '<tr class="'+(gaps.length?'needs-update':'')+'"><td class="pt">'+esc(nameOf(entry))+'<small>'+esc(entry.ctlNo||"")+'</small></td><td><span class="badge">'+esc(entry.program||"")+'</span></td><td>'+basisMarkup(entry.program)+'</td><td>'+(rule.kind==="none"||rule.kind==="milestone"?'<span class="oktext">Not required</span><small>Optional internal time: '+esc(entry.minutes==null?"—":entry.minutes)+'</small>':esc(entry.minutes==null?"—":entry.minutes))+'</td><td>'+esc(entry.status||"Open")+'</td><td>'+gapMarkup(gaps)+'</td><td><button class="btn sec sm" onclick="openRequirements(\''+esc(entry.id)+'\')">Update missing items</button></td></tr>';}).join("");
+  var rows=entries.map(function(entry){var gaps=entry.gaps||[];var rule=programRule(entry.program);var readiness=entry.billingReadiness||{state:"incomplete",label:(gaps.length+" missing")};return '<tr class="readiness-'+esc(readiness.state)+'"><td class="pt">'+esc(nameOf(entry))+'<small>'+esc(entry.ctlNo||"")+'</small></td><td><span class="badge">'+esc(entry.program||"")+'</span><div class="readiness-pill '+esc(readiness.state)+'">'+esc(readiness.label)+'</div></td><td>'+basisMarkup(entry.program)+'</td><td>'+(rule.kind==="none"||rule.kind==="milestone"?'<span class="oktext">Not required</span><small>Optional internal time: '+esc(entry.minutes==null?"—":entry.minutes)+'</small>':esc(entry.minutes==null?"—":entry.minutes))+'</td><td>'+esc(entry.status||"Open")+'</td><td>'+gapMarkup(gaps)+'</td><td><button class="btn sec sm" onclick="openRequirements(\''+esc(entry.id)+'\')">Update missing items</button></td></tr>';}).join("");
   return '<section class="month-close"><div class="month-close-head"><div><h2>'+esc(close.month)+' documentation &amp; claim close</h2><p>'+(firstDay?'New month: the prior-month close is ready. ':'')+'Review every patient, correct missing documentation, then finish claim processing from the editable table.</p></div><button class="btn sec sm" onclick="reviewMonthClose()">Review and update month</button></div>'+
     '<div class="close-bars"><div class="close-bar"><b>'+Number(counts.tracked||0)+'</b><span>patients/programs tracked</span></div><div class="close-bar"><b>'+Number(counts.complete||0)+'</b><span>complete or billed</span></div><div class="close-bar"><b class="gap">'+Number(counts.missing||0)+'</b><span>documentation / claim gaps</span></div><div class="close-bar"><b>'+Number(counts.claimPending||0)+'</b><span>complete, claim pending</span></div></div>'+
     '<div class="tablewrap" style="border:0;border-radius:0"><table><thead><tr><th>Patient</th><th>Program</th><th>Billing basis</th><th>Min</th><th>Status</th><th>Missing / next action</th><th>Update</th></tr></thead><tbody>'+ (rows||'<tr><td colspan="7" class="msg">No care-management rows were found for the prior month.</td></tr>') +'</tbody></table></div></section>';
