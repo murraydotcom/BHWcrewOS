@@ -162,6 +162,31 @@ function documentationGaps(log = {}) {
   return [...new Set(gaps)];
 }
 
+function billingReadiness(log = {}, patient = null) {
+  const evidence = log.billingReadinessEvidence || {};
+  const missing = documentationGaps(log);
+  const blockers = [];
+  const patientStatus = String(patient?.patientStatus || patient?.status || "").toLowerCase();
+  if (!patient) blockers.push("Patient Registry connection");
+  else if (patient.selectable === false || ["inactive", "prospective", "transferred", "deceased", "test"].includes(patientStatus)) {
+    blockers.push(`Active Patient Registry status (${patientStatus || "not selectable"})`);
+  }
+  if (evidence.eligibilityStatus === "not-eligible") blockers.push("Program eligibility");
+  if (["declined", "revoked"].includes(evidence.consentStatus)) blockers.push(`Program consent (${evidence.consentStatus})`);
+  if (evidence.coverageStatus === "inactive") blockers.push("Active payer coverage");
+  if (evidence.providerReviewStatus === "held") blockers.push("Provider placed billing on hold");
+  if (String(log.status || "").toLowerCase() === "billed" && missing.length) {
+    blockers.push("Billed status conflicts with incomplete evidence");
+  }
+  const state = blockers.length ? "blocked" : missing.length ? "incomplete" : "ready";
+  return {
+    state,
+    label: state === "ready" ? "Ready for RCM review" : state === "blocked" ? "Blocked" : `${missing.length} missing`,
+    blockers: [...new Set(blockers)],
+    missing,
+  };
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return json(405, { error: "POST only" });
   const session = getSession(event);
@@ -218,7 +243,7 @@ exports.handler = async (event) => {
     });
     const entries = resultLogs.map((log) => {
       const patient = byId.get(log.bhwPatientId);
-      return {
+      const entry = {
         ...log,
         month: log.serviceMonth || "",
         ctlNo: log.bhwPatientId,
@@ -230,6 +255,8 @@ exports.handler = async (event) => {
         edited: log.updatedAt || "",
         gaps: documentationGaps(log),
       };
+      entry.billingReadiness = billingReadiness(entry, patient);
+      return entry;
     });
     const activityById = new Map();
     for (const request of activityResult.requests) {
@@ -260,12 +287,14 @@ exports.handler = async (event) => {
       .reduce((latest, value) => value > latest ? value : latest, "");
     const closeEntries = [...new Map((logsByMonth.get(closeMonth) || []).map((log) => [log.id, log])).values()].map((log) => {
       const patient = byId.get(log.bhwPatientId);
-      return {
+      const entry = {
         ...log,
         ctlNo: log.bhwPatientId,
         entry: log.entry || patient?.name || log.bhwPatientId,
         gaps: documentationGaps(log),
       };
+      entry.billingReadiness = billingReadiness(entry, patient);
+      return entry;
     });
     return json(200, {
       entries,
@@ -298,4 +327,4 @@ exports.handler = async (event) => {
   }
 };
 
-exports._test = { careEnrollmentPatients, codeRequirement, currentRosterObservation, documentationGaps, isoDate, monthEnd, monthsInWindow, previousMonth, shiftDate };
+exports._test = { billingReadiness, careEnrollmentPatients, codeRequirement, currentRosterObservation, documentationGaps, isoDate, monthEnd, monthsInWindow, previousMonth, shiftDate };
