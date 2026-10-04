@@ -2506,6 +2506,10 @@ async function phGoalsSave(id){
 /* ============ Medicare Prevention Tracker (Stedi → HETS) ============ */
 const API_STEDI = "/.netlify/functions/stedi";
 let STEDI_STATUS = null, STEDI_STATUS_LOADING = false;
+const maskedMemberId = (value) => {
+  const identifier = String(value || "").trim();
+  return identifier ? `•••• ${identifier.slice(-4)}` : "";
+};
 
 function stediConnectionSummary(){
   const successful = (D.prevention||[]).filter((row)=>row.sourceSystem==="Stedi HETS" && row.lastChecked && !row.coverageError && ["Active","Inactive"].includes(row.coverage));
@@ -2551,7 +2555,7 @@ function prevCard(){
     <p class="lede">Coverage and AWV eligibility come from CMS HETS through Stedi. Open care gaps come from the reviewed payer gap feed in BHW Cloud. ${stediConnectionSummary()} Both Primary Care and Care Management read this same patient-linked queue; payer gaps never change the clinical chart without provider review.</p>
     ${rows.length ? `<div class="tbl-wrap"><table><thead><tr><th>Patient</th><th>Coverage</th><th>Plan</th><th>AWV</th><th>Gaps</th><th>Checked</th><th></th></tr></thead><tbody>
       ${rows.map(({p,r})=>`<tr>
-        <td><b>${esc(p.name)}</b> ${!p.hasMbi?'<span class="pill warn">MBI needed</span>':""}</td>
+        <td><b>${esc(p.name)}</b> ${!p.hasMbi?'<span class="pill warn">MBI needed</span>':`<span class="pill gray">MBI on file${p.medicareCoverageOrder?` · ${esc(p.medicareCoverageOrder)}`:""}</span>`}</td>
         <td>${r?`<span class="pill ${r.coverage==="Active"?"ok":r.coverage==="Inactive"?"alert":"warn"}">${esc(r.coverage)}</span>`:'<span class="pill gray">Never checked</span>'}</td>
         <td>${r?esc(r.planType==="Medicare Advantage"?("MA"+(r.maName?" · "+r.maName:"")):r.planType):"—"}</td>
         <td>${r?`<span class="pill ${r.awvStatus==="Due now"?"alert":r.awvStatus==="Upcoming"?"warn":r.awvStatus==="Recently done"?"ok":"gray"}">${esc(r.awvStatus)}</span>${r.awvNext?` <span class="pill gray">next ${esc(r.awvNext)}</span>`:""}${r.awvLast?` <span class="pill gray">last ${esc(r.awvLast)}${r.doneInHub?" ✓ here":""}</span>`:""}`:"—"}</td>
@@ -2620,7 +2624,7 @@ function gapsDetail(patientId){
   const open = rec.gaps.filter(g=>g.open), other = rec.gaps.filter(g=>!g.open);
   const line = g=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)"><span>${esc(g.label)}${g.hcpcs?` <span class="pill gray">${esc(g.hcpcs)}</span>`:""}</span><span class="pill ${g.open?"alert":"gray"}">${esc(g.state)}</span></div>`;
   openModal(`<h3>Care gaps — ${esc(p.name||rec.name)}</h3>
-  <div class="msub">Medicare Wellness Report${rec.payer?" · "+esc(rec.payer):""}${rec.memberId?" · Member "+esc(rec.memberId):""}</div>
+  <div class="msub">Medicare Wellness Report${rec.payer?" · "+esc(rec.payer):""}${rec.memberId?" · Member "+esc(maskedMemberId(rec.memberId)):""}${rec.hasMbi?` · MBI on file${rec.medicareCoverageOrder?` (${esc(rec.medicareCoverageOrder)})`:""}`:(rec.medicareCoverageOrder?" · MBI missing":"")}</div>
   <div class="f">
     <div class="awv-q"><div class="awv-l">Open (${open.length})</div>${open.length?open.map(line).join(""):'<span class="pill ok">None flagged this cycle</span>'}</div>
     ${other.length?`<div class="awv-q"><div class="awv-l">Needs info / other plan (${other.length})</div>${other.map(line).join("")}</div>`:""}

@@ -43,6 +43,8 @@ exports.handler = async (event) => {
         name: patient?.name || profile.bhwPatientId,
         memberId: patient?.memberId || "",
         payer: profile.payer || patient?.payer || "",
+        hasMbi: Boolean(patient?.hasMbi || patient?.medicareMbi),
+        medicareCoverageOrder: patient?.medicareCoverageOrder || "",
         gaps: gapsFor(profile),
         updatedAt: profile.coverageCheckedAt || profile.updatedAt || "",
       };
@@ -61,7 +63,7 @@ exports.handler = async (event) => {
       const match = hits[0];
       return json(200, {
         matched: true,
-        patient: { bhwPatientId: match.bhwPatientId, name: match.name, memberId: match.memberId, payer: match.payer },
+        patient: { bhwPatientId: match.bhwPatientId, name: match.name, memberId: match.memberId, payer: match.payer, hasMbi: match.hasMbi, medicareCoverageOrder: match.medicareCoverageOrder },
         gaps: match.gaps,
         openCount: match.gaps.filter((gap) => gap.open).length,
         storage: "BHW Cloud",

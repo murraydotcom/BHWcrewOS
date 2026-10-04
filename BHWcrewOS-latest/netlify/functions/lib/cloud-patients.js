@@ -13,6 +13,26 @@ function isOriginalMedicareCoverage(record = {}) {
   return /medicare|\bcms\b|\bqmb\b|\bdual\b|part\s*[ab]\b/.test(label);
 }
 
+function isMedicareCoverage(record = {}) {
+  const insuranceType = String(record.insuranceType || "").trim().toLowerCase();
+  if (["original-medicare", "medicare-advantage"].includes(insuranceType)) return true;
+  const label = [record.primaryPayer, record.payer, record.payerName, record.insurancePlanName, record.planName, record.insurance]
+    .filter(Boolean).join(" ").toLowerCase();
+  return /medicare|\bcms\b|\bqmb\b|dual complete|healthspring|alterwood advantage|part\s*[abc]\b/.test(label);
+}
+
+function resolveMedicareCoverageOrder(patient = {}) {
+  const coverages = Array.isArray(patient.coverageRecords) ? patient.coverageRecords : [];
+  const withNestedMbi = coverages.find((coverage) => isValidMedicareMbi(coverage?.medicareMbi));
+  const coverage = withNestedMbi || coverages.find(isMedicareCoverage);
+  if (coverage) {
+    const order = String(coverage.coverageOrder || coverage.category || coverage.order || "").trim().toLowerCase();
+    return ({ additional: "other", tertiary: "other" })[order] || (["primary", "secondary", "other"].includes(order) ? order : "unknown");
+  }
+  if (isMedicareCoverage(patient)) return "primary";
+  return resolveMedicareMbi(patient) ? "unknown" : "";
+}
+
 function resolveMedicareMbi(patient = {}) {
   const explicit = normalizeMedicareMbi(patient.medicareMbi);
   if (isValidMedicareMbi(explicit)) return explicit;
@@ -111,6 +131,8 @@ function legacyPatient(p) {
   const programs = Array.isArray(p.programEnrollment) ? p.programEnrollment : [];
   const snapshot = p.clinicalSnapshot || {};
   const status = p.patientStatus || "";
+  const medicareMbi = resolveMedicareMbi(p);
+  const medicareCoverageOrder = resolveMedicareCoverageOrder(p);
   return {
     ...cloudPatient,
     id: p.bhwPatientId,
@@ -124,7 +146,9 @@ function legacyPatient(p) {
     mco: p.medicaidMco || "",
     insurance: p.insurancePlanName || p.primaryPayer || p.payerName || "",
     member: p.memberId || "",
-    medicareMbi: resolveMedicareMbi(p),
+    medicareMbi,
+    hasMbi: Boolean(medicareMbi),
+    medicareCoverageOrder,
     program: programs.join(" · "),
     programs,
     careProgramEnrollmentIds: Array.isArray(p.sourceRelations?.careProgramEnrollments) ? p.sourceRelations.careProgramEnrollments : [],
@@ -170,4 +194,5 @@ module.exports = {
   normalizeMedicareMbi,
   isValidMedicareMbi,
   resolveMedicareMbi,
+  resolveMedicareCoverageOrder,
 };

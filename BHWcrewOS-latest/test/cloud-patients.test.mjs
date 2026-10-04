@@ -8,6 +8,7 @@ const {
   parsePatientName,
   searchCloudPatients,
   resolveMedicareMbi,
+  resolveMedicareCoverageOrder,
   isValidMedicareMbi,
 } = require('../netlify/functions/lib/cloud-patients');
 
@@ -64,7 +65,10 @@ test('Medicare MBI resolver reconciles canonical and coverage-record locations w
 test('Cloud patient adapter promotes a nested Registry MBI for every directory consumer', () => {
   const patient = legacyPatient({
     bhwPatientId: 'BHW0141', legalFirstName: 'Synthetic', legalLastName: 'Medicare',
-    primaryPayer: 'Medicare', coverageRecords: [{ payer: 'CMS', medicareMbi: '1EG4-TE5-MK73' }],
+    primaryPayer: 'Commercial', coverageRecords: [{ coverageOrder: 'secondary', insuranceType: 'original-medicare', payer: 'CMS', medicareMbi: '1EG4-TE5-MK73' }],
   });
   assert.equal(patient.medicareMbi, '1EG4TE5MK73');
+  assert.equal(patient.hasMbi, true);
+  assert.equal(patient.medicareCoverageOrder, 'secondary');
+  assert.equal(resolveMedicareCoverageOrder(patient), 'secondary');
 });

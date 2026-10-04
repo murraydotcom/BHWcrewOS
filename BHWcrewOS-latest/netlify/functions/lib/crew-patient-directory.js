@@ -1,4 +1,4 @@
-const { resolveMedicareMbi } = require("./cloud-patients");
+const { resolveMedicareMbi, resolveMedicareCoverageOrder } = require("./cloud-patients");
 
 const normalizeId = (value) => String(value || "").trim().toUpperCase();
 
@@ -40,6 +40,7 @@ function buildPatientDirectory(cloudPatients) {
         insuranceLabel: patient.insurance || patient.insurancePlanName || patient.primaryPayer || "",
         memberId: patient.memberId || patient.member || "",
         hasMbi: Boolean(resolveMedicareMbi(patient)),
+        medicareCoverageOrder: resolveMedicareCoverageOrder(patient),
         email: patient.email || "",
         guardianEmail: patient.guardianEmail || "",
         status,
