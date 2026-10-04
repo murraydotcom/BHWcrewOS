@@ -258,9 +258,11 @@ test("CrewHQ frontend exposes verified consent, retry-safe segments, and the pro
   assert.match(html, /video recording remains off/i);
   assert.match(html, /id="createMeet"/);
   assert.match(html, /id="importMeetTranscript"/);
+  assert.match(html, /id="newMeet"/);
   assert.match(app, /createTelehealthSession/);
   assert.match(app, /importTelehealthTranscript/);
   assert.match(app, /sessionRecordingAgreement: true/);
+  assert.match(app, /Ready to create the next appointment Meet/);
   assert.match(app, /do not start Meet transcription until both consent checks/i);
   assert.match(app, /longRecordingEnabled/);
   assert.match(html, /up to two hours/i);
@@ -268,7 +270,7 @@ test("CrewHQ frontend exposes verified consent, retry-safe segments, and the pro
   assert.match(html, /failed audio remains in this open tab for Retry/i);
   assert.match(html, /id="wakeStatus"/);
   assert.match(html, /supported devices are asked to keep the screen awake/i);
-  assert.match(html, /transcription-app\.mjs\?v=20261004-1/);
+  assert.match(html, /transcription-app\.mjs\?v=20261004-2/);
   assert.match(app, /elapsedSeconds >= maxVisitSeconds/);
   assert.match(app, /segmentElapsedSeconds >= segmentSeconds/);
   assert.match(app, /beforeunload/);

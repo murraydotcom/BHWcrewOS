@@ -45,7 +45,7 @@
           <div class="field"><label for="meetEnd">Scheduled end</label><input id="meetEnd" type="datetime-local"></div>
         </div>
         <label class="check"><input id="meetTranscript" type="checkbox" checked><span>Use Google Meet transcription after both consent checks above are confirmed. Do not turn on Meet recording.</span></label>
-        <div class="controls"><button class="btn primary" id="createMeet" type="button">Create appointment Meet</button><a class="btn" id="openMeet" href="" target="_blank" rel="noopener" aria-disabled="true">Open Google Meet</a><button class="btn" id="copyMeet" type="button" disabled>Copy patient join link</button><button class="btn" id="importMeetTranscript" type="button" disabled>Import completed transcript</button></div>
+        <div class="controls"><button class="btn primary" id="createMeet" type="button">Create appointment Meet</button><a class="btn" id="openMeet" href="" target="_blank" rel="noopener" aria-disabled="true">Open Google Meet</a><button class="btn" id="copyMeet" type="button" disabled>Copy patient join link</button><button class="btn" id="importMeetTranscript" type="button" disabled>Import completed transcript</button><button class="btn" id="newMeet" type="button" hidden>New appointment</button></div>
         <div class="telehealth-status" id="meetStatus" role="status" aria-live="polite">Select a patient, then create an appointment-specific Meet.</div>
       </div>
       <div class="meter"><div class="timer" id="timer">00:00</div><div class="state" id="state">Ready</div><div class="wake-status" id="wakeStatus" data-state="idle" role="status" aria-live="polite">Screen awake protection starts with recording</div></div>
@@ -59,7 +59,6 @@
     </div>
   </section>
 </div></main></div><div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script type="module" src="transcription-app.mjs?v=20261004-1"></script>
+<script type="module" src="transcription-app.mjs?v=20261004-2"></script>
 <script src="/staff-chat-launcher.js" defer></script>
 </body></html>
-

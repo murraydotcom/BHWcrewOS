@@ -142,6 +142,7 @@ function renderMeetSession() {
   $("copyMeet").disabled = !uri;
   const imported = Boolean(session?.encounterId);
   $("importMeetTranscript").disabled = !session?.transcriptionRequested || !telehealthConsentReady() || imported;
+  $("newMeet").hidden = !imported;
   if (!session) {
     $("meetStatus").className = "telehealth-status";
     $("meetStatus").textContent = selectedPatientId()
@@ -610,6 +611,21 @@ $("importMeetTranscript").onclick = async () => {
     renderMeetSession();
     showToast(error.message || "The Meet transcript is not ready yet.");
   }
+};
+
+$("newMeet").onclick = () => {
+  if (!activeTelehealthSession?.encounterId) return;
+  activeTelehealthSession = null;
+  rememberMeetSession();
+  telehealthCreationKey = "";
+  verifiedConsent = null;
+  $("patient").value = "";
+  $("meetStart").value = "";
+  $("meetEnd").value = "";
+  $("meetTranscript").checked = true;
+  clearSession({ resetAttestations: true });
+  updateConsentCopy();
+  showToast("Ready to create the next appointment Meet.");
 };
 
 $("start").onclick = async () => {
