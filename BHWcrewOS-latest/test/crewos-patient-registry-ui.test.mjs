@@ -40,7 +40,8 @@ test("CrewHQ keeps patient maintenance tools inside the protected Patient Regist
   assert.match(registry, /rcm\.bhwmedical\.org\/provider\/patient-loader\.html/);
   assert.match(registry, /rcm\.bhwmedical\.org\/provider\/patient-collision-repair\.html/);
   assert.match(registry, /rcm\.bhwmedical\.org\/provider\/health-blueprint\.html/);
-  assert.match(registry, /Whole-Person Clinical Map — Synthetic/);
+  assert.match(registry, /Patient 360 — Synthetic/);
+  assert.doesNotMatch(registry, /Whole-Person Clinical Map — Synthetic/);
   assert.match(registryApp, /patient\.nameSuffix/);
   assert.match(registryApp, /"Suffix"/);
   assert.match(registryApp, /Care Connect pilot access/);

@@ -17,6 +17,7 @@ on:
       - "BHWcrewOS-latest/provider/patient-operations.*"
       - "BHWcrewOS-latest/test/patient-workspace-context.test.mjs"
       - "BHWcrewOS-latest/test/provider-360-naming-contract.test.mjs"
+      - "BHWcrewOS-latest/test/crewos-patient-registry-ui.test.mjs"
       - ".github/workflows/patient-workspace-context-tests.yml"
   workflow_dispatch:
 
@@ -35,6 +36,7 @@ jobs:
         run: |
           node --test BHWcrewOS-latest/test/patient-workspace-context.test.mjs
           node --test BHWcrewOS-latest/test/provider-360-naming-contract.test.mjs
+          node --test BHWcrewOS-latest/test/crewos-patient-registry-ui.test.mjs
       - name: Check browser and Operations API modules
         run: |
           node --check BHWcrewOS-latest/provider/patient-workspace-context-client.mjs
