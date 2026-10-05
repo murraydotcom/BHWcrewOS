@@ -100,6 +100,13 @@ test("CM Due excludes fax rows without changing the shared Front Desk queue", ()
 });
 
 test("Care Management uses a rolling 30-day window and builds prior-month close gaps", async () => {
+  const [medicarePatient] = careLogData.careEnrollmentPatients([{
+    bhwPatientId: "BHW0557", name: "Synthetic Medicare", dob: "1980-01-02", selectable: true,
+    payer: "Synthetic Commercial", insurance: "Synthetic Commercial", memberId: "PRIMARY-1",
+    hasMbi: true, medicareCoverageOrder: "secondary", programs: ["CCM"],
+  }]);
+  assert.equal(medicarePatient.hasMbi, true);
+  assert.equal(medicarePatient.medicareCoverageOrder, "secondary");
   assert.deepEqual(careLogData.monthsInWindow("2026-08-30", "2026-09-28"), ["2026-08", "2026-09"]);
   assert.equal(careLogData.previousMonth("2026-09-28"), "2026-08");
   assert.equal(careLogData.monthEnd("2026-02"), "2026-02-28");
@@ -177,6 +184,8 @@ test("Care Management uses a rolling 30-day window and builds prior-month close 
   assert.match(page, /Governed intake and roster evidence/);
   assert.match(page, /Ready for BHW RCM review/);
   assert.match(page, /green rows have the recorded requirements for RCM review/);
+  assert.match(page, /MBI on file/);
+  assert.match(page, /Medicare \"\+e\.medicareCoverageOrder/);
   assert.match(page, /readiness-incomplete/);
   assert.match(page, /APCM is evaluated without a minute threshold/);
   assert.doesNotMatch(page, /value="released"/);
@@ -192,6 +201,8 @@ test("Population Health and Hospital Visits share Registry identity, contact det
     readFile(new URL("../index.html", import.meta.url), "utf8"),
   ]);
   assert.match(shell, /Population Health/);
+  assert.match(shell, /maskedMemberId/);
+  assert.match(shell, /MBI on file/);
   assert.doesNotMatch(shell, /Panel &amp; Discharges/);
   assert.match(population, /registryMatchForRow/);
   assert.match(population, /First Contact At/);

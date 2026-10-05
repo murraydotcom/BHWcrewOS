@@ -1,0 +1,206 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import {
+  INSURANCE_TYPES,
+  PAYER_DIRECTORY,
+  coverageSlotsForPatient,
+  inferInsuranceType,
+  insuranceEditorLimitMessage,
+  insuranceReviewFlags,
+  insuranceStorageForPatient,
+  insuranceValidationMessage,
+  medicareMbiForPatient,
+  payerDirectoryEntry,
+  sanitizeCoverageRecords,
+} from "../shared/patient-coverage.mjs";
+
+const VALID_MBI = "1EG4TE5MK73";
+
+test("payer directory keeps exact insurance names tied to supported classifications", () => {
+  const names = PAYER_DIRECTORY.map((entry) => entry.name.toLowerCase());
+  assert.equal(new Set(names).size, names.length);
+  for (const entry of PAYER_DIRECTORY) assert.ok(INSURANCE_TYPES.includes(entry.insuranceType));
+  const directoryKeys = PAYER_DIRECTORY.flatMap((entry) => [entry.name, ...(entry.aliases || [])])
+    .map((name) => name.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim());
+  assert.equal(new Set(directoryKeys).size, directoryKeys.length);
+
+  assert.equal(payerDirectoryEntry("Aetna Better Health of Maryland")?.insuranceType, "medicaid-mco");
+  assert.equal(payerDirectoryEntry("UnitedHealthcare Dual Complete")?.insuranceType, "medicare-advantage");
+  assert.equal(payerDirectoryEntry("TRICARE For Life")?.insuranceType, "tricare");
+  assert.equal(payerDirectoryEntry("Carelon Behavioral Health Maryland")?.insuranceType, "behavioral-health");
+  assert.equal(payerDirectoryEntry("Marylnd Physicians Care")?.insuranceType, "medicaid-mco");
+  assert.equal(payerDirectoryEntry("CareFirst BCBS - DC, National Capital Area")?.insuranceType, "commercial");
+  assert.equal(payerDirectoryEntry("UnitedHealthcare Community Plan / CA, DC,  DE, FL, GA, HI, IA, KY, LA, MA, MD, MS, NC, NE, NM, NY, OH, OK, PA, RI, TX, VA, WA, WI")?.insuranceType, "medicaid-mco");
+  assert.equal(payerDirectoryEntry("UnitedHealthcare Community Plan")?.name, "UHC Community");
+  assert.equal(payerDirectoryEntry("Riverside Health, Inc")?.insuranceType, "");
+
+  const marylandMcos = [
+    "Aetna Better Health of Maryland",
+    "CareFirst Community Health",
+    "Jai Medical Systems, Inc.",
+    "Kaiser Permanente of the Mid-Atlantic States",
+    "Maryland Physicians Care",
+    "MedStar Family Choice, Inc.",
+    "Priority Partners",
+    "UHC Community",
+    "Wellpoint Maryland",
+  ];
+  for (const name of marylandMcos) assert.equal(payerDirectoryEntry(name)?.insuranceType, "medicaid-mco");
+
+  const medicareAdvantageNames = PAYER_DIRECTORY.filter((entry) => entry.insuranceType === "medicare-advantage").map((entry) => entry.name);
+  assert.ok(medicareAdvantageNames.includes("Alterwood Advantage"));
+  assert.ok(medicareAdvantageNames.includes("CareFirst Medicare Advantage"));
+  assert.ok(medicareAdvantageNames.includes("UnitedHealthcare Dual Complete"));
+});
+
+test("carrier-only payer names stay unclassified until the exact plan is known", () => {
+  assert.equal(inferInsuranceType("Aetna"), "");
+  assert.equal(inferInsuranceType("UnitedHealthcare"), "");
+  assert.equal(inferInsuranceType("Cigna"), "");
+  assert.equal(inferInsuranceType("Cigna PPO"), "commercial");
+  assert.match(insuranceReviewFlags({ primaryPayer: "Aetna", memberId: "A-1" }).join(" "), /not classified/);
+});
+
+test("primary coverage requires an actual payer name and never substitutes a classification", () => {
+  const stored = insuranceStorageForPatient({}, {
+    primary: { insuranceType: "commercial", memberId: "PRIMARY-1", coverageStatus: "pending" },
+  });
+  assert.equal(stored.primaryPayer, "");
+  assert.match(insuranceValidationMessage(stored), /actual insurance or payer name/i);
+  assert.match(insuranceReviewFlags(stored).join(" "), /Primary insurance name not recorded/);
+});
+
+test("generic Medicaid remains a review item until the named MCO or payer is identified", () => {
+  const flags = insuranceReviewFlags({ primaryPayer: "Medicaid", memberId: "MD-1", coverageStatus: "unknown" });
+  assert.match(flags.join(" "), /generic Medicaid label/i);
+  assert.match(insuranceReviewFlags({ primaryPayer: "Medicaid of Maryland", memberId: "MD-2" }).join(" "), /generic Medicaid label/i);
+  assert.doesNotMatch(insuranceReviewFlags({ primaryPayer: "Priority Partners", memberId: "PP-1" }).join(" "), /generic Medicaid label/i);
+});
+
+test("Medicaid MCO storage normalizes UnitedHealthcare and Riverside display names", () => {
+  const stored = insuranceStorageForPatient({}, {
+    primary: { insuranceType: "medicaid-mco", payerName: "UnitedHealthcare", memberId: "UHC-1" },
+    secondary: { insuranceType: "medicaid-mco", payerName: "Riverside Health, Inc", memberId: "CF-1" },
+  });
+  assert.equal(stored.coverageRecords[0].payerName, "UHC Community");
+  assert.equal(stored.coverageRecords[1].payerName, "CareFirst Community Health");
+});
+
+test("legacy primary payer and member ID remain a compatible primary coverage projection", () => {
+  const patient = {
+    primaryPayer: "CareFirst BCBS",
+    memberId: "CF-123",
+    coverageStatus: "verified",
+  };
+  const slots = coverageSlotsForPatient(patient);
+  assert.equal(slots.primary.coverageOrder, "primary");
+  assert.equal(slots.primary.insuranceType, "commercial");
+  assert.equal(slots.primary.payerName, "CareFirst BCBS");
+  assert.equal(slots.primary.memberId, "CF-123");
+
+  const stored = insuranceStorageForPatient(patient);
+  assert.equal(stored.primaryPayer, "CareFirst BCBS");
+  assert.equal(stored.memberId, "CF-123");
+  assert.equal(stored.coverageRecords.length, 1);
+});
+
+test("Registry stores primary, secondary, and additional policies separately", () => {
+  const stored = insuranceStorageForPatient({}, {
+    primary: { insuranceType: "commercial", payerName: "CareFirst BCBS", memberId: "PRIMARY-1", coverageStatus: "verified" },
+    secondary: { insuranceType: "original-medicare", payerName: "Medicare", memberId: "SECONDARY-2", coverageStatus: "verified", medicareSecondaryReason: "12" },
+    other: { insuranceType: "medicare-supplement", payerName: "Supplement Payer", memberId: "OTHER-3", coverageStatus: "pending" },
+  }, VALID_MBI);
+
+  assert.deepEqual(stored.coverageRecords.map((record) => record.coverageOrder), ["primary", "secondary", "other"]);
+  assert.deepEqual(stored.coverageRecords.map((record) => record.memberId), ["PRIMARY-1", "SECONDARY-2", "OTHER-3"]);
+  assert.equal(stored.medicareMbi, VALID_MBI);
+  assert.equal(stored.coverageRecords[1].medicareMbi, VALID_MBI);
+  assert.equal(stored.coverageRecords[1].medicareSecondaryReason, "12");
+  assert.equal(stored.primaryPayer, "CareFirst BCBS");
+  assert.equal(stored.memberId, "PRIMARY-1");
+});
+
+test("Medicare Advantage member ID is never inferred to be the MBI", () => {
+  const patient = {
+    coverageRecords: [{
+      coverageOrder: "primary",
+      insuranceType: "medicare-advantage",
+      payerName: "UnitedHealthcare Medicare Advantage",
+      memberId: VALID_MBI,
+      coverageStatus: "verified",
+    }],
+  };
+  assert.equal(medicareMbiForPatient(patient), "");
+  assert.match(insuranceReviewFlags(patient).join(" "), /MBI not verified/);
+});
+
+test("valid Original Medicare member ID can seed the separate MBI during legacy migration", () => {
+  const patient = { primaryPayer: "Medicare", memberId: VALID_MBI, coverageStatus: "verified" };
+  assert.equal(medicareMbiForPatient(patient), VALID_MBI);
+  assert.deepEqual(insuranceReviewFlags(patient), []);
+});
+
+test("secondary Medicare remains reviewable until its MSP reason is verified", () => {
+  const patient = {
+    medicareMbi: VALID_MBI,
+    coverageRecords: [
+      { coverageOrder: "primary", insuranceType: "commercial", payerName: "Aetna Commercial", memberId: "A-1" },
+      { coverageOrder: "secondary", insuranceType: "original-medicare", payerName: "Medicare", memberId: VALID_MBI },
+    ],
+  };
+  assert.match(insuranceReviewFlags(patient).join(" "), /MSP reason not verified/);
+});
+
+test("invalid MBI is rejected and nested coverage payloads are allowlisted", () => {
+  assert.match(insuranceValidationMessage({ medicareMbi: "not-an-mbi", coverageRecords: [] }), /valid 11-character MBI/);
+  const [record] = sanitizeCoverageRecords([{
+    coverageOrder: "secondary",
+    insuranceType: "original-medicare",
+    payerName: "Medicare",
+    memberId: VALID_MBI,
+    medicareMbi: VALID_MBI,
+    medicareSecondaryReason: "47",
+    ignored: "drop-me",
+  }]);
+  assert.equal(record.medicareMbi, VALID_MBI);
+  assert.equal(record.medicareSecondaryReason, "47");
+  assert.equal(record.ignored, undefined);
+});
+
+test("legacy backend coverage aliases retain order, group number, and verified status in the editor", () => {
+  const stored = insuranceStorageForPatient({
+    primaryPayer: "CareFirst BCBS", memberId: "PRIMARY-1", coverageStatus: "verified",
+    coverageRecords: [{ category: "secondary", payer: "Medicare", memberId: VALID_MBI, policyGroup: "GROUP-2", status: "verified" }],
+  });
+  assert.deepEqual(stored.coverageRecords.map((record) => record.coverageOrder), ["primary", "secondary"]);
+  assert.equal(stored.coverageRecords[1].groupNumber, "GROUP-2");
+  assert.equal(stored.coverageRecords[1].coverageStatus, "verified");
+  assert.equal(stored.medicareMbi, VALID_MBI);
+});
+
+test("generic supplement names stay separate from Original Medicare", () => {
+  assert.equal(inferInsuranceType("Synthetic Medicare Supplement"), "medicare-supplement");
+  assert.equal(medicareMbiForPatient({ primaryPayer: "Synthetic Medicare Supplement", memberId: VALID_MBI }), "");
+});
+
+test("the three-card editor blocks records it cannot retain while allowing missing details to be corrected", () => {
+  assert.match(insuranceEditorLimitMessage({ coverageRecords: [
+    { coverageOrder: "primary", payerName: "CareFirst BCBS" },
+    { category: "other", payerName: "Supplement One" },
+    { category: "tertiary", payerName: "Supplement Two" },
+  ] }), /Only one other/);
+  assert.equal(insuranceEditorLimitMessage({ medicareMbi: "invalid", coverageRecords: [
+    { coverageOrder: "primary", memberId: "MISSING-PAYER" },
+  ] }), "");
+});
+
+test("invalid coverage order, classification, nested MBI and MSP values are rejected before normalization", () => {
+  const base = { coverageOrder: "secondary", insuranceType: "original-medicare", payerName: "Medicare" };
+  for (const [values, message] of [
+    [{ medicareSecondaryReason: "99" }, /Medicare-secondary reason is not supported/],
+    [{ medicareSecondaryReason: "12-extra" }, /Medicare-secondary reason is not supported/],
+    [{ insuranceType: "unsupported" }, /Insurance type is not supported/],
+    [{ coverageOrder: "unsupported" }, /Coverage order must be/],
+    [{ medicareMbi: "invalid" }, /valid 11-character MBI/],
+  ]) assert.throws(() => sanitizeCoverageRecords([{ ...base, ...values }]), message);
+});

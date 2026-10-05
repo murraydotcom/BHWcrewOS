@@ -1,8 +1,13 @@
 import crypto from "node:crypto";
+import {
+  insuranceValidationMessage,
+  normalizeMedicareMbi,
+  sanitizeCoverageRecords,
+} from "../../shared/patient-coverage.mjs";
 
 const PATIENT_FIELDS = [
   "bhwPatientId", "legalFirstName", "legalLastName", "nameSuffix", "preferredName", "dateOfBirth",
-  "phone", "email", "patientStatus", "primaryPayer", "memberId", "coverageStatus",
+  "phone", "email", "patientStatus", "primaryPayer", "memberId", "coverageStatus", "medicareMbi", "coverageRecords",
   "referralSource", "responsibleStaff", "lastVerifiedAt",
   "primaryCareProvider", "primaryCareProviderVerificationAttestation",
 ];
@@ -249,7 +254,20 @@ export default async (request) => {
       case "save-patient": {
         const patient = pick(body.patient, PATIENT_FIELDS);
         patient.bhwPatientId = patientId(patient.bhwPatientId);
-        return response(200, await cloudRequest(`/v1/patients/${encodeURIComponent(patient.bhwPatientId)}`, session, { method: "PUT", body: patient }));
+        const expectedUpdatedAt = String(body.expectedUpdatedAt || "").trim().slice(0, 40);
+        try {
+          if (patient.medicareMbi !== undefined) patient.medicareMbi = normalizeMedicareMbi(patient.medicareMbi);
+          if (patient.coverageRecords !== undefined) patient.coverageRecords = sanitizeCoverageRecords(patient.coverageRecords);
+          const insuranceError = insuranceValidationMessage(patient);
+          if (insuranceError) throw new Error(insuranceError);
+        } catch (error) {
+          error.status = 400;
+          throw error;
+        }
+        return response(200, await cloudRequest(`/v1/patients/${encodeURIComponent(patient.bhwPatientId)}`, session, {
+          method: "PUT",
+          body: { ...patient, ...(expectedUpdatedAt ? { expectedUpdatedAt } : {}) },
+        }));
       }
       case "notify-billing-toolkit-provider": {
         const receipt = validateHealthCoreDraftReceipt(body.receipt);

@@ -29,7 +29,7 @@ function loadHandler(source, overrides = {}) {
   ];
   const patients = overrides.patients || [
     { bhwPatientId: "BHW0000", name: "Synthetic Patient", memberId: "SYNTH-0000" },
-    { bhwPatientId: "BHW0001", name: "Synthetic Patient", memberId: "SYNTH-0001" },
+    { bhwPatientId: "BHW0001", name: "Synthetic Patient", memberId: "SYNTH-0001", hasMbi: true, medicareCoverageOrder: "secondary" },
   ];
   vm.runInNewContext(source, {
     exports,
@@ -60,6 +60,8 @@ test("payer gaps resolve by authoritative BHW patient ID even when names are amb
   assert.equal(response.statusCode, 200);
   assert.equal(body.matched, true);
   assert.equal(body.patient.bhwPatientId, "BHW0001");
+  assert.equal(body.patient.hasMbi, true);
+  assert.equal(body.patient.medicareCoverageOrder, "secondary");
   assert.equal(body.gaps[0].code, "colorectal-cancer-screening");
 });
 
@@ -117,5 +119,6 @@ test("payer gap list retains authoritative IDs for both shared queue views", asy
   const response = await handler({ httpMethod: "POST", body: JSON.stringify({ action: "list" }) });
   const body = JSON.parse(response.body);
   assert.deepEqual(body.patients.map((patient) => patient.bhwPatientId), ["BHW0000", "BHW0001"]);
+  assert.equal(body.patients[1].hasMbi, true);
   assert.equal(body.updated, "2026-09-30T13:00:00.000Z");
 });

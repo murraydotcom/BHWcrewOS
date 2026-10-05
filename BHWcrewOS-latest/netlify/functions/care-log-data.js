@@ -60,6 +60,8 @@ function careEnrollmentPatients(roster = [], { includeSynthetic = false, access 
       payer: "Synthetic coverage",
       insurance: "Synthetic coverage",
       memberId: "",
+      hasMbi: false,
+      medicareCoverageOrder: "",
       programs: [],
       selectable: true,
     });
@@ -72,6 +74,8 @@ function careEnrollmentPatients(roster = [], { includeSynthetic = false, access 
     payer: patient.payer || "",
     insurance: patient.insurance || "",
     memberId: patient.memberId || "",
+    hasMbi: Boolean(patient.hasMbi || patient.medicareMbi),
+    medicareCoverageOrder: patient.medicareCoverageOrder || "",
     programs: patient.programs || [],
   }));
 }
@@ -239,6 +243,8 @@ exports.handler = async (event) => {
         ...enrollment,
         patientName: patient?.name || (enrollment.bhwPatientId === "BHW0000" ? "Synthetic Patient" : enrollment.bhwPatientId),
         payer: patient?.payer || enrollment.intake?.coverageDuplication?.payer || "",
+        hasMbi: Boolean(patient?.hasMbi || patient?.medicareMbi),
+        medicareCoverageOrder: patient?.medicareCoverageOrder || "",
       };
     });
     const entries = resultLogs.map((log) => {
@@ -251,6 +257,8 @@ exports.handler = async (event) => {
         entry: log.entry || patient?.name || log.bhwPatientId,
         memberId: patient?.memberId || log.memberId || "",
         payer: patient?.payer || "",
+        hasMbi: Boolean(patient?.hasMbi || patient?.medicareMbi),
+        medicareCoverageOrder: patient?.medicareCoverageOrder || "",
         rosterLinked: Boolean(patient),
         edited: log.updatedAt || "",
         gaps: documentationGaps(log),
@@ -291,6 +299,8 @@ exports.handler = async (event) => {
         ...log,
         ctlNo: log.bhwPatientId,
         entry: log.entry || patient?.name || log.bhwPatientId,
+        hasMbi: Boolean(patient?.hasMbi || patient?.medicareMbi),
+        medicareCoverageOrder: patient?.medicareCoverageOrder || "",
         gaps: documentationGaps(log),
       };
       entry.billingReadiness = billingReadiness(entry, patient);

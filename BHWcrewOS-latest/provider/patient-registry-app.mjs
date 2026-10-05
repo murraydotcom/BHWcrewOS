@@ -1,12 +1,33 @@
 import { createPatientRegistryClient } from "./patient-registry-client.mjs";
+import {
+  COVERAGE_ORDERS,
+  COVERAGE_STATUSES,
+  INSURANCE_TYPES,
+  INSURANCE_TYPE_LABELS,
+  MSP_REASONS,
+  MSP_REASON_LABELS,
+  PAYER_DIRECTORY,
+  coverageSlotsForPatient,
+  hasCoverageIdentity,
+  insuranceEditorLimitMessage,
+  insuranceReviewFlags,
+  insuranceStorageForPatient,
+  insuranceValidationMessage,
+  medicareMbiForPatient,
+  payerDirectoryEntry,
+} from "../shared/patient-coverage.mjs";
+import {
+  coverageOrderFromFilename,
+  insuranceUpdateMatches,
+  parseInsuranceReport,
+  prepareInsuranceUpdates,
+} from "./patient-insurance-import.mjs";
 
 const THEME_KEY = "bhw_provider_theme_v1";
 const PENDING_PATIENT_KEY = "bhw_pending_encounter_patient_v1";
 const $ = (id) => document.getElementById(id);
 const esc = (value) => String(value ?? "").replace(/[&<>\"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[character]));
-const PAYERS = ["Medicare", "Medicare + QMB", "Maryland Medicaid", "CareFirst BCBS", "UnitedHealthcare Commercial", "UnitedHealthcare Medicare Advantage", "UnitedHealthcare Community Plan", "Aetna Commercial", "Aetna Better Health of Maryland", "Cigna", "Humana", "Maryland Physicians Care", "TRICARE", "Alterwood Advantage", "Self-pay", "Other"];
 const STATUS_OPTIONS = ["active", "prospective", "inactive", "transferred", "deceased"];
-const COVERAGE_OPTIONS = ["verified", "pending", "needs-review", "inactive", "self-pay", "unknown"];
 const CONSENT_SOURCES = ["previsit-form", "new-patient-packet"];
 const CARE_API = "https://bhw-medication-api-343692256275.us-east4.run.app";
 const PORTAL_ACCESS_STATUSES = ["not-invited", "approved", "invited", "active", "paused", "revoked"];
@@ -19,6 +40,9 @@ let careToken = "";
 let careTokenExpiresAt = 0;
 let registryFormDirty = false;
 let registryRefreshPromise = null;
+let registryLoaded = false;
+let insuranceImportPlan = null;
+let insuranceImportRunning = false;
 
 function showToast(message) {
   $("toast").textContent = message;
@@ -35,6 +59,101 @@ function field(id, label, value = "", type = "text", options = []) {
   return `<div class="field"><label>${esc(label)}</label>${control}</div>`;
 }
 
+function labeledSelect(id, label, value, values, labels) {
+  const optionValues = value && !values.includes(value) ? [value, ...values] : values;
+  return `<div class="field"><label>${esc(label)}</label><select id="${id}">${optionValues.map((option) => `<option value="${esc(option)}" ${option === value ? "selected" : ""}>${esc(labels[option] || option || "Not selected")}</option>`).join("")}</select></div>`;
+}
+
+const PAYER_DIRECTORY_OPTIONS = PAYER_DIRECTORY.flatMap((entry) => [entry.name, ...(entry.aliases || [])]
+  .map((name) => ({ name, insuranceType: entry.insuranceType })))
+  .sort((left, right) => `${left.insuranceType} ${left.name}`.localeCompare(`${right.insuranceType} ${right.name}`));
+
+const NAMED_PAYER_DIRECTORY = PAYER_DIRECTORY
+  .filter((entry) => entry.insuranceType && !entry.generic)
+  .sort((left, right) => `${left.insuranceType} ${left.name}`.localeCompare(`${right.insuranceType} ${right.name}`));
+
+function payerDirectoryStatus(value) {
+  const entry = payerDirectoryEntry(value);
+  if (!value) return "Choose a payer from the directory or enter the exact payer name.";
+  if (!entry) return "Not in the payer directory. Select the classification after verifying the plan.";
+  if (entry.generic) return "Generic Medicaid label only. Verify and choose the patient's actual MCO or payer name.";
+  if (!entry.insuranceType) return "Carrier name only; the plan classification still needs review.";
+  return `Directory classification: ${INSURANCE_TYPE_LABELS[entry.insuranceType]}.`;
+}
+
+function namedPayerOptions(insuranceType, payerName = "") {
+  const current = payerDirectoryEntry(payerName);
+  const selectedName = current && !current.generic ? current.name : "";
+  const entries = insuranceType ? NAMED_PAYER_DIRECTORY.filter((entry) => entry.insuranceType === insuranceType) : NAMED_PAYER_DIRECTORY;
+  const placeholder = insuranceType
+    ? `Select a named ${INSURANCE_TYPE_LABELS[insuranceType] || "insurance"} payer`
+    : "Select a classification first, or browse all named payers";
+  if (insuranceType) {
+    return `<option value="">${esc(placeholder)}</option>${entries.map((entry) => `<option value="${esc(entry.name)}" ${entry.name === selectedName ? "selected" : ""}>${esc(entry.name)}</option>`).join("")}`;
+  }
+  const groups = INSURANCE_TYPES.filter(Boolean).map((type) => {
+    const groupEntries = entries.filter((entry) => entry.insuranceType === type);
+    return groupEntries.length ? `<optgroup label="${esc(INSURANCE_TYPE_LABELS[type])}">${groupEntries.map((entry) => `<option value="${esc(entry.name)}" ${entry.name === selectedName ? "selected" : ""}>${esc(entry.name)}</option>`).join("")}</optgroup>` : "";
+  }).join("");
+  return `<option value="">${esc(placeholder)}</option>${groups}`;
+}
+
+function namedPayerField(id, insuranceType, payerName) {
+  return `<div class="field"><label>Named payer directory</label><select id="${id}DirectoryChoice">${namedPayerOptions(insuranceType, payerName)}</select><div class="coverage-help">Choose the verified payer to copy its exact name and classification. Keep the product-specific name in “Plan / program name.”</div></div>`;
+}
+
+function payerField(id, value = "", required = false) {
+  const listId = `${id}Directory`;
+  const options = PAYER_DIRECTORY_OPTIONS.map((option) => `<option value="${esc(option.name)}" label="${esc(INSURANCE_TYPE_LABELS[option.insuranceType] || "Classification required")}"></option>`).join("");
+  return `<div class="field"><label>${required ? "Actual primary insurance / payer name *" : "Insurance / payer name"}</label><input id="${id}" type="text" value="${esc(value)}" list="${listId}" autocomplete="off" ${required ? 'required aria-required="true"' : ""}><datalist id="${listId}">${options}</datalist><div class="coverage-help" id="${id}DirectoryStatus">${esc(payerDirectoryStatus(value))}</div></div>`;
+}
+
+function wireInsuranceDirectory(prefix) {
+  for (const order of COVERAGE_ORDERS) {
+    const key = order[0].toUpperCase() + order.slice(1);
+    const payer = $(`${prefix}${key}Payer`);
+    const type = $(`${prefix}${key}Type`);
+    const status = $(`${prefix}${key}PayerDirectoryStatus`);
+    const choice = $(`${prefix}${key}PayerDirectoryChoice`);
+    if (!payer || !type || !status || !choice) continue;
+    const syncPayer = () => {
+      const entry = payerDirectoryEntry(payer.value);
+      if (entry?.insuranceType) type.value = entry.insuranceType;
+      else if (entry && !entry.insuranceType) type.value = "";
+      status.textContent = payerDirectoryStatus(payer.value);
+      choice.innerHTML = namedPayerOptions(type.value, payer.value);
+    };
+    payer.addEventListener("input", syncPayer);
+    type.addEventListener("change", () => {
+      choice.innerHTML = namedPayerOptions(type.value, payer.value);
+      status.textContent = payerDirectoryStatus(payer.value);
+    });
+    choice.addEventListener("change", () => {
+      if (!choice.value) return;
+      payer.value = choice.value;
+      syncPayer();
+    });
+  }
+}
+
+function coverageCard(patient, prefix, order) {
+  const coverage = coverageSlotsForPatient(patient)[order];
+  const title = ({ primary: "Primary insurance", secondary: "Secondary insurance", other: "Additional / other insurance" })[order];
+  const key = order[0].toUpperCase() + order.slice(1);
+  const mspField = order === "secondary"
+    ? `${labeledSelect(`${prefix}${key}MspReason`, "Medicare-secondary reason", coverage.medicareSecondaryReason, MSP_REASONS, MSP_REASON_LABELS)}<div class="coverage-help">Complete this only when Original Medicare or Medicare Advantage is secondary. Leave it “Not yet verified” rather than guessing.</div>`
+    : "";
+  return `<section class="coverage-card" data-coverage-order="${order}"><div class="coverage-card-head"><div><b>${esc(title)}</b><span>${esc(order)}</span></div></div><div class="coverage-grid">${labeledSelect(`${prefix}${key}Type`, "Insurance classification", coverage.insuranceType, INSURANCE_TYPES, INSURANCE_TYPE_LABELS)}${namedPayerField(`${prefix}${key}Payer`, coverage.insuranceType, coverage.payerName)}${payerField(`${prefix}${key}Payer`, coverage.payerName, order === "primary")}${field(`${prefix}${key}Plan`, "Plan / program name", coverage.planName)}${field(`${prefix}${key}Member`, "Member / policy ID", coverage.memberId)}${field(`${prefix}${key}Group`, "Group number", coverage.groupNumber)}${field(`${prefix}${key}PayerId`, "Electronic payer ID", coverage.payerId)}${field(`${prefix}${key}From`, "Effective from", coverage.effectiveFrom, "date")}${field(`${prefix}${key}To`, "Effective to", coverage.effectiveTo, "date")}${labeledSelect(`${prefix}${key}Coverage`, "Coverage status", coverage.coverageStatus, COVERAGE_STATUSES, {})}${mspField}</div></section>`;
+}
+
+function insuranceFields(patient, prefix) {
+  const flags = insuranceReviewFlags(patient);
+  const flagMarkup = flags.length
+    ? `<div class="insurance-review"><b>Insurance review needed</b><ul>${flags.map((flag) => `<li>${esc(flag)}</li>`).join("")}</ul></div>`
+    : `<div class="insurance-review complete"><b>Insurance structure complete</b><div>No structural insurance gaps are detected. Eligibility still requires payer verification.</div></div>`;
+  return `<section class="insurance-section"><div class="insurance-title"><div><h4>Insurance coverage</h4><p>The primary coverage must show the actual insurance or payer name. Store its classification separately; “Commercial,” “Medicaid / MCO,” or “Medicare Advantage” is not the payer name. Use the visible named-payer directory to choose the MCO or Medicare Advantage carrier, then retain the specific product in “Plan / program name.” The MBI is never replaced by a Medicare Advantage plan member ID.</p></div></div><div class="mbi-row">${field(`${prefix}MedicareMbi`, "Medicare Beneficiary Identifier (MBI)", medicareMbiForPatient(patient))}<div class="coverage-help">Enter the patient’s 11-character MBI whenever Medicare is primary or secondary. Leave blank until verified.</div></div>${flagMarkup}<div class="coverage-cards">${COVERAGE_ORDERS.map((order) => coverageCard(patient, prefix, order)).join("")}</div></section>`;
+}
+
 function patientFields(patient = {}, prefix = "d", includeId = false) {
   return [
     includeId ? field(`${prefix}Id`, "BHW Patient ID", patient.bhwPatientId || "") : "",
@@ -46,9 +165,7 @@ function patientFields(patient = {}, prefix = "d", includeId = false) {
     field(`${prefix}Phone`, "Primary phone", patient.phone || "", "tel"),
     field(`${prefix}Email`, "Email", patient.email || "", "email"),
     field(`${prefix}Status`, "Patient status", patient.patientStatus || "active", "select", STATUS_OPTIONS),
-    field(`${prefix}Payer`, "Primary payer", patient.primaryPayer || PAYERS[0], "select", PAYERS),
-    field(`${prefix}Member`, "Member ID", patient.memberId || ""),
-    field(`${prefix}Coverage`, "Coverage status", patient.coverageStatus || "unknown", "select", COVERAGE_OPTIONS),
+    insuranceFields(patient, prefix),
     field(`${prefix}Referral`, "Referral source", patient.referralSource || ""),
     field(`${prefix}Staff`, "Responsible staff", patient.responsibleStaff || "Operations Manager"),
     field(`${prefix}PcpStaffId`, "Main PCP CrewHQ staff ID", patient.primaryCareProvider?.crewStaffId || ""),
@@ -59,7 +176,28 @@ function patientFields(patient = {}, prefix = "d", includeId = false) {
   ].join("");
 }
 
+function readCoverage(prefix) {
+  const slots = Object.fromEntries(COVERAGE_ORDERS.map((order) => {
+    const key = order[0].toUpperCase() + order.slice(1);
+    return [order, {
+      coverageOrder: order,
+      insuranceType: $(`${prefix}${key}Type`).value,
+      payerName: $(`${prefix}${key}Payer`).value.trim(),
+      planName: $(`${prefix}${key}Plan`).value.trim(),
+      memberId: $(`${prefix}${key}Member`).value.trim(),
+      groupNumber: $(`${prefix}${key}Group`).value.trim(),
+      payerId: $(`${prefix}${key}PayerId`).value.trim(),
+      effectiveFrom: $(`${prefix}${key}From`).value,
+      effectiveTo: $(`${prefix}${key}To`).value,
+      coverageStatus: $(`${prefix}${key}Coverage`).value,
+      medicareSecondaryReason: order === "secondary" ? $(`${prefix}${key}MspReason`).value : "",
+    }];
+  }));
+  return insuranceStorageForPatient({}, slots, $(`${prefix}MedicareMbi`).value);
+}
+
 function readPatient(prefix, bhwPatientId = "") {
+  const insurance = readCoverage(prefix);
   return {
     bhwPatientId: (bhwPatientId || $(`${prefix}Id`)?.value || "").trim().toUpperCase(),
     legalFirstName: $(`${prefix}First`).value.trim(),
@@ -70,9 +208,7 @@ function readPatient(prefix, bhwPatientId = "") {
     phone: $(`${prefix}Phone`).value.trim(),
     email: $(`${prefix}Email`).value.trim(),
     patientStatus: $(`${prefix}Status`).value,
-    primaryPayer: $(`${prefix}Payer`).value,
-    memberId: $(`${prefix}Member`).value.trim(),
-    coverageStatus: $(`${prefix}Coverage`).value,
+    ...insurance,
     referralSource: $(`${prefix}Referral`).value.trim(),
     responsibleStaff: $(`${prefix}Staff`).value.trim(),
     primaryCareProvider: {
@@ -89,6 +225,8 @@ function readPatient(prefix, bhwPatientId = "") {
 function validationMessage(patient) {
   if (!/^BHW\d{4}$/.test(patient.bhwPatientId) || patient.bhwPatientId === "BHW0000") return "Enter the verified BHW Patient ID in the BHW#### format.";
   if (!patient.legalFirstName || !patient.legalLastName || !patient.dateOfBirth) return "Legal first name, legal last name, and date of birth are required.";
+  const insuranceError = insuranceValidationMessage(patient);
+  if (insuranceError) return insuranceError;
   return "";
 }
 
@@ -257,8 +395,9 @@ function visiblePatients() {
   const query = $("search").value.trim().toLowerCase();
   const filter = $("statusFilter").value;
   return patients.filter((patient) => {
-    const matchesStatus = filter === "all" || (filter === "needs-review" ? patient.coverageStatus === "needs-review" : patient.patientStatus === filter);
-    const haystack = [patient.bhwPatientId, patient.legalFirstName, patient.legalLastName, patient.nameSuffix, patient.preferredName, patient.phone, patient.primaryPayer, patient.memberId].join(" ").toLowerCase();
+    const coverageRecords = Object.values(coverageSlotsForPatient(patient)).filter(hasCoverageIdentity);
+    const matchesStatus = filter === "all" || (filter === "needs-review" ? patient.coverageStatus === "needs-review" || insuranceReviewFlags(patient).length > 0 : patient.patientStatus === filter);
+    const haystack = [patient.bhwPatientId, patient.legalFirstName, patient.legalLastName, patient.nameSuffix, patient.preferredName, patient.phone, ...coverageRecords.flatMap((coverage) => [coverage.payerName, coverage.planName, coverage.memberId])].join(" ").toLowerCase();
     return matchesStatus && (!query || haystack.includes(query));
   });
 }
@@ -266,7 +405,7 @@ function visiblePatients() {
 function renderKpis() {
   const active = patients.filter((patient) => patient.patientStatus === "active").length;
   const prospective = patients.filter((patient) => patient.patientStatus === "prospective").length;
-  const coverageReview = patients.filter((patient) => ["pending", "needs-review", "unknown"].includes(patient.coverageStatus)).length;
+  const coverageReview = patients.filter((patient) => ["pending", "needs-review", "unknown"].includes(patient.coverageStatus) || insuranceReviewFlags(patient).length > 0).length;
   $("kpis").innerHTML = [[patients.length, "Master records"], [active, "Active patients"], [prospective, "Prospective / referrals"], [coverageReview, "Coverage follow-up"]]
     .map(([value, label]) => `<div class="kpi"><div class="v">${value}</div><div class="l">${label}</div></div>`).join("");
 }
@@ -275,8 +414,16 @@ function renderRows() {
   const visible = visiblePatients();
   $("patientRows").innerHTML = visible.length ? visible.map((patient) => {
     const name = `${patient.legalLastName}${patient.nameSuffix ? ` ${patient.nameSuffix}` : ""}, ${patient.preferredName || patient.legalFirstName}`;
-    const coverageClass = patient.coverageStatus === "verified" ? "complete" : "warning";
-    return `<tr data-id="${esc(patient.bhwPatientId)}" class="${patient.bhwPatientId === selectedId ? "on" : ""}"><td><b>${esc(patient.bhwPatientId)}</b></td><td>${esc(name)}</td><td>${esc(patient.dateOfBirth)}</td><td>${esc(patient.phone || "—")}</td><td>${esc(patient.primaryPayer || "—")}<br><span class="badge ${coverageClass}">${esc(patient.coverageStatus)}</span></td><td>${esc(patient.patientStatus)}</td></tr>`;
+    const slots = coverageSlotsForPatient(patient);
+    const reviewFlags = insuranceReviewFlags(patient);
+    const coverageClass = patient.coverageStatus === "verified" && !reviewFlags.length ? "complete" : "warning";
+    const secondary = hasCoverageIdentity(slots.secondary) ? (slots.secondary.payerName || slots.secondary.planName || INSURANCE_TYPE_LABELS[slots.secondary.insuranceType]) : "";
+    const mbiStatus = Object.values(slots).some((coverage) => ["original-medicare", "medicare-advantage"].includes(coverage.insuranceType))
+      ? (medicareMbiForPatient(patient) ? "MBI on file" : "MBI missing")
+      : "";
+    const primaryName = slots.primary.payerName || patient.primaryPayer || "Insurance name missing";
+    const primaryClass = INSURANCE_TYPE_LABELS[slots.primary.insuranceType] || "Not classified";
+    return `<tr data-id="${esc(patient.bhwPatientId)}" class="${patient.bhwPatientId === selectedId ? "on" : ""}"><td><b>${esc(patient.bhwPatientId)}</b></td><td>${esc(name)}</td><td>${esc(patient.dateOfBirth)}</td><td>${esc(patient.phone || "—")}</td><td>${esc(primaryName)}<div class="coverage-summary">Classification: ${esc(primaryClass)}</div>${secondary ? `<div class="coverage-summary">Secondary: ${esc(secondary)}</div>` : ""}${mbiStatus ? `<div class="coverage-summary">${esc(mbiStatus)}</div>` : ""}<span class="badge ${coverageClass}">${esc(reviewFlags.length ? "needs review" : patient.coverageStatus)}</span></td><td>${esc(patient.patientStatus)}</td></tr>`;
   }).join("") : '<tr><td colspan="6"><div class="empty">No patient records match this view.</div></td></tr>';
   document.querySelectorAll("tr[data-id]").forEach((row) => { row.onclick = () => { selectedId = row.dataset.id; render(); }; });
 }
@@ -291,7 +438,10 @@ function renderDetail() {
     control.addEventListener("input", () => { registryFormDirty = true; });
     control.addEventListener("change", () => { registryFormDirty = true; });
   });
+  wireInsuranceDirectory("d");
   $("savePatient").onclick = async () => {
+    const existingInsuranceError = insuranceEditorLimitMessage(patient);
+    if (existingInsuranceError) { showToast(existingInsuranceError); return; }
     const next = readPatient("d", patient.bhwPatientId);
     const error = validationMessage(next);
     if (error) { showToast(error); return; }
@@ -299,12 +449,17 @@ function renderDetail() {
     button.disabled = true;
     button.textContent = "Saving…";
     try {
-      await client.savePatient(next);
+      await client.savePatient(next, patient.updatedAt || "");
       await refreshPatients({ force: true, selectId: patient.bhwPatientId });
       const current = patients.find((item) => item.bhwPatientId === patient.bhwPatientId);
       const fields = ["legalFirstName", "legalLastName", "nameSuffix", "preferredName", "dateOfBirth", "phone", "email", "patientStatus", "primaryPayer", "memberId", "coverageStatus", "referralSource", "responsibleStaff"];
       if (!current || fields.some((key) => String(current[key] || "") !== String(next[key] || ""))) {
         throw new Error("The patient update could not be verified in the current Cloud registry.");
+      }
+      const savedInsurance = insuranceStorageForPatient(current);
+      const intendedInsurance = insuranceStorageForPatient(next);
+      if (savedInsurance.medicareMbi !== intendedInsurance.medicareMbi || JSON.stringify(savedInsurance.coverageRecords) !== JSON.stringify(intendedInsurance.coverageRecords)) {
+        throw new Error("The primary, secondary, additional, or Medicare insurance details were not retained by the current Cloud registry.");
       }
       const providerFields = ["crewStaffId", "clinicalStaffProfileId", "name", "credential"];
       if (providerFields.some((key) => String(current.primaryCareProvider?.[key] || "") !== String(next.primaryCareProvider?.[key] || ""))) {
@@ -332,6 +487,138 @@ function renderDetail() {
 
 function render() { renderKpis(); renderRows(); renderDetail(); }
 
+function clearInsuranceImport() {
+  insuranceImportPlan = null;
+  $("insuranceReportFiles").value = "";
+  $("insuranceFileSummary").textContent = "Files stay in this browser until an approved Registry update is applied.";
+  $("insuranceImportBadge").className = "badge warning";
+  $("insuranceImportBadge").textContent = "Dry run required";
+  $("previewInsuranceImport").disabled = true;
+  $("clearInsuranceImport").disabled = true;
+  $("insuranceImportReview").innerHTML = '<div class="notice"><b>No Registry changes have been prepared.</b><br>Only exact BHW#### matches with a specific, classified payer can be applied. Legacy IDs, ambiguous payers, generic Medicaid, conflicting rows, and unverified Medicare information remain in review.</div>';
+}
+
+function syncInsuranceFileControls() {
+  const files = [...$("insuranceReportFiles").files];
+  const orders = files.map((file) => coverageOrderFromFilename(file.name));
+  const complete = files.length === 3 && COVERAGE_ORDERS.every((order) => orders.filter((item) => item === order).length === 1);
+  $("insuranceFileSummary").textContent = files.length ? files.map((file) => file.name).join(" · ") : "Files stay in this browser until an approved Registry update is applied.";
+  $("previewInsuranceImport").disabled = !complete || !registryLoaded;
+  $("clearInsuranceImport").disabled = !files.length;
+  $("insuranceImportBadge").className = "badge warning";
+  $("insuranceImportBadge").textContent = complete && !registryLoaded ? "Refreshing current Registry" : complete ? "Ready for dry run" : "Select all three reports";
+}
+
+function renderInsuranceImportPlan(plan) {
+  const { summary } = plan;
+  const previewRows = plan.updates.slice(0, 30).map((update) => `<tr><td><b>${esc(update.bhwPatientId)}</b></td><td>${esc(update.coverageOrders.join(", "))}</td><td>${esc(update.payerNames.join(" · "))}</td><td>${update.importsMbi ? "Validated MBI" : "No new MBI"}</td></tr>`).join("");
+  const reviewRows = plan.review.slice(0, 12).map((row) => `<li>${esc(row.sourcePatientId || `Source row ${row.sourceRow || ""}`)} · ${esc(row.reason)}</li>`).join("");
+  $("insuranceImportBadge").className = `badge ${summary.updatePatients ? "warning" : "complete"}`;
+  $("insuranceImportBadge").textContent = summary.updatePatients ? "Dry run ready" : "No changes found";
+  $("insuranceImportReview").innerHTML = `
+    <div class="notice safe-note"><b>Protected dry run complete.</b><br>No Registry record has changed. The apply step updates insurance fields only for exact BHW#### matches and reads each save response back before counting it complete.</div>
+    <div class="import-kpis">
+      <div><b>${summary.updatePatients}</b><span>Patients to update</span></div>
+      <div><b>${summary.updateCoverageRows}</b><span>Coverage rows</span></div>
+      <div><b>${summary.reviewRows}</b><span>Rows kept in review</span></div>
+      <div><b>${summary.importedMbiPatients}</b><span>Validated MBIs</span></div>
+    </div>
+    ${previewRows ? `<div class="import-preview"><table><thead><tr><th>BHW ID</th><th>Coverage</th><th>Payer</th><th>Medicare</th></tr></thead><tbody>${previewRows}</tbody></table></div><div class="privacy">Showing the first ${Math.min(30, summary.updatePatients)} of ${summary.updatePatients} planned patient updates.</div>` : ""}
+    ${reviewRows ? `<details style="margin-top:10px"><summary><b>Why some rows remain in review</b></summary><ul class="privacy" style="font-size:10px">${reviewRows}</ul></details>` : ""}
+    ${summary.updatePatients ? `<label class="attestation"><input type="checkbox" id="insuranceImportAttest"><span>I reviewed this dry run and authorize updates only for the exact-matched insurance records shown here. Unresolved rows must remain unchanged.</span></label><div class="import-progress" aria-label="Insurance import progress"><span id="insuranceImportProgress"></span></div><div class="actions"><button class="btn primary" id="applyInsuranceImport" disabled>Apply ${summary.updatePatients} exact-matched updates</button><span class="privacy" id="insuranceImportApplyStatus" style="margin:0">Nothing has been written.</span></div>` : ""}`;
+  if ($("insuranceImportAttest")) {
+    $("insuranceImportAttest").onchange = () => { $("applyInsuranceImport").disabled = !$("insuranceImportAttest").checked || insuranceImportRunning; };
+    $("applyInsuranceImport").onclick = () => { void applyInsuranceImport(); };
+  }
+}
+
+async function previewInsuranceImport() {
+  if (!registryLoaded) {
+    showToast("Wait for the current BHW Cloud Registry to finish loading before running the insurance dry run.");
+    return;
+  }
+  const files = [...$("insuranceReportFiles").files];
+  const byOrder = new Map(files.map((file) => [coverageOrderFromFilename(file.name), file]));
+  if (COVERAGE_ORDERS.some((order) => !byOrder.has(order))) {
+    showToast("Select one Primary, one Secondary, and one Other Patient Insurance Report CSV.");
+    return;
+  }
+  const button = $("previewInsuranceImport");
+  button.disabled = true;
+  button.textContent = "Preparing dry run…";
+  try {
+    const reportRows = (await Promise.all(COVERAGE_ORDERS.map(async (order) => parseInsuranceReport(await byOrder.get(order).text(), order)))).flat();
+    insuranceImportPlan = prepareInsuranceUpdates(reportRows, patients);
+    renderInsuranceImportPlan(insuranceImportPlan);
+  } catch (error) {
+    insuranceImportPlan = null;
+    $("insuranceImportReview").innerHTML = `<div class="notice"><b>The insurance dry run could not be prepared.</b><br>${esc(error.message || "Check the selected CSV files.")}</div>`;
+    showToast(error.message || "The insurance reports could not be prepared.");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Run insurance dry run";
+  }
+}
+
+async function applyInsuranceImport() {
+  if (!insuranceImportPlan?.updates.length || insuranceImportRunning || !$("insuranceImportAttest")?.checked) return;
+  if (registryFormDirty) {
+    showToast("Save or discard the open patient changes before applying the insurance reconciliation.");
+    return;
+  }
+  insuranceImportRunning = true;
+  const button = $("applyInsuranceImport");
+  const status = $("insuranceImportApplyStatus");
+  const progress = $("insuranceImportProgress");
+  button.disabled = true;
+  button.textContent = "Applying verified updates…";
+  const failures = [];
+  let cursor = 0;
+  let completed = 0;
+  const updates = insuranceImportPlan.updates;
+  const worker = async () => {
+    while (cursor < updates.length) {
+      const update = updates[cursor];
+      cursor += 1;
+      try {
+        const result = await client.savePatient(update.patient, update.expectedUpdatedAt);
+        if (!result.patient || !insuranceUpdateMatches(result.patient, update.patient)) throw new Error("Cloud read-back did not match the intended insurance update");
+      } catch (error) {
+        failures.push({ bhwPatientId: update.bhwPatientId, message: error.message || "Save failed" });
+      }
+      completed += 1;
+      progress.style.width = `${Math.round((completed / updates.length) * 100)}%`;
+      status.textContent = `${completed} of ${updates.length} processed${failures.length ? ` · ${failures.length} need retry` : ""}`;
+    }
+  };
+  try {
+    await Promise.all(Array.from({ length: Math.min(4, updates.length) }, worker));
+    await refreshPatients({ force: true, announce: false });
+    const currentIndex = new Map(patients.map((patient) => [patient.bhwPatientId, patient]));
+    const unverified = updates.filter((update) => !insuranceUpdateMatches(currentIndex.get(update.bhwPatientId) || {}, update.patient));
+    for (const update of unverified) {
+      if (!failures.some((failure) => failure.bhwPatientId === update.bhwPatientId)) failures.push({ bhwPatientId: update.bhwPatientId, message: "Final Registry read-back did not match" });
+    }
+    if (failures.length) {
+      insuranceImportPlan = { ...insuranceImportPlan, updates: updates.filter((update) => failures.some((failure) => failure.bhwPatientId === update.bhwPatientId)) };
+      $("insuranceImportBadge").className = "badge warning";
+      $("insuranceImportBadge").textContent = "Partial update";
+      status.textContent = `${updates.length - failures.length} verified in BHW Cloud · ${failures.length} remain for retry`;
+      button.disabled = false;
+      button.textContent = `Retry ${failures.length} unresolved updates`;
+      showToast(`${updates.length - failures.length} insurance records were verified in BHW Cloud. ${failures.length} remain unchanged or need retry.`);
+    } else {
+      $("insuranceImportBadge").className = "badge complete";
+      $("insuranceImportBadge").textContent = "Cloud update verified";
+      status.textContent = `${updates.length} patient insurance updates verified in BHW Cloud at ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}.`;
+      button.textContent = "Updates complete";
+      showToast(`${updates.length} patient insurance records updated and verified in BHW Cloud.`);
+    }
+  } finally {
+    insuranceImportRunning = false;
+  }
+}
+
 async function refreshPatients({ force = false, selectId = selectedId, announce = false } = {}) {
   if (!client) return false;
   if (registryFormDirty && !force) {
@@ -344,20 +631,26 @@ async function refreshPatients({ force = false, selectId = selectedId, announce 
     return true;
   }
   registryRefreshPromise = (async () => {
+    registryLoaded = false;
+    syncInsuranceFileControls();
     const button = $("refreshPatients");
     if (button) { button.disabled = true; button.textContent = "Refreshing…"; }
     try {
       const current = await client.listPatients();
       patients = current;
+      registryLoaded = true;
       selectedId = current.some((patient) => patient.bhwPatientId === selectId) ? selectId : (current[0]?.bhwPatientId || "");
       registryFormDirty = false;
       $("cloudStatus").className = "badge complete";
       $("cloudStatus").textContent = "Google Cloud synced";
       $("lastRegistrySync").textContent = `Current as of ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
       render();
+      syncInsuranceFileControls();
       if (announce) showToast(`Patient Registry refreshed from BHW Cloud · ${current.length} current records.`);
       return true;
     } catch (error) {
+      registryLoaded = false;
+      syncInsuranceFileControls();
       $("cloudStatus").className = "badge warning";
       $("cloudStatus").textContent = "Refresh interrupted";
       if (announce) showToast(error.message || "The Patient Registry could not refresh.");
@@ -373,6 +666,12 @@ async function refreshPatients({ force = false, selectId = selectedId, announce 
 $("search").oninput = renderRows;
 $("statusFilter").onchange = renderRows;
 $("refreshPatients").onclick = () => { void refreshPatients({ announce: true }); };
+$("insuranceReportFiles").onchange = () => {
+  insuranceImportPlan = null;
+  syncInsuranceFileControls();
+};
+$("previewInsuranceImport").onclick = () => { void previewInsuranceImport(); };
+$("clearInsuranceImport").onclick = clearInsuranceImport;
 $("theme").onclick = () => {
   const dark = document.documentElement.dataset.theme === "dark";
   document.documentElement.dataset.theme = dark ? "light" : "dark";
@@ -380,7 +679,7 @@ $("theme").onclick = () => {
 };
 if (localStorage.getItem(THEME_KEY) === "dark") document.documentElement.dataset.theme = "dark";
 
-$("newPatient").onclick = () => { $("newPatientFields").innerHTML = patientFields({}, "n", true); $("modal").classList.add("on"); $("nId").focus(); };
+$("newPatient").onclick = () => { $("newPatientFields").innerHTML = patientFields({}, "n", true); wireInsuranceDirectory("n"); $("modal").classList.add("on"); $("nId").focus(); };
 $("cancel").onclick = () => $("modal").classList.remove("on");
 $("create").onclick = async () => {
   const patient = readPatient("n");

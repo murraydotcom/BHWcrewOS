@@ -44,9 +44,10 @@ test("no fallback roster is produced when the Cloud Registry is unavailable", ()
 test("nested Registry MBI status reaches every CrewHQ chart through the shared directory", () => {
   const result = buildPatientDirectory([cloud({
     memberId: "",
-    coverageRecords: [{ payer: "CMS Medicare", medicareMbi: "1EG4-TE5-MK73" }],
+    coverageRecords: [{ coverageOrder: "secondary", insuranceType: "original-medicare", payer: "CMS Medicare", medicareMbi: "1EG4-TE5-MK73" }],
   })]);
   assert.equal(result.patients[0].hasMbi, true);
+  assert.equal(result.patients[0].medicareCoverageOrder, "secondary");
 });
 
 test("carrier-branded Medicare plans remain in the Medicare prevention queue", () => {
@@ -55,4 +56,30 @@ test("carrier-branded Medicare plans remain in the Medicare prevention queue", (
     cloud({ bhwPatientId: "BHW0002", primaryPayer: "Aetna Medicare Advantage" }),
   ]);
   assert.deepEqual(result.patients.map((patient) => patient.insurance), ["Medicare", "Medicare"]);
+});
+
+test("secondary Medicare and named Advantage plans reach the AWV queue without replacing the actual payer", () => {
+  for (const [primary, secondary, expected] of [
+    [{ insuranceType: "commercial", payerName: "CareFirst BCBS" }, { insuranceType: "original-medicare", payerName: "Medicare" }, "Medicare"],
+    [{ insuranceType: "medicaid-mco", payerName: "Maryland Physicians Care" }, { insuranceType: "original-medicare", payerName: "Medicare" }, "Medicare + Medicaid"],
+    [{ insuranceType: "medicare-advantage", payerName: "Alterwood Advantage" }, null, "Medicare"],
+    [{ insuranceType: "medicare-advantage", payerName: "CIGNA HealthSpring" }, null, "Medicare"],
+  ]) {
+    const coverageRecords = [{ ...primary, coverageOrder: "primary", memberId: "PRIMARY-1" }];
+    if (secondary) coverageRecords.push({ ...secondary, coverageOrder: "secondary", medicareMbi: "1EG4TE5MK73" });
+    const result = buildPatientDirectory([cloud({ primaryPayer: primary.payerName, coverageRecords })]).patients[0];
+    assert.equal(result.insurance, expected);
+    assert.equal(result.insuranceLabel, primary.payerName);
+    assert.equal(result.medicareCoverageOrder, secondary ? "secondary" : "primary");
+  }
+});
+
+test("a supplement alone does not put a patient in the Medicare AWV queue", () => {
+  const [patient] = buildPatientDirectory([cloud({
+    primaryPayer: "Medicare Supplement", memberId: "1EG4TE5MK73",
+    coverageRecords: [{ coverageOrder: "primary", insuranceType: "medicare-supplement", payerName: "Medicare Supplement", memberId: "1EG4TE5MK73" }],
+  })]).patients;
+  assert.equal(patient.hasMbi, false);
+  assert.equal(patient.medicareCoverageOrder, "");
+  assert.notEqual(patient.insurance, "Medicare");
 });

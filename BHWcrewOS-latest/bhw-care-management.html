@@ -311,8 +311,9 @@ function render(){
     var gaps=e.gaps||[];
     var rule=programRule(e.program);
     var readiness=e.billingReadiness||{state:"incomplete",label:(gaps.length+" missing")};
+    var mbiStatus=e.medicareCoverageOrder ? " · "+(e.hasMbi?"MBI on file":"MBI missing")+" · Medicare "+e.medicareCoverageOrder : "";
     return '<tr data-id="'+esc(e.id)+'" class="readiness-'+esc(readiness.state)+'">'+
-      '<td class="pt">'+esc(nameOf(e))+'<small>'+esc(e.ctlNo||"")+(e.coordinator?" · "+esc(e.coordinator):"")+'</small></td>'+
+      '<td class="pt">'+esc(nameOf(e))+'<small>'+esc(e.ctlNo||"")+(e.coordinator?" · "+esc(e.coordinator):"")+esc(mbiStatus)+'</small></td>'+
       '<td><span class="badge">'+esc(e.program||"")+'</span><div class="readiness-pill '+esc(readiness.state)+'">'+esc(readiness.label)+'</div></td>'+
       '<td>'+basisMarkup(e.program)+'</td>'+
       '<td class="icd">'+esc(e.icd||"—")+'</td>'+
