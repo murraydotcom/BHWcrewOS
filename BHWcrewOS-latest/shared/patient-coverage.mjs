@@ -59,16 +59,16 @@ export const PAYER_DIRECTORY = [
   { name: "Aetna Medicare Advantage", insuranceType: "medicare-advantage" },
   { name: "Humana Medicare Advantage", insuranceType: "medicare-advantage" },
 
-  { name: "Maryland Medicaid", insuranceType: "medicaid-mco", aliases: ["Medicaid of Maryland"] },
+  { name: "Maryland Medicaid", insuranceType: "medicaid-mco", aliases: ["Medicaid of Maryland"], generic: true },
   { name: "Medicaid", insuranceType: "medicaid-mco", generic: true },
   { name: "Aetna Better Health of Maryland", insuranceType: "medicaid-mco", aliases: ["Aetna Better health"] },
-  { name: "CareFirst BlueCross BlueShield Community Health Plan of Maryland", insuranceType: "medicaid-mco", aliases: ["CareFirst Community Health Plan Maryland", "CareFirst Community", "Blue Choice Medicaid", "Carefirst community health", "Carefirst community health plan", "Carefirst Community Partner", "Carefirst Community partners", "Carefirst Community Plan"] },
+  { name: "CareFirst Community Health", insuranceType: "medicaid-mco", aliases: ["CareFirst BlueCross BlueShield Community Health Plan of Maryland", "CareFirst Community Health Plan Maryland", "CareFirst Community", "Blue Choice Medicaid", "Carefirst community health plan", "Carefirst Community Partner", "Carefirst Community partners", "Carefirst Community Plan"] },
   { name: "Jai Medical Systems, Inc.", insuranceType: "medicaid-mco", aliases: ["JAI Medical Systems", "Jai", "JAI MEDICAL"] },
   { name: "Kaiser Permanente of the Mid-Atlantic States", insuranceType: "medicaid-mco", aliases: ["Kaiser Permanente Maryland HealthChoice"] },
   { name: "Maryland Physicians Care", insuranceType: "medicaid-mco", aliases: ["MAryland Phsycians care", "maryland Phycisians Care", "Maryland Physcians care", "Maryland Physiocians Care", "Marylnd Physicians Care", "Md physicians care"] },
   { name: "MedStar Family Choice, Inc.", insuranceType: "medicaid-mco", aliases: ["MedStar Family Choice", "Medstar Family Choice Maryland Healthchoice"] },
   { name: "Priority Partners", insuranceType: "medicaid-mco", aliases: ["Priority Partenrs"] },
-  { name: "UnitedHealthcare Community Plan of Maryland", insuranceType: "medicaid-mco", aliases: ["UnitedHealthcare Community Plan", "United Health Care Community", "United Health Care Community Plan", "United Healthcare community plan", "UnitedHealthcare Community Plan / CA, DC,  DE, FL, GA, HI, IA, KY, LA, MA, MD, MS, NC, NE, NM, NY, OH, OK, PA, RI, TX, VA, WA, WI"] },
+  { name: "UHC Community", insuranceType: "medicaid-mco", aliases: ["UnitedHealthcare Community Plan of Maryland", "UnitedHealthcare Community Plan", "UHC Community Plan", "United Health Care Community", "United Health Care Community Plan", "United Healthcare community plan", "UnitedHealthcare Community Plan / CA, DC,  DE, FL, GA, HI, IA, KY, LA, MA, MD, MS, NC, NE, NM, NY, OH, OK, PA, RI, TX, VA, WA, WI"] },
   { name: "Wellpoint Maryland", insuranceType: "medicaid-mco", aliases: ["Wellpoint", "Wellpoint MD Inc", "We’ll point", "Amerigroup - Maryland and District of Columbia", "Amerigroup MD"] },
   { name: "Amerigroup of Iowa", insuranceType: "medicaid-mco" },
 
@@ -188,6 +188,14 @@ export function normalizeCoverageRecord(record = {}, forcedOrder = "") {
   const insuranceType = statedInsuranceType && INSURANCE_TYPES.includes(statedInsuranceType)
     ? statedInsuranceType
     : inferredType;
+  const payerEntry = payerDirectoryEntry(payerName);
+  const normalizedPayerName = insuranceType === "medicaid-mco" && payerEntry?.name === "UnitedHealthcare"
+    ? "UHC Community"
+    : insuranceType === "medicaid-mco" && payerEntry?.name === "Riverside Health, Inc"
+      ? "CareFirst Community Health"
+    : insuranceType === "medicaid-mco" && payerEntry?.insuranceType === "medicaid-mco"
+      ? payerEntry.name
+      : payerName;
   const coverageStatus = COVERAGE_STATUSES.includes(clean(record.coverageStatus))
     ? clean(record.coverageStatus)
     : "unknown";
@@ -197,7 +205,7 @@ export function normalizeCoverageRecord(record = {}, forcedOrder = "") {
   return {
     coverageOrder: normalizedOrder,
     insuranceType,
-    payerName,
+    payerName: normalizedPayerName,
     planName,
     memberId: clean(record.memberId || record.member),
     groupNumber: clean(record.groupNumber),

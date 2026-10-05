@@ -30,16 +30,18 @@ test("payer directory keeps exact insurance names tied to supported classificati
   assert.equal(payerDirectoryEntry("Marylnd Physicians Care")?.insuranceType, "medicaid-mco");
   assert.equal(payerDirectoryEntry("CareFirst BCBS - DC, National Capital Area")?.insuranceType, "commercial");
   assert.equal(payerDirectoryEntry("UnitedHealthcare Community Plan / CA, DC,  DE, FL, GA, HI, IA, KY, LA, MA, MD, MS, NC, NE, NM, NY, OH, OK, PA, RI, TX, VA, WA, WI")?.insuranceType, "medicaid-mco");
+  assert.equal(payerDirectoryEntry("UnitedHealthcare Community Plan")?.name, "UHC Community");
+  assert.equal(payerDirectoryEntry("Riverside Health, Inc")?.insuranceType, "");
 
   const marylandMcos = [
     "Aetna Better Health of Maryland",
-    "CareFirst BlueCross BlueShield Community Health Plan of Maryland",
+    "CareFirst Community Health",
     "Jai Medical Systems, Inc.",
     "Kaiser Permanente of the Mid-Atlantic States",
     "Maryland Physicians Care",
     "MedStar Family Choice, Inc.",
     "Priority Partners",
-    "UnitedHealthcare Community Plan of Maryland",
+    "UHC Community",
     "Wellpoint Maryland",
   ];
   for (const name of marylandMcos) assert.equal(payerDirectoryEntry(name)?.insuranceType, "medicaid-mco");
@@ -70,7 +72,17 @@ test("primary coverage requires an actual payer name and never substitutes a cla
 test("generic Medicaid remains a review item until the named MCO or payer is identified", () => {
   const flags = insuranceReviewFlags({ primaryPayer: "Medicaid", memberId: "MD-1", coverageStatus: "unknown" });
   assert.match(flags.join(" "), /generic Medicaid label/i);
+  assert.match(insuranceReviewFlags({ primaryPayer: "Medicaid of Maryland", memberId: "MD-2" }).join(" "), /generic Medicaid label/i);
   assert.doesNotMatch(insuranceReviewFlags({ primaryPayer: "Priority Partners", memberId: "PP-1" }).join(" "), /generic Medicaid label/i);
+});
+
+test("Medicaid MCO storage normalizes UnitedHealthcare and Riverside display names", () => {
+  const stored = insuranceStorageForPatient({}, {
+    primary: { insuranceType: "medicaid-mco", payerName: "UnitedHealthcare", memberId: "UHC-1" },
+    secondary: { insuranceType: "medicaid-mco", payerName: "Riverside Health, Inc", memberId: "CF-1" },
+  });
+  assert.equal(stored.coverageRecords[0].payerName, "UHC Community");
+  assert.equal(stored.coverageRecords[1].payerName, "CareFirst Community Health");
 });
 
 test("legacy primary payer and member ID remain a compatible primary coverage projection", () => {
