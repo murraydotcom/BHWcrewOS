@@ -15,6 +15,12 @@ import {
   medicareMbiForPatient,
   payerDirectoryEntry,
 } from "../shared/patient-coverage.mjs";
+import {
+  coverageOrderFromFilename,
+  insuranceUpdateMatches,
+  parseInsuranceReport,
+  prepareInsuranceUpdates,
+} from "./patient-insurance-import.mjs";
 
 const THEME_KEY = "bhw_provider_theme_v1";
 const PENDING_PATIENT_KEY = "bhw_pending_encounter_patient_v1";
@@ -33,6 +39,8 @@ let careToken = "";
 let careTokenExpiresAt = 0;
 let registryFormDirty = false;
 let registryRefreshPromise = null;
+let insuranceImportPlan = null;
+let insuranceImportRunning = false;
 
 function showToast(message) {
   $("toast").textContent = message;
@@ -475,6 +483,123 @@ function renderDetail() {
 
 function render() { renderKpis(); renderRows(); renderDetail(); }
 
+function clearInsuranceImport() {
+  insuranceImportPlan = null;
+  $("insuranceReportFiles").value = "";
+  $("insuranceFileSummary").textContent = "Files stay in this browser until an approved Registry update is applied.";
+  $("insuranceImportBadge").className = "badge warning";
+  $("insuranceImportBadge").textContent = "Dry run required";
+  $("previewInsuranceImport").disabled = true;
+  $("clearInsuranceImport").disabled = true;
+  $("insuranceImportReview").innerHTML = '<div class="notice"><b>No Registry changes have been prepared.</b><br>Only exact BHW#### matches with a specific, classified payer can be applied. Legacy IDs, ambiguous payers, generic Medicaid, conflicting rows, and unverified Medicare information remain in review.</div>';
+}
+
+function renderInsuranceImportPlan(plan) {
+  const { summary } = plan;
+  const previewRows = plan.updates.slice(0, 30).map((update) => `<tr><td><b>${esc(update.bhwPatientId)}</b></td><td>${esc(update.coverageOrders.join(", "))}</td><td>${esc(update.payerNames.join(" · "))}</td><td>${update.importsMbi ? "Validated MBI" : "No new MBI"}</td></tr>`).join("");
+  const reviewRows = plan.review.slice(0, 12).map((row) => `<li>${esc(row.sourcePatientId || `Source row ${row.sourceRow || ""}`)} · ${esc(row.reason)}</li>`).join("");
+  $("insuranceImportBadge").className = `badge ${summary.updatePatients ? "warning" : "complete"}`;
+  $("insuranceImportBadge").textContent = summary.updatePatients ? "Dry run ready" : "No changes found";
+  $("insuranceImportReview").innerHTML = `
+    <div class="notice safe-note"><b>Protected dry run complete.</b><br>No Registry record has changed. The apply step updates insurance fields only for exact BHW#### matches and reads each save response back before counting it complete.</div>
+    <div class="import-kpis">
+      <div><b>${summary.updatePatients}</b><span>Patients to update</span></div>
+      <div><b>${summary.updateCoverageRows}</b><span>Coverage rows</span></div>
+      <div><b>${summary.reviewRows}</b><span>Rows kept in review</span></div>
+      <div><b>${summary.importedMbiPatients}</b><span>Validated MBIs</span></div>
+    </div>
+    ${previewRows ? `<div class="import-preview"><table><thead><tr><th>BHW ID</th><th>Coverage</th><th>Payer</th><th>Medicare</th></tr></thead><tbody>${previewRows}</tbody></table></div><div class="privacy">Showing the first ${Math.min(30, summary.updatePatients)} of ${summary.updatePatients} planned patient updates.</div>` : ""}
+    ${reviewRows ? `<details style="margin-top:10px"><summary><b>Why some rows remain in review</b></summary><ul class="privacy" style="font-size:10px">${reviewRows}</ul></details>` : ""}
+    ${summary.updatePatients ? `<label class="attestation"><input type="checkbox" id="insuranceImportAttest"><span>I reviewed this dry run and authorize updates only for the exact-matched insurance records shown here. Unresolved rows must remain unchanged.</span></label><div class="import-progress" aria-label="Insurance import progress"><span id="insuranceImportProgress"></span></div><div class="actions"><button class="btn primary" id="applyInsuranceImport" disabled>Apply ${summary.updatePatients} exact-matched updates</button><span class="privacy" id="insuranceImportApplyStatus" style="margin:0">Nothing has been written.</span></div>` : ""}`;
+  if ($("insuranceImportAttest")) {
+    $("insuranceImportAttest").onchange = () => { $("applyInsuranceImport").disabled = !$("insuranceImportAttest").checked || insuranceImportRunning; };
+    $("applyInsuranceImport").onclick = () => { void applyInsuranceImport(); };
+  }
+}
+
+async function previewInsuranceImport() {
+  const files = [...$("insuranceReportFiles").files];
+  const byOrder = new Map(files.map((file) => [coverageOrderFromFilename(file.name), file]));
+  if (COVERAGE_ORDERS.some((order) => !byOrder.has(order))) {
+    showToast("Select one Primary, one Secondary, and one Other Patient Insurance Report CSV.");
+    return;
+  }
+  const button = $("previewInsuranceImport");
+  button.disabled = true;
+  button.textContent = "Preparing dry run…";
+  try {
+    const reportRows = (await Promise.all(COVERAGE_ORDERS.map(async (order) => parseInsuranceReport(await byOrder.get(order).text(), order)))).flat();
+    insuranceImportPlan = prepareInsuranceUpdates(reportRows, patients);
+    renderInsuranceImportPlan(insuranceImportPlan);
+  } catch (error) {
+    insuranceImportPlan = null;
+    $("insuranceImportReview").innerHTML = `<div class="notice"><b>The insurance dry run could not be prepared.</b><br>${esc(error.message || "Check the selected CSV files.")}</div>`;
+    showToast(error.message || "The insurance reports could not be prepared.");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Run insurance dry run";
+  }
+}
+
+async function applyInsuranceImport() {
+  if (!insuranceImportPlan?.updates.length || insuranceImportRunning || !$("insuranceImportAttest")?.checked) return;
+  if (registryFormDirty) {
+    showToast("Save or discard the open patient changes before applying the insurance reconciliation.");
+    return;
+  }
+  insuranceImportRunning = true;
+  const button = $("applyInsuranceImport");
+  const status = $("insuranceImportApplyStatus");
+  const progress = $("insuranceImportProgress");
+  button.disabled = true;
+  button.textContent = "Applying verified updates…";
+  const failures = [];
+  let cursor = 0;
+  let completed = 0;
+  const updates = insuranceImportPlan.updates;
+  const worker = async () => {
+    while (cursor < updates.length) {
+      const update = updates[cursor];
+      cursor += 1;
+      try {
+        const result = await client.savePatient(update.patient);
+        if (!result.patient || !insuranceUpdateMatches(result.patient, update.patient)) throw new Error("Cloud read-back did not match the intended insurance update");
+      } catch (error) {
+        failures.push({ bhwPatientId: update.bhwPatientId, message: error.message || "Save failed" });
+      }
+      completed += 1;
+      progress.style.width = `${Math.round((completed / updates.length) * 100)}%`;
+      status.textContent = `${completed} of ${updates.length} processed${failures.length ? ` · ${failures.length} need retry` : ""}`;
+    }
+  };
+  try {
+    await Promise.all(Array.from({ length: Math.min(4, updates.length) }, worker));
+    await refreshPatients({ force: true, announce: false });
+    const currentIndex = new Map(patients.map((patient) => [patient.bhwPatientId, patient]));
+    const unverified = updates.filter((update) => !insuranceUpdateMatches(currentIndex.get(update.bhwPatientId) || {}, update.patient));
+    for (const update of unverified) {
+      if (!failures.some((failure) => failure.bhwPatientId === update.bhwPatientId)) failures.push({ bhwPatientId: update.bhwPatientId, message: "Final Registry read-back did not match" });
+    }
+    if (failures.length) {
+      insuranceImportPlan = { ...insuranceImportPlan, updates: updates.filter((update) => failures.some((failure) => failure.bhwPatientId === update.bhwPatientId)) };
+      $("insuranceImportBadge").className = "badge warning";
+      $("insuranceImportBadge").textContent = "Partial update";
+      status.textContent = `${updates.length - failures.length} verified in BHW Cloud · ${failures.length} remain for retry`;
+      button.disabled = false;
+      button.textContent = `Retry ${failures.length} unresolved updates`;
+      showToast(`${updates.length - failures.length} insurance records were verified in BHW Cloud. ${failures.length} remain unchanged or need retry.`);
+    } else {
+      $("insuranceImportBadge").className = "badge complete";
+      $("insuranceImportBadge").textContent = "Cloud update verified";
+      status.textContent = `${updates.length} patient insurance updates verified in BHW Cloud at ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}.`;
+      button.textContent = "Updates complete";
+      showToast(`${updates.length} patient insurance records updated and verified in BHW Cloud.`);
+    }
+  } finally {
+    insuranceImportRunning = false;
+  }
+}
+
 async function refreshPatients({ force = false, selectId = selectedId, announce = false } = {}) {
   if (!client) return false;
   if (registryFormDirty && !force) {
@@ -516,6 +641,19 @@ async function refreshPatients({ force = false, selectId = selectedId, announce 
 $("search").oninput = renderRows;
 $("statusFilter").onchange = renderRows;
 $("refreshPatients").onclick = () => { void refreshPatients({ announce: true }); };
+$("insuranceReportFiles").onchange = () => {
+  insuranceImportPlan = null;
+  const files = [...$("insuranceReportFiles").files];
+  const orders = files.map((file) => coverageOrderFromFilename(file.name));
+  const complete = files.length === 3 && COVERAGE_ORDERS.every((order) => orders.filter((item) => item === order).length === 1);
+  $("insuranceFileSummary").textContent = files.length ? files.map((file) => file.name).join(" · ") : "Files stay in this browser until an approved Registry update is applied.";
+  $("previewInsuranceImport").disabled = !complete;
+  $("clearInsuranceImport").disabled = !files.length;
+  $("insuranceImportBadge").className = "badge warning";
+  $("insuranceImportBadge").textContent = complete ? "Ready for dry run" : "Select all three reports";
+};
+$("previewInsuranceImport").onclick = () => { void previewInsuranceImport(); };
+$("clearInsuranceImport").onclick = clearInsuranceImport;
 $("theme").onclick = () => {
   const dark = document.documentElement.dataset.theme === "dark";
   document.documentElement.dataset.theme = dark ? "light" : "dark";
