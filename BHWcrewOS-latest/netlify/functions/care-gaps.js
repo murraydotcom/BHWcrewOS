@@ -16,6 +16,40 @@ function gapsFor(profile) {
   });
 }
 
+function syntheticHetsAcceptanceProfile() {
+  return {
+    bhwPatientId: "BHW0000",
+    name: "Synthetic Patient",
+    memberId: "SYNTH-0000",
+    payer: "Synthetic Medicare HETS fixture",
+    preventiveGaps: [],
+    preventiveServices: [
+      { code: "G0438", info: "Synthetic initial Annual Wellness Visit benefit", dates: [{ kind: "benefit.start", date: "2026-01-01" }] },
+      { code: "G0439", info: "Synthetic subsequent Annual Wellness Visit benefit", dates: [{ kind: "benefit.start", date: "2026-01-01" }] },
+      { code: "81528", info: "Synthetic stool DNA screening benefit", dates: [{ kind: "benefit.start", date: "2026-01-01" }] },
+      { code: "G0121", info: "Synthetic screening colonoscopy benefit", dates: [{ kind: "benefit.start", date: "2026-01-01" }] },
+      { code: "G0328", info: "Synthetic fecal occult blood screening benefit", dates: [{ kind: "benefit.start", date: "2026-01-01" }] },
+      { code: "92552", info: "Synthetic audiology benefit", dates: [{ kind: "benefit.start", date: "2026-01-01" }] },
+      { code: "92557", info: "Synthetic audiology benefit", dates: [{ kind: "benefit.start", date: "2026-01-01" }] },
+      { code: "92567", info: "Synthetic audiology benefit", dates: [{ kind: "benefit.start", date: "2026-01-01" }] },
+      { code: "92653", info: "Synthetic audiology benefit", dates: [{ kind: "benefit.start", date: "2026-01-01" }] },
+    ],
+    updatedAt: "2026-10-04T00:00:00.000Z",
+  };
+}
+
+function syntheticHetsAcceptanceRow() {
+  const profile = syntheticHetsAcceptanceProfile();
+  return {
+    bhwPatientId: profile.bhwPatientId,
+    name: profile.name,
+    memberId: profile.memberId,
+    payer: profile.payer,
+    gaps: gapsFor(profile),
+    updatedAt: profile.updatedAt,
+  };
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return json(405, { error: "POST only" });
   const session = getSession(event);
@@ -51,6 +85,11 @@ exports.handler = async (event) => {
         || (memberId && String(entry.memberId).toLowerCase() === memberId)
         || (!requestedId && !memberId && requestedName && nameKey(entry.name) === requestedName)
       ));
+      // BHW0000 must never be sent to CMS HETS. Expose a deterministic local
+      // fixture only for an exact synthetic-ID request so production acceptance
+      // can exercise normalization without touching a Registry patient, Stedi,
+      // or the ordinary payer-gap list.
+      if (!hits.length && requestedId === "BHW0000") hits.push(syntheticHetsAcceptanceRow());
       if (hits.length !== 1) return json(200, { matched: false, ambiguous: hits.length > 1, gaps: [] });
       const match = hits[0];
       return json(200, {
