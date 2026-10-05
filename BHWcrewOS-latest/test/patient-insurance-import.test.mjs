@@ -156,3 +156,19 @@ test("an ambiguous payer remains review-only when the current Registry has no cl
   assert.equal(plan.updates.length, 0);
   assert.match(plan.review[0].reason, /unresolved in both the report and current Registry/i);
 });
+
+test("unrecognized payer text cannot inherit a current Registry classification", () => {
+  const [row] = parseInsuranceReport(report([
+    sourceRow({ payer: "Not An Insurance Company" }),
+  ]), "primary");
+  const registryPatient = patient();
+  registryPatient.coverageRecords.push({
+    coverageOrder: "primary",
+    insuranceType: "commercial",
+    payerName: "CareFirst BlueCross BlueShield",
+    coverageStatus: "verified",
+  });
+  const plan = prepareInsuranceUpdates([row], [registryPatient]);
+  assert.equal(plan.updates.length, 0);
+  assert.match(plan.review[0].reason, /unrecognized payer text/i);
+});

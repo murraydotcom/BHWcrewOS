@@ -6,6 +6,7 @@ import {
   medicareMbiForPatient,
   normalizeCoverageRecord,
   normalizeMedicareMbi,
+  payerDirectoryEntry,
   payerNameNeedsReview,
 } from "../shared/patient-coverage.mjs";
 
@@ -134,6 +135,11 @@ export function prepareInsuranceUpdates(reportRows = [], patients = []) {
     const currentPatient = patientIndex.get(id);
     let resolvedRow = row;
     if (row.classificationNeedsRegistry) {
+      const carrier = payerDirectoryEntry(row.coverageRecord.payerName);
+      if (!carrier) {
+        review.push({ ...row, reason: "Unrecognized payer text cannot inherit a Registry classification" });
+        continue;
+      }
       const currentType = coverageSlotsForPatient(currentPatient)[row.coverageOrder].insuranceType;
       if (!currentType) {
         review.push({ ...row, reason: "Insurance classification is unresolved in both the report and current Registry" });
