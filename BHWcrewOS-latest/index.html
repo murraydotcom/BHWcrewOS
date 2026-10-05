@@ -2637,7 +2637,7 @@ function gapsDetail(patientId){
     <div class="awv-q"><div class="awv-l">Clinically open (${open.length})</div>${open.length?open.map(line).join(""):'<span class="pill ok">No reviewed clinical gaps are open</span>'}</div>
     ${other.length?`<div class="awv-q"><div class="awv-l">Benefit evidence / needs review (${other.length})</div>${other.map(line).join("")}</div>`:""}
     <p class="lede"><b>HETS eligibility is not a diagnosis, completed-service record, or overdue-screening determination.</b> Alternate HCPCS/CPT rows are collapsed into one clinical measure. A provider must confirm the indication and actual service before Health Core or billing is changed.</p>
-    <div class="macts"><button class="btn sec" onclick="closeModal()">Close</button>${p.id==="BHW0000"?`<a class="btn sec" href="provider/preventive.html?source=hets&amp;patient=BHW0000">Review HETS in Health Core</a>`:`<span class="pill gray" title="The Health Core HETS write gate remains restricted to BHW0000">Health Core update gated</span>`}${(D.awv&&["Medicare","Medicare + Medicaid"].includes(p.insurance))?`<button class="btn" onclick="closeModal();prevStartAwv('${p.id}')">▶ Start AWV</button>`:""}</div>
+    <div class="macts"><button class="btn sec" onclick="closeModal()">Close</button>${p.id==="BHW0000"?`<a class="btn sec" href="https://bhw-health-core-ehr-awknhudemq-uk.a.run.app/preventive-review.html?patient=BHW0000">Review HETS in Health Core</a>`:`<span class="pill gray" title="The Health Core HETS write gate remains restricted to BHW0000">Health Core update gated</span>`}${(D.awv&&["Medicare","Medicare + Medicaid"].includes(p.insurance))?`<button class="btn" onclick="closeModal();prevStartAwv('${p.id}')">▶ Start AWV</button>`:""}</div>
   </div>`);
 }
 

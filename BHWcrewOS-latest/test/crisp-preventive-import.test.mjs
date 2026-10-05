@@ -145,8 +145,8 @@ test("Preventive UI exposes preview, explicit save state, review gate, and Patie
   assert.match(patient360, /record\.preventiveCare/);
   assert.match(patient360, /Preventive care &amp; health screenings/);
   assert.match(patient360, /no automatic order/i);
-  assert.match(html, /HETS benefit evidence/i);
-  assert.match(html, /clinical disposition/i);
+  assert.match(html, /Health Core owns clinical review, provider attestation, and saved HETS evidence/i);
+  assert.match(html, /CrewOS no longer presents or saves a provider clinical disposition/i);
 
   const moduleScript = html.match(/<script type="module">([\s\S]*?)<\/script>/)?.[1] || "";
   assert.doesNotThrow(() => new Function(moduleScript));
