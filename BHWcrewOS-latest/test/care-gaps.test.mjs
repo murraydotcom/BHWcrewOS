@@ -7,9 +7,9 @@ import vm from "node:vm";
 const require = createRequire(import.meta.url);
 const hetsPreventive = require("../netlify/functions/lib/hets-preventive.js");
 
-function loadHandler(source) {
+function loadHandler(source, overrides = {}) {
   const exports = {};
-  const profiles = [
+  const profiles = overrides.profiles || [
     {
       bhwPatientId: "BHW0000",
       payer: "Synthetic Medicare",
@@ -27,7 +27,7 @@ function loadHandler(source) {
       updatedAt: "2026-09-30T13:00:00.000Z",
     },
   ];
-  const patients = [
+  const patients = overrides.patients || [
     { bhwPatientId: "BHW0000", name: "Synthetic Patient", memberId: "SYNTH-0000" },
     { bhwPatientId: "BHW0001", name: "Synthetic Patient", memberId: "SYNTH-0001" },
   ];
@@ -77,6 +77,38 @@ test("HETS audiology codes collapse to one review item and never become seven ov
   assert.deepEqual(hearing.sourceCodes, ["92552", "92557"]);
   assert.equal(hearing.codeCount, 2);
   assert.equal(body.openCount, 1);
+});
+
+test("exact BHW0000 requests use an isolated synthetic HETS fixture when Cloud has no profile", async () => {
+  const source = await readFile(new URL("../netlify/functions/care-gaps.js", import.meta.url), "utf8");
+  const handler = loadHandler(source, { profiles: [], patients: [] });
+  const response = await handler({
+    httpMethod: "POST",
+    body: JSON.stringify({ action: "for", bhwPatientId: "BHW0000" }),
+  });
+  const body = JSON.parse(response.body);
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.matched, true);
+  assert.equal(body.patient.bhwPatientId, "BHW0000");
+  assert.equal(body.patient.payer, "Synthetic Medicare HETS fixture");
+  assert.deepEqual(body.gaps.map((gap) => gap.measureId), [
+    "annual-wellness-visit",
+    "colorectal-cancer-screening",
+    "hearing-audiology-assessment",
+  ]);
+  const hearing = body.gaps.find((gap) => gap.measureId === "hearing-audiology-assessment");
+  assert.deepEqual(hearing.hetsSourceCodes, ["92552", "92557", "92567", "92653"]);
+  assert.equal(body.gaps.every((gap) => gap.open === false && gap.clinicalStatus === "needs-review"), true);
+});
+
+test("the isolated BHW0000 HETS fixture never appears in ordinary payer-gap lists", async () => {
+  const source = await readFile(new URL("../netlify/functions/care-gaps.js", import.meta.url), "utf8");
+  const handler = loadHandler(source, { profiles: [], patients: [] });
+  const response = await handler({ httpMethod: "POST", body: JSON.stringify({ action: "list" }) });
+  const body = JSON.parse(response.body);
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(body.patients, []);
+  assert.equal(body.rows, 0);
 });
 
 test("payer gap list retains authoritative IDs for both shared queue views", async () => {
