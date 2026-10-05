@@ -2604,7 +2604,8 @@ function gapsCell(p){
   const rec = gapsFor(p);
   if(!rec) return '<span class="pill gray">No payer row</span>';
   const open = rec.open.length;
-  return `<button class="btn sm ${open?"warn":"sec"}" onclick="gapsDetail('${p.id}')">${open?`${open} open`:"none open"}</button>`;
+  const review = rec.gaps.filter(g=>!g.open && g.clinicalStatus==="needs-review").length;
+  return `<button class="btn sm ${open?"warn":"sec"}" onclick="gapsDetail('${p.id}')">${open?`${open} open`:review?`${review} to review`:"none open"}</button>`;
 }
 async function gapsRefresh(){
   CARE_GAPS = null;
@@ -2618,14 +2619,25 @@ function gapsDetail(patientId){
   const rec = gapsFor(p);
   if(!rec){ toast("No payer gap rows on file for this patient"); return; }
   const open = rec.gaps.filter(g=>g.open), other = rec.gaps.filter(g=>!g.open);
-  const line = g=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)"><span>${esc(g.label)}${g.hcpcs?` <span class="pill gray">${esc(g.hcpcs)}</span>`:""}</span><span class="pill ${g.open?"alert":"gray"}">${esc(g.state)}</span></div>`;
+  const line = g=>{
+    const codes=(g.sourceCodes||[]).join(", ");
+    const evidence=(g.codeDetails||[]).map(d=>{
+      const dates=(d.eligibilityDates||[]).join(", ");
+      return `<li><b>${esc(d.code||"Source row")}</b>${d.info?` · ${esc(d.info)}`:""}${dates?` · payer date ${esc(dates)}`:""}</li>`;
+    }).join("");
+    return `<div style="padding:9px 0;border-bottom:1px solid var(--line)">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><span><b>${esc(g.label)}</b>${g.codeCount?` <span class="pill gray">${g.codeCount} code${g.codeCount===1?"":"s"}</span>`:""}</span><span class="pill ${g.open?"alert":"gray"}">${esc(g.state)}</span></div>
+      ${g.codeGuidance?`<div class="msub" style="margin-top:5px">${esc(g.codeGuidance)}</div>`:""}
+      ${codes?`<details style="margin-top:6px"><summary class="msub" style="cursor:pointer">Codes returned: ${esc(codes)}</summary>${evidence?`<ul class="msub" style="margin:7px 0 0 18px">${evidence}</ul>`:""}</details>`:""}
+    </div>`;
+  };
   openModal(`<h3>Care gaps — ${esc(p.name||rec.name)}</h3>
-  <div class="msub">Medicare Wellness Report${rec.payer?" · "+esc(rec.payer):""}${rec.memberId?" · Member "+esc(rec.memberId):""}</div>
+  <div class="msub">Reviewed payer gaps + CMS HETS benefit evidence${rec.payer?" · "+esc(rec.payer):""}${rec.memberId?" · Member "+esc(rec.memberId):""}</div>
   <div class="f">
-    <div class="awv-q"><div class="awv-l">Open (${open.length})</div>${open.length?open.map(line).join(""):'<span class="pill ok">None flagged this cycle</span>'}</div>
-    ${other.length?`<div class="awv-q"><div class="awv-l">Needs info / other plan (${other.length})</div>${other.map(line).join("")}</div>`:""}
-    <p class="lede">Source: the payer Wellness Report uploaded to the Gaps in Care Management page. Close gaps at the visit, then next month's upload clears them.</p>
-    <div class="macts"><button class="btn sec" onclick="closeModal()">Close</button>${(D.awv&&["Medicare","Medicare + Medicaid"].includes(p.insurance))?`<button class="btn" onclick="closeModal();prevStartAwv('${p.id}')">▶ Start AWV</button>`:""}</div>
+    <div class="awv-q"><div class="awv-l">Clinically open (${open.length})</div>${open.length?open.map(line).join(""):'<span class="pill ok">No reviewed clinical gaps are open</span>'}</div>
+    ${other.length?`<div class="awv-q"><div class="awv-l">Benefit evidence / needs review (${other.length})</div>${other.map(line).join("")}</div>`:""}
+    <p class="lede"><b>HETS eligibility is not a diagnosis, completed-service record, or overdue-screening determination.</b> Alternate HCPCS/CPT rows are collapsed into one clinical measure. A provider must confirm the indication and actual service before Health Core or billing is changed.</p>
+    <div class="macts"><button class="btn sec" onclick="closeModal()">Close</button>${p.id==="BHW0000"?`<a class="btn sec" href="provider/preventive.html?source=hets&amp;patient=BHW0000">Review HETS in Health Core</a>`:`<span class="pill gray" title="The Health Core HETS write gate remains restricted to BHW0000">Health Core update gated</span>`}${(D.awv&&["Medicare","Medicare + Medicaid"].includes(p.insurance))?`<button class="btn" onclick="closeModal();prevStartAwv('${p.id}')">▶ Start AWV</button>`:""}</div>
   </div>`);
 }
 

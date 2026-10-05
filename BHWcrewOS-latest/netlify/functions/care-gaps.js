@@ -4,22 +4,16 @@
 
 const { getSession, json } = require("./_lib");
 const { cloudRequest, listCloudPatients } = require("./lib/cloud-patients");
+const { normalizeHetsMeasures, preventiveCatalogForUi } = require("./lib/hets-preventive");
 
 const norm = (value) => String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 const nameKey = (value) => norm(String(value || "").split(",").reverse().join(" "));
 
 function gapsFor(profile) {
-  return (Array.isArray(profile.preventiveGaps) ? profile.preventiveGaps : [])
-    .map((gap) => ({
-      code: String(gap.code || ""),
-      label: String(gap.label || gap.code || ""),
-      hcpcs: String(gap.hcpcs || ""),
-      state: String(gap.state || ""),
-      open: gap.open === true,
-      eligibleProf: String(gap.eligibleProf || ""),
-      eligibleTech: String(gap.eligibleTech || ""),
-    }))
-    .sort((a, b) => Number(b.open) - Number(a.open) || a.label.localeCompare(b.label));
+  return normalizeHetsMeasures({
+    preventiveGaps: profile.preventiveGaps,
+    preventiveServices: profile.preventiveServices,
+  });
 }
 
 exports.handler = async (event) => {
@@ -63,7 +57,9 @@ exports.handler = async (event) => {
         matched: true,
         patient: { bhwPatientId: match.bhwPatientId, name: match.name, memberId: match.memberId, payer: match.payer },
         gaps: match.gaps,
+        preventiveCatalog: preventiveCatalogForUi(),
         openCount: match.gaps.filter((gap) => gap.open).length,
+        sourceUpdatedAt: match.updatedAt,
         storage: "BHW Cloud",
       });
     }
@@ -73,6 +69,7 @@ exports.handler = async (event) => {
       const updated = patients.reduce((latest, entry) => entry.updatedAt > latest ? entry.updatedAt : latest, "");
       return json(200, {
         patients: patients.map(({ updatedAt, ...entry }) => entry),
+        preventiveCatalog: preventiveCatalogForUi(),
         rows: patients.reduce((count, patient) => count + patient.gaps.length, 0),
         updated,
         storage: "BHW Cloud",
