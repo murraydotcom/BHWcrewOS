@@ -61,6 +61,9 @@ test("CrewHQ keeps patient maintenance tools inside the protected Patient Regist
   assert.match(registryApp, /Classification:/);
   assert.match(registryApp, /PAYER_DIRECTORY_OPTIONS/);
   assert.match(registryApp, /Directory classification/);
+  assert.match(registryApp, /Named payer directory/);
+  assert.match(registryApp, /Select a named/);
+  assert.match(registryApp, /PayerDirectoryChoice/);
   assert.match(registryApp, /wireInsuranceDirectory/);
   assert.match(workflowApp, /patient\.nameSuffix/);
   assert.match(transcriptionApp, /patient\.nameSuffix/);

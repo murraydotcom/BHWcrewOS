@@ -60,15 +60,15 @@ export const PAYER_DIRECTORY = [
   { name: "Humana Medicare Advantage", insuranceType: "medicare-advantage" },
 
   { name: "Maryland Medicaid", insuranceType: "medicaid-mco", aliases: ["Medicaid of Maryland"] },
-  { name: "Medicaid", insuranceType: "medicaid-mco" },
+  { name: "Medicaid", insuranceType: "medicaid-mco", generic: true },
   { name: "Aetna Better Health of Maryland", insuranceType: "medicaid-mco", aliases: ["Aetna Better health"] },
-  { name: "CareFirst Community Health Plan Maryland", insuranceType: "medicaid-mco", aliases: ["CareFirst Community", "Blue Choice Medicaid", "Carefirst community health", "Carefirst community health plan", "Carefirst Community Partner", "Carefirst Community partners", "Carefirst Community Plan"] },
-  { name: "JAI Medical Systems", insuranceType: "medicaid-mco", aliases: ["Jai", "JAI MEDICAL"] },
-  { name: "Kaiser Permanente Maryland HealthChoice", insuranceType: "medicaid-mco" },
+  { name: "CareFirst BlueCross BlueShield Community Health Plan of Maryland", insuranceType: "medicaid-mco", aliases: ["CareFirst Community Health Plan Maryland", "CareFirst Community", "Blue Choice Medicaid", "Carefirst community health", "Carefirst community health plan", "Carefirst Community Partner", "Carefirst Community partners", "Carefirst Community Plan"] },
+  { name: "Jai Medical Systems, Inc.", insuranceType: "medicaid-mco", aliases: ["JAI Medical Systems", "Jai", "JAI MEDICAL"] },
+  { name: "Kaiser Permanente of the Mid-Atlantic States", insuranceType: "medicaid-mco", aliases: ["Kaiser Permanente Maryland HealthChoice"] },
   { name: "Maryland Physicians Care", insuranceType: "medicaid-mco", aliases: ["MAryland Phsycians care", "maryland Phycisians Care", "Maryland Physcians care", "Maryland Physiocians Care", "Marylnd Physicians Care", "Md physicians care"] },
-  { name: "MedStar Family Choice", insuranceType: "medicaid-mco", aliases: ["Medstar Family Choice Maryland Healthchoice"] },
+  { name: "MedStar Family Choice, Inc.", insuranceType: "medicaid-mco", aliases: ["MedStar Family Choice", "Medstar Family Choice Maryland Healthchoice"] },
   { name: "Priority Partners", insuranceType: "medicaid-mco", aliases: ["Priority Partenrs"] },
-  { name: "UnitedHealthcare Community Plan", insuranceType: "medicaid-mco", aliases: ["United Health Care Community", "United Health Care Community Plan", "United Healthcare community plan", "UnitedHealthcare Community Plan / CA, DC,  DE, FL, GA, HI, IA, KY, LA, MA, MD, MS, NC, NE, NM, NY, OH, OK, PA, RI, TX, VA, WA, WI"] },
+  { name: "UnitedHealthcare Community Plan of Maryland", insuranceType: "medicaid-mco", aliases: ["UnitedHealthcare Community Plan", "United Health Care Community", "United Health Care Community Plan", "United Healthcare community plan", "UnitedHealthcare Community Plan / CA, DC,  DE, FL, GA, HI, IA, KY, LA, MA, MD, MS, NC, NE, NM, NY, OH, OK, PA, RI, TX, VA, WA, WI"] },
   { name: "Wellpoint Maryland", insuranceType: "medicaid-mco", aliases: ["Wellpoint", "Wellpoint MD Inc", "We’ll point", "Amerigroup - Maryland and District of Columbia", "Amerigroup MD"] },
   { name: "Amerigroup of Iowa", insuranceType: "medicaid-mco" },
 
@@ -142,6 +142,10 @@ const PAYER_DIRECTORY_INDEX = new Map(PAYER_DIRECTORY.flatMap((entry) => [entry.
 
 export function payerDirectoryEntry(value) {
   return PAYER_DIRECTORY_INDEX.get(payerKey(value)) || null;
+}
+
+export function payerNameNeedsReview(value) {
+  return Boolean(payerDirectoryEntry(value)?.generic);
 }
 
 export function normalizeMedicareMbi(value) {
@@ -302,6 +306,9 @@ export function insuranceReviewFlags(patient = {}) {
   else if (!clean(slots.primary.payerName)) flags.push("Primary insurance name not recorded");
   for (const record of records) {
     if (!record.insuranceType) flags.push(`${record.coverageOrder[0].toUpperCase()}${record.coverageOrder.slice(1)} insurance is not classified`);
+    if (payerNameNeedsReview(record.payerName)) {
+      flags.push(`${record.coverageOrder[0].toUpperCase()}${record.coverageOrder.slice(1)} insurance has only a generic Medicaid label; verify and select the actual MCO or payer name`);
+    }
   }
   if (records.some((record) => isMedicareType(record.insuranceType)) && !isValidMedicareMbi(medicareMbiForPatient(patient))) {
     flags.push("Medicare coverage present; MBI not verified");

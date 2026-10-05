@@ -58,12 +58,38 @@ const PAYER_DIRECTORY_OPTIONS = PAYER_DIRECTORY.flatMap((entry) => [entry.name, 
   .map((name) => ({ name, insuranceType: entry.insuranceType })))
   .sort((left, right) => `${left.insuranceType} ${left.name}`.localeCompare(`${right.insuranceType} ${right.name}`));
 
+const NAMED_PAYER_DIRECTORY = PAYER_DIRECTORY
+  .filter((entry) => entry.insuranceType && !entry.generic)
+  .sort((left, right) => `${left.insuranceType} ${left.name}`.localeCompare(`${right.insuranceType} ${right.name}`));
+
 function payerDirectoryStatus(value) {
   const entry = payerDirectoryEntry(value);
   if (!value) return "Choose a payer from the directory or enter the exact payer name.";
   if (!entry) return "Not in the payer directory. Select the classification after verifying the plan.";
+  if (entry.generic) return "Generic Medicaid label only. Verify and choose the patient's actual MCO or payer name.";
   if (!entry.insuranceType) return "Carrier name only; the plan classification still needs review.";
   return `Directory classification: ${INSURANCE_TYPE_LABELS[entry.insuranceType]}.`;
+}
+
+function namedPayerOptions(insuranceType, payerName = "") {
+  const current = payerDirectoryEntry(payerName);
+  const selectedName = current && !current.generic ? current.name : "";
+  const entries = insuranceType ? NAMED_PAYER_DIRECTORY.filter((entry) => entry.insuranceType === insuranceType) : NAMED_PAYER_DIRECTORY;
+  const placeholder = insuranceType
+    ? `Select a named ${INSURANCE_TYPE_LABELS[insuranceType] || "insurance"} payer`
+    : "Select a classification first, or browse all named payers";
+  if (insuranceType) {
+    return `<option value="">${esc(placeholder)}</option>${entries.map((entry) => `<option value="${esc(entry.name)}" ${entry.name === selectedName ? "selected" : ""}>${esc(entry.name)}</option>`).join("")}`;
+  }
+  const groups = INSURANCE_TYPES.filter(Boolean).map((type) => {
+    const groupEntries = entries.filter((entry) => entry.insuranceType === type);
+    return groupEntries.length ? `<optgroup label="${esc(INSURANCE_TYPE_LABELS[type])}">${groupEntries.map((entry) => `<option value="${esc(entry.name)}" ${entry.name === selectedName ? "selected" : ""}>${esc(entry.name)}</option>`).join("")}</optgroup>` : "";
+  }).join("");
+  return `<option value="">${esc(placeholder)}</option>${groups}`;
+}
+
+function namedPayerField(id, insuranceType, payerName) {
+  return `<div class="field"><label>Named payer directory</label><select id="${id}DirectoryChoice">${namedPayerOptions(insuranceType, payerName)}</select><div class="coverage-help">Choose the verified payer to copy its exact name and classification. Keep the product-specific name in “Plan / program name.”</div></div>`;
 }
 
 function payerField(id, value = "", required = false) {
@@ -78,12 +104,24 @@ function wireInsuranceDirectory(prefix) {
     const payer = $(`${prefix}${key}Payer`);
     const type = $(`${prefix}${key}Type`);
     const status = $(`${prefix}${key}PayerDirectoryStatus`);
-    if (!payer || !type || !status) continue;
-    payer.addEventListener("input", () => {
+    const choice = $(`${prefix}${key}PayerDirectoryChoice`);
+    if (!payer || !type || !status || !choice) continue;
+    const syncPayer = () => {
       const entry = payerDirectoryEntry(payer.value);
       if (entry?.insuranceType) type.value = entry.insuranceType;
       else if (entry && !entry.insuranceType) type.value = "";
       status.textContent = payerDirectoryStatus(payer.value);
+      choice.innerHTML = namedPayerOptions(type.value, payer.value);
+    };
+    payer.addEventListener("input", syncPayer);
+    type.addEventListener("change", () => {
+      choice.innerHTML = namedPayerOptions(type.value, payer.value);
+      status.textContent = payerDirectoryStatus(payer.value);
+    });
+    choice.addEventListener("change", () => {
+      if (!choice.value) return;
+      payer.value = choice.value;
+      syncPayer();
     });
   }
 }
@@ -95,7 +133,7 @@ function coverageCard(patient, prefix, order) {
   const mspField = order === "secondary"
     ? `${labeledSelect(`${prefix}${key}MspReason`, "Medicare-secondary reason", coverage.medicareSecondaryReason, MSP_REASONS, MSP_REASON_LABELS)}<div class="coverage-help">Complete this only when Original Medicare or Medicare Advantage is secondary. Leave it “Not yet verified” rather than guessing.</div>`
     : "";
-  return `<section class="coverage-card" data-coverage-order="${order}"><div class="coverage-card-head"><div><b>${esc(title)}</b><span>${esc(order)}</span></div></div><div class="coverage-grid">${labeledSelect(`${prefix}${key}Type`, "Insurance classification", coverage.insuranceType, INSURANCE_TYPES, INSURANCE_TYPE_LABELS)}${payerField(`${prefix}${key}Payer`, coverage.payerName, order === "primary")}${field(`${prefix}${key}Plan`, "Plan / program name", coverage.planName)}${field(`${prefix}${key}Member`, "Member / policy ID", coverage.memberId)}${field(`${prefix}${key}Group`, "Group number", coverage.groupNumber)}${field(`${prefix}${key}PayerId`, "Electronic payer ID", coverage.payerId)}${field(`${prefix}${key}From`, "Effective from", coverage.effectiveFrom, "date")}${field(`${prefix}${key}To`, "Effective to", coverage.effectiveTo, "date")}${labeledSelect(`${prefix}${key}Coverage`, "Coverage status", coverage.coverageStatus, COVERAGE_STATUSES, {})}${mspField}</div></section>`;
+  return `<section class="coverage-card" data-coverage-order="${order}"><div class="coverage-card-head"><div><b>${esc(title)}</b><span>${esc(order)}</span></div></div><div class="coverage-grid">${labeledSelect(`${prefix}${key}Type`, "Insurance classification", coverage.insuranceType, INSURANCE_TYPES, INSURANCE_TYPE_LABELS)}${namedPayerField(`${prefix}${key}Payer`, coverage.insuranceType, coverage.payerName)}${payerField(`${prefix}${key}Payer`, coverage.payerName, order === "primary")}${field(`${prefix}${key}Plan`, "Plan / program name", coverage.planName)}${field(`${prefix}${key}Member`, "Member / policy ID", coverage.memberId)}${field(`${prefix}${key}Group`, "Group number", coverage.groupNumber)}${field(`${prefix}${key}PayerId`, "Electronic payer ID", coverage.payerId)}${field(`${prefix}${key}From`, "Effective from", coverage.effectiveFrom, "date")}${field(`${prefix}${key}To`, "Effective to", coverage.effectiveTo, "date")}${labeledSelect(`${prefix}${key}Coverage`, "Coverage status", coverage.coverageStatus, COVERAGE_STATUSES, {})}${mspField}</div></section>`;
 }
 
 function insuranceFields(patient, prefix) {
@@ -103,7 +141,7 @@ function insuranceFields(patient, prefix) {
   const flagMarkup = flags.length
     ? `<div class="insurance-review"><b>Insurance review needed</b><ul>${flags.map((flag) => `<li>${esc(flag)}</li>`).join("")}</ul></div>`
     : `<div class="insurance-review complete"><b>Insurance structure complete</b><div>No structural insurance gaps are detected. Eligibility still requires payer verification.</div></div>`;
-  return `<section class="insurance-section"><div class="insurance-title"><div><h4>Insurance coverage</h4><p>The primary coverage must show the actual insurance or payer name. Store its classification separately; “Commercial,” “Medicaid / MCO,” or “Medicare Advantage” is not the payer name. The MBI is never replaced by a Medicare Advantage plan member ID.</p></div></div><div class="mbi-row">${field(`${prefix}MedicareMbi`, "Medicare Beneficiary Identifier (MBI)", medicareMbiForPatient(patient))}<div class="coverage-help">Enter the patient’s 11-character MBI whenever Medicare is primary or secondary. Leave blank until verified.</div></div>${flagMarkup}<div class="coverage-cards">${COVERAGE_ORDERS.map((order) => coverageCard(patient, prefix, order)).join("")}</div></section>`;
+  return `<section class="insurance-section"><div class="insurance-title"><div><h4>Insurance coverage</h4><p>The primary coverage must show the actual insurance or payer name. Store its classification separately; “Commercial,” “Medicaid / MCO,” or “Medicare Advantage” is not the payer name. Use the visible named-payer directory to choose the MCO or Medicare Advantage carrier, then retain the specific product in “Plan / program name.” The MBI is never replaced by a Medicare Advantage plan member ID.</p></div></div><div class="mbi-row">${field(`${prefix}MedicareMbi`, "Medicare Beneficiary Identifier (MBI)", medicareMbiForPatient(patient))}<div class="coverage-help">Enter the patient’s 11-character MBI whenever Medicare is primary or secondary. Leave blank until verified.</div></div>${flagMarkup}<div class="coverage-cards">${COVERAGE_ORDERS.map((order) => coverageCard(patient, prefix, order)).join("")}</div></section>`;
 }
 
 function patientFields(patient = {}, prefix = "d", includeId = false) {

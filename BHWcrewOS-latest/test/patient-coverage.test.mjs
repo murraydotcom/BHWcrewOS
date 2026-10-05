@@ -30,6 +30,24 @@ test("payer directory keeps exact insurance names tied to supported classificati
   assert.equal(payerDirectoryEntry("Marylnd Physicians Care")?.insuranceType, "medicaid-mco");
   assert.equal(payerDirectoryEntry("CareFirst BCBS - DC, National Capital Area")?.insuranceType, "commercial");
   assert.equal(payerDirectoryEntry("UnitedHealthcare Community Plan / CA, DC,  DE, FL, GA, HI, IA, KY, LA, MA, MD, MS, NC, NE, NM, NY, OH, OK, PA, RI, TX, VA, WA, WI")?.insuranceType, "medicaid-mco");
+
+  const marylandMcos = [
+    "Aetna Better Health of Maryland",
+    "CareFirst BlueCross BlueShield Community Health Plan of Maryland",
+    "Jai Medical Systems, Inc.",
+    "Kaiser Permanente of the Mid-Atlantic States",
+    "Maryland Physicians Care",
+    "MedStar Family Choice, Inc.",
+    "Priority Partners",
+    "UnitedHealthcare Community Plan of Maryland",
+    "Wellpoint Maryland",
+  ];
+  for (const name of marylandMcos) assert.equal(payerDirectoryEntry(name)?.insuranceType, "medicaid-mco");
+
+  const medicareAdvantageNames = PAYER_DIRECTORY.filter((entry) => entry.insuranceType === "medicare-advantage").map((entry) => entry.name);
+  assert.ok(medicareAdvantageNames.includes("Alterwood Advantage"));
+  assert.ok(medicareAdvantageNames.includes("CareFirst Medicare Advantage"));
+  assert.ok(medicareAdvantageNames.includes("UnitedHealthcare Dual Complete"));
 });
 
 test("carrier-only payer names stay unclassified until the exact plan is known", () => {
@@ -47,6 +65,12 @@ test("primary coverage requires an actual payer name and never substitutes a cla
   assert.equal(stored.primaryPayer, "");
   assert.match(insuranceValidationMessage(stored), /actual insurance or payer name/i);
   assert.match(insuranceReviewFlags(stored).join(" "), /Primary insurance name not recorded/);
+});
+
+test("generic Medicaid remains a review item until the named MCO or payer is identified", () => {
+  const flags = insuranceReviewFlags({ primaryPayer: "Medicaid", memberId: "MD-1", coverageStatus: "unknown" });
+  assert.match(flags.join(" "), /generic Medicaid label/i);
+  assert.doesNotMatch(insuranceReviewFlags({ primaryPayer: "Priority Partners", memberId: "PP-1" }).join(" "), /generic Medicaid label/i);
 });
 
 test("legacy primary payer and member ID remain a compatible primary coverage projection", () => {
