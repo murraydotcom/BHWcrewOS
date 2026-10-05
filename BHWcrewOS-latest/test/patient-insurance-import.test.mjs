@@ -170,5 +170,16 @@ test("unrecognized payer text cannot inherit a current Registry classification",
   });
   const plan = prepareInsuranceUpdates([row], [registryPatient]);
   assert.equal(plan.updates.length, 0);
-  assert.match(plan.review[0].reason, /unrecognized payer text/i);
+  assert.match(plan.review[0].reason, /not a recognized carrier/i);
+});
+
+test("an unrecognized payer stays review-only even when the plan text suggests a known classification", () => {
+  const [row] = parseInsuranceReport(report([
+    sourceRow({ payer: "Person Name", plan: "Maryland Medicaid HealthChoice" }),
+  ]), "primary");
+  assert.equal(row.coverageRecord.insuranceType, "medicaid-mco");
+  assert.match(row.reasons.join(" "), /not a recognized carrier/i);
+  const plan = prepareInsuranceUpdates([row], [patient()]);
+  assert.equal(plan.updates.length, 0);
+  assert.equal(plan.review.length, 1);
 });

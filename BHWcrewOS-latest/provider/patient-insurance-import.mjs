@@ -82,6 +82,7 @@ export function parseInsuranceReport(text, coverageOrder) {
     if (!id) reasons.push("Patient ID is missing from the report row");
     else if (!/^BHW\d{4}$/.test(id) || id === "BHW0000") reasons.push("Legacy, reserved, or non-canonical patient ID requires review");
     if (!record.payerName) reasons.push("Insurance payer name is missing");
+    else if (!payerDirectoryEntry(record.payerName)) reasons.push("Insurance payer name is not a recognized carrier");
     if (payerNameNeedsReview(record.payerName)) reasons.push("Generic Medicaid label requires the named MCO");
     const mbi = record.insuranceType === "original-medicare" && isValidMedicareMbi(record.memberId)
       ? normalizeMedicareMbi(record.memberId)
