@@ -1,6 +1,7 @@
 import {
   COVERAGE_ORDERS,
   coverageSlotsForPatient,
+  insuranceEditorLimitMessage,
   insuranceStorageForPatient,
   isValidMedicareMbi,
   medicareMbiForPatient,
@@ -45,10 +46,9 @@ function sourcePatientId(patientName) {
 
 function eligibilityStatus(value) {
   const status = clean(value).toLowerCase();
-  if (status === "eligible") return "verified";
-  if (status === "not eligible") return "inactive";
-  if (status.includes("couldn't be checked") || status.includes("could not be checked")) return "needs-review";
-  return "unknown";
+  // The report records coverage, not a current payer eligibility transaction.
+  // Any report-side result remains review-only until eligibility is checked separately.
+  return status ? "needs-review" : "unknown";
 }
 
 export function coverageOrderFromFilename(name = "") {
@@ -106,7 +106,7 @@ function mergeCoverage(existing, incoming) {
     if (clean(value)) merged[key] = value;
   }
   const sourceStatus = incoming.coverageStatus;
-  merged.coverageStatus = sourceStatus === "unknown" && existing.coverageStatus === "verified"
+  merged.coverageStatus = ["unknown", "needs-review"].includes(sourceStatus) && existing.coverageStatus === "verified"
     ? "verified"
     : sourceStatus || existing.coverageStatus || "unknown";
   return normalizeCoverageRecord(merged, incoming.coverageOrder);
@@ -134,6 +134,15 @@ export function prepareInsuranceUpdates(reportRows = [], patients = []) {
     if (row.reasons.length) { review.push({ ...row, reason: row.reasons.join("; ") }); continue; }
     if (!patientIndex.has(id)) { review.push({ ...row, reason: "Canonical BHW ID is not in the current Registry" }); continue; }
     const currentPatient = patientIndex.get(id);
+    if (!clean(currentPatient.updatedAt)) {
+      review.push({ ...row, reason: "Current Registry version is missing; refresh the Registry before preparing updates" });
+      continue;
+    }
+    const editorLimit = insuranceEditorLimitMessage(currentPatient);
+    if (editorLimit) {
+      review.push({ ...row, reason: `${editorLimit} Preserve the current coverage records and review this patient manually.` });
+      continue;
+    }
     let resolvedRow = row;
     if (row.classificationNeedsRegistry) {
       const carrier = payerDirectoryEntry(row.coverageRecord.payerName);
@@ -177,7 +186,10 @@ export function prepareInsuranceUpdates(reportRows = [], patients = []) {
     }
     if (group.mbi.size > 1) conflict = "Conflicting Medicare Beneficiary Identifiers require review";
     const currentMbi = medicareMbiForPatient(group.patient);
-    if (!group.mbi.size && currentMbi && !isValidMedicareMbi(currentMbi)) {
+    const importedMbi = [...group.mbi][0] || "";
+    if (importedMbi && currentMbi && normalizeMedicareMbi(currentMbi) !== importedMbi) {
+      conflict = "Imported Medicare Beneficiary Identifier conflicts with the current Registry and requires review";
+    } else if (!group.mbi.size && currentMbi && !isValidMedicareMbi(currentMbi)) {
       conflict = "Existing Medicare Beneficiary Identifier is invalid and requires review";
     }
     if (conflict) {
@@ -186,7 +198,6 @@ export function prepareInsuranceUpdates(reportRows = [], patients = []) {
     }
     const slots = coverageSlotsForPatient(group.patient);
     for (const [order, row] of byOrder) slots[order] = mergeCoverage(slots[order], row.coverageRecord);
-    const importedMbi = [...group.mbi][0] || "";
     const mbi = importedMbi || medicareMbiForPatient(group.patient);
     const insurance = insuranceStorageForPatient(group.patient, slots, mbi);
     const patient = { ...group.patient, ...insurance };
@@ -196,6 +207,7 @@ export function prepareInsuranceUpdates(reportRows = [], patients = []) {
       coverageOrders: [...byOrder.keys()],
       payerNames: [...byOrder.values()].map((row) => row.coverageRecord.payerName),
       importsMbi: Boolean(importedMbi),
+      expectedUpdatedAt: clean(group.patient.updatedAt),
     };
     if (insuranceSignature(group.patient) === insuranceSignature(patient)) unchanged.push(update);
     else updates.push(update);

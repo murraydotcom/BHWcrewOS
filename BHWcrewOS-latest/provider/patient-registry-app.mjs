@@ -449,7 +449,7 @@ function renderDetail() {
     button.disabled = true;
     button.textContent = "Saving…";
     try {
-      await client.savePatient(next);
+      await client.savePatient(next, patient.updatedAt || "");
       await refreshPatients({ force: true, selectId: patient.bhwPatientId });
       const current = patients.find((item) => item.bhwPatientId === patient.bhwPatientId);
       const fields = ["legalFirstName", "legalLastName", "nameSuffix", "preferredName", "dateOfBirth", "phone", "email", "patientStatus", "primaryPayer", "memberId", "coverageStatus", "referralSource", "responsibleStaff"];
@@ -581,7 +581,7 @@ async function applyInsuranceImport() {
       const update = updates[cursor];
       cursor += 1;
       try {
-        const result = await client.savePatient(update.patient);
+        const result = await client.savePatient(update.patient, update.expectedUpdatedAt);
         if (!result.patient || !insuranceUpdateMatches(result.patient, update.patient)) throw new Error("Cloud read-back did not match the intended insurance update");
       } catch (error) {
         failures.push({ bhwPatientId: update.bhwPatientId, message: error.message || "Save failed" });

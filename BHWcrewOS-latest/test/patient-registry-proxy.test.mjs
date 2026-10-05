@@ -33,7 +33,7 @@ test("Patient Registry browser client stays on the signed-in CrewOS origin", asy
   }, storage);
 
   const patients = await client.listPatients();
-  await client.savePatient({ bhwPatientId: "BHW9999", legalFirstName: "Synthetic" });
+  await client.savePatient({ bhwPatientId: "BHW9999", legalFirstName: "Synthetic", updatedAt: "2026-10-05T12:00:00.000Z" });
   await client.recordingConsent("BHW9999");
   await client.saveRecordingConsent("BHW9999", { status: "current" });
   await client.portalAccess("BHW9999");
@@ -43,6 +43,7 @@ test("Patient Registry browser client stays on the signed-in CrewOS origin", asy
   assert.ok(calls.every((call) => call.options.headers.Authorization === "Bearer synthetic-crew-token"));
   assert.deepEqual(calls[0].body, { action: "list" });
   assert.equal(calls[1].body.action, "save-patient");
+  assert.equal(calls[1].body.expectedUpdatedAt, "2026-10-05T12:00:00.000Z");
   assert.deepEqual(calls[2].body, { action: "recording-consent", bhwPatientId: "BHW9999" });
   assert.deepEqual(calls[3].body, { action: "save-recording-consent", bhwPatientId: "BHW9999", consent: { status: "current" } });
   assert.deepEqual(calls[4].body, { action: "portal-access", bhwPatientId: "BHW9999" });
@@ -101,6 +102,7 @@ test("Patient Registry proxy verifies CrewOS and calls Google Cloud server-side"
       },
       body: JSON.stringify({
         action: "save-patient",
+        expectedUpdatedAt: "2026-10-05T12:00:00.000Z",
         patient: {
           bhwPatientId: "BHW9999",
           legalFirstName: "Synthetic",
@@ -132,6 +134,7 @@ test("Patient Registry proxy verifies CrewOS and calls Google Cloud server-side"
     assert.equal(savedPatient.coverageRecords[0].medicareSecondaryReason, "12");
     assert.equal(savedPatient.coverageRecords[0].ignoredNested, undefined);
     assert.equal(savedPatient.ignored, undefined);
+    assert.equal(savedPatient.expectedUpdatedAt, "2026-10-05T12:00:00.000Z");
 
     const consentResponse = await registryHandler(new Request("https://bhwcrewos.example/.netlify/functions/patient-registry", {
       method: "POST",

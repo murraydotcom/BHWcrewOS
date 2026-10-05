@@ -48,7 +48,7 @@ const element = (id) => {
   if (!elements.has(id)) elements.set(id, { value: "", checked: false, innerHTML: "", classList: { add() {}, remove() {} } });
   return elements.get(id);
 };
-const app = await readFile(new URL("../provider/patient-registry-app.mjs", import.meta.url), "utf8");
+const app = (await readFile(new URL("../provider/patient-registry-app.mjs", import.meta.url), "utf8")).replace(/\r\n/g, "\n");
 const source = app.slice(0, app.indexOf('$("search").oninput')).replace(/^import[\s\S]*?;\n/gm, "");
 const ui = vm.createContext({ ...coverage, ...insuranceImport, document: { getElementById: element, querySelectorAll: () => [] }, clearTimeout() {}, setTimeout() {} });
 vm.runInContext(`${source}\nglobalThis.form = { readPatient, patientFields, renderRows };`, ui);
@@ -57,13 +57,28 @@ const scenarios = [
   ["BHW9998", "commercial", "CareFirst BCBS", "original-medicare", "Medicare", mbi, "secondary", "Medicare"],
   ["BHW9999", "medicare-advantage", "UnitedHealthcare Dual Complete", "", "", "", "primary", "Medicare + Medicaid"],
 ];
+stored.set("BHW9998", {
+  bhwPatientId: "BHW9998",
+  legalFirstName: "Synthetic",
+  legalLastName: "BHW9998",
+  dateOfBirth: "1980-01-02",
+  patientStatus: "active",
+  mrn: "SYNTHETIC-MRN",
+  address: "Synthetic Baltimore address",
+  programEnrollment: ["CCM"],
+  sourceRelations: { carePlans: ["synthetic-care-plan"] },
+  clinicalSnapshot: { allergies: "Synthetic allergy" },
+  createdAt: "2026-10-05T11:00:00.000Z",
+  updatedAt: "2026-10-05T12:00:00.000Z",
+});
 for (const [id, primaryType, primaryName, secondaryType, secondaryName, explicitMbi, order, category] of scenarios) {
   for (const [key, value] of Object.entries({ First: "Synthetic", Last: id, Dob: "1980-01-02", Status: "active", MedicareMbi: explicitMbi })) element(`d${key}`).value = value;
   for (const [slot, type, name] of [["Primary", primaryType, primaryName], ["Secondary", secondaryType, secondaryName], ["Other", "medicare-supplement", "Synthetic Supplement"]]) {
     for (const [field, value] of Object.entries({ Type: type, Payer: name, Plan: "", Member: name ? slot === "Primary" && !explicitMbi ? mbi : `${id}-${slot}` : "", Group: name ? `${slot}-GROUP` : "", PayerId: name ? `${slot}-PAYER` : "", Coverage: "verified", From: name ? "2026-01-01" : "", To: "", MspReason: order === "secondary" && slot === "Secondary" ? "12" : "" })) element(`d${slot}${field}`).value = value;
   }
   const intended = ui.form.readPatient("d", id);
-  await client.savePatient(intended);
+  const current = stored.get(id);
+  await client.savePatient(intended, current?.updatedAt || "");
   const actual = (await client.listPatients()).find((patient) => patient.bhwPatientId === id);
   assert.deepEqual(coverage.insuranceStorageForPatient(actual), coverage.insuranceStorageForPatient(intended));
   const html = ui.form.patientFields(actual);
@@ -76,6 +91,13 @@ for (const [id, primaryType, primaryName, secondaryType, secondaryName, explicit
   assert.equal(directoryPatient.hasMbi, Boolean(explicitMbi));
   assert.equal(adapted.payer, primaryName);
   assert.equal(adapted.memberId, intended.memberId);
+  if (id === "BHW9998") {
+    assert.equal(actual.mrn, "SYNTHETIC-MRN");
+    assert.equal(actual.address, "Synthetic Baltimore address");
+    assert.deepEqual(actual.programEnrollment, ["CCM"]);
+    assert.deepEqual(actual.sourceRelations.carePlans, ["synthetic-care-plan"]);
+    assert.equal(actual.clinicalSnapshot.allergies, "Synthetic allergy");
+  }
 }
 const roster = [...stored.values()].map(legacyPatient);
 const fixture = roster.find((patient) => patient.bhwPatientId === "BHW9998");
@@ -114,6 +136,13 @@ vm.runInContext(`${awvSource}\nglobalThis.html = prevCard();`, awv);
 for (const patient of roster) assert.ok(awv.html.includes(patient.name));
 assert.ok(awv.html.includes("MBI on file · secondary"));
 assert.ok(awv.html.includes("MBI needed"));
+const stale = structuredClone(stored.get("BHW9998"));
+stored.set("BHW9998", { ...stale, phone: "4105550199", updatedAt: "2026-10-05T13:00:00.000Z" });
+await assert.rejects(
+  () => client.savePatient({ ...stale, phone: "4105550100" }, stale.updatedAt),
+  /changed after it was loaded/i,
+);
+assert.equal(stored.get("BHW9998").phone, "4105550199");
 const invalid = { ...stored.get("BHW9998"), coverageRecords: [{ coverageOrder: "secondary", insuranceType: "original-medicare", payerName: "Medicare", medicareSecondaryReason: "99" }] };
 const beforeInvalid = JSON.stringify(stored.get("BHW9998"));
 await assert.rejects(() => client.savePatient(invalid), /Medicare-secondary reason is not supported/);

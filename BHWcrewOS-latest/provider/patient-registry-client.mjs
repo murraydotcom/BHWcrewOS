@@ -35,8 +35,8 @@ export async function createPatientRegistryClient(fetchImpl = fetch, storage = g
       const body = await request("list");
       return Array.isArray(body.patients) ? body.patients : [];
     },
-    savePatient(patient) {
-      return request("save-patient", { patient });
+    savePatient(patient, expectedUpdatedAt = patient?.updatedAt || "") {
+      return request("save-patient", { patient, expectedUpdatedAt });
     },
     recordingConsent(bhwPatientId) {
       return request("recording-consent", { bhwPatientId });

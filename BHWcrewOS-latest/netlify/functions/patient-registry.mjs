@@ -254,6 +254,7 @@ export default async (request) => {
       case "save-patient": {
         const patient = pick(body.patient, PATIENT_FIELDS);
         patient.bhwPatientId = patientId(patient.bhwPatientId);
+        const expectedUpdatedAt = String(body.expectedUpdatedAt || "").trim().slice(0, 40);
         try {
           if (patient.medicareMbi !== undefined) patient.medicareMbi = normalizeMedicareMbi(patient.medicareMbi);
           if (patient.coverageRecords !== undefined) patient.coverageRecords = sanitizeCoverageRecords(patient.coverageRecords);
@@ -263,7 +264,10 @@ export default async (request) => {
           error.status = 400;
           throw error;
         }
-        return response(200, await cloudRequest(`/v1/patients/${encodeURIComponent(patient.bhwPatientId)}`, session, { method: "PUT", body: patient }));
+        return response(200, await cloudRequest(`/v1/patients/${encodeURIComponent(patient.bhwPatientId)}`, session, {
+          method: "PUT",
+          body: { ...patient, ...(expectedUpdatedAt ? { expectedUpdatedAt } : {}) },
+        }));
       }
       case "notify-billing-toolkit-provider": {
         const receipt = validateHealthCoreDraftReceipt(body.receipt);

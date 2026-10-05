@@ -32,6 +32,7 @@ function patient(id = "BHW1234") {
     legalLastName: "Doe",
     phone: "4105550100",
     patientStatus: "active",
+    updatedAt: "2026-10-05T12:00:00.000Z",
     coverageRecords: [{
       coverageOrder: "secondary",
       insuranceType: "commercial",
@@ -58,7 +59,7 @@ test("the row-three parser separates the named payer from its classification", (
   assert.equal(row.coverageRecord.payerName, "UHC Community");
   assert.equal(row.coverageRecord.insuranceType, "medicaid-mco");
   assert.equal(row.coverageRecord.memberId, "MEMBER-1");
-  assert.equal(row.coverageRecord.coverageStatus, "verified");
+  assert.equal(row.coverageRecord.coverageStatus, "needs-review");
   assert.deepEqual(row.reasons, []);
 });
 
@@ -126,6 +127,7 @@ test("safe updates preserve unrelated patient data and unreported coverage slots
   assert.equal(updated.phone, "4105550100");
   assert.equal(updated.coverageRecords.find((row) => row.coverageOrder === "primary").payerName, "CareFirst Community Health");
   assert.equal(updated.coverageRecords.find((row) => row.coverageOrder === "secondary").memberId, "KEEP-SECONDARY");
+  assert.equal(plan.updates[0].expectedUpdatedAt, "2026-10-05T12:00:00.000Z");
   assert.equal(insuranceUpdateMatches(updated, plan.updates[0].patient), true);
 });
 
@@ -146,6 +148,49 @@ test("conflicting rows and invalid existing MBIs block the whole patient update"
   const invalid = prepareInsuranceUpdates(ordinaryRows, [invalidMbi]);
   assert.equal(invalid.updates.length, 0);
   assert.match(invalid.review[0].reason, /identifier is invalid/i);
+});
+
+test("an imported MBI that differs from the current Registry stays in review", () => {
+  const current = patient();
+  current.medicareMbi = VALID_MBI;
+  const [row] = parseInsuranceReport(report([
+    sourceRow({ payer: "Medicare", member: "2EG4TE5MK73" }),
+  ]), "primary");
+  const plan = prepareInsuranceUpdates([row], [current]);
+  assert.equal(plan.updates.length, 0);
+  assert.match(plan.review[0].reason, /conflicts with the current Registry/i);
+  assert.equal(current.medicareMbi, VALID_MBI);
+});
+
+test("insurance reports never establish current eligibility", () => {
+  for (const status of ["Eligible", "Not Eligible", "Couldn't be checked"]) {
+    const [row] = parseInsuranceReport(report([
+      sourceRow({ payer: "CareFirst Community", status }),
+    ]), "primary");
+    assert.equal(row.coverageRecord.coverageStatus, "needs-review");
+  }
+});
+
+test("imports stay review-only when the current Registry version or coverage shape cannot be preserved", () => {
+  const [row] = parseInsuranceReport(report([
+    sourceRow({ payer: "CareFirst Community" }),
+  ]), "primary");
+  const versionless = patient();
+  delete versionless.updatedAt;
+  const missingVersion = prepareInsuranceUpdates([row], [versionless]);
+  assert.equal(missingVersion.updates.length, 0);
+  assert.match(missingVersion.review[0].reason, /version is missing/i);
+
+  const extraCoverage = patient();
+  extraCoverage.coverageRecords = [
+    { coverageOrder: "primary", insuranceType: "commercial", payerName: "CareFirst BlueCross BlueShield", memberId: "ONE" },
+    { coverageOrder: "secondary", insuranceType: "original-medicare", payerName: "Medicare", memberId: VALID_MBI },
+    { coverageOrder: "other", insuranceType: "medicare-supplement", payerName: "Synthetic Supplement", memberId: "THREE" },
+    { coverageOrder: "other", insuranceType: "behavioral-health", payerName: "Carelon Behavioral Health Maryland", memberId: "FOUR" },
+  ];
+  const unsupportedShape = prepareInsuranceUpdates([row], [extraCoverage]);
+  assert.equal(unsupportedShape.updates.length, 0);
+  assert.match(unsupportedShape.review[0].reason, /supports one primary, one secondary, and one additional/i);
 });
 
 test("an ambiguous payer remains review-only when the current Registry has no classification", () => {
