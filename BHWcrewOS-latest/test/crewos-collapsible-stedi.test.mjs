@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import test from "node:test";
 import vm from "node:vm";
+
+const require = createRequire(import.meta.url);
+const hetsPreventive = require("../netlify/functions/lib/hets-preventive.js");
 
 test("Primary Care and Care Management cards receive persistent collapse controls", async () => {
   const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
@@ -33,6 +37,7 @@ function loadStatusHandler(source, env = {}) {
         cloudRequest: async () => { throw new Error("status must not call BHW Cloud"); },
         listCloudPatients: async () => { throw new Error("status must not load patients"); },
       };
+      if (id === "./lib/hets-preventive") return hetsPreventive;
       throw new Error(`Unexpected require: ${id}`);
     },
   };

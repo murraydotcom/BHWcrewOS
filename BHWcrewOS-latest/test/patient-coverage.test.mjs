@@ -5,6 +5,7 @@ import {
   PAYER_DIRECTORY,
   coverageSlotsForPatient,
   inferInsuranceType,
+  insuranceEditorLimitMessage,
   insuranceReviewFlags,
   insuranceStorageForPatient,
   insuranceValidationMessage,
@@ -164,4 +165,42 @@ test("invalid MBI is rejected and nested coverage payloads are allowlisted", () 
   assert.equal(record.medicareMbi, VALID_MBI);
   assert.equal(record.medicareSecondaryReason, "47");
   assert.equal(record.ignored, undefined);
+});
+
+test("legacy backend coverage aliases retain order, group number, and verified status in the editor", () => {
+  const stored = insuranceStorageForPatient({
+    primaryPayer: "CareFirst BCBS", memberId: "PRIMARY-1", coverageStatus: "verified",
+    coverageRecords: [{ category: "secondary", payer: "Medicare", memberId: VALID_MBI, policyGroup: "GROUP-2", status: "verified" }],
+  });
+  assert.deepEqual(stored.coverageRecords.map((record) => record.coverageOrder), ["primary", "secondary"]);
+  assert.equal(stored.coverageRecords[1].groupNumber, "GROUP-2");
+  assert.equal(stored.coverageRecords[1].coverageStatus, "verified");
+  assert.equal(stored.medicareMbi, VALID_MBI);
+});
+
+test("generic supplement names stay separate from Original Medicare", () => {
+  assert.equal(inferInsuranceType("Synthetic Medicare Supplement"), "medicare-supplement");
+  assert.equal(medicareMbiForPatient({ primaryPayer: "Synthetic Medicare Supplement", memberId: VALID_MBI }), "");
+});
+
+test("the three-card editor blocks records it cannot retain while allowing missing details to be corrected", () => {
+  assert.match(insuranceEditorLimitMessage({ coverageRecords: [
+    { coverageOrder: "primary", payerName: "CareFirst BCBS" },
+    { category: "other", payerName: "Supplement One" },
+    { category: "tertiary", payerName: "Supplement Two" },
+  ] }), /Only one other/);
+  assert.equal(insuranceEditorLimitMessage({ medicareMbi: "invalid", coverageRecords: [
+    { coverageOrder: "primary", memberId: "MISSING-PAYER" },
+  ] }), "");
+});
+
+test("invalid coverage order, classification, nested MBI and MSP values are rejected before normalization", () => {
+  const base = { coverageOrder: "secondary", insuranceType: "original-medicare", payerName: "Medicare" };
+  for (const [values, message] of [
+    [{ medicareSecondaryReason: "99" }, /Medicare-secondary reason is not supported/],
+    [{ medicareSecondaryReason: "12-extra" }, /Medicare-secondary reason is not supported/],
+    [{ insuranceType: "unsupported" }, /Insurance type is not supported/],
+    [{ coverageOrder: "unsupported" }, /Coverage order must be/],
+    [{ medicareMbi: "invalid" }, /valid 11-character MBI/],
+  ]) assert.throws(() => sanitizeCoverageRecords([{ ...base, ...values }]), message);
 });

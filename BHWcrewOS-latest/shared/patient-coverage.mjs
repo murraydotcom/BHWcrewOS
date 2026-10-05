@@ -13,7 +13,7 @@ export const INSURANCE_TYPES = [
   "other",
 ];
 
-export const COVERAGE_STATUSES = ["unknown", "verified", "pending", "needs-review", "inactive"];
+export const COVERAGE_STATUSES = ["unknown", "verified", "pending", "needs-review", "inactive", "self-pay"];
 
 export const MSP_REASONS = ["", "12", "13", "14", "15", "16", "41", "42", "43", "47"];
 
@@ -166,19 +166,20 @@ export function inferInsuranceType(value) {
   const directoryEntry = payerDirectoryEntry(label);
   if (directoryEntry) return directoryEntry.insuranceType;
   if (/medicare advantage|dual complete|healthspring|\bpart\s*c\b|\bma\s+plan\b|alterwood advantage/.test(label)) return "medicare-advantage";
+  if (/medigap|medicare supplement/.test(label)) return "medicare-supplement";
   if (/original medicare|\bmedicare\b|\bpart\s*[ab]\b/.test(label)) return "original-medicare";
   if (/medicaid|healthchoice|community plan|maryland physicians care|better health|priority partners|jai medical|wellpoint|medstar family choice|amerigroup\s*(?:md|of iowa|-\s*maryland)/.test(label)) return "medicaid-mco";
   if (/tricare|us family health plan|\busfhp\b/.test(label)) return "tricare";
   if (/carelon behavioral|optum.*behavior/.test(label)) return "behavioral-health";
-  if (/medigap|medicare supplement/.test(label)) return "medicare-supplement";
   if (/self[ -]?pay/.test(label)) return "self-pay";
   if (/commercial|choice plus|\bppo\b|\bhmo\b|employer health|\behp\b|\bumr\b|surest|freedom life|carefirst|blue\s*(?:cross|shield|choice)|highmark|horizon blue|independence|amerihealth|anthem|geisinger|\bncas\b|healthfund|select access|\bfep\b|healthone/.test(label)) return "commercial";
   return "";
 }
 
 export function normalizeCoverageRecord(record = {}, forcedOrder = "") {
-  const coverageOrder = clean(forcedOrder || record.coverageOrder || record.order || record.priority).toLowerCase();
-  const normalizedOrder = COVERAGE_ORDERS.includes(coverageOrder) ? coverageOrder : "other";
+  const coverageOrder = clean(forcedOrder || record.coverageOrder || record.category || record.order || record.priority).toLowerCase();
+  const normalizedOrder = ({ additional: "other", tertiary: "other" })[coverageOrder]
+    || (COVERAGE_ORDERS.includes(coverageOrder) ? coverageOrder : "other");
   const payerName = clean(record.payerName || record.payer || record.insurance || record.primaryPayer);
   const planName = clean(record.planName || record.insurancePlanName);
   const inferredType = payerDirectoryEntry(planName)?.insuranceType
@@ -196,8 +197,8 @@ export function normalizeCoverageRecord(record = {}, forcedOrder = "") {
     : insuranceType === "medicaid-mco" && payerEntry?.insuranceType === "medicaid-mco"
       ? payerEntry.name
       : payerName;
-  const coverageStatus = COVERAGE_STATUSES.includes(clean(record.coverageStatus))
-    ? clean(record.coverageStatus)
+  const coverageStatus = COVERAGE_STATUSES.includes(clean(record.coverageStatus || record.status))
+    ? clean(record.coverageStatus || record.status)
     : "unknown";
   const medicareSecondaryReason = MSP_REASONS.includes(clean(record.medicareSecondaryReason))
     ? clean(record.medicareSecondaryReason)
@@ -208,7 +209,7 @@ export function normalizeCoverageRecord(record = {}, forcedOrder = "") {
     payerName: normalizedPayerName,
     planName,
     memberId: clean(record.memberId || record.member),
-    groupNumber: clean(record.groupNumber),
+    groupNumber: clean(record.groupNumber || record.policyGroup),
     payerId: clean(record.payerId),
     effectiveFrom: clean(record.effectiveFrom),
     effectiveTo: clean(record.effectiveTo),
@@ -289,15 +290,33 @@ export function insuranceStorageForPatient(patient = {}, slotInput = null, mbiIn
   };
 }
 
-export function insuranceValidationMessage(patient = {}) {
-  const mbi = normalizeMedicareMbi(patient.medicareMbi);
-  if (mbi && !isValidMedicareMbi(mbi)) return "The Medicare Beneficiary Identifier must be a valid 11-character MBI. Do not enter a Medicare Advantage plan member ID in the MBI field.";
+export function insuranceEditorLimitMessage(patient = {}) {
   const records = Array.isArray(patient.coverageRecords) ? patient.coverageRecords.map((record) => normalizeCoverageRecord(record)) : [];
   if (records.length > 3) return "This Registry editor supports one primary, one secondary, and one additional coverage record.";
   const seen = new Set();
   for (const record of records) {
     if (seen.has(record.coverageOrder)) return `Only one ${record.coverageOrder} coverage record can be saved in this Registry view.`;
     seen.add(record.coverageOrder);
+  }
+  return "";
+}
+
+export function insuranceValidationMessage(patient = {}) {
+  const mbi = normalizeMedicareMbi(patient.medicareMbi);
+  if (mbi && !isValidMedicareMbi(mbi)) return "The Medicare Beneficiary Identifier must be a valid 11-character MBI. Do not enter a Medicare Advantage plan member ID in the MBI field.";
+  const rawRecords = Array.isArray(patient.coverageRecords) ? patient.coverageRecords : [];
+  for (const record of rawRecords) {
+    if (!record || typeof record !== "object" || Array.isArray(record)) return "Each coverage record must be an object.";
+    const order = clean(record.coverageOrder || record.category || record.order || record.priority).toLowerCase();
+    if (order && ![...COVERAGE_ORDERS, "additional", "tertiary"].includes(order)) return "Coverage order must be primary, secondary, or other.";
+    if (clean(record.insuranceType) && !INSURANCE_TYPES.includes(clean(record.insuranceType))) return "Insurance type is not supported.";
+    if (clean(record.medicareSecondaryReason) && !MSP_REASONS.includes(clean(record.medicareSecondaryReason))) return "Medicare-secondary reason is not supported.";
+    if (clean(record.medicareMbi) && !isValidMedicareMbi(record.medicareMbi)) return "The Medicare Beneficiary Identifier must be a valid 11-character MBI.";
+  }
+  const limitError = insuranceEditorLimitMessage(patient);
+  if (limitError) return limitError;
+  const records = Array.isArray(patient.coverageRecords) ? patient.coverageRecords.map((record) => normalizeCoverageRecord(record)) : [];
+  for (const record of records) {
     if (!INSURANCE_TYPES.includes(record.insuranceType)) return `Choose a valid insurance type for ${record.coverageOrder} coverage.`;
     if (record.coverageOrder === "primary" && hasCoverageIdentity(record) && !clean(record.payerName)) {
       return "Enter the actual insurance or payer name for the primary coverage. The insurance classification cannot be used as the payer name.";
@@ -330,6 +349,8 @@ export function insuranceReviewFlags(patient = {}) {
 export function sanitizeCoverageRecords(records) {
   if (!Array.isArray(records)) throw new Error("coverageRecords must be an array.");
   if (records.length > 3) throw new Error("Only primary, secondary, and additional coverage records are supported.");
+  const error = insuranceValidationMessage({ coverageRecords: records });
+  if (error) throw new Error(error);
   return records.map((record) => {
     const normalized = normalizeCoverageRecord(record);
     return Object.fromEntries(COVERAGE_FIELDS.map((field) => [field, normalized[field]]));

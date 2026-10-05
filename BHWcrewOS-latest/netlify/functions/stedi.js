@@ -17,6 +17,7 @@ const {
   isValidMedicareMbi,
   resolveMedicareMbi,
 } = require("./lib/cloud-patients");
+const { HETS_MEDICARE_SERVICE_BUNDLE, normalizeHetsMeasures } = require("./lib/hets-preventive");
 const BHW_NPI = "1306511597";
 const AWV_CODES = ["G0402", "G0438", "G0439"];
 const STEDI_ELIGIBILITY_PATH = "/2026-06-01/eligibility-check";
@@ -143,7 +144,7 @@ function shapePatient(patient) {
 }
 
 function parse271(r) {
-  const out = { active: null, planType: "Unknown", maName: "", awvLast: null, awvNext: null,
+  const out = { active: null, planType: "Unknown", maName: "", awvLast: null, awvNext: null, awvEligibleNow: false,
                 services: [], deductible: "", note: "" };
   const entries = planBenefitEntries(r);
   const statuses = entries.filter(({ type }) => type === "statuses");
@@ -179,14 +180,16 @@ function parse271(r) {
     out.deductible = `$${deductible.benefit.amount}${period ? ` (${period})` : ""}`;
   }
 
+  const supportedStcEvidence = new Set(["67", "CQ", "80", "CO", "BD"]);
   for (const { type, benefit } of entries) {
     const service = benefit.service || {};
     const system = String(service.system || "").toUpperCase();
     const code = String(service.value || "").toUpperCase();
-    if (!code || (system === "STC" && !AWV_CODES.includes(code))) continue;
+    if (!code || (system === "STC" && !supportedStcEvidence.has(code))) continue;
     const dates = benefitDates(benefit.dates);
     out.services.push({
-      code,
+      code: system === "STC" ? `STC:${code}` : code,
+      serviceSystem: system,
       info: service.definition || (benefit.messages || []).join("; ") || displayEnum(type),
       dates,
     });
@@ -194,8 +197,9 @@ function parse271(r) {
     for (const date of dates) {
       if (date.kind.startsWith("latestVisit") && date.date <= today()) {
         if (!out.awvLast || date.date > out.awvLast) out.awvLast = date.date;
-      } else if (!date.kind.endsWith(".end") && date.date > today()) {
+      } else if (!date.kind.endsWith(".end") && /benefit|eligib/i.test(date.kind)) {
         if (!out.awvNext || date.date < out.awvNext) out.awvNext = date.date;
+        if (date.date <= today()) out.awvEligibleNow = true;
       }
     }
   }
@@ -209,7 +213,7 @@ function parse271(r) {
 
 function awvStatus(parsed) {
   const t = today();
-  if (parsed.awvNext && parsed.awvNext <= t) return "Due now";
+  if (parsed.awvEligibleNow || (parsed.awvNext && parsed.awvNext <= t)) return "Due now";
   if (parsed.awvLast) {
     const months = (new Date(t) - new Date(parsed.awvLast)) / (30.44 * 86400000);
     if (months >= 11) return "Due now";
@@ -217,7 +221,8 @@ function awvStatus(parsed) {
     return "Recently done";
   }
   if (parsed.awvNext) return "Upcoming";
-  if (parsed.active) return "Due now"; // active Medicare, no AWV history returned → treat as due, verify manually
+  // Active Medicare with no AWV-specific response is not proof that the AWV is
+  // due. HETS omissions and Medicare Advantage history both require review.
   return "Unknown";
 }
 
@@ -236,9 +241,11 @@ async function upsertTracker(patient, parsed, errNote, session) {
       awvNextEligibleDate: parsed.awvNext || "",
       coverageCheckedAt: new Date().toISOString(),
       preventiveServices: parsed.services,
+      preventiveMeasureSummary: normalizeHetsMeasures({ preventiveServices: parsed.services }),
       deductibleRemaining: parsed.deductible,
       coverageNotes: (errNote || parsed.note || "").slice(0, 4000),
       sourceSystem: "Stedi HETS",
+      sourceRulesVersion: "cms-hets-2026-2-v15.1",
     },
   });
   return result.profile?.id || patient.id;
@@ -250,6 +257,7 @@ async function runCheck(patient, clientIp, session) {
   const dateOfBirth = dashDate(patient.dob);
   if (!dateOfBirth) return { skipped: "invalid-dob" };
   const payload = {
+    externalPatientId: patient.id,
     payerId: "CMS",
     provider: {
       name: { organization: "BALTIMORE HEALTHCARE AND WELLNESS LLC" },
@@ -265,7 +273,11 @@ async function runCheck(patient, clientIp, session) {
       },
       dateOfBirth,
     },
-    encounter: { services: [{ system: "STC", value: "30" }] },
+    // CMS HETS supports repeated STC/HCPCS requests. This CMS-specific bundle
+    // keeps one button/batch action to one 270 while returning the benefit
+    // families needed for the normalized preventive review. BHW0000 remains
+    // the release-test fixture until the existing production gate is opened.
+    encounter: { services: HETS_MEDICARE_SERVICE_BUNDLE },
   };
   const res = await stediRequest(STEDI_ELIGIBILITY_PATH, payload, clientIp);
   if (!res.ok) {
@@ -280,7 +292,15 @@ async function runCheck(patient, clientIp, session) {
     return { error: `Stedi ${res.status}` };
   }
   await upsertTracker(patient, parsed, "", session);
-  return { ok: true, active: parsed.active, awvStatus: awvStatus(parsed), awvNext: parsed.awvNext, awvLast: parsed.awvLast };
+  return {
+    ok: true,
+    active: parsed.active,
+    awvStatus: awvStatus(parsed),
+    awvNext: parsed.awvNext,
+    awvLast: parsed.awvLast,
+    preventiveMeasureCount: normalizeHetsMeasures({ preventiveServices: parsed.services }).length,
+    requestScope: "coverage-and-preventive-benefits",
+  };
 }
 
 exports.handler = async (event) => {
@@ -317,6 +337,11 @@ exports.handler = async (event) => {
       const raw = patients.find((item) => item.bhwPatientId === String(b.patientId || "").toUpperCase());
       if (!raw) return json(404, { error: "Patient not found" });
       const patient = shapePatient(raw);
+      if (patient.id === "BHW0000") {
+        return json(409, {
+          error: "BHW0000 is synthetic and cannot be sent to CMS HETS. Use an approved Stedi mock or local fixture for the synthetic workflow.",
+        });
+      }
       if (!patient.mbi) return json(400, { error: "No MBI on file for this patient — add it first" });
       const result = await runCheck(patient, clientIp, session);
       return json(200, result);
@@ -325,7 +350,7 @@ exports.handler = async (event) => {
     if (b.action === "batch") {
       const offset = b.offset || 0;
       const targets = (await listCloudPatients(session)).map(shapePatient).filter((p) =>
-        ["Medicare", "Medicare + Medicaid"].includes(p.insurance) && p.mbi && p.status !== "Deceased");
+        p.id !== "BHW0000" && ["Medicare", "Medicare + Medicaid"].includes(p.insurance) && p.mbi && p.status !== "Deceased");
       const slice = targets.slice(offset, offset + 4);
       const results = [];
       for (const patient of slice) {

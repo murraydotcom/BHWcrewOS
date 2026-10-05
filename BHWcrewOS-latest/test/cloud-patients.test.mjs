@@ -72,3 +72,30 @@ test('Cloud patient adapter promotes a nested Registry MBI for every directory c
   assert.equal(patient.medicareCoverageOrder, 'secondary');
   assert.equal(resolveMedicareCoverageOrder(patient), 'secondary');
 });
+
+test('Advantage and supplement policy numbers never seed an MBI even when they have MBI format', () => {
+  for (const coverage of [
+    { insuranceType: 'medicare-advantage', payerName: 'UnitedHealthcare Dual Complete' },
+    { insuranceType: 'medicare-advantage', payerName: 'CIGNA HealthSpring' },
+    { insuranceType: 'medicare-supplement', payerName: 'Medicare Supplement' },
+    { insuranceType: 'commercial', payerName: 'Synthetic Medicare Named Employer Plan' },
+  ]) {
+    assert.equal(resolveMedicareMbi({ coverageRecords: [{ ...coverage, memberId: '1EG4TE5MK73' }] }), '');
+  }
+  assert.equal(resolveMedicareMbi({ primaryPayer: 'UnitedHealthcare Dual Complete', memberId: '1EG4TE5MK73' }), '');
+  assert.equal(resolveMedicareMbi({ primaryPayer: 'Medicare Supplement', memberId: '1EG4TE5MK73' }), '');
+});
+
+test('structured primary coverage wins over stale legacy payer and plan projections', () => {
+  const patient = legacyPatient({
+    bhwPatientId: 'BHW9999', legalFirstName: 'Synthetic', legalLastName: 'Coverage',
+    primaryPayer: 'Medicare', memberId: '1EG4TE5MK73', insurancePlanName: 'Original Medicare',
+    coverageRecords: [{ coverageOrder: 'primary', insuranceType: 'commercial', payerName: 'CareFirst BCBS', memberId: 'PRIMARY-1', planName: 'Verified Employer Plan', coverageStatus: 'verified' }],
+  });
+  assert.equal(patient.payer, 'CareFirst BCBS');
+  assert.equal(patient.primaryPayer, 'CareFirst BCBS');
+  assert.equal(patient.memberId, 'PRIMARY-1');
+  assert.equal(patient.insurance, 'Verified Employer Plan');
+  assert.equal(patient.hasMbi, false);
+  assert.equal(patient.medicareCoverageOrder, '');
+});

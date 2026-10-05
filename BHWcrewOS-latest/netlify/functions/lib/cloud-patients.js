@@ -6,30 +6,39 @@ const MBI_PATTERN = /^[1-9][AC-HJ-KM-NP-RT-Y][AC-HJ-KM-NP-RT-Y0-9][0-9][AC-HJ-KM
 const normalizeMedicareMbi = (value) => String(value || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
 const isValidMedicareMbi = (value) => MBI_PATTERN.test(normalizeMedicareMbi(value));
 
+function primaryCoverageForPatient(patient = {}) {
+  return (Array.isArray(patient.coverageRecords) ? patient.coverageRecords : [])
+    .find((coverage) => String(coverage?.coverageOrder || coverage?.category || coverage?.order || coverage?.priority || "").trim().toLowerCase() === "primary");
+}
+
 function isOriginalMedicareCoverage(record = {}) {
+  const insuranceType = String(record.insuranceType || "").trim().toLowerCase();
+  if (insuranceType) return insuranceType === "original-medicare";
   const label = [record.primaryPayer, record.payer, record.payerName, record.insurancePlanName, record.planName, record.insurance]
     .filter(Boolean).join(" ").toLowerCase();
-  if (/medicare advantage|part\s*c|\bma\s+plan\b/.test(label)) return false;
-  return /medicare|\bcms\b|\bqmb\b|\bdual\b|part\s*[ab]\b/.test(label);
+  if (/medicare advantage|dual complete|healthspring|alterwood advantage|medigap|medicare supplement|part\s*c|\bma\s+plan\b/.test(label)) return false;
+  return /medicare|\bcms\b|part\s*[ab]\b/.test(label);
 }
 
 function isMedicareCoverage(record = {}) {
   const insuranceType = String(record.insuranceType || "").trim().toLowerCase();
-  if (["original-medicare", "medicare-advantage"].includes(insuranceType)) return true;
+  if (insuranceType) return ["original-medicare", "medicare-advantage"].includes(insuranceType);
   const label = [record.primaryPayer, record.payer, record.payerName, record.insurancePlanName, record.planName, record.insurance]
     .filter(Boolean).join(" ").toLowerCase();
+  if (/medigap|medicare supplement/.test(label)) return false;
   return /medicare|\bcms\b|\bqmb\b|dual complete|healthspring|alterwood advantage|part\s*[abc]\b/.test(label);
 }
 
 function resolveMedicareCoverageOrder(patient = {}) {
   const coverages = Array.isArray(patient.coverageRecords) ? patient.coverageRecords : [];
-  const withNestedMbi = coverages.find((coverage) => isValidMedicareMbi(coverage?.medicareMbi));
+  const withNestedMbi = coverages.find((coverage) => isMedicareCoverage(coverage) && isValidMedicareMbi(coverage?.medicareMbi));
   const coverage = withNestedMbi || coverages.find(isMedicareCoverage);
   if (coverage) {
     const order = String(coverage.coverageOrder || coverage.category || coverage.order || "").trim().toLowerCase();
     return ({ additional: "other", tertiary: "other" })[order] || (["primary", "secondary", "other"].includes(order) ? order : "unknown");
   }
-  if (isMedicareCoverage(patient)) return "primary";
+  const primary = primaryCoverageForPatient(patient);
+  if (isMedicareCoverage(primary || patient)) return "primary";
   return resolveMedicareMbi(patient) ? "unknown" : "";
 }
 
@@ -43,8 +52,9 @@ function resolveMedicareMbi(patient = {}) {
     if (isValidMedicareMbi(nested)) return nested;
   }
 
-  const memberId = normalizeMedicareMbi(patient.memberId || patient.member);
-  if (isOriginalMedicareCoverage(patient) && isValidMedicareMbi(memberId)) return memberId;
+  const primary = primaryCoverageForPatient(patient);
+  const memberId = normalizeMedicareMbi(primary ? primary.memberId : patient.memberId || patient.member);
+  if (isOriginalMedicareCoverage(primary || patient) && isValidMedicareMbi(memberId)) return memberId;
   for (const coverage of coverages) {
     const nestedMemberId = normalizeMedicareMbi(coverage?.memberId);
     if (isOriginalMedicareCoverage(coverage) && isValidMedicareMbi(nestedMemberId)) return nestedMemberId;
@@ -133,8 +143,16 @@ function legacyPatient(p) {
   const status = p.patientStatus || "";
   const medicareMbi = resolveMedicareMbi(p);
   const medicareCoverageOrder = resolveMedicareCoverageOrder(p);
+  const primary = primaryCoverageForPatient(p);
+  const primaryPayer = primary?.payerName || primary?.payer || p.primaryPayer || p.payerName || "";
+  const memberId = primary ? primary.memberId || "" : p.memberId || "";
+  const insurancePlanName = primary ? primary.planName || "" : p.insurancePlanName || "";
   return {
     ...cloudPatient,
+    primaryPayer,
+    memberId,
+    insurancePlanName,
+    coverageStatus: primary ? primary.coverageStatus || primary.status || "unknown" : p.coverageStatus,
     id: p.bhwPatientId,
     bhwId: p.bhwPatientId,
     ctl: p.bhwPatientId,
@@ -142,10 +160,10 @@ function legacyPatient(p) {
     dob: p.dateOfBirth || "",
     chart: p.mrn || "",
     mrn: p.mrn || p.bhwPatientId,
-    payer: p.primaryPayer || p.payerName || "",
+    payer: primaryPayer,
     mco: p.medicaidMco || "",
-    insurance: p.insurancePlanName || p.primaryPayer || p.payerName || "",
-    member: p.memberId || "",
+    insurance: insurancePlanName || primaryPayer,
+    member: memberId,
     medicareMbi,
     hasMbi: Boolean(medicareMbi),
     medicareCoverageOrder,
@@ -195,4 +213,6 @@ module.exports = {
   isValidMedicareMbi,
   resolveMedicareMbi,
   resolveMedicareCoverageOrder,
+  isMedicareCoverage,
+  primaryCoverageForPatient,
 };

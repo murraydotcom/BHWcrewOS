@@ -9,6 +9,7 @@ import {
   PAYER_DIRECTORY,
   coverageSlotsForPatient,
   hasCoverageIdentity,
+  insuranceEditorLimitMessage,
   insuranceReviewFlags,
   insuranceStorageForPatient,
   insuranceValidationMessage,
@@ -439,6 +440,8 @@ function renderDetail() {
   });
   wireInsuranceDirectory("d");
   $("savePatient").onclick = async () => {
+    const existingInsuranceError = insuranceEditorLimitMessage(patient);
+    if (existingInsuranceError) { showToast(existingInsuranceError); return; }
     const next = readPatient("d", patient.bhwPatientId);
     const error = validationMessage(next);
     if (error) { showToast(error); return; }

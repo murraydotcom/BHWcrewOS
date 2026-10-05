@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import test from "node:test";
 import vm from "node:vm";
+
+const require = createRequire(import.meta.url);
+const hetsPreventive = require("../netlify/functions/lib/hets-preventive.js");
 
 const syntheticPatient = {
   bhwPatientId: "BHWTEST1",
@@ -15,7 +19,7 @@ const syntheticPatient = {
   patientStatus: "Active",
 };
 
-async function loadHarness({ response, statusCode = 200 }) {
+async function loadHarness({ response, statusCode = 200, patients = [syntheticPatient] }) {
   const source = await readFile(new URL("../netlify/functions/stedi.js", import.meta.url), "utf8");
   const httpCalls = [];
   const cloudCalls = [];
@@ -53,11 +57,12 @@ async function loadHarness({ response, statusCode = 200 }) {
           cloudCalls.push({ path, options: JSON.parse(JSON.stringify(options)) });
           return { profile: { id: "synthetic-profile" } };
         },
-        listCloudPatients: async () => [syntheticPatient],
+        listCloudPatients: async () => patients,
         normalizeMedicareMbi: (value) => value,
         isValidMedicareMbi: () => true,
         resolveMedicareMbi: (patient) => patient.medicareMbi || "",
       };
+      if (id === "./lib/hets-preventive") return hetsPreventive;
       throw new Error(`Unexpected require: ${id}`);
     },
   };
@@ -140,19 +145,22 @@ test("Stedi eligibility check uses the redesigned request and preserves the BHW 
   assert.equal(request.options.path, "/2026-06-01/eligibility-check");
   assert.equal(request.options.headers.Authorization, "Key synthetic-key");
   assert.equal(request.options.headers["X-Forwarded-For"], "192.0.2.44");
-  assert.deepEqual(JSON.parse(request.body), {
-    payerId: "CMS",
-    provider: {
-      name: { organization: "BALTIMORE HEALTHCARE AND WELLNESS LLC" },
-      npi: "1306511597",
-    },
-    subscriber: {
-      memberId: "1EG4TE5MK73",
-      name: { person: { firstName: "SYNTHETIC", lastName: "MEDICARE" } },
-      dateOfBirth: "1950-01-02",
-    },
-    encounter: { services: [{ system: "STC", value: "30" }] },
+  const submitted = JSON.parse(request.body);
+  assert.equal(submitted.payerId, "CMS");
+  assert.equal(submitted.externalPatientId, "BHWTEST1");
+  assert.deepEqual(submitted.provider, {
+    name: { organization: "BALTIMORE HEALTHCARE AND WELLNESS LLC" },
+    npi: "1306511597",
   });
+  assert.deepEqual(submitted.subscriber, {
+    memberId: "1EG4TE5MK73",
+    name: { person: { firstName: "SYNTHETIC", lastName: "MEDICARE" } },
+    dateOfBirth: "1950-01-02",
+  });
+  const requested = new Set(submitted.encounter.services.map(({ system, value }) => `${system}:${value}`));
+  for (const code of ["STC:30", "STC:BZ", "STC:71", "STC:BT", "HCPCS:77067", "HCPCS:G0444"]) {
+    assert.equal(requested.has(code), true, `missing ${code}`);
+  }
 
   assert.equal(harness.cloudCalls.length, 1);
   const tracker = harness.cloudCalls[0];
@@ -167,6 +175,7 @@ test("Stedi eligibility check uses the redesigned request and preserves the BHW 
   assert.equal(tracker.options.body.awvNextEligibleDate, "2099-01-15");
   assert.equal(tracker.options.body.sourceSystem, "Stedi HETS");
   assert.equal(tracker.options.body.coverageNotes, "");
+  assert.equal(tracker.options.body.sourceRulesVersion, "cms-hets-2026-2-v15.1");
   assert.deepEqual(tracker.options.body.preventiveServices.map(({ code }) => code), ["G0439", "G0402"]);
 });
 
@@ -211,4 +220,17 @@ test("non-success Stedi responses still write the existing BHW Cloud error shape
   assert.equal(tracker.awvStatus, "Unknown");
   assert.equal(tracker.coverageNotes, "Stedi 422: Synthetic request rejected");
   assert.equal(tracker.sourceSystem, "Stedi HETS");
+});
+
+test("BHW0000 never becomes a production CMS HETS request", async () => {
+  const fixture = { ...syntheticPatient, bhwPatientId: "BHW0000" };
+  const harness = await loadHarness({ response: {}, patients: [fixture] });
+  const result = await harness.handler({
+    ...checkEvent(),
+    body: JSON.stringify({ action: "check", patientId: "BHW0000" }),
+  });
+  assert.equal(result.statusCode, 409);
+  assert.match(JSON.parse(result.body).error, /approved Stedi mock or local fixture/);
+  assert.equal(harness.httpCalls.length, 0);
+  assert.equal(harness.cloudCalls.length, 0);
 });
