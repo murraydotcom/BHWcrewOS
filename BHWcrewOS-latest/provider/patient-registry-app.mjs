@@ -39,6 +39,7 @@ let careToken = "";
 let careTokenExpiresAt = 0;
 let registryFormDirty = false;
 let registryRefreshPromise = null;
+let registryLoaded = false;
 let insuranceImportPlan = null;
 let insuranceImportRunning = false;
 
@@ -494,6 +495,17 @@ function clearInsuranceImport() {
   $("insuranceImportReview").innerHTML = '<div class="notice"><b>No Registry changes have been prepared.</b><br>Only exact BHW#### matches with a specific, classified payer can be applied. Legacy IDs, ambiguous payers, generic Medicaid, conflicting rows, and unverified Medicare information remain in review.</div>';
 }
 
+function syncInsuranceFileControls() {
+  const files = [...$("insuranceReportFiles").files];
+  const orders = files.map((file) => coverageOrderFromFilename(file.name));
+  const complete = files.length === 3 && COVERAGE_ORDERS.every((order) => orders.filter((item) => item === order).length === 1);
+  $("insuranceFileSummary").textContent = files.length ? files.map((file) => file.name).join(" · ") : "Files stay in this browser until an approved Registry update is applied.";
+  $("previewInsuranceImport").disabled = !complete || !registryLoaded;
+  $("clearInsuranceImport").disabled = !files.length;
+  $("insuranceImportBadge").className = "badge warning";
+  $("insuranceImportBadge").textContent = complete && !registryLoaded ? "Refreshing current Registry" : complete ? "Ready for dry run" : "Select all three reports";
+}
+
 function renderInsuranceImportPlan(plan) {
   const { summary } = plan;
   const previewRows = plan.updates.slice(0, 30).map((update) => `<tr><td><b>${esc(update.bhwPatientId)}</b></td><td>${esc(update.coverageOrders.join(", "))}</td><td>${esc(update.payerNames.join(" · "))}</td><td>${update.importsMbi ? "Validated MBI" : "No new MBI"}</td></tr>`).join("");
@@ -518,6 +530,10 @@ function renderInsuranceImportPlan(plan) {
 }
 
 async function previewInsuranceImport() {
+  if (!registryLoaded) {
+    showToast("Wait for the current BHW Cloud Registry to finish loading before running the insurance dry run.");
+    return;
+  }
   const files = [...$("insuranceReportFiles").files];
   const byOrder = new Map(files.map((file) => [coverageOrderFromFilename(file.name), file]));
   if (COVERAGE_ORDERS.some((order) => !byOrder.has(order))) {
@@ -612,20 +628,26 @@ async function refreshPatients({ force = false, selectId = selectedId, announce 
     return true;
   }
   registryRefreshPromise = (async () => {
+    registryLoaded = false;
+    syncInsuranceFileControls();
     const button = $("refreshPatients");
     if (button) { button.disabled = true; button.textContent = "Refreshing…"; }
     try {
       const current = await client.listPatients();
       patients = current;
+      registryLoaded = true;
       selectedId = current.some((patient) => patient.bhwPatientId === selectId) ? selectId : (current[0]?.bhwPatientId || "");
       registryFormDirty = false;
       $("cloudStatus").className = "badge complete";
       $("cloudStatus").textContent = "Google Cloud synced";
       $("lastRegistrySync").textContent = `Current as of ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
       render();
+      syncInsuranceFileControls();
       if (announce) showToast(`Patient Registry refreshed from BHW Cloud · ${current.length} current records.`);
       return true;
     } catch (error) {
+      registryLoaded = false;
+      syncInsuranceFileControls();
       $("cloudStatus").className = "badge warning";
       $("cloudStatus").textContent = "Refresh interrupted";
       if (announce) showToast(error.message || "The Patient Registry could not refresh.");
@@ -643,14 +665,7 @@ $("statusFilter").onchange = renderRows;
 $("refreshPatients").onclick = () => { void refreshPatients({ announce: true }); };
 $("insuranceReportFiles").onchange = () => {
   insuranceImportPlan = null;
-  const files = [...$("insuranceReportFiles").files];
-  const orders = files.map((file) => coverageOrderFromFilename(file.name));
-  const complete = files.length === 3 && COVERAGE_ORDERS.every((order) => orders.filter((item) => item === order).length === 1);
-  $("insuranceFileSummary").textContent = files.length ? files.map((file) => file.name).join(" · ") : "Files stay in this browser until an approved Registry update is applied.";
-  $("previewInsuranceImport").disabled = !complete;
-  $("clearInsuranceImport").disabled = !files.length;
-  $("insuranceImportBadge").className = "badge warning";
-  $("insuranceImportBadge").textContent = complete ? "Ready for dry run" : "Select all three reports";
+  syncInsuranceFileControls();
 };
 $("previewInsuranceImport").onclick = () => { void previewInsuranceImport(); };
 $("clearInsuranceImport").onclick = clearInsuranceImport;
