@@ -158,3 +158,10 @@ test("migration UI is session-gated, starts with preview, and distinguishes veri
   assert.match(migration, /const message = clean\(P\.text\(p\.Summary\) \|\| "Legacy Patient Request", 4000\)/);
   assert.match(migration, /const summary = clean\(message, 500\)/);
 });
+
+test("the legacy patient migration is retired when the Notion cutover is complete", async () => {
+  const handler = await readFile(new URL("../netlify/functions/patient-cloud-migration.js", import.meta.url), "utf8");
+  assert.match(handler, /const \{ cutoverMode \} = require\("\.\/lib\/operational-store"\)/);
+  assert.match(handler, /mode === "database"/);
+  assert.match(handler, /legacy Notion patient migration is retired/);
+});

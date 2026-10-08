@@ -7,6 +7,7 @@ const { getSession, json } = require("./_lib");
 const { cloudRequest } = require("./lib/cloud-patients");
 const { operationsRequest, createFrontDeskIntake, createFrontDeskIntakeBulk } = require("./lib/operations-cloud");
 const { prepareIdentity, prepareMigration, publicPreview, sealIdentity, verifyIdentity, sealPreparedPreview, verifyPreparedPreview } = require("./lib/patient-cloud-migration");
+const { cutoverMode } = require("./lib/operational-store");
 
 const CONFIRMATION = "APPLY APPROVED CLOUD MIGRATION";
 
@@ -173,6 +174,10 @@ exports.handler = async (event) => {
   const session = getSession(event);
   if (!session) return json(401, { error: "Sign in to CrewOS again." });
   if (String(session.access || "").toLowerCase() !== "admin") return json(403, { error: "Administrator access is required." });
+
+  const mode = await cutoverMode();
+  if (mode === "database") return json(410, { error: "The legacy Notion patient migration is retired. Current patient workflows are authoritative in BHW Cloud." });
+  if (mode === "cutover") return json(423, { error: "The protected Notion cutover is in progress. Legacy migration is unavailable." });
 
   let body;
   try { body = JSON.parse(event.body || "{}"); } catch { return json(400, { error: "Bad JSON" }); }
