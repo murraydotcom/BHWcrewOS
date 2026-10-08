@@ -61,3 +61,16 @@ test("a locked cutover rejects stale snapshots from before writes paused", async
   assert.equal(status.complete, false);
   assert.ok(status.sources.every((source) => source.verified === false));
 });
+
+test("missing Netlify Database configuration preserves the pre-cutover Notion runtime", async () => {
+  const error = Object.assign(new Error("The environment has not been configured to use Netlify Database"), { name: "MissingDatabaseConnectionError" });
+  const pool = { query: async () => { throw error; } };
+  assert.equal(await store.cutoverMode({ pool }), "notion");
+
+  const status = await store.cutoverStatus({
+    get pool() { throw error; },
+  });
+  assert.equal(status.mode, "notion");
+  assert.equal(status.databaseReady, false);
+  assert.equal(status.complete, false);
+});
