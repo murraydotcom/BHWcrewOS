@@ -1,7 +1,8 @@
 // netlify/functions/ops-data.js — dashboard payload, division walls enforced HERE.
 // Returns only what the signed-in person's divisions permit. Admins see all.
  
-const { DB, normalizeDivision, queryDb, P, getSession, visibleDivisions, json } = require("./_lib");
+const { DB, normalizeDivision, P, getSession, visibleDivisions, json } = require("./_lib");
+const { queryOperational } = require("./lib/operational-store");
 const { cloudRequest, listCloudPatients } = require("./lib/cloud-patients");
 const { buildPatientDirectory } = require("./lib/crew-patient-directory");
 const { operationsRequest } = require("./lib/operations-cloud");
@@ -94,10 +95,10 @@ exports.handler = async (event) => {
   try {
     const [staffPages, roomPages, schedulePages, resourcePages, patientRegistryResult, operationsRows, careLogRows, wellnessRows, programPlanRows, panelRows] =
       await Promise.all([
-        queryDb(DB.staff),
-        queryDb(DB.rooms),
-        queryDb(DB.schedule),
-        queryDb(DB.resources),
+        queryOperational("staff", DB.staff),
+        queryOperational("rooms", DB.rooms),
+        queryOperational("schedule", DB.schedule),
+        queryOperational("resources", DB.resources),
         listCloudPatients(session)
           .then((patients) => ({ ready: true, patients, error: "" }))
           .catch((error) => ({ ready: false, patients: [], error: error.message || "Patient Registry unavailable" })),
@@ -150,10 +151,10 @@ exports.handler = async (event) => {
     const monthKey = new Date().toISOString().slice(0, 7);
     const minuteRows = careLogRows.logs || [];
  
-    // Crew Projects: posted by team leads in Notion, shown to assigned staff in My Space.
+    // Crew Projects: posted by team leads and shown to assigned staff in My Space.
     let crewProjects = [];
     if (DB.crewProjects) {
-      const cpPages = await queryDb(DB.crewProjects);
+      const cpPages = await queryOperational("crewProjects", DB.crewProjects);
       crewProjects = cpPages.map((pg) => {
         const p = pg.properties;
         return {

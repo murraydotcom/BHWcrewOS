@@ -4,7 +4,8 @@ import { createRequire } from 'node:module';
 import crypto from 'node:crypto';
 
 const require = createRequire(import.meta.url);
-const { handler } = require('../netlify/functions/frontdesk-data.js');
+const frontdesk = require('../netlify/functions/frontdesk-data.js');
+const { handler } = frontdesk;
 
 const SESSION_SECRET = 'synthetic-frontdesk-session-secret';
 function signedHeaders() {
@@ -53,11 +54,12 @@ test('Front Desk resolves BHW0000 direct lookup without querying a live patient 
 });
 
 test('Front Desk specialist directory includes the address used by the referral form', async () => {
-  const previousFetch = global.fetch;
-  global.fetch = async () => ({
-    ok: true,
-    json: async () => ({
-      results: [{
+  const response = await frontdesk._test.handle({
+    httpMethod: 'GET',
+    headers: signedHeaders(),
+    queryStringParameters: { dir: '1' },
+  }, {
+    queryOperationalImpl: async () => [{
         properties: {
           Specialist: { title: [{ plain_text: 'Synthetic Specialist' }] },
           Specialty: { select: { name: 'Endocrinology' } },
@@ -72,25 +74,11 @@ test('Front Desk specialist directory includes the address used by the referral 
           Notes: { rich_text: [] },
         },
       }],
-      has_more: false,
-      next_cursor: null,
-    }),
   });
-
-  try {
-    const response = await handler({
-      httpMethod: 'GET',
-      headers: signedHeaders(),
-      queryStringParameters: { dir: '1' },
-    });
-
-    assert.equal(response.statusCode, 200);
-    const body = JSON.parse(response.body);
-    assert.equal(body.specialists.length, 1);
-    assert.equal(body.specialists[0].address, '100 Test Avenue, Baltimore, MD 21201');
-  } finally {
-    global.fetch = previousFetch;
-  }
+  assert.equal(response.statusCode, 200);
+  const body = JSON.parse(response.body);
+  assert.equal(body.specialists.length, 1);
+  assert.equal(body.specialists[0].address, '100 Test Avenue, Baltimore, MD 21201');
 });
 
 test('an accepted Front Desk text moves the request to the communication log exactly once', async () => {

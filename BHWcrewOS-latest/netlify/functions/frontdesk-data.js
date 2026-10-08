@@ -1,18 +1,13 @@
 // netlify/functions/frontdesk-data.js
 // Live patient lookup for bhw-front-desk.html
 // Patient identity and Patient Requests come from protected Google Cloud.
-// Notion remains only for the non-patient specialist reference directory.
-
-const NOTION = 'https://api.notion.com/v1';
-const H = () => ({
-  'Authorization': `Bearer ${process.env.NOTION_TOKEN}`,
-  'Notion-Version': '2022-06-28',
-  'Content-Type': 'application/json',
-});
+// The non-patient specialist reference directory is served by the CrewOS
+// operational store (temporarily Notion until the verified database cutover).
 
 const { listCloudPatients, findCloudPatient, searchCloudPatients } = require('./lib/cloud-patients');
 const { createIFaxClient } = require('./lib/ifax');
-const { getSession } = require('./_lib');
+const { DB, getSession } = require('./_lib');
+const { queryOperational } = require('./lib/operational-store');
 const { operationsRequest } = require('./lib/operations-cloud');
 const crypto = require('crypto');
 const digits = s => (s || '').replace(/\D/g, '');
@@ -68,7 +63,7 @@ async function fetchRequests(bhwPatientId, session) {
   return requestRows(result).slice(0, 8).map(shapeRequest);
 }
 
-exports.handler = async (event) => {
+async function handle(event, { queryOperationalImpl = queryOperational } = {}) {
   try {
     const session = getSession(event);
     if (!session) return { statusCode: 401, body: JSON.stringify({ error: 'Sign in to CrewOS again' }) };
@@ -202,19 +197,12 @@ exports.handler = async (event) => {
       }
     }
 
-    // ---- SPECIALIST DIRECTORY: ?dir=1 -> the referral directory (live from Notion) ----
+    // ---- SPECIALIST DIRECTORY: ?dir=1 -> the CrewOS-owned referral directory ----
     if (event.queryStringParameters?.dir) {
-      const SPEC_DB = process.env.SPECIALIST_DB_ID || '8ae69b6a2f1a42679848744f3a17acb6';
+      const SPEC_DB = process.env.SPECIALIST_DB_ID || DB.specialistDirectory;
       const specialists = [];
-      let cursor;
-      do {
-        const sres = await fetch(`${NOTION}/databases/${SPEC_DB}/query`, {
-          method: 'POST', headers: H(),
-          body: JSON.stringify({ page_size: 100, ...(cursor ? { start_cursor: cursor } : {}) }),
-        });
-        const sdata = await sres.json();
-        if (!sres.ok) return { statusCode: 502, body: JSON.stringify({ error: sdata.message || 'directory query failed' }) };
-        for (const r of (sdata.results || [])) {
+      const directoryPages = await queryOperationalImpl('specialistDirectory', SPEC_DB);
+      for (const r of directoryPages) {
           const p = r.properties;
           const name = text(p['Specialist']);
           if (!name) continue;
@@ -231,9 +219,7 @@ exports.handler = async (event) => {
             wait: sel(p['Typical Wait']),
             notes: text(p['Notes']),
           });
-        }
-        cursor = sdata.has_more ? sdata.next_cursor : null;
-      } while (cursor);
+      }
       return {
         statusCode: 200,
         headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
@@ -346,4 +332,7 @@ exports.handler = async (event) => {
   } catch (e) {
     return { statusCode: 500, body: JSON.stringify({ error: String(e) }) };
   }
-};
+}
+
+exports.handler = handle;
+exports._test = { handle };

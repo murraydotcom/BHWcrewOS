@@ -5,10 +5,11 @@
 //                          neededBy, sort }] }   (Active only, sorted)
 //
 // The referral form in crewOS filters these by the selected destination and
-// fills Type / Details / Priority / Needed-by. Edit the "Referral Templates —
-// by Destination" Notion DB to change what staff see — no code change needed.
+// fills Type / Details / Priority / Needed-by. Templates are owned by the
+// CrewOS operational store after the verified Notion exit.
 
-const { DB, queryDb, P, getSession, json } = require("./_lib");
+const { DB, P, getSession, json } = require("./_lib");
+const { queryOperational } = require("./lib/operational-store");
 
 function shape(pg) {
   const p = pg.properties;
@@ -28,10 +29,8 @@ function shape(pg) {
 exports.handler = async (event) => {
   const session = getSession(event);
   if (!session) return json(401, { error: "Signed out — sign in to crewOS again." });
-  if (!process.env.NOTION_TOKEN) return json(503, { error: "NOTION_TOKEN is not set on this site" });
-
   try {
-    const templates = (await queryDb(DB.referralTemplates))
+    const templates = (await queryOperational("referralTemplates", DB.referralTemplates))
       .map(shape)
       .filter((t) => t.name && t.active)
       .sort((a, b) =>
