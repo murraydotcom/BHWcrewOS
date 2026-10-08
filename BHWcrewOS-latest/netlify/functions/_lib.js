@@ -60,12 +60,23 @@ const DB = {
   screenerLinks: "279d0105ebe24629a2d0c1c82cc8b5e6",
   screeners: "c63580758d3082a1811701c33683dd0d", // Condition Screeners — Data (scored responses)
   referralTemplates: "ca79d3c1d889463cacf01168d413712f", // Referral Templates — by Destination
+  specialistDirectory: "8ae69b6a2f1a42679848744f3a17acb6", // Specialist Referral Directory (non-patient reference data)
   carePlans: "ad8bcdfb4bd94385b39c67ef972d1fad", // Care Plans — Data (annual, per program)
   questionnaires: "eb20fcd416df4956b2a88e35de008410", // Questionnaires — Data (patient intake)
   careGaps: "32e580758d30806bac67e7deff25bc3c", // Medicare Wellness Report (payer gaps, monthly CSV uploads)
   crewProjects: "386e620a9df545209a02207c4554c75b",
   careLog: "a839f769a04e461a8e1c495073a22b87", // Care Management Log — one row / patient / month (CCM/APCM) or episode (TCM)
 };
+
+// Historical workflow databases that remain available for schema/status
+// reconciliation only. Patient-bearing rows are never queried by the BHW
+// Intel status layer; current operational and clinical records live in the
+// protected Google Cloud systems.
+const LEGACY_WORKFLOW_DB = Object.freeze({
+  operationsDashboard: "2c8580758d30803489fbef2965d95c27",
+  carePlanLab: "c88711e42e254219a8e018c71cd87e57",
+  clinicalActions: "19b4fd8e123b4e9b83725a0db185a353",
+});
 
 const LEGACY_DIVISION_ALIASES = Object.freeze({
   "The Porter House": "Elevated Wellness",
@@ -167,5 +178,5 @@ function json(statusCode, body) {
   };
 }
  
-module.exports = { DB, DIVISIONS, LEGACY_DIVISION_ALIASES, normalizeDivision, httpJson, queryDb, createPage, updatePage, P, W, sign, verify, getSession, visibleDivisions, json };
+module.exports = { DB, LEGACY_WORKFLOW_DB, DIVISIONS, LEGACY_DIVISION_ALIASES, normalizeDivision, httpJson, queryDb, createPage, updatePage, P, W, sign, verify, getSession, visibleDivisions, json };
  
