@@ -34,13 +34,27 @@ async function pool(dependencies = {}) {
   return (await getDatabaseClient()).pool;
 }
 
+function isMissingDatabaseConfiguration(error) {
+  return error?.name === "MissingDatabaseConnectionError"
+    || String(error?.message || error).includes("environment has not been configured to use Netlify Database");
+}
+
 async function cutoverMode(dependencies = {}) {
-  const result = await (await pool(dependencies)).query(
-    "SELECT mode FROM crewos_cutover_state WHERE state_key = $1",
-    ["notion-exit"],
-  );
-  const mode = result.rows[0]?.mode;
-  return ["notion", "cutover", "database"].includes(mode) ? mode : "notion";
+  try {
+    const result = await (await pool(dependencies)).query(
+      "SELECT mode FROM crewos_cutover_state WHERE state_key = $1",
+      ["notion-exit"],
+    );
+    const mode = result.rows[0]?.mode;
+    return ["notion", "cutover", "database"].includes(mode) ? mode : "notion";
+  } catch (error) {
+    // Netlify Lambda-compatibility functions do not receive NETLIFY_DB_URL
+    // automatically. Until the production connection is explicitly present,
+    // preserve the existing Notion-backed runtime instead of taking CrewOS
+    // authentication and scheduling offline.
+    if (isMissingDatabaseConfiguration(error)) return "notion";
+    throw error;
+  }
 }
 
 function cutoverInProgressError() {
@@ -212,7 +226,22 @@ async function replaceNamespace(key, pages, {
 }
 
 async function cutoverStatus(dependencies = {}) {
-  const dbPool = await pool(dependencies);
+  let dbPool;
+  try {
+    dbPool = await pool(dependencies);
+  } catch (error) {
+    if (!isMissingDatabaseConfiguration(error)) throw error;
+    return {
+      mode: "notion",
+      databaseReady: false,
+      databaseError: "CrewHQ Database runtime connection is not configured.",
+      cutoverStartedAt: null,
+      finalizedAt: null,
+      finalizedBy: "",
+      complete: false,
+      sources: REQUIRED_NAMESPACES.map((key) => ({ namespace: key, sourceCount: null, importedCount: null, schemaProperties: [], importedAt: null, verified: false })),
+    };
+  }
   const [state, sources] = await Promise.all([
     dbPool.query("SELECT mode, cutover_started_at, finalized_at, finalized_by FROM crewos_cutover_state WHERE state_key = $1", ["notion-exit"]),
     dbPool.query("SELECT namespace, source_count, imported_count, schema_properties, imported_at FROM crewos_operational_sources ORDER BY namespace"),
@@ -236,6 +265,7 @@ async function cutoverStatus(dependencies = {}) {
   });
   return {
     mode: stateMode,
+    databaseReady: true,
     cutoverStartedAt: startedAt,
     finalizedAt: state.rows[0]?.finalized_at || null,
     finalizedBy: state.rows[0]?.finalized_by || "",
@@ -297,5 +327,6 @@ module.exports = {
   stableHash,
   recordsHash,
   canonicalJson,
+  isMissingDatabaseConfiguration,
   _resetDatabaseForTests: () => { databasePromise = undefined; },
 };
