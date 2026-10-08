@@ -3,6 +3,7 @@
   "private": true,
   "dependencies": {
     "pdf-lib": "^1.17.1",
-    "@netlify/blobs": "^10.7.11"
+    "@netlify/blobs": "^10.7.11",
+    "@netlify/database": "^2.0.1"
   }
 }

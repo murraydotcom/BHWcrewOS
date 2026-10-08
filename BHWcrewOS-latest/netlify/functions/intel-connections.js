@@ -14,6 +14,7 @@ const {
   getSession,
   json,
 } = require("./_lib");
+const { cutoverStatus, queryOperational } = require("./lib/operational-store");
 
 const NOTION = "https://api.notion.com/v1";
 const MAX_NOTION_PAGES = 10;
@@ -63,6 +64,7 @@ const LEGACY_WORKFLOWS = Object.freeze([
 const LIVE_CONTROLS = Object.freeze([
   {
     key: "employee-codes",
+    namespace: "staff",
     name: "Employee codes",
     databaseId: DB.staff,
     mode: "read/write",
@@ -78,6 +80,7 @@ const LIVE_CONTROLS = Object.freeze([
   },
   {
     key: "referral-templates",
+    namespace: "referralTemplates",
     name: "Referral templates",
     databaseId: DB.referralTemplates,
     mode: "read/write",
@@ -89,6 +92,7 @@ const LIVE_CONTROLS = Object.freeze([
   },
   {
     key: "room-rules",
+    namespace: "rooms",
     name: "Rooms and room rules",
     databaseId: DB.rooms,
     mode: "read",
@@ -100,6 +104,7 @@ const LIVE_CONTROLS = Object.freeze([
   },
   {
     key: "staff-availability",
+    namespace: "availability",
     name: "Staff availability",
     databaseId: DB.availability,
     mode: "read/write",
@@ -111,6 +116,7 @@ const LIVE_CONTROLS = Object.freeze([
   },
   {
     key: "shared-schedule",
+    namespace: "schedule",
     name: "Shared room schedule",
     databaseId: DB.schedule,
     mode: "read/write",
@@ -122,6 +128,7 @@ const LIVE_CONTROLS = Object.freeze([
   },
   {
     key: "staff-resources",
+    namespace: "resources",
     name: "Staff resources",
     databaseId: DB.resources,
     mode: "read",
@@ -133,6 +140,7 @@ const LIVE_CONTROLS = Object.freeze([
   },
   {
     key: "crew-projects",
+    namespace: "crewProjects",
     name: "Crew projects",
     databaseId: DB.crewProjects,
     mode: "read",
@@ -144,6 +152,7 @@ const LIVE_CONTROLS = Object.freeze([
   },
   {
     key: "specialist-directory",
+    namespace: "specialistDirectory",
     name: "Specialist referral directory",
     databaseId: process.env.SPECIALIST_DB_ID || DB.specialistDirectory,
     mode: "read",
@@ -210,7 +219,27 @@ async function readNotionRows(databaseId, { httpJsonImpl = httpJson } = {}) {
   throw new Error("Notion result exceeded the status page safety limit");
 }
 
-async function inspectLiveControl(definition, dependencies = {}) {
+async function inspectLiveControl(definition, dependencies = {}, cutover = { mode: "notion", sources: [] }) {
+  if (cutover.mode === "database") {
+    const source = cutover.sources.find((entry) => entry.namespace === definition.namespace);
+    try {
+      const rows = await queryOperational(definition.namespace, definition.databaseId, undefined, undefined, dependencies);
+      const missingProperties = definition.requiredProperties.filter((property) => !source?.schemaProperties?.includes(property));
+      return {
+        key: definition.key,
+        name: definition.name,
+        source: "CrewHQ Database",
+        mode: definition.mode,
+        state: source?.verified && !missingProperties.length ? "connected" : "degraded",
+        label: source?.verified && !missingProperties.length ? "CrewHQ database connected" : "Imported data needs attention",
+        missingProperties,
+        metrics: definition.summarize(rows),
+        action: definition.action,
+      };
+    } catch (error) {
+      return { key: definition.key, name: definition.name, source: "CrewHQ Database", mode: definition.mode, state: "blocked", label: "CrewHQ database unavailable", missingProperties: [], metrics: {}, error: conciseError(error), action: definition.action };
+    }
+  }
   const schema = await inspectNotionSchema(definition, dependencies);
   if (schema.state === "blocked") {
     return { key: definition.key, name: definition.name, source: "Notion", mode: definition.mode, ...schema, metrics: {}, action: definition.action, sourceHref: notionUrl(definition.databaseId) };
@@ -271,10 +300,13 @@ function workflowState(service) {
   return service?.state === "connected" ? "active" : "degraded";
 }
 
-async function buildReport({ httpJsonImpl = httpJson, fetchImpl = fetch, now = () => new Date() } = {}) {
+async function buildReport({ httpJsonImpl = httpJson, fetchImpl = fetch, now = () => new Date(), cutoverStatusImpl = cutoverStatus, operationalDependencies = {} } = {}) {
+  const cutover = await cutoverStatusImpl();
   const [controls, legacySchemas, operations, rcm] = await Promise.all([
-    Promise.all(LIVE_CONTROLS.map((definition) => inspectLiveControl(definition, { httpJsonImpl }))),
-    Promise.all(LEGACY_WORKFLOWS.map((definition) => inspectNotionSchema(definition, { httpJsonImpl }))),
+    Promise.all(LIVE_CONTROLS.map((definition) => inspectLiveControl(definition, { httpJsonImpl, ...operationalDependencies }, cutover))),
+    cutover.mode === "database"
+      ? Promise.resolve(LEGACY_WORKFLOWS.map(() => ({ state: "retired", label: "Notion runtime retired", missingProperties: [] })))
+      : Promise.all(LEGACY_WORKFLOWS.map((definition) => inspectNotionSchema(definition, { httpJsonImpl }))),
     probeCloudService("operations", process.env.OPERATIONS_CLOUD_API_URL, { fetchImpl }),
     probeCloudService("rcm", process.env.RCM_CLOUD_API_URL, { fetchImpl }),
   ]);
@@ -291,7 +323,7 @@ async function buildReport({ httpJsonImpl = httpJson, fetchImpl = fetch, now = (
     legacySource: {
       ...legacySchemas[index],
       label: legacySchemas[index].state === "connected" ? "Legacy source verified — read-only" : legacySchemas[index].label,
-      sourceHref: notionUrl(definition.databaseId),
+      ...(cutover.mode === "database" ? {} : { sourceHref: notionUrl(definition.databaseId) }),
       rowsRead: false,
     },
     ...(definition.key === "care-plan-lab" ? {
@@ -315,13 +347,17 @@ async function buildReport({ httpJsonImpl = httpJson, fetchImpl = fetch, now = (
     ok: activeCount === controls.length && cloudCount === Object.keys(services).length,
     generatedAt: now().toISOString(),
     summary: {
-      activeNotionControls: activeCount,
-      totalNotionControls: controls.length,
+      activeOperationalControls: activeCount,
+      totalOperationalControls: controls.length,
       connectedCloudServices: cloudCount,
       totalCloudServices: Object.keys(services).length,
     },
     boundary: {
-      notion: "Live for employee codes, referral templates, room rules, availability, scheduling, staff resources, crew projects, and specialist reference data.",
+      notion: cutover.mode === "database"
+        ? "Disconnected from CrewOS runtime. Active controls are owned by the CrewHQ Database."
+        : cutover.mode === "cutover"
+          ? "Final verified snapshot in progress. Operational writes are paused until the CrewHQ Database cutover completes or safely rolls back."
+          : "Temporary source for employee codes, referral templates, room rules, availability, scheduling, staff resources, crew projects, and specialist reference data until the verified cutover is finalized.",
       cloud: "Authoritative for patient operations, clinical actions, care plans, and website publishing.",
       lab: labProductionReady
         ? "Controlled production lab service is configured."
@@ -330,6 +366,7 @@ async function buildReport({ httpJsonImpl = httpJson, fetchImpl = fetch, now = (
     controls: [...controls, websiteContent],
     workflows,
     services,
+    cutover,
   };
 }
 

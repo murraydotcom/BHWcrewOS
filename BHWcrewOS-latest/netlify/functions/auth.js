@@ -10,7 +10,8 @@
 //   POST { action:"clinical-login", pin } + CrewOS token  → short-lived clinical token
 
 const crypto = require("crypto");
-const { DB, httpJson, queryDb, updatePage, P, W, sign, getSession, json } = require("./_lib");
+const { DB, httpJson, P, W, sign, getSession, json } = require("./_lib");
+const { cutoverMode, queryOperational, updateOperationalPage } = require("./lib/operational-store");
 
 const NOTION = "https://api.notion.com/v1";
 const PIN_PROP = "PIN Hash";
@@ -43,6 +44,7 @@ function staffSession(user, { exp, scope = "staff", authTime = 0 } = {}) {
 }
 
 async function ensurePinProperty() {
+  if (await cutoverMode() !== "notion") return;
   // Idempotent: adds the PIN Hash rich_text property to Staff & Roles if missing.
   const res = await httpJson("PATCH", `${NOTION}/databases/${DB.staff}`,
     { properties: { [PIN_PROP]: { rich_text: {} } } });
@@ -83,7 +85,9 @@ exports.handler = async (event) => {
       } });
     }
 
-    if (!process.env.NOTION_TOKEN) return json(503, { error: "NOTION_TOKEN environment variable is not set on this site" });
+    if (await cutoverMode() !== "database" && !process.env.NOTION_TOKEN) {
+      return json(503, { error: "CrewOS staff migration is not finalized and NOTION_TOKEN is unavailable" });
+    }
 
     if (body.action === "clinical-login") {
       const session = getSession(event);
@@ -91,7 +95,7 @@ exports.handler = async (event) => {
       if (!/^\d{4,8}$/.test(String(body.pin || ""))) {
         return json(400, { error: "Enter your CrewOS PIN" });
       }
-      const staff = (await queryDb(DB.staff)).map(shapeStaff);
+      const staff = (await queryOperational("staff", DB.staff)).map(shapeStaff);
       const user = staff.find((person) => person.id === session.staffId);
       if (!user || !user.active) return json(403, { error: "Account inactive" });
       if (!user.pinHash || !user.pinHash.includes(":")) {
@@ -113,7 +117,7 @@ exports.handler = async (event) => {
     }
 
     if (body.action === "roster") {
-      const staff = (await queryDb(DB.staff)).map(shapeStaff).filter((s) => s.active);
+      const staff = (await queryOperational("staff", DB.staff)).map(shapeStaff).filter((s) => s.active);
       return json(200, { staff: staff.map(({ id, name, role }) => ({ id, name, role })) });
     }
 
@@ -125,14 +129,14 @@ exports.handler = async (event) => {
       }
       await ensurePinProperty();
       const salt = crypto.randomBytes(16).toString("hex");
-      await updatePage(body.staffId, { [PIN_PROP]: W.text(`${salt}:${hashPin(body.pin, salt)}`) });
+      await updateOperationalPage("staff", body.staffId, { [PIN_PROP]: W.text(`${salt}:${hashPin(body.pin, salt)}`) });
       return json(200, { ok: true });
     }
 
     if (body.action === "login") {
       const { staffId, pin } = body;
       if (!staffId || !pin) return json(400, { error: "Select your name and enter your PIN" });
-      const staff = (await queryDb(DB.staff)).map(shapeStaff);
+      const staff = (await queryOperational("staff", DB.staff)).map(shapeStaff);
       const user = staff.find((s) => s.id === staffId);
       if (!user || !user.active) return json(403, { error: "Account inactive" });
       if (!user.pinHash || !user.pinHash.includes(":")) {

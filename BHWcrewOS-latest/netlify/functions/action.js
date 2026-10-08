@@ -10,7 +10,8 @@
 //   patient-select, patient-create (protected Cloud Registry only)
 
 const crypto = require("crypto");
-const { DB, DIVISIONS, normalizeDivision, queryDb, createPage, updatePage, P, W, getSession, visibleDivisions, json } = require("./_lib");
+const { DB, DIVISIONS, normalizeDivision, P, W, getSession, visibleDivisions, json } = require("./_lib");
+const { queryOperational, createOperationalPage, updateOperationalPage } = require("./lib/operational-store");
 const { cloudRequest, listCloudPatients, parsePatientName } = require("./lib/cloud-patients");
 const { operationsRequest } = require("./lib/operations-cloud");
 
@@ -174,7 +175,7 @@ exports.handler = async (event) => {
         return json(200, { ok: true, assignedTo: result.request?.assignedToName || session.name, savedAt: result.request?.updatedAt, storage: "BHW Cloud" });
       }
       case "referral-template-save": {
-        // Save the current referral wording as a reusable template in Notion.
+        // Save the current referral wording in the CrewOS operational store.
         const destination = normalizeDivision(b.destination);
         if (!destination || !DIVISIONS.includes(destination)) return json(400, { error: "Pick a destination program" });
         if (!b.name) return json(400, { error: "Give the template a short name" });
@@ -188,7 +189,7 @@ exports.handler = async (event) => {
         if (b.type) props["Type"] = W.sel(b.type);
         if (b.priority) props["Priority"] = W.sel(b.priority);
         if (b.neededBy) props["Needed By"] = W.sel(b.neededBy);
-        const page = await createPage(DB.referralTemplates, props);
+        const page = await createOperationalPage("referralTemplates", DB.referralTemplates, props);
         return json(200, { ok: true, id: page.id });
       }
 
@@ -275,7 +276,7 @@ exports.handler = async (event) => {
       /* ---------------- Availability ---------------- */
       case "availability-submit": {
         if (!b.date || !b.start || !b.end) return json(400, { error: "Date, start, and end required" });
-        const page = await createPage(DB.availability, {
+        const page = await createOperationalPage("availability", DB.availability, {
           "Entry": W.title(`${session.name} · ${b.date} · ${b.start}–${b.end}`),
           "Staff": W.rel([session.staffId]),
           "Date": W.date(b.date),
@@ -295,7 +296,7 @@ exports.handler = async (event) => {
         if (!roomId || !service || !date || !start || !end) return json(400, { error: "Room, service, date, start, and end required" });
 
         // Rule 1: service must be allowed in the room.
-        const roomPages = await queryDb(DB.rooms);
+        const roomPages = await queryOperational("rooms", DB.rooms);
         const room = roomPages.find((r) => r.id === roomId);
         if (!room) return json(400, { error: "Room not found" });
         const allowed = P.multi(room.properties["Allowed Services"]);
@@ -305,7 +306,7 @@ exports.handler = async (event) => {
         }
 
         // Rule 2: no room or staff double-booking (same date, overlapping times).
-        const sameDay = await queryDb(DB.schedule, {
+        const sameDay = await queryOperational("schedule", DB.schedule, {
           and: [
             { property: "Date", date: { equals: date } },
             { property: "Status", select: { equals: "Scheduled" } },
@@ -324,7 +325,7 @@ exports.handler = async (event) => {
           if (clash) return json(409, { error: `A selected staff member is already booked ${s}–${e}` });
         }
 
-        const page = await createPage(DB.schedule, {
+        const page = await createOperationalPage("schedule", DB.schedule, {
           "Booking": W.title(`${service} · ${roomName} · ${date} ${start}`),
           "Staff": W.rel(staffIds || []),
           "Service Type": W.sel(service),
@@ -341,7 +342,7 @@ exports.handler = async (event) => {
       case "booking-status": {
         if (!session.canSchedule) return json(403, { error: "You don't have scheduling permission" });
         if (!["Completed", "Cancelled"].includes(b.status)) return json(400, { error: "Bad status" });
-        await updatePage(b.id, { "Status": W.sel(b.status) });
+        await updateOperationalPage("schedule", b.id, { "Status": W.sel(b.status) });
         return json(200, { ok: true });
       }
 
