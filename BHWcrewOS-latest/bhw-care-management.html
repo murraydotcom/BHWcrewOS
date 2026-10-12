@@ -20,7 +20,7 @@ header img{height:40px;width:auto}
 h1{font-family:var(--serif,Georgia);font-weight:600;font-size:21px;margin:0}
 .sub{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--clay-deep);font-weight:700}
 .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-left:auto}
-select,input[type=text],input[type=date],input[type=datetime-local],input[type=number]{font-family:inherit;font-size:13px;padding:7px 9px;border:1.5px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+select,input[type=text],input[type=date],input[type=month],input[type=datetime-local],input[type=number]{font-family:inherit;font-size:13px;padding:7px 9px;border:1.5px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
 input:focus,select:focus{outline:none;border-color:var(--river)}
 .btn{font-family:inherit;font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:99px;border:0;background:var(--clay);color:#fff;cursor:pointer}
 .btn.sec{background:#fff;border:1.5px solid var(--line);color:var(--ink)}
@@ -66,6 +66,7 @@ td select{width:100%;min-width:90px}
 .activity{margin-top:18px;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}.activity-head{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:flex-start;justify-content:space-between}.activity-head h2{font-family:var(--serif,Georgia);font-size:18px;margin:0}.activity-head p{margin:3px 0 0;font-size:11px;color:var(--soft)}.activity-list{display:grid}.activity-row{display:grid;grid-template-columns:minmax(180px,1.15fr) minmax(135px,.8fr) minmax(120px,.7fr) minmax(150px,.9fr) auto;gap:12px;align-items:center;padding:11px 16px;border-bottom:1px solid var(--line);font-size:11.5px}.activity-row:last-child{border-bottom:0}.activity-row .when{color:var(--soft);font-size:10.5px}.activity-row .status{text-transform:capitalize}.activity-row .open{color:var(--ok);font-weight:750;text-decoration:none;white-space:nowrap}.activity-warning{padding:9px 13px;background:#fdf6ec;color:var(--clay-deep);font-size:10.5px}@media(max-width:760px){.activity-row{grid-template-columns:1fr 1fr}.activity-row .open{grid-column:1/-1}}
 .rolling{margin:14px 0;background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px}.rolling-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.rolling-head h2,.month-close h2{font-family:var(--serif,Georgia);font-size:18px;margin:0}.rolling-head p,.month-close p{font-size:11px;color:var(--soft);margin:3px 0 0}.days{display:grid;grid-template-columns:repeat(30,minmax(34px,1fr));gap:4px;margin-top:12px;overflow-x:auto;padding-bottom:3px}.day{min-width:34px;border:1px solid var(--line);border-radius:8px;padding:6px 3px;text-align:center;background:#fbfaf8}.day.today{border-color:var(--river);box-shadow:inset 0 0 0 1px var(--river)}.day.has{background:#edf5f4}.day .d{font-size:9px;color:var(--soft)}.day .n{font-size:15px;font-weight:800;color:var(--ok)}.day .m{font-size:8px;color:var(--soft)}.month-close{margin:18px 0;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}.month-close-head{padding:14px 16px;display:flex;gap:12px;align-items:flex-start;justify-content:space-between;border-bottom:1px solid var(--line)}.close-bars{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 16px}.close-bar{border:1px solid var(--line);border-radius:10px;padding:9px}.close-bar b{font-size:19px}.close-bar span{display:block;font-size:9px;color:var(--soft);text-transform:uppercase}.gap{color:var(--urgent);font-weight:700}.oktext{color:var(--ok);font-weight:700}.needs-update td{background:#fff7f3}.needs-update:hover td{background:#ffefe8}.rule-key{margin:0 0 14px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:13px 15px}.rule-key h2{font-family:var(--serif,Georgia);font-size:17px;margin:0 0 3px}.rule-key p{margin:0 0 9px;color:var(--soft);font-size:11px}.rule-grid{display:grid;grid-template-columns:repeat(4,minmax(170px,1fr));gap:7px}.rule-card{border:1px solid var(--line);border-radius:9px;padding:8px}.rule-card b{display:block;font-size:11px}.rule-card span{font-size:9.5px;color:var(--soft)}.rule-badge{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:99px;margin-bottom:3px}.rule-time{background:#edf5f4;color:var(--ok)}.rule-none{background:#f4efe8;color:var(--clay-deep)}.rule-device{background:#edf2f7;color:#35627a}.rule-milestone{background:#f6edf7;color:#704878}.basis{min-width:165px}.basis small,.min-cell small{display:block;color:var(--soft);font-size:9.5px;line-height:1.3;margin-top:3px}.gap-list{max-width:220px}.gap-chip{display:inline-block;margin:1px 2px 1px 0;padding:2px 5px;border-radius:6px;background:#fff0eb;color:var(--urgent);font-size:9.5px;font-weight:700}.modal{position:fixed;inset:0;z-index:2147483100;background:rgba(35,43,47,.55);display:flex;align-items:flex-start;justify-content:center;padding:28px 14px;overflow:auto}.modal[hidden]{display:none}.dialog{width:min(980px,100%);background:#fff;border-radius:16px;box-shadow:0 18px 60px rgba(20,32,38,.3);overflow:hidden}.dialog-head{display:flex;justify-content:space-between;gap:12px;padding:16px 18px;border-bottom:1px solid var(--line)}.dialog-head h2{font-family:var(--serif,Georgia);font-size:20px;margin:0}.dialog-head p{font-size:11px;color:var(--soft);margin:3px 0 0}.dialog-body{padding:16px 18px}.carry-note{margin:0 0 12px;padding:10px 12px;border:1px solid #cfe2de;border-radius:10px;background:#edf5f4;color:var(--ok);font-size:11px;line-height:1.45}.form-section{border:1px solid var(--line);border-radius:11px;padding:12px;margin-bottom:12px}.form-section h3{margin:0 0 9px;font-size:12px}.form-grid{display:grid;grid-template-columns:repeat(3,minmax(160px,1fr));gap:10px}.field label{display:block;font-size:9.5px;font-weight:750;text-transform:uppercase;letter-spacing:.05em;color:var(--soft);margin-bottom:3px}.field input,.field select,.field textarea{width:100%}.field textarea{min-height:74px;resize:vertical;font:inherit;padding:7px 9px;border:1.5px solid var(--line);border-radius:8px}.check-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:9px}.check{display:flex;align-items:flex-start;gap:6px;font-size:11px}.dialog-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--line);background:#fbfaf8}.dialog-actions .save-state{margin-right:auto;color:var(--ok);font-size:11px;font-weight:700}.vitals-panel{margin:0 0 14px;background:linear-gradient(120deg,#fff,#edf5f4);border:1px solid #cfe2de;border-radius:12px;padding:14px 16px}.vitals-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap}.vitals-head h2{font-family:var(--serif,Georgia);font-size:17px;margin:0}.vitals-head p{font-size:11px;color:var(--soft);margin:3px 0 0;max-width:760px}.vitals-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.vitals-actions select{min-width:220px}.vitals-boundary{margin-top:10px;padding:9px 11px;border-radius:9px;background:#fff;border:1px solid var(--line);font-size:10.5px;color:var(--soft)}.vitals-boundary b{color:var(--ink)}@media(max-width:900px){.rule-grid{grid-template-columns:1fr 1fr}.form-grid,.check-grid{grid-template-columns:1fr 1fr}}@media(max-width:760px){.close-bars{grid-template-columns:1fr 1fr}.rule-grid,.form-grid,.check-grid{grid-template-columns:1fr}}
 .enrollment-panel{margin:0 0 14px;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}.enrollment-head{padding:14px 16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line)}.enrollment-head h2{font-family:var(--serif,Georgia);font-size:18px;margin:0}.enrollment-head p{font-size:11px;color:var(--soft);margin:3px 0 0;max-width:760px}.enrollment-list{display:grid}.enrollment-row{display:grid;grid-template-columns:minmax(170px,1.15fr) 80px 120px minmax(170px,1fr) 110px auto;gap:10px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line);font-size:11px}.enrollment-row:last-child{border-bottom:0}.enrollment-row.missing{background:#fff7f3}.enrollment-actions{display:flex;gap:6px;justify-content:flex-end}.enroll-frame-dialog{width:min(1200px,100%);height:calc(100vh - 42px);background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 18px 60px rgba(20,32,38,.3);display:grid;grid-template-rows:auto 1fr}.enroll-frame-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line)}.enroll-frame-head b{font-family:var(--serif,Georgia);font-size:17px}.enroll-frame{border:0;width:100%;height:100%;background:var(--linen)}.enrollment-warning{padding:9px 13px;background:#fdf6ec;color:var(--clay-deep);font-size:10.5px}@media(max-width:900px){.enrollment-row{grid-template-columns:1fr 80px 110px 1fr}.enrollment-actions{grid-column:1/-1;justify-content:flex-start}}@media(max-width:760px){.enrollment-row{grid-template-columns:1fr 1fr}.enrollment-row>div:first-child,.enrollment-actions{grid-column:1/-1}}
+.batch-dialog{width:min(1180px,100%)}.batch-setup{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:10px}.batch-boundary{margin:0 0 12px;padding:10px 12px;border:1px solid var(--sand);border-radius:10px;background:#fdf6ec;color:var(--clay-deep);font-size:11px}.batch-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.batch-summary .close-bar{background:#fff}.batch-fees{display:flex;gap:8px;flex-wrap:wrap}.batch-fee{display:grid;grid-template-columns:auto 100px;align-items:center;gap:6px;padding:7px 9px;border:1px solid var(--line);border-radius:9px;background:#fbfaf8}.batch-fee b{font-size:11px}.batch-table{min-width:900px}.batch-lines{display:flex;gap:5px;flex-wrap:wrap}.batch-line{padding:2px 7px;border:1px solid var(--line);border-radius:99px;font-size:10px;font-weight:800;background:#fff}.batch-issues{max-width:360px;font-size:10.5px}.batch-issues div{margin-bottom:3px}.batch-review{display:flex;align-items:flex-start;gap:8px;font-size:11px;margin-top:12px;padding:10px 12px;border:1px solid #cfe2de;border-radius:10px;background:#edf5f4}.batch-export-status{font-size:11px;color:var(--urgent);font-weight:700;margin-top:8px}.batch-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.batch-actions .spacer{flex:1}.batch-loading{padding:36px;text-align:center;color:var(--soft)}@media(max-width:900px){.batch-setup{grid-template-columns:1fr 1fr}.batch-summary{grid-template-columns:1fr 1fr}}@media(max-width:600px){.batch-setup{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -76,6 +77,7 @@ td select{width:100%;min-width:90px}
   <div class="controls" id="controls" style="display:none">
     <a class="btn sec sm" href="/bhw-care-program-sop.html" style="text-decoration:none">Care Program SOP</a>
     <button class="btn sm" type="button" onclick="openEnrollment()">+ Intake &amp; enroll</button>
+    <button class="btn sm" type="button" onclick="openBillingBatch()">Prepare APCM/BHI batch</button>
     <select id="program" onchange="load()">
       <option>All</option><option>CCM</option><option>APCM</option><option>PCM</option><option>TCM</option>
       <option>RPM</option><option>RTM</option><option>BHI</option><option>CoCM</option><option>CHI</option><option>PIN</option><option>PIN-PS</option><option>CharmEd Minds</option>
@@ -95,6 +97,33 @@ td select{width:100%;min-width:90px}
   <div class="enroll-frame-dialog" role="dialog" aria-modal="true" aria-labelledby="enrollmentFrameTitle">
     <div class="enroll-frame-head"><div><b id="enrollmentFrameTitle">Care Program Intake &amp; Enrollment</b><div class="sub">Registry-linked cumulative program record</div></div><button class="btn sec sm" type="button" onclick="closeEnrollment()">Close</button></div>
     <iframe class="enroll-frame" id="enrollmentFrame" title="Care Program Intake and Enrollment"></iframe>
+  </div>
+</div>
+
+<div class="modal" id="billingBatchModal" hidden>
+  <div class="dialog batch-dialog" role="dialog" aria-modal="true" aria-labelledby="billingBatchTitle">
+    <div class="dialog-head"><div><h2 id="billingBatchTitle">APCM/BHI manual billing batch</h2><p>One reviewed worklist for invoice and claim entry. Nothing is transmitted from this screen.</p></div><button class="btn sec sm" type="button" onclick="closeBillingBatch()">Close</button></div>
+    <div class="dialog-body">
+      <div class="batch-boundary"><b>Real-patient boundary:</b> this workbench pairs each APCM base line with an eligible 2026 BHI/CoCM add-on, separates exceptions, and creates a local claim-entry CSV. It does not create or transmit any real-patient claim. Keep downloaded files only in BHW-approved protected storage.</div>
+      <div class="form-section"><h3>Batch setup</h3><div class="batch-setup">
+        <div class="field"><label for="batchServiceMonth">Service month</label><input id="batchServiceMonth" type="month" onchange="refreshBillingBatch()"></div>
+        <div class="field"><label for="batchDate">Batch date</label><input id="batchDate" type="date"></div>
+        <div class="field"><label for="batchServiceDate">Claim service date</label><input id="batchServiceDate" type="date"><small>Choose the payer-approved date inside the service month.</small></div>
+        <div class="field"><label for="batchPlaceOfService">Place of service</label><input id="batchPlaceOfService" type="text" inputmode="numeric" maxlength="2" placeholder="e.g., 11"></div>
+        <div class="field" style="grid-column:span 2"><label for="batchProviderName">Billing provider</label><input id="batchProviderName" type="text" autocomplete="off"></div>
+        <div class="field"><label for="batchProviderNpi">Billing provider NPI</label><input id="batchProviderNpi" type="text" inputmode="numeric" maxlength="10" autocomplete="off"></div>
+        <div class="field"><label>Data source</label><div>BHW Cloud care logs + Patient Registry</div></div>
+      </div></div>
+      <div class="form-section"><h3>RCM synthetic acceptance handoff</h3><p>Use a claimable RCM encounter for reserved patient <b>BHW0000</b> to test claim creation, Stedi-format validation, and a simulated 277CA. This handoff sends only the synthetic encounter ID; it never sends the real-patient batch rows.</p><div class="batch-setup">
+        <div class="field" style="grid-column:span 2"><label for="batchSyntheticEncounterId">Claimable BHW0000 RCM encounter ID</label><input id="batchSyntheticEncounterId" type="text" autocomplete="off" placeholder="ENC-2026-0000"></div>
+        <div class="field"><label>RCM acceptance</label><div><button class="btn sec sm" type="button" onclick="runSyntheticClaimHandoff(false)">Check readiness</button> <button class="btn sm" id="batchSyntheticCreate" type="button" onclick="runSyntheticClaimHandoff(true)">Create synthetic claim</button></div></div>
+        <div class="field"><label>Next step</label><div><a class="btn sec sm" href="/provider/workflow.html" target="_blank" rel="noopener" style="text-decoration:none">Open RCM workflow</a></div></div>
+      </div><div class="batch-export-status" id="batchSyntheticStatus">No real-patient data enters this acceptance handoff.</div></div>
+      <div id="billingBatchBody"><div class="batch-loading">Loading the service month…</div></div>
+      <label class="batch-review"><input id="batchReviewConfirmed" type="checkbox"><span>I reviewed each included patient, payer/member ID, coverage, diagnosis, provider, service date, place of service, code pairing, charge, documentation, and overlap rules against the source record and current payer requirements.</span></label>
+      <div class="batch-export-status" id="batchExportStatus"></div>
+    </div>
+    <div class="dialog-actions batch-actions"><button class="btn sec" type="button" onclick="exportBillingExceptions()">Export exceptions</button><span class="spacer"></span><button class="btn sec" type="button" onclick="closeBillingBatch()">Close</button><button class="btn" id="batchExportButton" type="button" onclick="exportBillingReady()">Export ready claim-entry CSV</button></div>
   </div>
 </div>
 
@@ -166,6 +195,11 @@ var ACTIVITY_WARNING = "";
 var LAST_CONTENT_SYNC = 0;
 var app = document.getElementById("app");
 var ACTIVE_REQUIREMENT_ENTRY = null;
+var BILLING_BATCH_ENTRIES = [];
+var BILLING_BATCH = null;
+var BILLING_BATCH_MODULE = null;
+var BILLING_BATCH_CHARGES = {};
+var BILLING_BATCH_SETTINGS_KEY = "bhw-apcm-bhi-batch-settings-v1";
 
 var PROGRAM_RULES = {
   "APCM": {kind:"none", label:"No minute threshold", detail:"Monthly, element-based. Minutes are optional operations data, not the Medicare threshold.", options:[
@@ -180,9 +214,11 @@ var PROGRAM_RULES = {
   "PCM": {kind:"time", label:"Time-based", detail:"Base-code threshold is 30 minutes; role and add-on rules still apply.", options:[
     {code:"99424",label:"99424 · practitioner PCM, 30 minutes",minutes:30},{code:"99426",label:"99426 · clinical-staff PCM, 30 minutes",minutes:30}
   ]},
-  "BHI": {kind:"time", label:"Time-based", detail:"General BHI requires at least 20 qualifying minutes per calendar month.", options:[{code:"99484",label:"99484 · General BHI, 20 minutes",minutes:20}]},
-  "COCM": {kind:"time", label:"Time-based", detail:"Threshold changes for the first, subsequent, or abbreviated month.", options:[
-    {code:"99492",label:"99492 · first CoCM month, 70 minutes",minutes:70},{code:"99493",label:"99493 · subsequent CoCM month, 60 minutes",minutes:60},{code:"G2214",label:"G2214 · initial/subsequent CoCM, 30 minutes",minutes:30}
+  "BHI": {kind:"time", label:"Time-based", detail:"Use G0570 with an APCM base claim in 2026; use 99484 only for a separately reviewed non-APCM pathway.", options:[
+    {code:"G0570",label:"G0570 · General BHI add-on with APCM, 20 minutes",minutes:20},{code:"99484",label:"99484 · standalone General BHI, 20 minutes",minutes:20}
+  ]},
+  "COCM": {kind:"time", label:"Time-based", detail:"Use G0568/G0569 with APCM in 2026; standard CoCM codes remain separate payer-reviewed paths.", options:[
+    {code:"G0568",label:"G0568 · initial CoCM add-on with APCM, 70 minutes",minutes:70},{code:"G0569",label:"G0569 · subsequent CoCM add-on with APCM, 60 minutes",minutes:60},{code:"99492",label:"99492 · standalone first CoCM month, 70 minutes",minutes:70},{code:"99493",label:"99493 · standalone subsequent CoCM month, 60 minutes",minutes:60},{code:"G2214",label:"G2214 · standalone initial/subsequent CoCM, 30 minutes",minutes:30}
   ]},
   "CHI": {kind:"time", label:"Time-based", detail:"Base CHI service requires 60 qualifying minutes per calendar month.", options:[{code:"G0019",label:"G0019 · CHI base, 60 minutes",minutes:60}]},
   "PIN": {kind:"time", label:"Time-based", detail:"Base PIN service requires 60 qualifying minutes per calendar month.", options:[{code:"G0023",label:"G0023 · PIN base, 60 minutes",minutes:60}]},
@@ -358,7 +394,7 @@ function monthCloseMarkup(){
   if(!close.month)return "";
   var firstDay=todayISO().slice(-2)==="01";
   var rows=entries.map(function(entry){var gaps=entry.gaps||[];var rule=programRule(entry.program);var readiness=entry.billingReadiness||{state:"incomplete",label:(gaps.length+" missing")};return '<tr class="readiness-'+esc(readiness.state)+'"><td class="pt">'+esc(nameOf(entry))+'<small>'+esc(entry.ctlNo||"")+'</small></td><td><span class="badge">'+esc(entry.program||"")+'</span><div class="readiness-pill '+esc(readiness.state)+'">'+esc(readiness.label)+'</div></td><td>'+basisMarkup(entry.program)+'</td><td>'+(rule.kind==="none"||rule.kind==="milestone"?'<span class="oktext">Not required</span><small>Optional internal time: '+esc(entry.minutes==null?"—":entry.minutes)+'</small>':esc(entry.minutes==null?"—":entry.minutes))+'</td><td>'+esc(entry.status||"Open")+'</td><td>'+gapMarkup(gaps)+'</td><td><button class="btn sec sm" onclick="openRequirements(\''+esc(entry.id)+'\')">Update missing items</button></td></tr>';}).join("");
-  return '<section class="month-close"><div class="month-close-head"><div><h2>'+esc(close.month)+' documentation &amp; claim close</h2><p>'+(firstDay?'New month: the prior-month close is ready. ':'')+'Review every patient, correct missing documentation, then finish claim processing from the editable table.</p></div><button class="btn sec sm" onclick="reviewMonthClose()">Review and update month</button></div>'+
+  return '<section class="month-close"><div class="month-close-head"><div><h2>'+esc(close.month)+' documentation &amp; claim close</h2><p>'+(firstDay?'New month: the prior-month close is ready. ':'')+'Review every patient, correct missing documentation, then finish claim processing from the editable table.</p></div><div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn sm" onclick="openBillingBatch(\''+esc(close.month)+'\')">Prepare APCM/BHI batch</button><button class="btn sec sm" onclick="reviewMonthClose()">Review and update month</button></div></div>'+
     '<div class="close-bars"><div class="close-bar"><b>'+Number(counts.tracked||0)+'</b><span>patients/programs tracked</span></div><div class="close-bar"><b>'+Number(counts.complete||0)+'</b><span>complete or billed</span></div><div class="close-bar"><b class="gap">'+Number(counts.missing||0)+'</b><span>documentation / claim gaps</span></div><div class="close-bar"><b>'+Number(counts.claimPending||0)+'</b><span>complete, claim pending</span></div></div>'+
     '<div class="tablewrap" style="border:0;border-radius:0"><table><thead><tr><th>Patient</th><th>Program</th><th>Billing basis</th><th>Min</th><th>Status</th><th>Missing / next action</th><th>Update</th></tr></thead><tbody>'+ (rows||'<tr><td colspan="7" class="msg">No care-management rows were found for the prior month.</td></tr>') +'</tbody></table></div></section>';
 }
@@ -426,7 +462,7 @@ window.addEventListener("message",function(event){
 });
 
 function openRequirements(id){
-  var entry=ALL.concat((MONTH_CLOSE&&MONTH_CLOSE.entries)||[]).filter(function(item){return item.id===id;})[0];
+  var entry=ALL.concat((MONTH_CLOSE&&MONTH_CLOSE.entries)||[],BILLING_BATCH_ENTRIES||[]).filter(function(item){return item.id===id;})[0];
   if(!entry){ alert("This care-management row could not be found. Refresh and try again."); return; }
   ACTIVE_REQUIREMENT_ENTRY=entry;
   var evidence=entry.billingReadinessEvidence||{};
@@ -552,6 +588,7 @@ async function saveRequirements(event){
   var when=res.d.savedAt?new Date(res.d.savedAt).toLocaleString():"now";
   reqEl("requirementsSaveState").textContent="Saved to BHW Cloud · "+when;
   await load();
+  if(!reqEl("billingBatchModal").hidden)await refreshBillingBatch();
   setTimeout(closeRequirements,700);
 }
 
@@ -583,6 +620,169 @@ async function save(btn){
   } else {
     alert("Couldn't save: " + (res.d.error || res.status));
   }
+}
+
+async function billingBatchModule(){
+  if(!BILLING_BATCH_MODULE)BILLING_BATCH_MODULE=await import("/engine/care-billing-batch.mjs");
+  return BILLING_BATCH_MODULE;
+}
+
+function storedBillingBatchSettings(){
+  try{return JSON.parse(sessionStorage.getItem(BILLING_BATCH_SETTINGS_KEY)||"{}");}catch(e){return {};}
+}
+
+function collectBillingBatchSettings(){
+  var charges=Object.assign({},BILLING_BATCH_CHARGES);
+  document.querySelectorAll("[data-batch-charge]").forEach(function(input){
+    var code=String(input.getAttribute("data-batch-charge")||"");
+    if(code)charges[code]=input.value;
+  });
+  return {
+    billingProviderName:reqEl("batchProviderName").value.trim(),
+    billingProviderNpi:reqEl("batchProviderNpi").value.trim(),
+    placeOfService:reqEl("batchPlaceOfService").value.trim(),
+    batchDate:reqEl("batchDate").value,
+    serviceDate:reqEl("batchServiceDate").value,
+    reviewConfirmed:reqEl("batchReviewConfirmed").checked,
+    charges:charges
+  };
+}
+
+function persistBillingBatchSettings(settings){
+  BILLING_BATCH_CHARGES=Object.assign({},settings.charges||{});
+  try{sessionStorage.setItem(BILLING_BATCH_SETTINGS_KEY,JSON.stringify({
+    billingProviderName:settings.billingProviderName,
+    billingProviderNpi:settings.billingProviderNpi,
+    placeOfService:settings.placeOfService,
+    charges:BILLING_BATCH_CHARGES
+  }));}catch(e){}
+}
+
+function batchMonthEnd(value){
+  var parts=String(value||"").split("-");
+  var date=new Date(Date.UTC(Number(parts[0]),Number(parts[1]),0));
+  return Number.isFinite(date.getTime())?date.toISOString().slice(0,10):"";
+}
+
+async function openBillingBatch(serviceMonth){
+  var settings=storedBillingBatchSettings();
+  BILLING_BATCH_CHARGES=Object.assign({},settings.charges||{});
+  reqEl("batchServiceMonth").value=serviceMonth||(MONTH_CLOSE&&MONTH_CLOSE.month)||String(reqEl("windowEnd").value||todayISO()).slice(0,7);
+  reqEl("batchDate").value=todayISO();
+  reqEl("batchServiceDate").value="";
+  reqEl("batchProviderName").value=settings.billingProviderName||"";
+  reqEl("batchProviderNpi").value=settings.billingProviderNpi||"";
+  reqEl("batchPlaceOfService").value=settings.placeOfService||"";
+  reqEl("batchReviewConfirmed").checked=false;
+  reqEl("batchExportStatus").textContent="";
+  reqEl("batchSyntheticEncounterId").value="";
+  reqEl("batchSyntheticStatus").textContent="No real-patient data enters this acceptance handoff.";
+  reqEl("batchSyntheticCreate").disabled=false;
+  reqEl("billingBatchModal").hidden=false;
+  document.body.style.overflow="hidden";
+  await refreshBillingBatch();
+}
+
+async function runSyntheticClaimHandoff(createClaim){
+  var encounterId=reqEl("batchSyntheticEncounterId").value.trim().toUpperCase();
+  var status=reqEl("batchSyntheticStatus"), button=reqEl("batchSyntheticCreate");
+  if(!/^ENC-[A-Z0-9._-]{4,96}$/.test(encounterId)){status.textContent="Enter a valid RCM encounter ID for the BHW0000 synthetic record.";return;}
+  if(createClaim&&!confirm("Create the synthetic APCM/BHI claim in RCM for BHW0000?\n\nThis does not send a claim to Stedi or a payer. Real-patient batch rows are not included."))return;
+  if(createClaim){button.disabled=true;button.textContent="Creating synthetic claim…";}else status.textContent="Checking the exact RCM encounter…";
+  try{
+    var result=await api("care-billing-synthetic-claim",{action:createClaim?"create":"preflight",encounterId:encounterId});
+    if(result.status===401){closeBillingBatch();gate("Your session expired — sign in to crewOS again.");return;}
+    if(!result.ok||!result.d.ok){
+      var blockers=result.d.preflight&&result.d.preflight.blockers||result.d.details||[];
+      status.textContent=(result.d.error||"Synthetic handoff is not ready")+(blockers.length?": "+blockers.join(" · "):"");
+      return;
+    }
+    if(createClaim){
+      status.textContent="Synthetic claim "+result.d.claim.claimControlNumber+" created for invoice "+result.d.claim.invoiceId+". Transmission remains blocked. Open RCM to run Stedi validation-only processing.";
+    }else{
+      status.textContent="Ready: "+result.d.preflight.invoiceId+" · "+result.d.preflight.codes.join(" + ")+" · BHW0000 only · transmission blocked.";
+    }
+  }catch(error){
+    status.textContent="Synthetic RCM handoff failed: "+(error.message||error);
+  }finally{
+    if(createClaim){button.disabled=false;button.textContent="Create synthetic claim";}
+  }
+}
+
+function closeBillingBatch(){
+  reqEl("billingBatchModal").hidden=true;
+  document.body.style.overflow="";
+  BILLING_BATCH_ENTRIES=[];
+  BILLING_BATCH=null;
+}
+
+async function refreshBillingBatch(){
+  var serviceMonth=reqEl("batchServiceMonth").value;
+  var body=reqEl("billingBatchBody");
+  reqEl("batchReviewConfirmed").checked=false;
+  reqEl("batchExportStatus").textContent="";
+  body.innerHTML='<div class="batch-loading">Loading '+esc(serviceMonth||"the service month")+'…</div>';
+  if(!/^\d{4}-\d{2}$/.test(serviceMonth)){body.innerHTML='<div class="msg">Choose a valid service month.</div>';return;}
+  var first=serviceMonth+"-01", last=batchMonthEnd(serviceMonth);
+  reqEl("batchServiceDate").min=first;
+  reqEl("batchServiceDate").max=last;
+  if(reqEl("batchServiceDate").value&&(reqEl("batchServiceDate").value<first||reqEl("batchServiceDate").value>last))reqEl("batchServiceDate").value="";
+  try{
+    var result=await api("care-log-data",{action:"list",program:"All",month:serviceMonth});
+    if(result.status===401){closeBillingBatch();gate("Your session expired — sign in to crewOS again.");return;}
+    if(!result.ok)throw new Error(result.d.error||String(result.status));
+    BILLING_BATCH_ENTRIES=result.d.entries||[];
+    var module=await billingBatchModule();
+    BILLING_BATCH=module.buildCareBillingBatch(BILLING_BATCH_ENTRIES,{serviceMonth:serviceMonth,batchDate:reqEl("batchDate").value});
+    renderBillingBatch();
+  }catch(error){
+    BILLING_BATCH=null;
+    body.innerHTML='<div class="msg">The batch could not be prepared: '+esc(error.message||error)+'</div>';
+  }
+}
+
+function renderBillingBatch(){
+  var batch=BILLING_BATCH, summary=batch.summary||{};
+  var codes=[];
+  batch.groups.forEach(function(group){group.lineItems.forEach(function(line){if(codes.indexOf(line.code)<0)codes.push(line.code);});});
+  codes.sort();
+  var fees=codes.length?codes.map(function(code){return '<label class="batch-fee"><b>'+esc(code)+' charge</b><input type="number" min="0.01" step="0.01" data-batch-charge="'+esc(code)+'" value="'+esc(BILLING_BATCH_CHARGES[code]||"")+'" placeholder="0.00"></label>';}).join(""):'<span class="msg" style="padding:0">No codes are available until source rows are prepared.</span>';
+  var rows=batch.groups.map(function(group){
+    var lines=group.lineItems.length?group.lineItems.map(function(line){return '<span class="batch-line">'+esc(line.code)+' · '+esc(line.program)+'</span>';}).join(""):'<span class="gap">No valid lines</span>';
+    var issues=group.blockers.map(function(issue){return '<div class="gap">• '+esc(issue)+'</div>';}).concat(group.warnings.map(function(issue){return '<div>• '+esc(issue)+'</div>';})).join("")||'<span class="oktext">Source evidence ready</span>';
+    var actions=group.sourceLogIds.map(function(id){var source=BILLING_BATCH_ENTRIES.filter(function(entry){return entry.id===id;})[0]||{};return '<button class="btn sec sm" type="button" onclick="openRequirements(\''+esc(id)+'\')">Update '+esc(normalizedProgram(source.program)||"source")+'</button>';}).join(" ");
+    return '<tr class="readiness-'+(group.status==="ready"?'ready':'blocked')+'"><td class="pt">'+esc(group.patientName)+'<small>'+esc(group.patientId)+' · '+esc(group.worksheetReference)+'</small></td><td>'+esc(group.payer||"—")+'<small style="display:block;color:var(--soft)">'+esc(group.memberId||"member ID missing")+'</small></td><td><div class="batch-lines">'+lines+'</div></td><td><span class="readiness-pill '+(group.status==="ready"?'ready':'blocked')+'">'+(group.status==="ready"?'Ready for manual entry':'Exception')+'</span></td><td class="batch-issues">'+issues+'</td><td>'+actions+'</td></tr>';
+  }).join("");
+  reqEl("billingBatchBody").innerHTML='<div class="batch-summary"><div class="close-bar"><b>'+Number(summary.patients||0)+'</b><span>patients reviewed</span></div><div class="close-bar"><b class="oktext">'+Number(summary.ready||0)+'</b><span>source-ready claims</span></div><div class="close-bar"><b class="gap">'+Number(summary.blocked||0)+'</b><span>exceptions</span></div><div class="close-bar"><b>'+Number(summary.claimLines||0)+'</b><span>ready claim lines</span></div></div>'+
+    '<div class="form-section"><h3>Charges by HCPCS code</h3><p>Enter the approved fee once per code. The same reviewed charge is applied to every matching line in this local batch export.</p><div class="batch-fees">'+fees+'</div></div>'+
+    '<div class="tablewrap"><table class="batch-table"><thead><tr><th>Patient</th><th>Payer / member</th><th>Claim lines</th><th>State</th><th>Exception / review note</th><th>Source</th></tr></thead><tbody>'+(rows||'<tr><td colspan="6" class="msg">No APCM, BHI, or CoCM care-log rows were found for this service month.</td></tr>')+'</tbody></table></div>';
+  reqEl("batchExportButton").disabled=Number(summary.ready||0)===0;
+}
+
+function downloadBillingCsv(filename,csv){
+  var blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+  var url=URL.createObjectURL(blob), link=document.createElement("a");
+  link.href=url;link.download=filename;document.body.appendChild(link);link.click();link.remove();setTimeout(function(){URL.revokeObjectURL(url);},1000);
+}
+
+async function exportBillingReady(){
+  if(!BILLING_BATCH)return;
+  var module=await billingBatchModule();
+  var settings=collectBillingBatchSettings();
+  var result=module.buildClaimEntryExport(BILLING_BATCH,settings);
+  if(!result.ok){reqEl("batchExportStatus").textContent="Cannot export: "+result.blockers.join(" · ");return;}
+  persistBillingBatchSettings(settings);
+  downloadBillingCsv("apcm-bhi-claim-entry-"+BILLING_BATCH.serviceMonth+"-batch-"+settings.batchDate+".csv",module.claimEntryCsv(result.rows));
+  reqEl("batchExportStatus").textContent=result.rows.length+" reviewed claim line"+(result.rows.length===1?"":"s")+" exported for manual entry. No claim was submitted.";
+}
+
+async function exportBillingExceptions(){
+  if(!BILLING_BATCH)return;
+  var module=await billingBatchModule();
+  var csv=module.exceptionCsv(BILLING_BATCH);
+  if(!csv){reqEl("batchExportStatus").textContent="There are no exceptions in this service month.";return;}
+  downloadBillingCsv("apcm-bhi-exceptions-"+BILLING_BATCH.serviceMonth+".csv",csv);
+  reqEl("batchExportStatus").textContent=BILLING_BATCH.summary.blocked+" exception row"+(BILLING_BATCH.summary.blocked===1?"":"s")+" exported for correction.";
 }
 
 async function importNow(){

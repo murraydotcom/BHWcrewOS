@@ -85,8 +85,9 @@ const TIME_PROGRAMS = new Set(["CCM", "PCM", "BHI", "COCM", "CHI", "PIN", "PIN-P
 const REMOTE_PROGRAMS = new Set(["RPM", "RTM"]);
 const CODE_REQUIREMENTS = Object.freeze({
   "99490": { minutes: 20 }, "99491": { minutes: 30 }, "99487": { minutes: 60 },
-  "99424": { minutes: 30 }, "99426": { minutes: 30 }, "99484": { minutes: 20 },
+  "99424": { minutes: 30 }, "99426": { minutes: 30 }, "99484": { minutes: 20 }, "G0570": { minutes: 20 },
   "99492": { minutes: 70 }, "99493": { minutes: 60 }, "G2214": { minutes: 30 },
+  "G0568": { minutes: 70 }, "G0569": { minutes: 60 },
   "G0019": { minutes: 60 }, "G0023": { minutes: 60 }, "G0140": { minutes: 60 },
   "99445": { deviceDays: 2 }, "99454": { deviceDays: 16 }, "99470": { minutes: 10, interactive: true },
   "99457": { minutes: 20, interactive: true }, "98984": { deviceDays: 2 }, "98985": { deviceDays: 2 },
@@ -297,10 +298,15 @@ exports.handler = async (event) => {
       const patient = byId.get(log.bhwPatientId);
       const entry = {
         ...log,
+        month: log.serviceMonth || "",
         ctlNo: log.bhwPatientId,
+        patientId: log.bhwPatientId,
         entry: log.entry || patient?.name || log.bhwPatientId,
+        memberId: patient?.memberId || log.memberId || "",
+        payer: patient?.payer || "",
         hasMbi: Boolean(patient?.hasMbi || patient?.medicareMbi),
         medicareCoverageOrder: patient?.medicareCoverageOrder || "",
+        rosterLinked: Boolean(patient),
         gaps: documentationGaps(log),
       };
       entry.billingReadiness = billingReadiness(entry, patient);

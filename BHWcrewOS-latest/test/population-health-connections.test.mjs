@@ -134,6 +134,8 @@ test("Care Management uses a rolling 30-day window and builds prior-month close 
     },
   });
   assert.ok(ccmGaps.includes("20-minute threshold"));
+  assert.deepEqual(careLogData.codeRequirement("G0570 · APCM General BHI add-on"), { code: "G0570", minutes: 20 });
+  assert.deepEqual(careLogData.codeRequirement("G0568 · APCM initial CoCM add-on"), { code: "G0568", minutes: 70 });
   const rpmGaps = careLogData.documentationGaps({
     program: "RPM", minutes: 10, activities: "Synthetic device review", nextFollowUp: "2026-09-30",
     billingReadinessEvidence: {
@@ -188,6 +190,12 @@ test("Care Management uses a rolling 30-day window and builds prior-month close 
   assert.match(page, /Medicare \"\+e\.medicareCoverageOrder/);
   assert.match(page, /readiness-incomplete/);
   assert.match(page, /APCM is evaluated without a minute threshold/);
+  assert.match(page, /Prepare APCM\/BHI batch/);
+  assert.match(page, /care-billing-batch\.mjs/);
+  assert.match(page, /G0570 · General BHI add-on with APCM/);
+  assert.match(page, /G0568 · initial CoCM add-on with APCM/);
+  assert.match(page, /Export ready claim-entry CSV/);
+  assert.match(page, /No claim was submitted/);
   assert.doesNotMatch(page, /value="released"/);
   assert.match(actionSource, /"billingReadinessEvidence"/);
   const scripts = [...page.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)].map((match) => match[1]);
