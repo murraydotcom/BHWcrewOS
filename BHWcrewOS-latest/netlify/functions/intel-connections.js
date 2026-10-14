@@ -69,7 +69,7 @@ const LIVE_CONTROLS = Object.freeze([
     databaseId: DB.staff,
     mode: "read/write",
     requiredProperties: ["Name", "Active", "Access Level", "PIN Hash"],
-    action: { label: "Manage employee codes", href: "/setup.html" },
+    action: { label: "Manage employees and codes", href: "/crewos-controls.html?section=staff" },
     summarize(rows) {
       const active = rows.filter((row) => P.check(row.properties?.Active));
       return {
@@ -85,7 +85,7 @@ const LIVE_CONTROLS = Object.freeze([
     databaseId: DB.referralTemplates,
     mode: "read/write",
     requiredProperties: ["Name", "Active", "Destination", "Body"],
-    action: { label: "Create a referral", href: "/crewos" },
+    action: { label: "Manage referral templates", href: "/crewos-controls.html?section=referralTemplates" },
     summarize(rows) {
       return { activeTemplates: rows.filter((row) => P.check(row.properties?.Active)).length };
     },
@@ -97,7 +97,7 @@ const LIVE_CONTROLS = Object.freeze([
     databaseId: DB.rooms,
     mode: "read",
     requiredProperties: ["Room", "Active", "Allowed Services", "Capacity"],
-    action: { label: "Open scheduling", href: "/crewos" },
+    action: { label: "Manage rooms and rules", href: "/crewos-controls.html?section=rooms" },
     summarize(rows) {
       return { activeRooms: rows.filter((row) => P.check(row.properties?.Active)).length };
     },
@@ -133,7 +133,7 @@ const LIVE_CONTROLS = Object.freeze([
     databaseId: DB.resources,
     mode: "read",
     requiredProperties: ["Resource", "Division", "Category", "Link", "Pinned"],
-    action: { label: "Open resources", href: "/crewos" },
+    action: { label: "Manage resources", href: "/crewos-controls.html?section=resources" },
     summarize(rows) {
       return { linkedResources: rows.filter((row) => row.properties?.Link?.url).length };
     },
@@ -145,7 +145,7 @@ const LIVE_CONTROLS = Object.freeze([
     databaseId: DB.crewProjects,
     mode: "read",
     requiredProperties: ["Project", "Staff", "Status", "Due Date", "Summary"],
-    action: { label: "Open My Space", href: "/crewos" },
+    action: { label: "Manage crew projects", href: "/crewos-controls.html?section=crewProjects" },
     summarize(rows) {
       return { openProjects: rows.filter((row) => P.sel(row.properties?.Status) !== "Complete").length };
     },
@@ -157,7 +157,7 @@ const LIVE_CONTROLS = Object.freeze([
     databaseId: process.env.SPECIALIST_DB_ID || DB.specialistDirectory,
     mode: "read",
     requiredProperties: ["Specialist", "Specialty", "Phone", "Accepting New Patients"],
-    action: { label: "Open Front Desk", href: "/bhw-front-desk.html" },
+    action: { label: "Manage specialist directory", href: "/crewos-controls.html?section=specialistDirectory" },
     summarize(rows) {
       return { directoryEntries: rows.filter((row) => P.title(row.properties?.Specialist)).length };
     },
@@ -229,7 +229,7 @@ async function inspectLiveControl(definition, dependencies = {}, cutover = { mod
         key: definition.key,
         name: definition.name,
         source: "CrewHQ Database",
-        mode: definition.mode,
+        mode: "read/write",
         state: source?.verified && !missingProperties.length ? "connected" : "degraded",
         label: source?.verified && !missingProperties.length ? "CrewHQ database connected" : "Imported data needs attention",
         missingProperties,

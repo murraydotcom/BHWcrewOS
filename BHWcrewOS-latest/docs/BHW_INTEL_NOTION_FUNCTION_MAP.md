@@ -2,7 +2,7 @@
 
 Last reconciled: 2026-10-08
 
-The administrator-only **BHW Intel Connections** page is the protected cutover and status center for functions that began in Notion. It reports aggregate connection health only and never displays patient content or PIN hashes.
+The administrator-only **Notion Connections** page is the protected cutover and status center for functions that began in Notion. Its **Manage BHWcrewOS controls** link opens `/crewos-controls.html`, where administrators can create and edit employees (including setting/resetting hashed PINs), referral templates, rooms/rules, resources, crew projects, and specialist directory entries after cutover. Saves use optimistic version checks and transactional read-back verification. The status page reports aggregate health only and never displays patient content or PIN hashes.
 
 ## Operational controls moving to CrewHQ Database
 

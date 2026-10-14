@@ -328,5 +328,6 @@ module.exports = {
   recordsHash,
   canonicalJson,
   isMissingDatabaseConfiguration,
+  getOperationalPool: pool,
   _resetDatabaseForTests: () => { databasePromise = undefined; },
 };
