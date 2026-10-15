@@ -102,7 +102,7 @@ test("BHW Intel page is session-gated and linked from CrewHQ", async () => {
   assert.match(page, /DISCONNECT NOTION/);
   assert.match(page, /notion-cutover/);
   assert.match(page, /patient rows read/);
-  assert.match(hq, /BHW Intel Connections/);
+  assert.match(hq, /Notion Connections/);
   assert.match(hq, /bhw-intel-connections\.html/);
   assert.match(source, /Administrator access is required/);
   assert.doesNotMatch(source, /queryDb\(LEGACY_WORKFLOW_DB/);

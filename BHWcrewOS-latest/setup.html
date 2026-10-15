@@ -67,7 +67,7 @@ const saved = [];
   }catch(e){
     sel.innerHTML = `<option value="">Team list unavailable</option>`;
     msg.className="msg err";
-    msg.textContent = e.message + " — check NOTION_TOKEN + Notion connection.";
+    msg.textContent = e.message + " — review the source status in Notion Connections.";
   }
 })();
 

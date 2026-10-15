@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
-  <title>BHW Intel Connections · CrewOS</title>
+  <title>Notion Connections · BHWcrewOS</title>
   <script src="/crew-provider-gate.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,8 +19,9 @@
     <div class="top">
       <div>
         <div class="eyebrow">CrewOS · Administrator control center</div>
-        <h1>BHW Intel Connections</h1>
-        <p class="lede">One place to complete the Notion exit, confirm the active system of record, and verify where every legacy workflow lives now.</p>
+        <h1>Notion Connections</h1>
+        <p class="lede">Complete the Notion exit, manage the operational controls inside BHWcrewOS, and open each current workflow.</p>
+        <div class="actions"><a class="action" href="/crewos-controls.html">Manage BHWcrewOS controls →</a></div>
       </div>
       <div><button class="refresh" id="refresh" type="button">Refresh status</button><div class="stamp" id="stamp">Checking connections…</div></div>
     </div>
@@ -97,7 +98,7 @@
         const data=await response.json().catch(()=>({}));
         if(!response.ok)throw new Error(data.error||`Status check failed (${response.status})`);
         render(data);
-      }catch(error){content.className='boundary fatal';content.innerHTML=`<h2>BHW Intel status could not load</h2><p>${esc(error.message)}</p><p>Administrator access is required. If you are an administrator, sign in again and retry.</p>`;stamp.textContent='Status unavailable'}
+      }catch(error){content.className='boundary fatal';content.innerHTML=`<h2>Notion Connections could not load</h2><p>${esc(error.message)}</p><p>Administrator access is required. If you are an administrator, sign in again and retry.</p>`;stamp.textContent='Status unavailable'}
       finally{refresh.disabled=false}
     }
     refresh.addEventListener('click',load);load();

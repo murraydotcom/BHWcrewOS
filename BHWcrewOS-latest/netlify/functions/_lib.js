@@ -112,8 +112,8 @@ async function updatePage(pageId, properties) {
  
 // ---------- Property readers ----------
 const P = {
-  title: (p) => p?.title?.map((t) => t.plain_text).join("") || "",
-  text: (p) => p?.rich_text?.map((t) => t.plain_text).join("") || "",
+  title: (p) => p?.title?.map((t) => t.plain_text ?? t.text?.content ?? "").join("") || "",
+  text: (p) => p?.rich_text?.map((t) => t.plain_text ?? t.text?.content ?? "").join("") || "",
   sel: (p) => p?.select?.name || "",
   multi: (p) => (p?.multi_select || []).map((o) => o.name),
   check: (p) => !!p?.checkbox,

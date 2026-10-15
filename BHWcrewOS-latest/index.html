@@ -345,7 +345,7 @@ async function api(url, body){
     err.textContent = "";
   }catch(e){
     sel.innerHTML = `<option value="">Team list unavailable</option>`;
-    err.textContent = "⚠ " + e.message + " — check NOTION_TOKEN and that the Data Layer page is shared with the integration, then refresh.";
+    err.textContent = "⚠ " + e.message + " — refresh to retry. Administrators can review the source status in Notion Connections.";
   }
 })();
 
