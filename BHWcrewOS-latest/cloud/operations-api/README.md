@@ -82,6 +82,14 @@ collections. Do not put either secret or a service-account key in the repo.
 
 ## Routes
 
+The additional `notion-workspace-app.mjs` wrapper provides administrator-only
+`/v1/notion-workspaces/{healthcare,purchases,library,marketing,invoices}`
+routes for paged reads and `preview`, `import`, and `save` actions. Imported
+rows retain immutable original columns, source hashes, and status. These
+historical workspaces do not create patient orders, claims, notifications, or
+Patient Registry links. See `docs/NOTION_EXPORT_RECONCILIATION.md` in the site
+root for activation and the five-source reconciliation.
+
 | Route | Caller | Purpose |
 | --- | --- | --- |
 | `GET /health` | Health check | Service readiness, no patient data |
