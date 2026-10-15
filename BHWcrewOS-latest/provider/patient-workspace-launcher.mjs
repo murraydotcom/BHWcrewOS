@@ -94,7 +94,7 @@ async function launch(button) {
   } catch (error) {
     state.textContent = `Not opened · ${error.message || "secure launch failed"}`;
     buttons.forEach((item) => { item.disabled = false; });
-    if (error.status === 401) location.assign("/crewos?next=%2Fprovider%2Fpatient-registry.html");
+    if (error.status === 401) location.assign("/crewos?next="+encodeURIComponent(location.pathname+location.search+location.hash));
   }
 }
 
