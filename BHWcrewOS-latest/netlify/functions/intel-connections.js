@@ -29,6 +29,7 @@ const LEGACY_WORKFLOWS = Object.freeze([
     service: "operations",
     description: "New operational work is managed as protected Patient Requests and queue activity.",
     actions: [
+      { label: "Open imported healthcare dashboard", href: "/bhw-notion-workspaces.html" },
       { label: "Open Patient Requests", href: "/bhw-requests.html" },
       { label: "Open crewOS", href: "/crewos" },
     ],
