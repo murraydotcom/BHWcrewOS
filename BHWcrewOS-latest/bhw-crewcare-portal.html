@@ -36,7 +36,7 @@ let patients=[];
 let operations=null;
 
 function crewToken(){try{return sessionStorage.getItem("crewos_token")||""}catch{return ""}}
-function showSignedOut(){ $("workspace").classList.add("hidden"); $("signedOut").classList.remove("hidden"); }
+function showSignedOut(){ document.querySelector("#signedOut a").href="/crewos?next="+encodeURIComponent(location.pathname+location.search+location.hash); $("workspace").classList.add("hidden"); $("signedOut").classList.remove("hidden"); }
 
 document.querySelectorAll("nav button").forEach((button)=>button.addEventListener("click",()=>{
   document.querySelectorAll("nav button").forEach((item)=>item.classList.remove("on"));

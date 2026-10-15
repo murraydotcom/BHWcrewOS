@@ -126,8 +126,10 @@ test("Capture keeps non-PHI caching separate from reauthenticated protected Clin
   assert.doesNotMatch(app, /\bdb\.transaction\(/);
   assert.match(app, /raw audio discarded/);
   assert.match(index, /SAFE_STANDALONE_NEXT/);
-  assert.match(index, /SAFE_STANDALONE_NEXT[^\n]*capture/);
-  assert.match(index, /SAFE_STANDALONE_NEXT[^\n]*patient-monitor/);
+  const routePolicy = index.slice(index.indexOf('const SAFE_STANDALONE_NEXT'), index.indexOf('function redirectToRequestedPage'));
+  const captureReturn = new Function('search', `${routePolicy}\nreturn requestedNext(search);`);
+  assert.equal(captureReturn('?next=%2Fbhw-capture.html'), '/bhw-capture.html');
+  assert.equal(captureReturn('?next=%2Fbhw-patient-monitor.html'), '/bhw-patient-monitor.html');
 });
 
 test("Capture falls back to a text-only cache when IndexedDB is unavailable", async () => {
