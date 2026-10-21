@@ -1,4 +1,6 @@
 import http from "node:http";
+import { Firestore } from '@google-cloud/firestore';
+import { blueprintTaskConfiguration, createBlueprintTaskStore, createBlueprintWorkClient } from './blueprint-tasks.mjs';
 import { createOperationsApp } from "./app.mjs";
 import { createClinicalContextApp } from "./clinical-context-app.mjs";
 import { ClinicalContextWorkflowRepository } from "./clinical-context-repository.mjs";
@@ -12,7 +14,9 @@ const repository = new ClinicalContextWorkflowRepository();
 const dialpad = createDialpadService();
 const chat = createGoogleChatService();
 const workflow = createWorkflowService(repository, { dialpad, chat });
-const baseApp = createOperationsApp({ repository, workflow });
+const blueprintConfig = blueprintTaskConfiguration(process.env);
+const blueprintTasks = blueprintConfig ? { store: createBlueprintTaskStore(new Firestore({projectId:process.env.GOOGLE_CLOUD_PROJECT,databaseId:blueprintConfig.databaseId})), readSource:createBlueprintWorkClient(process.env) } : null;
+const baseApp = createOperationsApp({ repository, workflow, blueprintTasks });
 const app = createStaffChatApp({ baseApp: createClinicalContextApp({ baseApp, repository }), chat: new StaffChatRepository(repository.db) });
 const port = Number(process.env.PORT || 8080);
 
