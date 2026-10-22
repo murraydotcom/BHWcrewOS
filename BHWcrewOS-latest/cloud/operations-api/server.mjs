@@ -1,4 +1,5 @@
 import http from "node:http";
+import {syntheticAcceptanceBoundary} from './synthetic-acceptance-boundary.mjs';
 import { Firestore } from '@google-cloud/firestore';
 import { blueprintTaskConfiguration, createBlueprintTaskStore, createBlueprintWorkClient } from './blueprint-tasks.mjs';
 import { createOperationsApp } from "./app.mjs";
@@ -39,7 +40,7 @@ const server = http.createServer(async (incoming, outgoing) => {
       headers: incoming.headers,
       body: ["GET", "HEAD"].includes(incoming.method || "GET") ? undefined : body,
     });
-    const response = await app(request);
+    const response = syntheticAcceptanceBoundary(request,process.env) || await app(request);
     outgoing.writeHead(response.status, Object.fromEntries(response.headers.entries()));
     outgoing.end(Buffer.from(await response.arrayBuffer()));
   } catch (error) {
