@@ -12,6 +12,7 @@ import {
   requireIdempotencyKey,
 } from "./schema.mjs";
 import { buildPatientRequestBundle } from "./domain.mjs";
+import { createBlueprintTaskHandler } from './blueprint-task-app.mjs';
 import { verifyCrewToken, verifyIntakeClient, verifyPatientIdentityClient } from "./auth.mjs";
 import { buildBillingToolkitAuditEvent } from "./billing-toolkit-audit.mjs";
 import {
@@ -142,13 +143,17 @@ export function createOperationsApp({
   environment = process.env,
   now = () => new Date(),
   idFactory,
+  blueprintTasks = null,
 } = {}) {
   if (!repository) throw new Error("repository is required");
+  const blueprintTaskHandler = createBlueprintTaskHandler({ ...blueprintTasks, environment, now });
 
   return async function operationsApp(request) {
     const cors = corsHeaders(request, environment);
     try {
       const url = new URL(request.url);
+      const blueprintResponse = await blueprintTaskHandler(request);
+      if (blueprintResponse) return blueprintResponse;
       if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
       if (url.pathname === "/health" && request.method === "GET") {
         return json(200, {
