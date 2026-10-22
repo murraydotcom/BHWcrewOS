@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import {createPrivateUpstreamHeaders} from './private-upstream-auth.mjs';
 const canonical=v=>Array.isArray(v)?v.map(canonical):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,canonical(v[k])])):v;
 export const digest=v=>crypto.createHash('sha256').update(JSON.stringify(canonical(v))??'null').digest('hex');
 const fail=(status,message)=>{throw Object.assign(new Error(message),{status});};
@@ -35,13 +36,14 @@ export function validateWork(body) {
   return {reference:structuredClone(r),decisions,revision:body.revision};
 }
 export function createBlueprintWorkClient(environment,{fetchImpl=fetch,now=Date.now}={}) {
+  const privateHeaders=createPrivateUpstreamHeaders(environment);
   return async()=>{
     let base;try{base=new URL(environment.HEALTH_CORE_BLUEPRINT_AUTHORITY_URL);}catch{fail(503,'Health Core Blueprint source is not configured.');}
     if(base.protocol!=='https:'||base.username||base.password||base.search||base.hash||base.pathname!=='/')fail(503,'An exact HTTPS Health Core origin is required.');
     const secret=environment.BLUEPRINT_AUTHORITY_CREWOS_SECRET;if(!secret)fail(503,'Blueprint source trust is not configured.');
     const iat=Math.floor(now()/1000),payload=Buffer.from(JSON.stringify({iss:'crewos',aud:'bhw-blueprint-authority',scope:'blueprint-read',bhwPatientId:'BHW0000',iat,exp:iat+60})).toString('base64url');
     const signature=crypto.createHmac('sha256',secret).update(payload).digest('base64url');
-    const response=await fetchImpl(base.origin+'/v1/patients/BHW0000/blueprint-work',{headers:{Authorization:`Bearer ${payload}.${signature}`,'X-BHW-Blueprint-Consumer':'crewos'},redirect:'error',cache:'no-store',signal:AbortSignal.timeout(8000)});
+    const response=await fetchImpl(base.origin+'/v1/patients/BHW0000/blueprint-work',{headers:{Authorization:`Bearer ${payload}.${signature}`,'X-BHW-Blueprint-Consumer':'crewos',...await privateHeaders(base.origin)},redirect:'error',cache:'no-store',signal:AbortSignal.timeout(8000)});
     if(!response.ok)fail([401,403,404,409,503].includes(response.status)?response.status:502,'Current Health Core work is unavailable; cached work cannot be completed.');
     return validateWork(await response.json());
   };
