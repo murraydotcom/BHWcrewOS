@@ -37,6 +37,9 @@ HR data.
 - `POST /v1/intake/patient-requests` is server-to-server. Care Connect sends
   `Authorization: Bearer <CARE_CONNECT_INTAKE_SECRET>`,
   `X-BHW-Client-Id: care-connect`, and a stable `Idempotency-Key`.
+- `POST /v1/intake/health-core-follow-up` is a separate server-to-server intake.
+  It accepts only deterministic work items tied to an exact provider-signed
+  Health Core note version and never sends a patient notification directly.
 - Direct browser/mobile Firestore access remains denied. Cloud Run uses its
   service account and Google Cloud IAM.
 
@@ -53,6 +56,9 @@ HR data.
 | `CARE_CONNECT_CLIENT_ID` | Optional; defaults to `care-connect` |
 | `FRONT_DESK_INTAKE_SECRET` | Server-only secret used by the Front Desk referral bridge |
 | `FRONT_DESK_CLIENT_ID` | Optional; defaults to `front-desk-os` |
+| `HEALTH_CORE_FOLLOW_UP_INTAKE_ENABLED` | Master gate for signed-note follow-up intake; defaults off |
+| `HEALTH_CORE_FOLLOW_UP_INTAKE_SECRET` | Dedicated server-only secret shared only with Health Core |
+| `HEALTH_CORE_FOLLOW_UP_CLIENT_ID` | Optional; defaults to `health-core` |
 | `ALLOWED_ORIGINS` | Comma-separated exact CrewOS origins for staff browser calls |
 | `PATIENT_WORKFLOW_AUTOMATION_ENABLED` | Automatic workflow SMS gate; anything except `true` suppresses automatic sends |
 | `PATIENT_MANUAL_SMS_ENABLED` | Staff-composed, no-PHI SMS gate; defaults to the automatic workflow setting when omitted |
@@ -92,6 +98,7 @@ collections. Do not put either secret or a service-account key in the repo.
 | `GET /v1/contracts/communication-foundation` | CrewOS | Current enums/schema version |
 | `POST /v1/intake/patient-requests` | Care Connect server | Atomic request + triage task + inbound communication + audit |
 | `POST /v1/intake/front-desk-referrals` | Front Desk server bridge | Create one matched referral workflow record only after validated referral-document generation |
+| `POST /v1/intake/health-core-follow-up` | Health Core server | Retry-safe CrewOS work item for a selected reminder, warm handoff, internal referral, whole-person-care/SDOH need, or education need from an exact signed note |
 | `POST /v1/intake/front-desk-patient-requests` | Front Desk server bridge | Create one matched or unresolved inbound fax/email request in the authoritative queue |
 | `POST /v1/intake/front-desk-referrals/:id/actions` | Front Desk server bridge | Record referral sent/ready/scheduled milestones without exposing the server secret |
 | `POST /v1/patient-identity/resolve` | Care Connect server, after OTP verification | Unique active Google patient-registry match using direct contact + DOB |
