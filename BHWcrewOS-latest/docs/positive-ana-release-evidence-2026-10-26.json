@@ -11,14 +11,16 @@
     "mergedFull": 556,
     "correctedFocused": 29,
     "correctedFull": 565,
-    "rcmFocused": 30
+    "rcmFocused": 30,
+    "careArchiveBaseline": 20,
+    "careCandidate": 25
   },
   "unverified": [
     "RCM Cloud Run revision/config",
-    "medication/care API implementation/revision/gates",
     "existing capability revocation",
     "production write/access history",
-    "human clinical UAT"
+    "human clinical UAT",
+    "medication/care current source parity, deployed revision and enforced gates"
   ],
   "correctiveProductionDeploymentPerformed": false,
   "automaticCorrectivePreview": {
@@ -33,5 +35,11 @@
     "crewPositiveAna": "40337204820 success",
     "rcmPositiveAna": "40337209352 success",
     "rcmSyntheticEligibility": "40337208906 success"
+  },
+  "careCandidate": {
+    "libraryFileId": "libfile_def6cb81ac20819190e80b23ada22fba",
+    "sourceArchiveSha256": "340ba5c00474b4450ffd9b1ee7b899b7a931bfd9d18b25485247e9f7950b085d",
+    "deployed": false,
+    "deployedSourceParityVerified": false
   }
 }
