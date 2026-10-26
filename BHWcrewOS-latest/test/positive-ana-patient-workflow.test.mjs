@@ -1,207 +1,177 @@
-import assert from "node:assert/strict";
-import { createRequire } from "node:module";
-import { readFile } from "node:fs/promises";
-import test from "node:test";
+import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+import { readFile } from 'node:fs/promises';
+import vm from 'node:vm';
+import test from 'node:test';
 
 const require = createRequire(import.meta.url);
-const libPath = require.resolve("../netlify/functions/_lib.js");
-const cloudPath = require.resolve("../netlify/functions/lib/cloud-patients.js");
-const recordPath = require.resolve("../netlify/functions/positive-ana-record.js");
-const step5Page = await readFile(new URL("../bhw-positive-ana-step5.html", import.meta.url), "utf8");
+const { sign } = require('../netlify/functions/_lib.js');
+const { handler, _test: { normalizeAnalysis, buildLongitudinalComparison, transcript } } = require('../netlify/functions/positive-ana-record.js');
+const page = await readFile(new URL('../bhw-positive-ana.html', import.meta.url), 'utf8');
+const step5Page = await readFile(new URL('../bhw-positive-ana-step5.html', import.meta.url), 'utf8');
+const source = await readFile(new URL('../netlify/functions/positive-ana-record.js', import.meta.url), 'utf8');
+process.env.SESSION_SECRET = 'offline-synthetic-session-secret';
 
-function response(statusCode, body) {
-  return { statusCode, body: JSON.stringify(body) };
+function event(body, claims = {}, overrides = {}) {
+  const now = Date.now();
+  const token = sign({ staffId: 'synthetic-clinician', name: 'Synthetic Clinician', role: 'CRNP', scope: 'clinical', authTime: now - 1000, exp: now + 60_000, ...claims });
+  return { httpMethod: 'POST', headers: { authorization: `Bearer ${token}` }, body: JSON.stringify(body), ...overrides };
 }
-
-function loadRecord(cloudRequest, session = { staffId: "synthetic-clinician", name: "Synthetic Clinician", role: "CRNP" }) {
-  require.cache[libPath] = {
-    id: libPath, filename: libPath, loaded: true,
-    exports: { getSession: () => session, json: response },
-  };
-  require.cache[cloudPath] = {
-    id: cloudPath, filename: cloudPath, loaded: true,
-    exports: {
-      cloudRequest,
-      findCloudPatient: async (id, actor) => {
-        const result = await cloudRequest("/v1/patients", { actor });
-        return (result.patients || []).find((patient) => patient.bhwPatientId === id) || null;
-      },
-    },
-  };
-  delete require.cache[recordPath];
-  return require(recordPath);
-}
-
-function event(overrides = {}) {
-  return {
-    httpMethod: "POST",
-    body: JSON.stringify({
-      bhwPatientId: "BHW9999",
-      responseId: "positive-ana-123e4567-e89b-12d3-a456-426614174000",
-      analysis: {
-        schemaVersion: "positive-ana-v3",
-        analysisMode: "non-ranking-clinician-review",
-        anaPatterns: [{ code: "AC-1", label: "AC-1 · Nuclear homogeneous", titer: 160 }],
-        sex: "Female",
-        cascade: "pos",
-        antibodies: [{ key: "dsDNA", label: "dsDNA" }],
-        medications: [],
-        labs: [{ key: "c3Low", label: "C3 low" }, { key: "seleniumLow", label: "Selenium low" }],
-        measurements: [
-          { key: "c3Value", label: "C3 numeric value", value: 64, unit: "mg/dL", method: "Nephelometry", referenceRange: "90-180", collectedOn: "2026-10-20" },
-          { key: "foodIgGValue", label: "Food-specific IgG numeric result", subject: "Wheat", value: 12.5, unit: "U/mL", method: "ELISA", referenceRange: "<2", collectedOn: "2026-10-20", contextual: true },
-          { key: "foodIgGValue", label: "Food-specific IgG numeric result", subject: "Milk", value: 5, unit: "U/mL", method: "ELISA", referenceRange: "<2", collectedOn: "2026-10-20", contextual: true },
-          { key: "tryptaseAcuteValue", label: "Acute serum tryptase", value: 14, unit: "ng/mL", method: "Immunoassay", referenceRange: "<11.5", collectedOn: "2026-10-20", contextual: true },
-        ],
-        symptoms: [{ group: "Renal / Vascular", label: "Blood in urine" }, { group: "Supportive Context / Exposures", label: "Short or disrupted sleep" }],
-        patientResponseIds: ["step5-submission-1"],
-        priorAnalysisIds: ["client-supplied-id-must-be-replaced"],
-        redFlags: ["Blood in urine"],
-        review: {
-          clinicianReviewRequired: true,
-          sourceSupportedContext: ["Food-specific IgG was retained as hypothesis-generating exposure context; it does not diagnose food allergy or intolerance."],
-          uncertainty: ["No condition ranking, score, hidden ordering, or automated diagnosis was generated."],
-        },
-      },
-    }),
-    ...overrides,
-  };
-}
-
-test("Positive ANA record saves to the verified BHW ID and requires exact Cloud read-back", async () => {
-  const calls = [];
-  const cloudRequest = async (path, options = {}) => {
-    calls.push({ path, options });
-    if (path === "/v1/patients") return { patients: [{ bhwPatientId: "BHW9999", patientStatus: "active" }] };
-    if (options.method === "POST") return { responseId: options.body.responseId, savedAt: "2026-10-25T12:00:00.000Z" };
-    return { responses: [
-      { responseId: "positive-ana-123e4567-e89b-12d3-a456-426614174000", bhwPatientId: "BHW9999", screeningId: "positive-ana-clinician-analysis", submittedAt: "2026-10-25T12:00:00.000Z" },
-      { responseId: "prior-exact-patient", bhwPatientId: "BHW9999", screeningId: "positive-ana-clinician-analysis", submittedAt: "2026-09-01T12:00:00.000Z", answers: {
-        anaPatterns: [{ code: "AC-1", label: "AC-1 · Nuclear homogeneous", titer: 80 }],
-        antibodies: [{ key: "SSA", label: "SSA / Ro" }],
-        labs: [{ key: "c4Low", label: "C4 low" }],
-        measurements: [
-          { key: "c3Value", label: "C3 numeric value", value: 80, unit: "mg/dL", method: "Nephelometry", referenceRange: "90-180", collectedOn: "2026-08-28" },
-          { key: "foodIgGValue", label: "Food-specific IgG numeric result", subject: "Wheat", value: 10, unit: "U/mL", method: "ELISA", referenceRange: "<2", collectedOn: "2026-08-28", contextual: true },
-          { key: "foodIgGValue", label: "Food-specific IgG numeric result", subject: "Milk", value: 7, unit: "U/mL", method: "ELISA", referenceRange: "<2", collectedOn: "2026-08-28", contextual: true },
-          { key: "tryptaseAcuteValue", label: "Acute serum tryptase", value: 12, unit: "µg/L", method: "Immunoassay", referenceRange: "<11.5", collectedOn: "2026-08-28", contextual: true },
-        ],
-        symptoms: [{ group: "Joints / Muscle", label: "Joint swelling" }],
-      } },
-      { responseId: "other-patient-prior", bhwPatientId: "BHW1111", screeningId: "positive-ana-clinician-analysis", submittedAt: "2026-09-15T12:00:00.000Z", answers: { measurements: [{ key: "c3Value", label: "C3 numeric value", value: 1, unit: "mg/dL" }] } },
-    ] };
-  };
-  const { handler } = loadRecord(cloudRequest);
-  const result = await handler(event());
-  const body = JSON.parse(result.body);
-
-  assert.equal(result.statusCode, 200);
-  assert.equal(body.saved, true);
-  assert.equal(body.bhwPatientId, "BHW9999");
-  assert.equal(body.destination, "BHW Cloud");
-  assert.equal(calls.length, 4);
-  assert.equal(calls[0].path, "/v1/patients");
-  assert.equal(calls[1].path, "/v1/questionnaire-responses");
-  assert.equal(calls[1].options.method, undefined);
-  assert.equal(calls[2].path, "/v1/questionnaire-responses");
-  assert.equal(calls[2].options.method, "POST");
-  assert.equal(calls[2].options.body.bhwPatientId, "BHW9999");
-  assert.equal(calls[2].options.body.screeningId, "positive-ana-clinician-analysis");
-  assert.equal(calls[2].options.body.answers.schemaVersion, "positive-ana-v3");
-  assert.equal(calls[2].options.body.answers.analysisMode, "non-ranking-clinician-review");
-  assert.equal(calls[2].options.body.answers.measurements[0].value, 64);
-  assert.equal(calls[2].options.body.answers.measurements[1].subject, "Wheat");
-  assert.equal(calls[2].options.body.answers.measurements[1].contextual, true);
-  assert.equal(calls[2].options.body.answers.measurements[2].contextual, true);
-  assert.equal(calls[2].options.body.answers.measurements[2].subject, "Milk");
-  assert.equal(calls[2].options.body.answers.measurements[3].contextual, true);
-  assert.ok(!Object.hasOwn(calls[2].options.body.answers, "differential"));
-  assert.ok(!Object.hasOwn(calls[2].options.body.answers, "sharedWorkup"));
-  assert.deepEqual(calls[2].options.body.answers.patientResponseIds, ["step5-submission-1"]);
-  assert.deepEqual(calls[2].options.body.answers.priorAnalysisIds, ["prior-exact-patient"]);
-  assert.equal(calls[2].options.body.answers.review.clinicianReviewRequired, true);
-  assert.match(calls[2].options.body.answers.review.sourceSupportedContext.join(" "), /Insider’s Guide to Supporting Optimal Immune Function/);
-  assert.deepEqual(calls[2].options.body.answers.review.sourceReferences.map((item) => item.pages), ["p. 1; pp. 5–25"]);
-  assert.equal(calls[2].options.body.answers.longitudinalComparison.priorReviewCount, 1);
-  assert.deepEqual(calls[2].options.body.answers.longitudinalComparison.provenance.map((item) => item.responseId), ["prior-exact-patient"]);
-  const c3Comparison = calls[2].options.body.answers.longitudinalComparison.measurements.find((item) => item.key === "c3Value");
-  const foodComparison = calls[2].options.body.answers.longitudinalComparison.measurements.find((item) => item.key === "foodIgGValue" && item.subject === "Wheat");
-  const milkComparison = calls[2].options.body.answers.longitudinalComparison.measurements.find((item) => item.key === "foodIgGValue" && item.subject === "Milk");
-  const tryptaseComparison = calls[2].options.body.answers.longitudinalComparison.measurements.find((item) => item.key === "tryptaseAcuteValue");
-  assert.equal(c3Comparison.comparability, "comparable");
-  assert.equal(c3Comparison.delta, -16);
-  assert.equal(foodComparison.comparability, "comparable");
-  assert.equal(foodComparison.delta, 2.5);
-  assert.equal(milkComparison.comparability, "comparable");
-  assert.equal(milkComparison.delta, -2);
-  assert.equal(calls[2].options.body.answers.longitudinalComparison.foodContext.length, 2);
-  assert.equal(tryptaseComparison.comparability, "not-comparable");
-  assert.match(tryptaseComparison.comparison, /Units are not comparable/);
-  assert.deepEqual(calls[2].options.body.answers.longitudinalComparison.symptoms.currentOnly, ["Blood in urine", "Short or disrupted sleep"]);
-  assert.deepEqual(calls[2].options.body.answers.longitudinalComparison.symptoms.previousOnly, ["Joint swelling"]);
-  assert.match(calls[2].options.body.answers.longitudinalComparison.patterns[0].comparison, /higher value than the prior recorded endpoint/);
-  assert.doesNotMatch(calls[2].options.body.transcript, /ranked differential|none ranked/i);
-  assert.match(calls[2].options.body.transcript, /non-ranking clinician review/i);
-  assert.match(calls[2].options.body.transcript, /Longitudinal comparison: 1 exact-patient prior review/);
-  assert.match(calls[2].options.body.transcript, /Source references: Insider’s Guide to Supporting Optimal Immune Function/);
-  assert.equal(calls[3].path, "/v1/questionnaire-responses");
+const analysis = () => ({
+  anaPatterns: [{ code: 'AC-1', label: 'Nuclear homogeneous', titer: 160 }],
+  antibodies: [{ key: 'dsDNA', label: 'dsDNA' }],
+  symptoms: [{ group: 'Renal / Vascular', label: 'Blood in urine' }],
+  labs: [{ key: 'seleniumLow', label: 'Selenium low' }],
+  measurements: [{ key: 'c3Value', label: 'C3 numeric value', value: 64, unit: 'mg/dL', method: 'Nephelometry', referenceRange: '90-180', collectedOn: '2026-10-20' }],
+  review: { clinicianReviewRequired: false },
+  // Deliberate attack inputs, never real records.
+  patientResponseIds: ['other-patient-response'], priorAnalysisIds: ['other-patient-prior'],
+  differential: [{ condition: 'SLE', score: 100 }], sharedWorkup: ['CBC'],
 });
 
-test("Positive ANA history returns only the selected patient's clinician analyses", async () => {
-  const calls = [];
-  const cloudRequest = async (path, options = {}) => {
-    calls.push({ path, options });
-    if (path === "/v1/patients") return { patients: [{ bhwPatientId: "BHW9999", patientStatus: "active" }] };
-    return { responses: [
-      { responseId: "keep", bhwPatientId: "BHW9999", screeningId: "positive-ana-clinician-analysis", submittedAt: "2026-10-25T12:00:00.000Z", respondent: "Provider", answers: { symptoms: [{ group: "Renal / Vascular", label: "Blood in urine" }], differential: [{ condition: "SLE", tier: "Strong", score: 100 }], sharedWorkup: ["CBC"], patientResponseIds: ["step5-1"], priorAnalysisIds: ["prior-1"] } },
-      { responseId: "other-patient", bhwPatientId: "BHW1111", screeningId: "positive-ana-clinician-analysis", answers: { symptoms: [{ group: "Test", label: "Wrong patient" }] } },
-      { responseId: "other-screening", bhwPatientId: "BHW9999", screeningId: "another-screening", answers: { symptoms: [{ group: "Test", label: "Wrong screening" }] } },
-    ] };
-  };
-  const { handler } = loadRecord(cloudRequest);
-  const result = await handler(event({ body: JSON.stringify({ action: "list", bhwPatientId: "BHW9999" }) }));
-  const body = JSON.parse(result.body);
+async function offline(run) {
+  const original = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async () => { calls += 1; throw new Error('network forbidden during synthetic regression'); };
+  try { await run(); assert.equal(calls, 0, 'no Cloud, Registry, storage, or delivery call'); }
+  finally { globalThis.fetch = original; }
+}
 
-  assert.equal(result.statusCode, 200);
-  assert.equal(body.bhwPatientId, "BHW9999");
-  assert.equal(body.analyses.length, 1);
-  assert.equal(body.analyses[0].responseId, "keep");
-  assert.ok(!Object.hasOwn(body.analyses[0].analysis, "differential"));
-  assert.ok(!Object.hasOwn(body.analyses[0].analysis, "sharedWorkup"));
-  assert.equal(body.analyses[0].analysis.analysisMode, "non-ranking-clinician-review");
-  assert.equal(body.analyses[0].analysis.legacyRankingOmitted, true);
-  assert.deepEqual(body.analyses[0].analysis.patientResponseIds, ["step5-1"]);
-  assert.deepEqual(body.analyses[0].analysis.priorAnalysisIds, ["prior-1"]);
-  assert.deepEqual(calls.map((call) => call.path), ["/v1/patients", "/v1/questionnaire-responses"]);
+test('patient save/list and delivery actions stay locked for every identifier, role, and client approval claim', async () => {
+  await offline(async () => {
+    // BHW9999 is exclusively an offline negative fixture here, never a pilot identity.
+    for (const bhwPatientId of ['BHW0000', 'BHW9999', 'BHW1111', '', '../BHW0000']) {
+      for (const action of ['save', 'list', 'create-assignment', 'send', 'approve', undefined]) {
+        const response = await handler(event({ action, bhwPatientId, analysis: analysis(), clinicalApproved: true, persistenceEnabled: true }, { role: 'admin' }));
+        assert.equal(response.statusCode, 423);
+        const body = JSON.parse(response.body);
+        assert.equal(body.saved, false); assert.equal(body.clinicalApproved, false);
+        assert.equal(body.persistenceEnabled, false); assert.equal(body.patientDeliveryEnabled, false);
+      }
+    }
+  });
 });
 
-test("Positive ANA record fails closed for an invalid patient, missing session, or mismatched read-back", async () => {
-  let cloudCalls = 0;
-  let module = loadRecord(async () => { cloudCalls += 1; return {}; });
-  let result = await module.handler(event({ body: JSON.stringify({ bhwPatientId: "BHW0000", analysis: { symptoms: [{ group: "Test", label: "Test" }] } }) }));
-  assert.equal(result.statusCode, 400);
-  assert.equal(cloudCalls, 0);
-
-  module = loadRecord(async () => { throw new Error("must not call"); }, null);
-  result = await module.handler(event());
-  assert.equal(result.statusCode, 401);
-
-  module = loadRecord(async (path, options = {}) => path === "/v1/patients" ? { patients: [{ bhwPatientId: "BHW9999", patientStatus: "active" }] } : options.method === "POST" ? { ok: true } : { responses: [] });
-  result = await module.handler(event());
-  assert.equal(result.statusCode, 502);
-  assert.match(JSON.parse(result.body).error, /could not be verified/i);
+test('signed release status reports the hard lock and never queries patient data', async () => {
+  await offline(async () => {
+    const response = await handler(event({ action: 'status' }));
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.headers['Cache-Control'], 'no-store');
+    assert.deepEqual(JSON.parse(response.body), { ok: true, mode: 'synthetic-only', syntheticPatientId: 'BHW0000', clinicalApproved: false, persistenceEnabled: false, patientDeliveryEnabled: false, clinicianReviewRequired: true });
+  });
 });
 
-test("patient Step 5 page uses only the opaque assignment capability and returns structured answers", () => {
-  assert.match(step5Page, /noindex,nofollow,noarchive/);
-  assert.match(step5Page, /\/v1\/public\/content-assignments/);
-  assert.match(step5Page, /assignment\.questions/);
-  assert.match(step5Page, /question\.type==='multi'/);
-  assert.match(step5Page, /\/v1\/public\/content-submissions/);
-  assert.match(step5Page, /urgentConcern/);
-  assert.match(step5Page, /This form does not diagnose an autoimmune condition/);
-  assert.doesNotMatch(step5Page, /id="patientId"|bhwPatientId|BHW\d{4}/);
-  const scripts = [...step5Page.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)]
-    .map((match) => match[1].trim()).filter(Boolean);
-  scripts.forEach((script, index) => assert.doesNotThrow(() => Function(script), `Step 5 inline script ${index + 1}`));
+test('missing, tampered, expired, appended, or identity-free signed sessions fail before workflow processing', async () => {
+  await offline(async () => {
+    const request = event({ action: 'status' });
+    const token = request.headers.authorization;
+    for (const authorization of ['', 'Bearer invalid', token + '.extra', token.slice(0,-1) + (token.endsWith('A') ? 'B' : 'A')]) {
+      assert.equal((await handler({ ...request, headers: { authorization } })).statusCode, 401);
+    }
+    assert.equal((await handler(event({ action: 'status' }, { exp: Date.now()-1 }))).statusCode, 401);
+    assert.equal((await handler(event({ action: 'status' }, { staffId: '' }))).statusCode, 401);
+  });
+});
+
+test('synthetic preview requires the exact BHW0000 identity; aliases and real-format IDs fail closed', async () => {
+  await offline(async () => {
+    for (const bhwPatientId of ['BHW9999','BHW1111','bhw0000',' BHW0000','BHW0000suffix',null,{},['BHW0000']]) {
+      assert.equal((await handler(event({ action: 'synthetic-preview', bhwPatientId, analysis: analysis(), syntheticReviewAttestation: true }))).statusCode, 403);
+    }
+  });
+});
+
+test('synthetic preview requires a provider role and recent clinical step-up; admin access is not clinical approval', async () => {
+  await offline(async () => {
+    for (const claims of [{ role: 'admin' },{role:'Care Manager'},{role:'front desk'},{scope:'staff'},{authTime:0},{authTime:Date.now()+60_000},{authTime:Date.now()-16*60_000},{exp:Date.now()+16*60_000}]) {
+      assert.equal((await handler(event({ action: 'synthetic-preview', bhwPatientId:'BHW0000', analysis:analysis(), syntheticReviewAttestation:true }, claims))).statusCode, 403);
+    }
+  });
+});
+
+test('synthetic preview requires explicit attestation and a structured analysis', async () => {
+  await offline(async () => {
+    for (const syntheticReviewAttestation of [false, undefined, 'true']) {
+      assert.equal((await handler(event({ action:'synthetic-preview', bhwPatientId:'BHW0000', analysis:analysis(), syntheticReviewAttestation }))).statusCode, 400);
+    }
+    for (const value of [null, undefined, []]) assert.equal((await handler(event({ action:'synthetic-preview',bhwPatientId:'BHW0000',analysis:value,syntheticReviewAttestation:true }))).statusCode,400);
+  });
+});
+
+test('attested BHW0000 preview cannot save, issue a link, inherit patient provenance, or become clinical signoff', async () => {
+  await offline(async () => {
+    const response = await handler(event({ action:'synthetic-preview',bhwPatientId:'BHW0000',analysis:analysis(),syntheticReviewAttestation:true }));
+    assert.equal(response.statusCode,200);
+    const body = JSON.parse(response.body);
+    assert.equal(body.bhwPatientId,'BHW0000'); assert.equal(body.saved,false); assert.equal(body.destination,'none');
+    assert.equal(body.syntheticReview.staffId,'synthetic-clinician'); assert.equal(body.syntheticReview.clinicalSignoff,false);
+    assert.equal(body.analysis.review.clinicianReviewRequired,true);
+    assert.deepEqual(body.analysis.patientResponseIds,[]); assert.deepEqual(body.analysis.priorAnalysisIds,[]);
+    assert.equal(body.analysis.longitudinalComparison.priorReviewCount,0);
+    for (const key of ['differential','sharedWorkup','diagnosis','prescription','order','carePlan','patientLink','responseId']) assert.equal(Object.hasOwn(body.analysis,key)||Object.hasOwn(body,key),false,key);
+  });
+});
+
+test('oversized, malformed, non-object, and unsupported-method requests fail without transport', async () => {
+  await offline(async () => {
+    assert.equal((await handler(event({}, {}, {httpMethod:'GET'}))).statusCode,405);
+    assert.equal((await handler(event({}, {}, {body:'{'}))).statusCode,400);
+    assert.equal((await handler(event(null))).statusCode,400);
+    assert.equal((await handler(event([]))).statusCode,400);
+    assert.equal((await handler(event({}, {}, {body:'x'.repeat(160001)}))).statusCode,413);
+  });
+});
+
+test('source context and numerical findings remain reviewable without ranking or automatic treatment', () => {
+  const normalized = normalizeAnalysis(analysis());
+  assert.equal(normalized.analysisMode,'non-ranking-clinician-review');
+  assert.equal(normalized.measurements[0].value,64);
+  assert.equal(normalized.review.clinicianReviewRequired,true);
+  assert.match(normalized.review.sourceReferences[0].title,/Insider’s Guide/);
+  const summary = transcript(normalized);
+  assert.match(summary,/Clinician review is required/);
+  assert.doesNotMatch(summary,/ranked differential/i);
+});
+
+test('offline longitudinal comparison retains factual changes and assay boundaries', () => {
+  const current = normalizeAnalysis(analysis());
+  const prior = [{responseId:'synthetic-prior',submittedAt:'2026-09-01T12:00:00Z',analysis:normalizeAnalysis({
+    anaPatterns:[{code:'AC-1',label:'Nuclear homogeneous',titer:80}],
+    measurements:[{key:'c3Value',label:'C3 numeric value',value:80,unit:'mg/dL',method:'Nephelometry',referenceRange:'90-180',collectedOn:'2026-08-28'}],
+    symptoms:[{group:'Joints / Muscle',label:'Joint swelling'}],
+  })}];
+  const comparison = buildLongitudinalComparison(current,prior);
+  assert.equal(comparison.priorReviewCount,1);
+  assert.equal(comparison.measurements[0].delta,-16);
+  assert.equal(comparison.measurements[0].comparability,'comparable');
+  assert.deepEqual(comparison.symptoms.currentOnly,['Blood in urine']);
+  assert.deepEqual(comparison.symptoms.previousOnly,['Joint swelling']);
+  prior[0].analysis.measurements[0].unit='other';
+  assert.equal(buildLongitudinalComparison(current,prior).measurements[0].comparability,'not-comparable');
+});
+
+test('browser uses an isolated fixture, never contacts Cloud, and cannot enable save/delivery after analysis', () => {
+  const elements = new Map();
+  const element = id => { if (!elements.has(id)) elements.set(id,{value:id==='patient-id'?'BHW0000':'',disabled:false,addEventListener(){}});return elements.get(id); };
+  let calls=0;
+  const context=vm.createContext({window:{}, $:element, fetch(){calls++;throw new Error('network forbidden');}});
+  const block=page.slice(page.indexOf('/* ================= VERIFIED PATIENT SAVE'),page.indexOf('/* ================= ATLAS + MANAGEMENT'));
+  vm.runInContext(block,context);
+  assert.equal(vm.runInContext('selectedPositiveAnaPatient().bhwPatientId',context),'BHW0000');
+  context.window._analysisRecord=analysis();
+  vm.runInContext('updatePatientWorkflowButtons()',context);
+  assert.equal(element('save-analysis').disabled,true);assert.equal(element('create-step5').disabled,true);
+  element('patient-id').value='BHW9999';
+  assert.equal(vm.runInContext('selectedPositiveAnaPatient()',context),null);
+  assert.equal(calls,0);
+});
+
+test('the public Step 5 page cannot use an old capability or transmit answers', () => {
+  assert.match(step5Page,/noindex,nofollow,noarchive/);
+  assert.match(step5Page,/Patient form is not active/);
+  assert.doesNotMatch(step5Page,/<script|<form|fetch\(|content-assignments|content-submissions|URLSearchParams/);
+});
+
+test('record endpoint imports no Cloud adapter and offers no environmental live-enable switch', () => {
+  assert.doesNotMatch(source,/cloudRequest|findCloudPatient|process\.env|\/v1\/|require\(.+cloud/);
 });

@@ -13,45 +13,6 @@
 </head>
 <body>
   <header class="top"><div class="brand"><h1>Symptoms &amp; History Check-in</h1><p>A private form for your BHW care team</p></div></header>
-  <main class="wrap" id="app"><section class="card loading">Opening your private form…</section></main>
-  <script>
-    const API='https://bhw-medication-api-343692256275.us-east4.run.app';
-    const params=new URLSearchParams(location.search),assignmentId=params.get('assignment')||'',token=params.get('token')||'',app=document.getElementById('app');
-    const esc=value=>String(value==null?'':value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-    const PRIORITY_FEATURES=new Set(['Vision loss or optic neuritis','Hemoptysis (coughing blood)','Shortness of breath at rest','Low oxygen / exertional desaturation','Syncope / near-syncope','Digital ulcers or gangrene','Reduced urine output','New severe hypertension','Seizure or unexplained neuro event','New psychosis, catatonia, or marked behavior change','Focal weakness or speech change','Rapidly ascending weakness','Sensory level or new bowel/bladder dysfunction','Trouble chewing, swallowing, or holding head up','Severe muscle tenderness or dark urine','Severe or unexplained anemia','Petechiae or very low platelets','Recurrent infections or severe neutropenia']);
-    function questionField(question){
-      const choices=Array.isArray(question.options)?question.options:[];
-      return `<section class="group"><h3>${esc(question.label)}</h3><div class="hint">Choose every item that currently applies or has been clinically important in the past. Skip this section if none apply.</div><div class="options">${choices.map(choice=>`<label class="option"><input type="checkbox" name="${esc(question.id)}" value="${esc(choice)}"><span>${esc(choice)}</span></label>`).join('')}</div></section>`;
-    }
-    function render(assignment){
-      const questions=(assignment.questions||[]).filter(question=>question.type==='multi'&&Array.isArray(question.options));
-      if(!questions.length){app.innerHTML='<section class="card loading">This form has no symptom questions. Please contact BHW for a new link.</section>';return}
-      document.title=`${assignment.title||'Symptoms & History Check-in'} — BHW Medical`;
-      app.innerHTML=`<section class="card"><h2>${esc(assignment.title||'Symptoms & history check-in')}</h2><p class="intro">Your answers go directly to your BHW care team. Select the symptoms and history items that apply to you; do not try to diagnose the cause.</p><div class="notice"><b>This form does not diagnose an autoimmune condition.</b> Your clinician will interpret your answers with your examination, laboratory results, medications, and medical history.</div><div class="notice warn"><b>Do not wait on this form for urgent help.</b> Call 911 for severe trouble breathing, chest pain, fainting, stroke symptoms, a seizure, coughing blood, severe bleeding, or another emergency. Call or text 988 for a mental-health or substance-use crisis.</div><form id="step5Form">${questions.map(questionField).join('')}<label class="option attestation"><input id="noneApply" type="checkbox"><span>None of the listed symptoms or history items apply to me.</span></label><label class="option attestation"><input id="sameDay" type="checkbox"><span>I believe one of my answers needs review today.</span></label><div class="status" id="status"></div><button class="btn" id="submitButton" type="submit">Send answers to BHW</button><p class="small">This inbox is not monitored continuously. Contact the office if you need help completing the form.</p></form></section>`;
-      const form=document.getElementById('step5Form');
-      form.addEventListener('change',event=>{if(event.target.matches('input[type="checkbox"][name]')&&event.target.checked)document.getElementById('noneApply').checked=false;if(event.target.id==='noneApply'&&event.target.checked)form.querySelectorAll('input[type="checkbox"][name]').forEach(input=>{input.checked=false})});
-      form.addEventListener('submit',event=>submit(event,questions));
-    }
-    async function submit(event,questions){
-      event.preventDefault();
-      const form=event.currentTarget,data=new FormData(form),responses={},selected=[];
-      questions.forEach(question=>{responses[question.id]=data.getAll(question.id);selected.push(...responses[question.id])});
-      const noneApply=document.getElementById('noneApply').checked,status=document.getElementById('status'),button=document.getElementById('submitButton');
-      if(!selected.length&&!noneApply){status.textContent='Select any symptoms that apply, or confirm that none of the listed items apply.';status.className='status on error';return}
-      responses.step5NoneReported=noneApply;
-      button.disabled=true;status.className='status';
-      try{
-        const urgentConcern=document.getElementById('sameDay').checked||selected.some(item=>PRIORITY_FEATURES.has(item));
-        const response=await fetch(`${API}/v1/public/content-submissions`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({assignmentId,token,completionStatus:'completed',responses,feedback:'',problemReported:urgentConcern,contactRequested:urgentConcern,urgentConcern})});
-        const result=await response.json().catch(()=>({}));if(!response.ok)throw new Error(result.error||'Unable to send answers');
-        status.textContent=urgentConcern?'Your answers were received and marked for priority review. If this may be an emergency, call 911 now.':'Your answers were received by BHW.';status.className='status on ok';button.hidden=true;form.querySelectorAll('input').forEach(input=>{input.disabled=true});
-      }catch(error){status.textContent='We could not send your answers. Please try again or contact the office.';status.className='status on error';button.disabled=false}
-    }
-    async function load(){
-      if(!assignmentId||!token){app.innerHTML='<section class="card loading">This private link is incomplete. Please use the complete link sent by BHW.</section>';return}
-      try{const response=await fetch(`${API}/v1/public/content-assignments/${encodeURIComponent(assignmentId)}?token=${encodeURIComponent(token)}`),data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Link unavailable');if(data.contentPath!=='/bhw-positive-ana-step5.html')throw new Error('Wrong form');render(data)}catch(error){app.innerHTML='<section class="card loading">This private form is unavailable, expired, or already used. Please contact BHW for a new link.</section>'}
-    }
-    load();
-  </script>
+  <main class="wrap" id="app"><section class="card"><h2>Patient form is not active</h2><p class="intro">This workflow is awaiting clinical release approval. This page does not load patient information or send answers. Contact your BHW care team through your usual approved channel.</p></section></main>
 </body>
 </html>

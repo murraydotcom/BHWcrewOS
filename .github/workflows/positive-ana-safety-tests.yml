@@ -1,0 +1,24 @@
+name: Positive ANA synthetic safety
+on:
+  pull_request:
+    paths:
+      - 'BHWcrewOS-latest/bhw-positive-ana*.html'
+      - 'BHWcrewOS-latest/netlify/functions/positive-ana-record.js'
+      - 'BHWcrewOS-latest/netlify/functions/_lib.js'
+      - 'BHWcrewOS-latest/provider/patient-360-app.mjs'
+      - 'BHWcrewOS-latest/test/positive-ana*.test.mjs'
+      - '.github/workflows/positive-ana-safety-tests.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synthetic-boundary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test BHWcrewOS-latest/test/positive-ana*.test.mjs
+      - run: node --check BHWcrewOS-latest/netlify/functions/positive-ana-record.js
+      - run: node --check BHWcrewOS-latest/provider/patient-360-app.mjs

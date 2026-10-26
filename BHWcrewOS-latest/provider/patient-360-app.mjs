@@ -1250,24 +1250,9 @@ function render(record, workflowConnection = { connected: false, encounters: [] 
 }
 
 async function loadPositiveAnaConnection() {
-  if (PATIENT_ID === "BHW0000") return { connected: true, analyses: [], synthetic: true };
-  const workspace = window.bhwPatientWorkspaceContext;
-  if (!workspace || workspace.bhwPatientId !== PATIENT_ID || workspace.purposeOfUse !== "treatment") {
-    throw new Error("The Positive ANA record was not released for this patient workspace.");
-  }
-  const crewToken = sessionStorage.getItem("crewos_token") || "";
-  if (!crewToken) throw new Error("CrewOS session expired. Sign in again.");
-  const response = await fetch("/.netlify/functions/positive-ana-record", {
-    method: "POST",
-    credentials: "same-origin",
-    cache: "no-store",
-    headers: { Authorization: `Bearer ${crewToken}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "list", bhwPatientId: PATIENT_ID }),
-  });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw Object.assign(new Error(body.error || "Positive ANA records unavailable."), { status: response.status });
-  if (body.bhwPatientId !== PATIENT_ID) throw new Error("Positive ANA patient identity did not match this workspace.");
-  return { connected: true, analyses: Array.isArray(body.analyses) ? body.analyses : [] };
+  // No Registry or questionnaire request is permitted by the Positive ANA pilot.
+  return { connected: false, analyses: [], synthetic: PATIENT_ID === "BHW0000",
+    error: "Positive ANA patient records are locked pending clinical release approval. BHW0000 synthetic preview only." };
 }
 
 async function load() {

@@ -1,11 +1,8 @@
-// Protected BHW Cloud persistence for the CrewOS Positive ANA decision-support
-// worksheet. The browser may select only a Patient Registry record; this
-// endpoint independently validates the BHW ID, bounds every field, and verifies
-// the exact saved record through a Cloud read-back before reporting success.
+// Positive ANA remains a BHW0000-only, nonpersistent synthetic preview.
+// No Cloud adapter is imported: a staff login, Registry match, environment flag,
+// or successful deployment cannot authorize real-patient access or persistence.
 
-const crypto = require("crypto");
 const { getSession, json } = require("./_lib");
-const { cloudRequest, findCloudPatient } = require("./lib/cloud-patients");
 
 const SCREENING_ID = "positive-ana-clinician-analysis";
 const SCHEMA_VERSION = "positive-ana-v3";
@@ -15,22 +12,6 @@ const SUPPLEMENTAL_GUIDE_HISTORY_GROUP = "Supportive Context / Exposures";
 
 function text(value, limit = 200) {
   return String(value == null ? "" : value).replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, limit);
-}
-
-function patientId(value) {
-  const id = text(value, 16).toUpperCase();
-  if (!/^BHW\d{4}$/.test(id) || id === "BHW0000") {
-    throw Object.assign(new Error("Choose a verified patient from the BHW Patient Registry"), { status: 400 });
-  }
-  return id;
-}
-
-function recordId(value) {
-  const id = text(value, 100);
-  if (!/^positive-ana-[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
-    throw Object.assign(new Error("A valid retry-safe analysis record ID is required"), { status: 400 });
-  }
-  return id;
 }
 
 function list(value, limit, mapper) {
@@ -411,109 +392,57 @@ function transcript(analysis) {
   ].filter(Boolean).join("\n").slice(0, 16000);
 }
 
-function savedRecord(result, id, bhwPatientId) {
-  return (result.responses || []).find((item) => item.responseId === id && item.bhwPatientId === bhwPatientId && item.screeningId === SCREENING_ID);
-}
+const RELEASE_STATE = Object.freeze({
+  mode: "synthetic-only",
+  syntheticPatientId: "BHW0000",
+  clinicalApproved: false,
+  persistenceEnabled: false,
+  patientDeliveryEnabled: false,
+  clinicianReviewRequired: true,
+});
 
-function clinicianAnalysisRecord(item) {
-  if (!item || item.screeningId !== SCREENING_ID) return null;
-  const responseId = text(item.responseId, 100);
-  if (!responseId) return null;
-  return {
-    responseId,
-    screeningId: SCREENING_ID,
-    submittedAt: text(item.submittedAt || item.createdAt, 80),
-    respondent: text(item.respondent, 160),
-    analysis: normalizeAnalysis(item.answers || {}),
-  };
+function syntheticProvider(session, now = Date.now()) {
+  const role = String(session.role || "").trim().toLowerCase();
+  const providers = ["provider", "physician", "crnp", "fnp", "pmhnp", "nurse practitioner", "family nurse practitioner", "medical director"];
+  const authTime = Number(session.authTime);
+  const exp = Number(session.exp);
+  return providers.includes(role) && session.scope === "clinical"
+    && Number.isFinite(authTime) && authTime > 0 && authTime <= now
+    && now - authTime <= 15 * 60 * 1000 && exp > now && exp <= authTime + 15 * 60 * 1000;
 }
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return json(405, { ok: false, error: "POST only" });
-  const session = getSession(event);
-  if (!session) return json(401, { ok: false, error: "Signed out — sign in to CrewOS again." });
+  const authorization = event.headers?.authorization || event.headers?.Authorization || "";
+  // Retain signed CrewOS authentication and reject appended/ambiguous tokens.
+  const session = /^Bearer [A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/i.test(authorization) ? getSession(event) : null;
+  if (!session || !session.staffId) return json(401, { ok: false, error: "Signed out — sign in to CrewOS again." });
   if (Buffer.byteLength(event.body || "", "utf8") > 160000) return json(413, { ok: false, error: "Analysis record is too large" });
-
   let body;
   try { body = JSON.parse(event.body || "{}"); } catch { return json(400, { ok: false, error: "Bad JSON" }); }
+  if (!body || typeof body !== "object" || Array.isArray(body)) return json(400, { ok: false, error: "An object is required" });
+  if (body.action === "status") return json(200, { ok: true, ...RELEASE_STATE });
 
-  try {
-    const bhwPatientId = patientId(body.bhwPatientId);
-    const verifiedPatient = await findCloudPatient(bhwPatientId, session);
-    if (!verifiedPatient || verifiedPatient.selectable === false || ["deceased", "transferred"].includes(String(verifiedPatient.patientStatus || "").toLowerCase())) {
-      return json(404, { ok: false, saved: false, destination: "BHW Cloud", error: "Patient was not found as an active record in the BHW Patient Registry" });
-    }
-    const action = text(body.action || "save", 20).toLowerCase();
-    if (action === "list") {
-      const result = await cloudRequest("/v1/questionnaire-responses", { actor: session });
-      const analyses = (result.responses || [])
-        .filter((item) => item.bhwPatientId === bhwPatientId && item.screeningId === SCREENING_ID)
-        .map(clinicianAnalysisRecord).filter(Boolean)
-        .sort((left, right) => String(right.submittedAt).localeCompare(String(left.submittedAt)))
-        .slice(0, 25);
-      return json(200, { ok: true, bhwPatientId, screeningId: SCREENING_ID, analyses });
-    }
-    if (action !== "save") return json(400, { ok: false, error: "Unsupported Positive ANA record action" });
-    const analysis = normalizeAnalysis(body.analysis);
-    if (!analysis.anaPatterns.length && !analysis.antibodies.length && !analysis.labs.length
-        && !analysis.measurements.length && !analysis.symptoms.length) {
-      return json(400, { ok: false, error: "Create the clinical review and enter at least one finding before saving" });
-    }
-    const responseId = recordId(body.responseId || `positive-ana-${crypto.randomUUID()}`);
-    const historyResult = await cloudRequest("/v1/questionnaire-responses", { actor: session });
-    const priorRecords = (historyResult.responses || [])
-      .filter((item) => item.responseId !== responseId && item.bhwPatientId === bhwPatientId && item.screeningId === SCREENING_ID)
-      .map(clinicianAnalysisRecord).filter(Boolean)
-      .sort((left, right) => String(right.submittedAt).localeCompare(String(left.submittedAt)))
-      .slice(0, 25);
-    analysis.priorAnalysisIds = priorRecords.map((item) => item.responseId);
-    analysis.longitudinalComparison = buildLongitudinalComparison(analysis, priorRecords);
-    analysis.review.sourceSupportedContext = analysis.review.sourceSupportedContext.filter((item) => !/prior patient-linked Positive ANA review/i.test(item));
-    if (priorRecords.length) analysis.review.sourceSupportedContext.push(`${priorRecords.length} exact-patient prior Positive ANA review(s) were compared factually with the current observations.`);
-    analysis.review.sourceGaps = analysis.review.sourceGaps.filter((item) => !/AC-specific ICAP/i.test(item));
-    if (analysis.anaPatterns.length) analysis.review.sourceGaps.push("AC-specific ICAP pattern-to-disease associations are not provided in the supplied Field Guide or Version 2 framework; no such association was inferred.");
-    const submittedAt = new Date().toISOString();
-    await cloudRequest("/v1/questionnaire-responses", {
-      actor: session,
-      method: "POST",
-      body: {
-        responseId,
-        sourceRecordId: responseId,
-        bhwPatientId,
-        assessmentId: "",
-        screeningId: SCREENING_ID,
-        screeningName: "Positive ANA clinician review",
-        program: "Primary Care",
-        responseKind: "questionnaire",
-        respondent: text(session.name || session.staffId || "CrewOS clinician", 160),
-        answers: analysis,
-        transcript: transcript(analysis),
-        flags: analysis.redFlags.join("; ").slice(0, 4000),
-        submittedAt,
-        sourceSystem: "CrewOS Positive ANA",
-      },
-    });
-
-    const readback = await cloudRequest("/v1/questionnaire-responses", { actor: session });
-    const stored = savedRecord(readback, responseId, bhwPatientId);
-    if (!stored) throw Object.assign(new Error("The Cloud save could not be verified. Retry with the same analysis record."), { status: 502 });
-    return json(200, {
-      ok: true,
-      saved: true,
-      destination: "BHW Cloud",
-      bhwPatientId,
-      responseId,
-      savedAt: stored.submittedAt || stored.createdAt || submittedAt,
-      screeningId: SCREENING_ID,
-    });
-  } catch (error) {
-    return json(Number(error.status) || 502, {
-      ok: false,
-      saved: false,
-      destination: "BHW Cloud",
-      error: String(error.message || error),
-    });
-  }
+  // Deliberately no live-enable environment variable. Releasing persistence
+  // requires a separately reviewed implementation and clinical-owner evidence.
+  if (body.action !== "synthetic-preview") return json(423, {
+    ok: false, saved: false, ...RELEASE_STATE,
+    error: "Positive ANA patient records and Step 5 delivery are locked pending clinical release approval. BHW0000 synthetic preview only.",
+  });
+  if (body.bhwPatientId !== "BHW0000") return json(403, { ok: false, saved: false, error: "Only exact BHW0000 synthetic preview is authorized" });
+  if (!syntheticProvider(session)) return json(403, { ok: false, saved: false, error: "Recent clinical authentication by a provider is required for synthetic review" });
+  if (body.syntheticReviewAttestation !== true) return json(400, { ok: false, saved: false, error: "Explicit synthetic clinician-review attestation is required" });
+  if (!body.analysis || typeof body.analysis !== "object" || Array.isArray(body.analysis)) return json(400, { ok: false, saved: false, error: "A synthetic analysis is required" });
+  const analysis = normalizeAnalysis(body.analysis);
+  // Client-supplied provenance never becomes patient-linked history.
+  analysis.patientResponseIds = [];
+  analysis.priorAnalysisIds = [];
+  analysis.longitudinalComparison = buildLongitudinalComparison(analysis, []);
+  return json(200, {
+    ok: true, saved: false, ...RELEASE_STATE, bhwPatientId: "BHW0000",
+    destination: "none", analysis,
+    syntheticReview: { staffId: session.staffId, reviewedAt: new Date().toISOString(), attested: true, clinicalSignoff: false },
+  });
 };
 
-exports._test = { SCREENING_ID, SCHEMA_VERSION, normalizeAnalysis, buildLongitudinalComparison, transcript, savedRecord, clinicianAnalysisRecord, patientId, recordId };
+exports._test = { SCREENING_ID, SCHEMA_VERSION, normalizeAnalysis, buildLongitudinalComparison, transcript, syntheticProvider, RELEASE_STATE };

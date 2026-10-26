@@ -297,37 +297,22 @@ test("priority results are not treated as diagnoses by themselves", () => {
   assert.match(page, /Symptoms drive urgency; antibodies alone do not diagnose disease/);
 });
 
-test("verified Patient Registry workflow saves analysis and creates a private Step 5 assignment", () => {
+test("Positive ANA pilot exposes only the local BHW0000 fixture and no patient transport", () => {
   assert.match(page, /src="\/crew-provider-gate\.js"/);
-  assert.match(page, /id="patient-search"/);
-  assert.match(page, /id="patient-id"/);
-  assert.match(page, /\/\.netlify\/functions\/patient-registry/);
-  assert.match(page, /\/\.netlify\/functions\/positive-ana-record/);
-  assert.match(page, /Saved and verified under/);
-  assert.match(page, /contentPath:'\/bhw-positive-ana-step5\.html'/);
-  assert.match(page, /questions:step5Questions\(\)/);
-  assert.match(page, /Object\.entries\(SYMPTOMS\)/);
-  assert.match(page, /staffAttestation:true/);
-  assert.match(page, /\/sent`/);
-  assert.match(page, /patient\.bhwPatientId!=='BHW0000'/);
-  assert.match(page, /'deceased','transferred'/);
-  assert.match(page, /includes\(patient\.bhwPatientId\).*exposed a patient identifier/s);
+  assert.match(page, /Synthetic pilot · BHW0000 only/);
+  assert.match(page, /id="patient-id" disabled/);
+  assert.match(page, /id="save-analysis" type="button" disabled/);
+  assert.match(page, /id="create-step5" type="button" disabled/);
+  assert.doesNotMatch(page, /fetch\(|CARE_CONTENT_API|care-cloud-token|content-assignments|content-submissions/);
+  assert.match(page, /Clinician review is required/);
 });
 
-test("saved analyses and returned Step 5 responses form a clinician-reviewed downstream loop", () => {
-  assert.match(page, /id="linked-records-list"/);
-  assert.match(page, /action:'list',bhwPatientId:patient\.bhwPatientId/);
-  assert.match(page, /\/v1\/staff\/content-submissions\?limit=100/);
-  assert.match(page, /workflowType:'positive_ana_step5'/);
-  assert.match(page, /function importStep5Submission\(submissionId\)/);
-  assert.match(page, /patient-reported Step 5 symptom\(s\) imported for review/);
-  assert.match(page, /Verify them, then create the clinical review and save it/);
-  assert.match(page, /patientResponseIds=\[\.\.\.\(window\._importedStep5SubmissionIds\|\|\[\]\)\]/);
-  assert.match(page, /priorAnalysisIds=\(linkedPositiveAnaAnalyses\|\|\[\]\)/);
+test("Patient 360 preserves review boundaries while its Positive ANA connection remains locked", () => {
+  const loader = patient360App.slice(patient360App.indexOf('async function loadPositiveAnaConnection()'), patient360App.indexOf('async function load() {'));
+  assert.match(loader, /connected: false, analyses: \[\]/);
+  assert.doesNotMatch(loader, /fetch\(/);
+  assert.match(loader, /locked pending clinical release approval/);
   assert.match(patient360App, /function positiveAnaAnalysisPanel\(context/);
-  assert.match(patient360App, /action: "list", bhwPatientId: PATIENT_ID/);
-  assert.match(patient360App, /body\.bhwPatientId !== PATIENT_ID/);
   assert.match(patient360App, /Returned patient answers must be verified and included in a newly saved clinician review/);
-  assert.match(patient360App, /positiveAnaAnalysisPanel\(context, \{ full: true \}\)/);
   assert.match(patient360App, /do not automatically create a diagnosis, order, ranking, score, or care-plan change/);
 });

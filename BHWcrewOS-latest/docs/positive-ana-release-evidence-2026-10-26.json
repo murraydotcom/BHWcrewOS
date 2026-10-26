@@ -1,0 +1,24 @@
+{
+  "auditDate": "2026-10-26",
+  "mergeSha": "738f4b7d83c85339b93ddf8b33687f9214c870c3",
+  "observedProductionDeploy": "6ade9f9127e92092ed61bbfc",
+  "productionCommit": "738f4b7d83c85339b93ddf8b33687f9214c870c3",
+  "publishedAtUtc": "2026-10-26T00:32:43.671Z",
+  "clinicalApproved": false,
+  "correctiveDeploymentPerformed": false,
+  "realPatientOperationsPerformed": false,
+  "tests": {
+    "mergedFocused": 20,
+    "mergedFull": 556,
+    "correctedFocused": 29,
+    "correctedFull": 565,
+    "rcmFocused": 30
+  },
+  "unverified": [
+    "RCM Cloud Run revision/config",
+    "medication/care API implementation/revision/gates",
+    "existing capability revocation",
+    "production write/access history",
+    "human clinical UAT"
+  ]
+}

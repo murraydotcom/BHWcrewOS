@@ -132,32 +132,18 @@ input,select{width:100%;font-family:inherit;font-size:14px;padding:10px 12px;bor
 
 <div class="tp on" id="tp-analyze">
   <section class="card patient-workflow" id="patient-workflow">
-    <span class="eyebrow">BHW patient connection</span><h2>Save this clinical review or send Step 5</h2>
-    <p class="workflow-note">Select one verified Patient Registry record. Saving keeps the non-ranking clinician review under that BHW Patient ID. Sending creates an opaque, expiring Step 5 link; the BHW ID is never placed in the patient URL.</p>
+    <span class="eyebrow">Synthetic pilot · BHW0000 only</span><h2>Review synthetic findings</h2>
+    <p class="workflow-note">Use test observations only. Patient Registry access, record saves, patient links, and delivery remain locked pending clinical release approval. Clinician review is required; this preview is not a clinical sign-off.</p>
     <div class="patient-grid">
-      <div><label for="patient-search">Find patient</label><input id="patient-search" type="search" placeholder="Search name or BHW ID" autocomplete="off"></div>
-      <div><label for="patient-id">Verified BHW patient</label><select id="patient-id"><option value="">Loading Patient Registry…</option></select></div>
+      <div><label for="patient-search">Synthetic patient</label><input id="patient-search" value="Synthetic Patient" disabled></div>
+      <div><label for="patient-id">Test identity</label><select id="patient-id" disabled><option value="BHW0000">Synthetic Patient · BHW0000</option></select></div>
     </div>
     <div class="patient-actions">
-      <button class="actionbtn" id="save-analysis" type="button" disabled>Save reviewed record</button>
-      <select id="step5-expiry" aria-label="Step 5 link expiration" style="width:auto"><option value="72">3-day link</option><option value="168" selected>7-day link</option><option value="336">14-day link</option><option value="720">30-day link</option></select>
-      <button class="actionbtn secondary" id="create-step5" type="button" disabled>Generate Step 5 link</button>
-      <a class="patient-link" id="review-step5-responses" href="/bhw-patient-materials.html" target="_blank" rel="noopener">Review returned patient responses →</a>
+      <button class="actionbtn" id="save-analysis" type="button" disabled>Record saves locked</button>
+      <button class="actionbtn secondary" id="create-step5" type="button" disabled>Patient delivery locked</button>
     </div>
-    <div class="workflow-status" id="workflow-status" role="status" aria-live="polite"></div>
-    <div class="linked-records">
-      <div class="linked-records-head"><b>Linked analyses and returned Step 5 responses</b><button id="refresh-linked-records" type="button">Refresh</button></div>
-      <div class="workflow-note">Returned symptoms remain patient-reported until imported, reviewed in this worksheet, and saved by a clinician.</div>
-      <div id="linked-records-list"><div class="linked-empty">Select a verified patient to load linked records.</div></div>
-    </div>
-    <div class="step5-tools" id="step5-tools">
-      <b>Private patient link</b><code id="step5-link"></code>
-      <textarea id="step5-message" aria-label="Patient message"></textarea>
-      <div class="patient-actions"><button class="actionbtn secondary" id="copy-step5" type="button">Copy patient message + link</button></div>
-      <div class="send-grid"><div><label for="step5-channel">Approved channel used</label><select id="step5-channel"><option value="dialpad_sms">Dialpad SMS</option><option value="patient_portal">Patient portal</option><option value="email">BHW email</option><option value="phone">Telephone</option><option value="in_person">In person</option><option value="other_approved">Other approved channel</option></select></div><button class="actionbtn" id="record-step5-sent" type="button">Record as sent</button></div>
-      <label class="attest"><input id="step5-attestation" type="checkbox"><span>I confirm that I sent this exact private link to the verified patient destination through the selected approved channel.</span></label>
-      <div class="workflow-note" id="step5-proof">Generated — not yet recorded as sent. Carrier delivery is not confirmed.</div>
-    </div>
+    <div class="workflow-status on" id="workflow-status" role="status" aria-live="polite">Synthetic preview only. Nothing is saved or sent.</div>
+    <div class="linked-records"><div id="linked-records-list"><div class="linked-empty">No patient records are loaded in the synthetic pilot.</div></div></div>
   </section>
 <div class="grid">
   <div class="intake-workspace" id="analysis-inputs">
@@ -214,13 +200,13 @@ input,select{width:100%;font-family:inherit;font-size:14px;padding:10px 12px;bor
 
   <section class="analysis-output" id="analysis-output" aria-live="polite">
     <div class="results-heading">
-      <div><span class="eyebrow">Non-ranking review</span><h2>Observations and interpretation</h2><div class="owner" id="result-owner">Unsaved review · select a patient before saving</div></div>
+      <div><span class="eyebrow">Non-ranking review</span><h2>Observations and interpretation</h2><div class="owner" id="result-owner">BHW0000 · unsaved synthetic preview</div></div>
       <button type="button" onclick="document.getElementById('analysis-inputs').scrollIntoView({behavior:'smooth'})">↑ Return to inputs</button>
     </div>
     <div class="redbanner" id="redbanner"></div>
     <div class="summary" id="summary"></div>
     <div id="results"><div class="card empty">Enter the reported findings and clinical context, then create the clinician review. No condition ranking or score will be generated.</div></div>
-    <button class="copybtn" id="copybtn" style="display:none" onclick="copyNote()">📋 Copy summary for the chart</button>
+    <button class="copybtn" id="copybtn" style="display:none" onclick="copyNote()">📋 Copy synthetic summary</button>
   </section>
 </div></div>
 <div class="tp" id="tp-patterns">
@@ -1271,7 +1257,7 @@ function snapshotComparisonHtml(title,snapshot){
 }
 function longitudinalReviewHtml(comparison){
   if(!comparison)return '';
-  if(!comparison.priorReviewCount)return '<div class="card" style="border-left:4px solid var(--river-deep)"><span class="eyebrow">Exact-patient longitudinal comparison</span><div class="abnote">No prior Positive ANA clinician review is available for this BHW Patient ID. The current observations will establish a review baseline after clinician save.</div></div>';
+  if(!comparison.priorReviewCount)return '<div class="card" style="border-left:4px solid var(--river-deep)"><span class="eyebrow">Exact-patient longitudinal comparison</span><div class="abnote">No prior Positive ANA clinician review is available for this BHW Patient ID. Synthetic observations remain unsaved; patient history is not loaded.</div></div>';
   const provenance=`<div class="abnote">Compared with ${comparison.provenance.map(item=>`${escapeWorkflowHtml(comparisonWhen(item.reviewedAt))} · ${escapeWorkflowHtml(item.responseId)}`).join('<br>')}</div>`;
   const patterns=comparison.patterns.length?`<div class="abfind"><b>ANA patterns and titers</b>${comparison.patterns.map(item=>`<div class="abact"><b>${escapeWorkflowHtml(item.label)}</b> — ${escapeWorkflowHtml(item.comparison)}${item.history.length?`<div class="abnote">Prior record(s): ${item.history.map(point=>`${escapeWorkflowHtml(comparisonWhen(point.reviewedAt))} · ${point.titer===null?'titer not reported':`1:${escapeWorkflowHtml(point.titer)}`} · ${escapeWorkflowHtml(point.responseId)}`).join('<br>')}</div>`:''}</div>`).join('')}</div>`:'';
   const measurements=comparison.measurements.length?`<div class="abfind"><b>Numeric findings</b>${comparison.measurements.map(item=>`<div class="abact"><b>${escapeWorkflowHtml(item.subject?`${item.subject} · ${item.label}`:item.label)}</b> <span class="evd">${escapeWorkflowHtml(item.comparability)}</span><br>${escapeWorkflowHtml(item.comparison)}${item.history.length?`<div class="abnote">Prior record(s): ${item.history.map(point=>`${escapeWorkflowHtml(point.collectedOn?comparisonWhen(point.collectedOn):comparisonWhen(point.reviewedAt))} · ${escapeWorkflowHtml(point.value)} ${escapeWorkflowHtml(point.unit)}${point.method?` · ${escapeWorkflowHtml(point.method)}`:' · method not recorded'} · ${escapeWorkflowHtml(point.responseId)}`).join('<br>')}</div>`:''}</div>`).join('')}</div>`:'';
@@ -1282,7 +1268,7 @@ function setAnalyzedRecord(record){
   window._analysisRecord=record;
   window._analysisRecordDirty=false;
   const patient=typeof selectedPositiveAnaPatient==='function'?selectedPositiveAnaPatient():null;
-  $('result-owner').textContent=patient?`${positiveAnaPatientName(patient)} · ${patient.bhwPatientId}`:'Unsaved review · select a patient before saving';
+  $('result-owner').textContent=patient?`${positiveAnaPatientName(patient)} · ${patient.bhwPatientId}`:'BHW0000 · unsaved synthetic preview';
   if(typeof updatePatientWorkflowButtons==='function')updatePatientWorkflowButtons();
   requestAnimationFrame(()=>$('analysis-output').scrollIntoView({behavior:'smooth',block:'start'}));
 }
@@ -1386,153 +1372,29 @@ Longitudinal differences are factual recorded-review comparisons. Nonselection d
 
 CLINICIAN REVIEW
 Interpret with assay method/reference range, timing, medications, examination, objective organ findings, and validated criteria. Urgent clinical instability overrides elective pattern review.`;
-  navigator.clipboard.writeText(t).then(()=>{const b=$('copybtn');b.textContent='Copied ✓';setTimeout(()=>b.textContent='📋 Copy summary for the chart',1500);});
+  navigator.clipboard.writeText(t).then(()=>{const b=$('copybtn');b.textContent='Copied ✓';setTimeout(()=>b.textContent='📋 Copy synthetic summary',1500);});
 }
 
-/* ================= VERIFIED PATIENT SAVE + STEP 5 DELIVERY ================= */
-const CARE_CONTENT_API='https://bhw-medication-api-343692256275.us-east4.run.app';
-const positiveAnaCrewToken=sessionStorage.getItem('crewos_token')||'';
-let positiveAnaPatients=[],positiveAnaCloudToken='',positiveAnaCloudTokenExpiresAt=0,pendingPositiveAnaRecordId='',currentStep5AssignmentId='',currentStep5PatientId='',linkedPositiveAnaAnalyses=[],linkedStep5Submissions=[];
+/* ================= VERIFIED PATIENT SAVE: LOCKED SYNTHETIC PILOT ================= */
+// This fixture is not a Patient Registry record. Never insert BHW0000 into the
+// Registry or relax its production validation to make a synthetic test pass.
+const positiveAnaPatients=[Object.freeze({bhwPatientId:'BHW0000',legalFirstName:'Synthetic',legalLastName:'Patient',synthetic:true})];
+let pendingPositiveAnaRecordId='',linkedPositiveAnaAnalyses=[],linkedStep5Submissions=[];
 window._importedStep5SubmissionIds=[];
-
-function positiveAnaPatientName(patient){return `${patient.legalLastName||''}, ${patient.preferredName||patient.legalFirstName||''}`.replace(/^,\s*/,"").trim()}
+function positiveAnaPatientName(patient){return `${patient.legalFirstName||''} ${patient.legalLastName||''}`.trim()}
 function selectedPositiveAnaPatient(){return positiveAnaPatients.find(patient=>patient.bhwPatientId===$('patient-id').value)||null}
 function showWorkflowStatus(message,kind=''){$('workflow-status').textContent=message;$('workflow-status').className=`workflow-status on ${kind}`.trim()}
-function updatePatientWorkflowButtons(){const patient=selectedPositiveAnaPatient();$('save-analysis').disabled=!patient||!window._analysisRecord;$('create-step5').disabled=!patient}
-
-function renderPositiveAnaPatients(){
-  const select=$('patient-id'),current=select.value,query=$('patient-search').value.trim().toLowerCase();
-  const visible=positiveAnaPatients.filter(patient=>!query||[patient.bhwPatientId,patient.legalFirstName,patient.legalLastName,patient.preferredName].join(' ').toLowerCase().includes(query));
-  select.innerHTML='<option value="">Select a verified patient</option>'+visible.map(patient=>`<option value="${escapeWorkflowHtml(patient.bhwPatientId)}">${escapeWorkflowHtml(positiveAnaPatientName(patient))} · ${escapeWorkflowHtml(patient.bhwPatientId)}</option>`).join('');
-  if(visible.some(patient=>patient.bhwPatientId===current))select.value=current;
-  updatePatientWorkflowButtons();
-}
+function updatePatientWorkflowButtons(){$('save-analysis').disabled=true;$('create-step5').disabled=true}
 function escapeWorkflowHtml(value){return String(value==null?'':value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}
-
-async function loadPositiveAnaPatients(){
-  try{
-    if(!positiveAnaCrewToken)throw new Error('CrewOS session expired. Sign in again.');
-    const response=await fetch('/.netlify/functions/patient-registry',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{Authorization:`Bearer ${positiveAnaCrewToken}`,'Content-Type':'application/json'},body:JSON.stringify({action:'list'})});
-    const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Patient Registry unavailable');
-    positiveAnaPatients=(data.patients||[]).filter(patient=>patient.bhwPatientId!=='BHW0000'&&!['deceased','transferred'].includes(String(patient.patientStatus||'').toLowerCase())).sort((left,right)=>`${left.legalLastName}|${left.legalFirstName}`.localeCompare(`${right.legalLastName}|${right.legalFirstName}`));
-    renderPositiveAnaPatients();
-    const requested=new URLSearchParams(location.search).get('patient');
-    if(requested&&positiveAnaPatients.some(patient=>patient.bhwPatientId===requested)){$('patient-id').value=requested;$('patient-search').value=positiveAnaPatientName(selectedPositiveAnaPatient());updatePatientWorkflowButtons();loadLinkedPositiveAnaRecords()}
-  }catch(error){$('patient-id').innerHTML=`<option value="">Could not load Patient Registry: ${escapeWorkflowHtml(error.message)}</option>`;showWorkflowStatus(error.message,'error')}
-}
-
-async function positiveAnaCareToken(){
-  if(positiveAnaCloudToken&&Date.now()<positiveAnaCloudTokenExpiresAt)return positiveAnaCloudToken;
-  const response=await fetch('/.netlify/functions/care-cloud-token',{method:'POST',headers:{Authorization:`Bearer ${positiveAnaCrewToken}`}}),data=await response.json().catch(()=>({}));
-  if(!response.ok||!data.token)throw new Error(data.error||'Patient-content connection unavailable');
-  positiveAnaCloudToken=data.token;positiveAnaCloudTokenExpiresAt=Date.now()+Math.max(30,(data.expiresIn||300)-30)*1000;return positiveAnaCloudToken;
-}
-async function positiveAnaContentRequest(path,options={}){
-  const accessToken=await positiveAnaCareToken(),response=await fetch(CARE_CONTENT_API+path,{...options,headers:{Authorization:`Bearer ${accessToken}`,'Content-Type':'application/json',...(options.headers||{})}}),data=await response.json().catch(()=>({}));
-  if(!response.ok)throw new Error(data.error||'Patient-content request failed');return data;
-}
-
-async function positiveAnaRecordRequest(payload){
-  const response=await fetch('/.netlify/functions/positive-ana-record',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{Authorization:`Bearer ${positiveAnaCrewToken}`,'Content-Type':'application/json'},body:JSON.stringify(payload)}),data=await response.json().catch(()=>({}));
-  if(!response.ok)throw new Error(data.error||'Positive ANA records unavailable');return data;
-}
-function linkedRecordTime(value){const date=new Date(value||'');return Number.isFinite(date.getTime())?date.toLocaleString():'time unavailable'}
-function step5ResponseSelections(submission){
-  const known=new Set(Object.values(SYMPTOMS).flat());
-  return Object.values(submission?.responses||{}).flatMap(value=>Array.isArray(value)?value:[value]).filter(value=>typeof value==='string'&&known.has(value));
-}
-function renderLinkedPositiveAnaRecords(errors=[]){
-  const list=$('linked-records-list');
-  const analysisCards=linkedPositiveAnaAnalyses.map(item=>{const analysis=item.analysis||{},patterns=analysis.anaPatterns||[],findings=(analysis.antibodies||[]).length+(analysis.labs||[]).length+(analysis.measurements||[]).length;return `<div class="linked-record"><b>Saved clinician review</b><span>${escapeWorkflowHtml(linkedRecordTime(item.submittedAt))} · ${patterns.length} ANA pattern(s) · ${findings} antibody/lab finding(s) · ${(analysis.symptoms||[]).length} symptom(s)</span><span>Non-ranking review · ${(analysis.patientResponseIds||[]).length} imported response(s) · ${(analysis.priorAnalysisIds||[]).length} prior review(s) considered</span></div>`});
-  const responseCards=linkedStep5Submissions.map(item=>{const selections=step5ResponseSelections(item),id=String(item.id||'');return `<div class="linked-record"><b>Returned Step 5 response</b><span>${escapeWorkflowHtml(linkedRecordTime(item.submittedAt))} · ${selections.length} patient-reported symptom(s) · ${escapeWorkflowHtml(item.status||'submitted')}</span>${id?`<button type="button" data-import-step5="${escapeWorkflowHtml(id)}">Import for clinician review</button>`:''}</div>`});
-  const errorCards=errors.map(message=>`<div class="linked-record linked-error"><b>Connection unavailable</b><span>${escapeWorkflowHtml(message)}</span></div>`);
-  const cards=[...analysisCards,...responseCards,...errorCards];
-  list.innerHTML=cards.length?`<div class="linked-records-grid">${cards.join('')}</div>`:'<div class="linked-empty">No saved Positive ANA review or returned Step 5 response is connected for this patient.</div>';
-  list.querySelectorAll('[data-import-step5]').forEach(button=>button.addEventListener('click',()=>importStep5Submission(button.dataset.importStep5)));
-}
-async function loadLinkedPositiveAnaRecords(){
-  const patient=selectedPositiveAnaPatient();linkedPositiveAnaAnalyses=[];linkedStep5Submissions=[];
-  if(!patient){renderLinkedPositiveAnaRecords();$('linked-records-list').innerHTML='<div class="linked-empty">Select a verified patient to load linked records.</div>';return}
-  $('linked-records-list').innerHTML='<div class="linked-empty">Loading linked records…</div>';
-  $('review-step5-responses').href=`/bhw-patient-materials.html?patient=${encodeURIComponent(patient.bhwPatientId)}`;
-  const [analysesResult,submissionsResult]=await Promise.allSettled([
-    positiveAnaRecordRequest({action:'list',bhwPatientId:patient.bhwPatientId}),
-    positiveAnaContentRequest('/v1/staff/content-submissions?limit=100')
-  ]),errors=[];
-  if(analysesResult.status==='fulfilled')linkedPositiveAnaAnalyses=analysesResult.value.analyses||[];else errors.push(analysesResult.reason.message);
-  if(submissionsResult.status==='fulfilled')linkedStep5Submissions=(submissionsResult.value.submissions||[]).filter(item=>item.patientId===patient.bhwPatientId&&(item.workflowType==='positive_ana_step5'||item.title==='Symptoms & history check-in'));else errors.push(submissionsResult.reason.message);
-  renderLinkedPositiveAnaRecords(errors);
-}
-function importStep5Submission(submissionId){
-  const submission=linkedStep5Submissions.find(item=>String(item.id)===String(submissionId));if(!submission)return;
-  const selections=step5ResponseSelections(submission),selectedSet=new Set(selections);
-  document.querySelectorAll('#symptoms input[type="checkbox"]').forEach(input=>{if(selectedSet.has(input.value)){input.checked=true;input.closest('.chip')?.classList.add('on')}});
-  if(!window._importedStep5SubmissionIds.includes(String(submissionId)))window._importedStep5SubmissionIds.push(String(submissionId));
-  window._analysisRecord=null;window._analysisRecordDirty=true;pendingPositiveAnaRecordId='';$('save-analysis').textContent='Save reviewed record';updatePatientWorkflowButtons();
-  showWorkflowStatus(`${selections.length} patient-reported Step 5 symptom(s) imported for review. Verify them, then create the clinical review and save it.`,'ok');
-  $('analysis-inputs').scrollIntoView({behavior:'smooth',block:'start'});
-}
-
-async function savePositiveAnaAnalysis(){
-  const button=$('save-analysis'),patient=selectedPositiveAnaPatient();
-  try{
-    if(!patient)throw new Error('Select a verified BHW patient');
-    if(!window._analysisRecord)throw new Error('Create the clinical review before saving');
-    if(!pendingPositiveAnaRecordId)pendingPositiveAnaRecordId=`positive-ana-${crypto.randomUUID()}`;
-    button.disabled=true;button.textContent='Saving…';showWorkflowStatus('Saving the reviewed record to BHW Cloud…');
-    const response=await fetch('/.netlify/functions/positive-ana-record',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{Authorization:`Bearer ${positiveAnaCrewToken}`,'Content-Type':'application/json'},body:JSON.stringify({action:'save',bhwPatientId:patient.bhwPatientId,responseId:pendingPositiveAnaRecordId,analysis:window._analysisRecord})}),data=await response.json().catch(()=>({}));
-    if(!response.ok||!data.saved)throw new Error(data.error||'Analysis was not saved');
-    if(data.bhwPatientId!==patient.bhwPatientId||data.responseId!==pendingPositiveAnaRecordId)throw new Error('Cloud confirmation did not match the selected patient and record');
-    pendingPositiveAnaRecordId='';button.textContent='Saved ✓';showWorkflowStatus(`Saved and verified under ${data.bhwPatientId} in BHW Cloud · ${new Date(data.savedAt).toLocaleString()}.`,'ok');loadLinkedPositiveAnaRecords();
-  }catch(error){button.textContent=pendingPositiveAnaRecordId?'Retry save':'Save reviewed record';showWorkflowStatus(`Not saved: ${error.message}`,'error')}
-  finally{updatePatientWorkflowButtons()}
-}
-
-function step5Questions(){
-  return Object.entries(SYMPTOMS).map(([group,options],index)=>({id:`step5_${index+1}_${group.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')}`,label:group,type:'multi',required:false,options:[...options]}));
-}
-function step5PatientMessage(link){return `BHW Medical sent you a secure symptoms and health-history check-in. Please select the items that apply to you and send the form back to your care team. This form does not provide a diagnosis.\n\nOpen your private form:\n${link}`}
-async function createStep5Assignment(){
-  const button=$('create-step5'),patient=selectedPositiveAnaPatient();
-  try{
-    if(!patient)throw new Error('Select a verified BHW patient');
-    button.disabled=true;button.textContent='Generating…';showWorkflowStatus('Generating a private, expiring Step 5 link…');
-    const data=await positiveAnaContentRequest('/v1/content-assignments',{method:'POST',body:JSON.stringify({patientId:patient.bhwPatientId,title:'Symptoms & history check-in',contentPath:'/bhw-positive-ana-step5.html',workflowType:'positive_ana_step5',responseMode:'fill_out',questions:step5Questions(),expiresInHours:Number($('step5-expiry').value)})});
-    if(!data.assignmentId||!data.patientLink)throw new Error('The private assignment could not be verified');
-    if(String(data.patientLink).includes(patient.bhwPatientId))throw new Error('The generated link exposed a patient identifier and was blocked');
-    currentStep5AssignmentId=data.assignmentId;currentStep5PatientId=patient.bhwPatientId;$('step5-link').textContent=data.patientLink;$('step5-message').value=step5PatientMessage(data.patientLink);$('step5-tools').className='step5-tools on';$('step5-attestation').checked=false;$('step5-proof').textContent='Generated — not yet recorded as sent. Carrier delivery is not confirmed.';button.textContent='Generate a new Step 5 link';showWorkflowStatus(`Private Step 5 assignment created for ${patient.bhwPatientId}. Copy the message into an approved patient channel, then record the send.`,'ok');
-  }catch(error){button.textContent='Generate Step 5 link';showWorkflowStatus(`Step 5 link not created: ${error.message}`,'error')}
-  finally{updatePatientWorkflowButtons()}
-}
-
-function positiveAnaDestination(channel){
-  const patient=selectedPositiveAnaPatient();if(!patient||patient.bhwPatientId!==currentStep5PatientId)throw new Error('Select the same verified patient used for this link');
-  if(['dialpad_sms','phone'].includes(channel)){const digits=String(patient.phone||'').replace(/\D/g,'');if(digits.length<4)throw new Error('No usable phone number in the Patient Registry');return `phone ending ${digits.slice(-4)}`}
-  if(channel==='email'){const parts=String(patient.email||'').trim().split('@');if(parts.length!==2||!parts[0]||!parts[1])throw new Error('No usable email in the Patient Registry');return `${parts[0][0]}***@${parts[1]}`}
-  if(channel==='patient_portal')return'protected patient portal';if(channel==='in_person')return'verified in-person recipient';return'approved channel — destination verified by staff';
-}
-async function recordStep5Sent(){
-  const status=$('step5-proof');
-  try{
-    if(!currentStep5AssignmentId)throw new Error('Generate a Step 5 link first');
-    if(!$('step5-attestation').checked)throw new Error('Complete the sending attestation first');
-    const channel=$('step5-channel').value,data=await positiveAnaContentRequest(`/v1/staff/content-assignments/${encodeURIComponent(currentStep5AssignmentId)}/sent`,{method:'POST',body:JSON.stringify({channel,destinationMasked:positiveAnaDestination(channel),staffAttestation:true})});
-    status.textContent=`Recorded as sent ${new Date(data.sentAt).toLocaleString()} through ${channel.replaceAll('_',' ')}. Carrier delivery is not confirmed.`;
-  }catch(error){status.textContent=`Could not record sending: ${error.message}`}
-}
-
-function resetStep5ForPatientChange(){currentStep5AssignmentId='';currentStep5PatientId='';linkedPositiveAnaAnalyses=[];linkedStep5Submissions=[];window._importedStep5SubmissionIds=[];$('step5-tools').className='step5-tools';$('step5-link').textContent='';$('step5-message').value='';pendingPositiveAnaRecordId='';$('save-analysis').textContent='Save reviewed record';const patient=selectedPositiveAnaPatient();$('result-owner').textContent=patient?`${positiveAnaPatientName(patient)} · ${patient.bhwPatientId}`:'Unsaved review · select a patient before saving';$('review-step5-responses').href=patient?`/bhw-patient-materials.html?patient=${encodeURIComponent(patient.bhwPatientId)}`:'/bhw-patient-materials.html';updatePatientWorkflowButtons();loadLinkedPositiveAnaRecords()}
+function loadLinkedPositiveAnaRecords(){linkedPositiveAnaAnalyses=[];linkedStep5Submissions=[];updatePatientWorkflowButtons()}
 function initializePositiveAnaPatientWorkflow(){
-  $('patient-search').addEventListener('input',renderPositiveAnaPatients);
-  $('patient-id').addEventListener('change',resetStep5ForPatientChange);
-  $('save-analysis').addEventListener('click',savePositiveAnaAnalysis);
-  $('create-step5').addEventListener('click',createStep5Assignment);
-  $('copy-step5').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('step5-message').value);$('copy-step5').textContent='Copied ✓';setTimeout(()=>$('copy-step5').textContent='Copy patient message + link',1500)}catch{showWorkflowStatus('Could not copy automatically. Select and copy the patient message manually.','error')}});
-  $('record-step5-sent').addEventListener('click',recordStep5Sent);
-  $('refresh-linked-records').addEventListener('click',loadLinkedPositiveAnaRecords);
-  $('tp-analyze').addEventListener('input',event=>{if(event.target.closest('#patient-workflow'))return;if(window._analysisRecord){window._analysisRecord=null;window._analysisRecordDirty=true;pendingPositiveAnaRecordId='';$('save-analysis').textContent='Save reviewed record';updatePatientWorkflowButtons();showWorkflowStatus('Clinical inputs changed. Create the clinical review again before saving the record.')}});
-  $('tp-analyze').addEventListener('change',event=>{if(event.target.closest('#patient-workflow'))return;if(window._analysisRecord){window._analysisRecord=null;window._analysisRecordDirty=true;pendingPositiveAnaRecordId='';$('save-analysis').textContent='Save reviewed record';updatePatientWorkflowButtons();showWorkflowStatus('Clinical inputs changed. Create the clinical review again before saving the record.')}});
-  loadPositiveAnaPatients();
+  updatePatientWorkflowButtons();
+  $('result-owner').textContent='Synthetic Patient · BHW0000 · unsaved preview';
+  for(const eventType of ['input','change'])$('tp-analyze').addEventListener(eventType,event=>{
+    if(event.target.closest('#patient-workflow'))return;
+    window._analysisRecord=null;window._analysisRecordDirty=true;pendingPositiveAnaRecordId='';
+    updatePatientWorkflowButtons();
+  });
 }
 initializePositiveAnaPatientWorkflow();
 
