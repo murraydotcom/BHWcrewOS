@@ -205,6 +205,19 @@ export function sanitizePatientRequest(input = {}, { user = {}, now = new Date()
   const status = cleanText(input.status || definition.received, 80).toLowerCase();
   const state = statusDefinition(requestType, status);
   const actor = cleanText(user.sub || input.createdBy || "system", 200);
+  const source = cleanText(input.source || "staff", 80).toLowerCase();
+  const suppliedFollowUp = input.healthCoreFollowUp && typeof input.healthCoreFollowUp === "object"
+    ? input.healthCoreFollowUp : null;
+  const healthCoreFollowUp = suppliedFollowUp && source === "health-core"
+    ? {
+      schemaVersion: Number(suppliedFollowUp.schemaVersion),
+      noteId: cleanText(suppliedFollowUp.noteId, 100),
+      signedVersion: Number(suppliedFollowUp.signedVersion),
+      signedContentHash: cleanText(suppliedFollowUp.signedContentHash, 64),
+      itemId: cleanText(suppliedFollowUp.itemId, 100),
+      itemKind: cleanText(suppliedFollowUp.itemKind, 40),
+    }
+    : null;
   return {
     id,
     bhwPatientId,
@@ -212,7 +225,7 @@ export function sanitizePatientRequest(input = {}, { user = {}, now = new Date()
     serviceLine: definition.serviceLine,
     assignedTeam: definition.assignedTeam,
     allowedRoles: [...definition.allowedRoles],
-    source: cleanText(input.source || "staff", 80).toLowerCase(),
+    source,
     sourceReference: cleanText(input.sourceReference, 200),
     summary: cleanText(input.summary || input.freeText, 4000),
     priority,
@@ -232,6 +245,7 @@ export function sanitizePatientRequest(input = {}, { user = {}, now = new Date()
     notificationMode: ["automatic", "manual", "none"].includes(cleanText(input.notificationMode, 20).toLowerCase())
       ? cleanText(input.notificationMode, 20).toLowerCase() : "automatic",
     workflowContext: workflowContext(input.workflowContext),
+    ...(healthCoreFollowUp ? { healthCoreFollowUp } : {}),
     version: 1,
     processedActionKeys: [],
     statusHistory: [{ status, category: state.category, at: timestamp, actor }],

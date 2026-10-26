@@ -1,3 +1,5 @@
+import crypto from "node:crypto";
+
 import {
   PATIENT_REQUEST_STATUSES,
   PATIENT_REQUEST_TYPES,
@@ -106,6 +108,56 @@ function frontDeskReferralActor(request, environment) {
     request.headers.get("x-bhw-client-id"),
     environment.FRONT_DESK_CLIENT_ID || "front-desk-os",
   );
+}
+
+function healthCoreFollowUpActor(request, environment) {
+  return verifyIntakeClient(
+    request.headers.get("authorization"),
+    environment.HEALTH_CORE_FOLLOW_UP_INTAKE_SECRET,
+    request.headers.get("x-bhw-client-id"),
+    environment.HEALTH_CORE_FOLLOW_UP_CLIENT_ID || "health-core",
+  );
+}
+
+function requireHealthCoreFollowUpIntent(body = {}) {
+  const link = body.healthCoreFollowUp && typeof body.healthCoreFollowUp === "object" ? body.healthCoreFollowUp : {};
+  const requestType = String(body.requestType || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  const kind = String(body.workflowContext?.kind || "").trim().toLowerCase().replace(/[\s_]+/g, "-");
+  const priority = String(body.priority || "routine").trim().toLowerCase();
+  const noteId = String(link.noteId || "").trim();
+  const signedVersion = Number(link.signedVersion);
+  const signedContentHash = String(link.signedContentHash || "");
+  const itemId = String(link.itemId || "").trim();
+  const itemKind = String(link.itemKind || "");
+  const expectedId = `hc-followup-${crypto.createHash("sha256")
+    .update(`${noteId}:${signedVersion}:${signedContentHash}:${itemKind}:${itemId}`)
+    .digest("hex").slice(0, 40)}`;
+  if (String(body.id || "") !== expectedId
+    || body.bhwPatientId !== "BHW0000"
+    || !["clinical_review", "general", "referral"].includes(requestType)
+    || !["patient-request", "handoff", "referral"].includes(kind)
+    || !["routine", "time-sensitive", "urgent"].includes(priority)
+    || link.schemaVersion !== 1
+    || !noteId
+    || !Number.isInteger(signedVersion) || signedVersion < 1
+    || !/^[a-f0-9]{64}$/.test(signedContentHash)
+    || !itemId
+    || !["staff-reminder", "patient-reminder", "routing-request"].includes(itemKind)) {
+    throw apiError(400, "health_core_follow_up_intent_required", "a complete signed Health Core follow-up reference is required");
+  }
+  const exactSource = `Health Core signed note ${String(link.noteId).trim()} v${Number(link.signedVersion)}`;
+  const expectedWorkflow = link.itemKind === "staff-reminder"
+    ? requestType === "clinical_review" && kind === "patient-request"
+    : link.itemKind === "patient-reminder"
+      ? requestType === "general" && kind === "handoff" && body.workflowContext?.toDivision === "Care Connect"
+      : true;
+  if (!String(body.summary || "").trim()
+    || body.sourceReference !== exactSource
+    || !expectedWorkflow
+    || (["handoff", "referral"].includes(kind) && !String(body.workflowContext?.toDivision || "").trim())) {
+    throw apiError(400, "health_core_follow_up_intent_required", "signed-note source and follow-up summary are required");
+  }
+  return { link, requestType, kind, priority };
 }
 
 function requireFrontDeskReferralIntent(body = {}) {
@@ -273,6 +325,58 @@ export function createOperationsApp({
           notification: automation?.notification || null,
           chat: automation?.chat || null,
         }, cors);
+      }
+
+      if (url.pathname === "/v1/intake/health-core-follow-up" && request.method === "POST") {
+        if (String(environment.HEALTH_CORE_FOLLOW_UP_INTAKE_ENABLED || "false").trim().toLowerCase() !== "true") {
+          throw apiError(503, "health_core_follow_up_not_configured", "Health Core follow-up intake is not enabled");
+        }
+        if (!workflow) throw apiError(503, "workflow_not_configured", "Health Core follow-up routing requires the CrewOS workflow service");
+        const actor = healthCoreFollowUpActor(request, environment);
+        const idempotencyKey = requireIdempotencyKey(request.headers.get("idempotency-key"));
+        const body = await readJson(request);
+        const intent = requireHealthCoreFollowUpIntent(body);
+        if (idempotencyKey !== body.id) {
+          throw apiError(409, "idempotency_key_conflict", "idempotency key must match the deterministic follow-up request ID");
+        }
+        const systemActor = {
+          sub: `integration:${actor.id}`,
+          name: "Health Core",
+          role: "system",
+          source: "health-core",
+        };
+        let existing = null;
+        try { existing = await workflow.getRequest(body.id, systemActor); } catch (error) {
+          if (Number(error?.status) !== 404) throw error;
+        }
+        if (existing) {
+          const existingLink = existing.healthCoreFollowUp || {};
+          const sameSignedItem = existingLink.noteId === intent.link.noteId
+            && Number(existingLink.signedVersion) === Number(intent.link.signedVersion)
+            && existingLink.signedContentHash === intent.link.signedContentHash
+            && existingLink.itemId === intent.link.itemId
+            && existingLink.itemKind === intent.link.itemKind;
+          const existingRequestType = String(existing.requestType || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+          const existingKind = String(existing.workflowContext?.kind || "").trim().toLowerCase().replace(/[\s_]+/g, "-");
+          if (existing.source !== "health-core"
+            || existing.sourceReference !== body.sourceReference
+            || existing.summary !== body.summary
+            || existingRequestType !== intent.requestType
+            || existingKind !== intent.kind
+            || String(existing.priority || "routine").trim().toLowerCase() !== intent.priority
+            || String(existing.workflowContext?.toDivision || "") !== String(body.workflowContext?.toDivision || "")
+            || !sameSignedItem) {
+            throw apiError(409, "follow_up_id_conflict", "the Health Core follow-up request ID is already in use");
+          }
+          return json(200, { ok: true, replayed: true, request: existing, patientRequest: existing }, cors);
+        }
+        const result = await workflow.createRequest({
+          ...body,
+          source: "health-core",
+          notificationMode: "manual",
+          manualNotifyOnly: true,
+        }, systemActor);
+        return json(201, { ok: true, replayed: false, ...result, patientRequest: result.request }, cors);
       }
 
       if (url.pathname === "/v1/intake/front-desk-patient-requests" && request.method === "POST") {
