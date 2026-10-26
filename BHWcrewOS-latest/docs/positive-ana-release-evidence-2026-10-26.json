@@ -5,7 +5,6 @@
   "productionCommit": "738f4b7d83c85339b93ddf8b33687f9214c870c3",
   "publishedAtUtc": "2026-10-26T00:32:43.671Z",
   "clinicalApproved": false,
-  "correctiveDeploymentPerformed": false,
   "realPatientOperationsPerformed": false,
   "tests": {
     "mergedFocused": 20,
@@ -20,5 +19,19 @@
     "existing capability revocation",
     "production write/access history",
     "human clinical UAT"
-  ]
+  ],
+  "correctiveProductionDeploymentPerformed": false,
+  "automaticCorrectivePreview": {
+    "deployId": "6adf5f622a60d2c587a234b0",
+    "commit": "d02ac387b61bfeae660b62ed4bcbd4ef21f9e83e",
+    "context": "deploy-preview",
+    "state": "ready",
+    "productionPublishedAt": null,
+    "signedWorkflowVerified": false
+  },
+  "ci": {
+    "crewPositiveAna": "40337204820 success",
+    "rcmPositiveAna": "40337209352 success",
+    "rcmSyntheticEligibility": "40337208906 success"
+  }
 }

@@ -1,6 +1,6 @@
 # Positive ANA clinical release audit — October 26, 2026
 
-**Decision: no clinical activation.** PR #221 is merged and deployed, but neither a staff login, an active Registry patient, a merge, a deployment, nor automated synthetic tests establish approval for real-patient clinical use. This correction is proposed source, not a deployed containment claim.
+**Decision: no clinical activation.** PR #221 is merged and deployed, but neither a staff login, an active Registry patient, a merge, a deployment, nor automated synthetic tests establish approval for real-patient clinical use. This correction is a draft release with an automatic non-production preview, not a claim of production containment.
 
 ## Evidence and status
 
@@ -15,10 +15,12 @@
 | Original focused tests | Reproduced 20/20 offline on exact merged CrewOS source |
 | Original full suite | Reproduced 556/556 on exact merged source after installing declared dependencies |
 | Corrected CrewOS | 29/29 focused; 565/565 full suite; Operations API syntax check and changed JavaScript syntax checks passed |
+| Corrective preview | Netlify automatically built SSO-protected deploy preview `6adf5f622a60d2c587a234b0` at `d02ac387b61bfeae660b62ed4bcbd4ef21f9e83e`, state ready, deploy-preview context, `published_at: null`; the skip marker did not prevent this build. No signed preview workflow was exercised |
+| Remote synthetic CI | CrewOS Positive ANA safety run `40337204820`: success. RCM release boundary run `40337209352`: success; existing RCM synthetic eligibility regression run `40337208906`: success |
 | Companion RCM correction | 4 new release-boundary tests, plus existing authentication, questionnaire-capability, and patient-operational-record tests: 30/30 passed offline |
 | Live negative checks | Unauthenticated `POST positive-ana-record` with status request returned 401; published Step 5 HTML returned 200 and still contained submission code |
 | Clinical approval | No Positive ANA real-patient approval evidence retrieved. No approval inferred or granted. Amaris Murray remains clinical go-live authority |
-| Actions during this audit | No real patient queried, no signed production token minted, no Registry/Cloud write, no patient assignment/link/message sent, no prescribing/order/diagnosis/care-plan action, no deployment/traffic/authentication-policy change |
+| Actions during this audit | No real patient queried, no signed production token minted, no Registry/Cloud write, no patient assignment/link/message sent, no prescribing/order/diagnosis/care-plan action, no production deployment/traffic/authentication-policy change; Netlify generated the non-production preview automatically |
 
 The deployment timestamps and commit are from Netlify project/deploy metadata, not inferred from the merge. Environment inspection retained only relevant routing/scope facts; no secrets are recorded here. Live negative probes establish unauthenticated denial, not safety of authenticated production writes. No production patient records or access logs were inspected, so this audit does not establish whether earlier writes occurred.
 
@@ -52,10 +54,17 @@ For this workflow, the safe G0 route is a nonpersistent BHW0000 fixture and sour
 
 ## Remaining release work — not completed by this source audit
 
-1. Review and release the CrewOS and companion RCM containment changes together; record exact deployed SHAs/revisions and rollback versions. This audit leaves main and all deployments unchanged.
+1. Review and release the CrewOS and companion RCM containment changes together; record exact deployed SHAs/revisions and rollback versions. This audit leaves main and production deployments unchanged; the automatic non-production preview is recorded above.
 2. Locate the medication/care API source and authenticated deployment evidence. Independently deny `positive_ana_step5` assignment/open/submission/sent paths while unapproved; verify existing capabilities cannot submit through another viewer or a direct API call. Revocation or record inspection requires the appropriate authenticated operational procedure, not a browser-only assumption.
 3. Inspect sanitized Cloud Run metadata for the RCM and medication/care services: revision/image, traffic, storage project, IAM/application auth, scopes, origins, feature gates, logs, and rollback. No authenticated Cloud Run administration was available here.
 4. Verify containment with synthetic-only deployed tests and keep real-patient writes, delivery, prescribing, orders, diagnoses, and care-plan changes off. A 401 by itself is insufficient.
 5. Before any later clinical release, separately implement explicit provider review/attribution, server-side exact-patient reads/provenance validation, signed patient context, cohort authorization, conflict/idempotency controls, cross-patient tests, recovery evidence, and named clinical-owner signoff. No automatic clinical decisions are authorized.
 
-**Approval record:** technical synthetic regression only. Human clinical UAT: not performed. Real-patient clinical approval: not established. Corrective deployment: not performed.
+**Approval record:** technical synthetic regression only. Human clinical UAT: not performed. Real-patient clinical approval: not established. Corrective production deployment: not performed. Automatic non-production preview: verified as ready, not clinically accepted.
+
+## Reviewable corrections
+
+- [CrewOS draft PR #222](https://github.com/murraydotcom/BHWcrewOS/pull/222) — endpoint, browser, Patient 360, Step 5 page, regression tests, and this audit.
+- [RCM draft PR #153](https://github.com/murraydotcom/bhw-rcm-platform/pull/153) — independent questionnaire persistence boundary and tests.
+
+Both remain unmerged. The verified preview SHA is the initial corrective code commit; later documentation-only commits do not imply a newly accepted clinical release.
