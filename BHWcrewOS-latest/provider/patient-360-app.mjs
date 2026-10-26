@@ -27,6 +27,7 @@ let activeRecord = null;
 let activeWorkflowConnection = { connected: false, encounters: [] };
 let activeAtlasConnection = { connected: false, workspace: null };
 let activeClinicalEventConnection = { connected: false, workspace: null };
+let activePositiveAnaConnection = { connected: false, analyses: [] };
 let healthCoreClient = null;
 const $ = (id) => document.getElementById(id);
 const esc = (value) => String(value ?? "").replace(/[&<>\"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[character]));
@@ -861,6 +862,30 @@ function patientCheckinPanel(context, { full = false } = {}) {
   return `<section class="panel patient-checkins"><div class="panel-head"><div><h3>Patient check-ins</h3><span class="panel-subtitle">Patient-entered details from Care Connect, stored in Health Core</span></div><div class="panel-actions">${badge(pending ? "pending" : "reviewed", pending ? `${pending} awaiting review` : "No pending review")}<a class="btn" href="/bhw-patient-monitor-list.html">Patient monitoring</a></div></div><div class="panel-body">${displayed.length ? displayed.map((checkin) => patientCheckinCard(checkin, context.monitoringModuleCatalog)).join("") : `<div class="empty-note">No Care Connect check-in is connected for this patient.</div>`}${!full && checkins.length > 1 ? `<a class="more-note" href="patient-360-data.html?patient=${encodeURIComponent(PATIENT_ID)}">Open all ${checkins.length} check-ins in Clinical Data</a>` : ""}</div></section>`;
 }
 
+function positiveAnaAnalysisPanel(context, { full = false } = {}) {
+  const connection = context.positiveAnaConnection || { connected: false, analyses: [] };
+  if (!connection.connected) return `<section class="panel"><div class="panel-head"><div><h3>Positive ANA clinician reviews</h3><span class="panel-subtitle">Patient-linked BHW Cloud non-ranking review records</span></div><span class="badge warning">Unavailable</span></div><div class="panel-body"><div class="empty-note">${esc(connection.error || "The Positive ANA record connection is unavailable.")}</div></div></section>`;
+  const analyses = Array.isArray(connection.analyses) ? connection.analyses : [];
+  const displayed = full ? analyses : analyses.slice(0, 1);
+  const cards = displayed.map((record) => {
+    const analysis = record.analysis || {};
+    const patterns = (analysis.anaPatterns || []).map((item) => `${item.label}${item.titer === null || item.titer === undefined ? "" : item.titer === 0 ? " · below cutoff" : ` · 1:${item.titer}`}`);
+    const findingCount = (analysis.antibodies || []).length + (analysis.labs || []).length + (analysis.measurements || []).length;
+    const measurements = (analysis.measurements || []).map((item) => `${item.label}: ${item.value}${item.unit ? ` ${item.unit}` : ""}`);
+    const sourceContext = analysis.review?.sourceSupportedContext || [];
+    const sourceReferences = analysis.review?.sourceReferences || [];
+    const uncertainty = analysis.review?.uncertainty || [];
+    const sourceGaps = analysis.review?.sourceGaps || [];
+    const longitudinal = analysis.longitudinalComparison || {};
+    const patternComparisons = (longitudinal.patterns || []).map((item) => `<p><b>${esc(item.label)}</b><br>${esc(item.comparison)}</p>`).join("");
+    const measurementComparisons = (longitudinal.measurements || []).map((item) => `<p><b>${esc(item.subject ? `${item.subject} · ${item.label}` : item.label)}</b> · ${esc(item.comparability || "not assessed")}<br>${esc(item.comparison)}</p>`).join("");
+    const longitudinalDetails = longitudinal.priorReviewCount || patternComparisons || measurementComparisons ? `<details ${full ? "open" : ""}><summary>Exact-patient longitudinal comparison (${longitudinal.priorReviewCount || 0} prior)</summary><div class="visit-note-content">${(longitudinal.provenance || []).length ? `<b>Provenance</b><br>${(longitudinal.provenance || []).map((item) => `${esc(dateText(item.reviewedAt, true))} · ${esc(item.responseId)}`).join("<br>")}<br><br>` : ""}${patternComparisons}${measurementComparisons}${longitudinal.symptoms?.baselineResponseId ? `<p><b>Symptoms/history versus prior review</b><br>Continuing: ${esc((longitudinal.symptoms.continuing || []).join(" · ") || "none")}<br>Current-only: ${esc((longitudinal.symptoms.currentOnly || []).join(" · ") || "none")}<br>Prior-only: ${esc((longitudinal.symptoms.previousOnly || []).join(" · ") || "none")}<br>${esc(longitudinal.symptoms.note || "")}</p>` : ""}<p><b>Boundary</b><br>Recorded differences are factual comparisons, not diagnoses or disease-activity scores. Nonselection does not establish a negative or resolved finding.</p></div></details>` : "";
+    return `<article class="visit-note-card"><div class="visit-note-head"><div><b>Positive ANA clinician review</b><span>${esc(dateText(record.submittedAt, true))}${record.respondent ? ` · ${esc(record.respondent)}` : ""}</span></div><span class="badge complete">Saved · non-ranking</span></div><p>${patterns.length ? esc(patterns.join(" · ")) : "ANA pattern was not recorded."}</p><div class="overview-facts"><span><b>${findingCount}</b> antibody or laboratory finding(s)</span><span><b>${(analysis.symptoms || []).length}</b> symptom/history item(s)</span><span><b>${(analysis.patientResponseIds || []).length}</b> imported Step 5 response(s)</span><span><b>${longitudinal.priorReviewCount || 0}</b> prior review(s) compared</span></div>${measurements.length ? `<details ${full ? "open" : ""}><summary>Numeric clinical context (${measurements.length})</summary><div class="visit-note-content">${esc(measurements.join(" · "))}</div></details>` : ""}${longitudinalDetails}${sourceContext.length || sourceReferences.length || uncertainty.length || sourceGaps.length ? `<details ${full ? "open" : ""}><summary>Interpretation, uncertainty, and source gaps</summary><div class="visit-note-content">${sourceContext.length ? `<b>Source-supported context</b><br>${esc(sourceContext.join(" "))}<br><br>` : ""}${sourceReferences.length ? `<b>Source references</b><br>${sourceReferences.map((item) => esc(`${item.title}${item.author ? ` — ${item.author}` : ""}${item.year ? ` (${item.year})` : ""}${item.pages ? `, ${item.pages}` : ""}`)).join("<br>")}<br><br>` : ""}${uncertainty.length ? `<b>Uncertainty</b><br>${esc(uncertainty.join(" "))}<br><br>` : ""}${sourceGaps.length ? `<b>Source gaps</b><br>${esc(sourceGaps.join(" "))}` : ""}</div></details>` : ""}${analysis.legacyRankingOmitted ? '<div class="record-boundary"><b>Legacy content omitted</b><span>An older saved condition order was not carried into this non-ranking view.</span></div>' : ""}${analysis.redFlags?.length ? `<div class="error-box" style="margin-top:8px"><b>Priority review:</b> ${esc(analysis.redFlags.join(" · "))}</div>` : ""}</article>`;
+  }).join("");
+  const content = cards || '<div class="empty-note">No saved Positive ANA clinician review is connected for this patient.</div>';
+  return `<section class="panel"><div class="panel-head"><div><h3>Positive ANA clinician reviews</h3><span class="panel-subtitle">Saved under this BHW Patient ID; observations and source-supported context without ranking</span></div><a class="btn" href="/bhw-positive-ana.html">Open Positive ANA</a></div><div class="panel-body">${content}${!full && analyses.length > 1 ? `<a class="more-note" href="patient-360-data.html">Open all ${analyses.length} saved reviews in Clinical Data</a>` : ""}<div class="record-boundary"><b>Clinical boundary</b><span>These are clinician-saved worksheet reviews. Returned patient answers must be verified and included in a newly saved clinician review before they appear here; they do not automatically create a diagnosis, order, ranking, score, or care-plan change.</span></div></div></section>`;
+}
+
 const monitoringProgramLabels = Object.freeze({
   mind: "Mind & Mood Recovery",
   charmed: "CharmEd Minds · Brain Health & Neurodivergence",
@@ -959,7 +984,7 @@ function overviewPage(context) {
     </div></div>
     <div class="overview-clinical-grid"><section class="panel lab-panel"><div class="panel-head"><h3>Important labs & trends</h3><a class="btn" href="patient-360-data.html">All results</a></div><div class="panel-body">${trendGraphic(observations)}</div></section><section class="panel"><div class="panel-head"><h3>What is due next</h3><span class="badge warning">Verify orders</span></div><div class="panel-body due-grid"><div><span>Next laboratory work</span>${compactItems(labDue,(item)=>`<b>${esc(titleText(item))}</b><small>${esc(dateText(item.occurrenceDateTime || item.authoredOn))}</small>`,"No next-lab order or due date is connected.",2)}</div><div><span>Screening or prevention</span>${compactItems(screenings,(item)=>`<b>${esc(item.label || titleText(item))}</b><small>${esc(statusText(item.status || "recorded"))}${item.visitAction?.providerApprovalRequired ? " · provider review" : ""}</small>`,"No screening due status is connected.",2)}</div></div></section></div>
     <div class="overview-clinical-grid"><section class="panel"><div class="panel-head"><h3>Nutrition & individualized plan</h3><a class="btn" href="nutrition-intelligence.html">Nutrition Intelligence</a></div><div class="panel-body personalized-grid"><div><span>Published Nutrition Intelligence</span>${reviewedNutrition}</div><div><span>Existing Blueprint and care-plan context</span>${compactItems(nutrition,(item)=>`<b>${esc(titleText(item))}</b><small>${esc(item.description || item.status || "recorded")}</small>`,"No additional structured nutrition care-plan item is connected.",2)}<ul class="clinical-list"><li><b>${esc(carePlans[0] ? titleText(carePlans[0]) : "Health Blueprint not connected")}</b><small>Nutrition output enters the Blueprint only as review-required source material</small></li></ul></div></div></section><section class="panel"><div class="panel-head"><h3>Prominent timeline</h3><a class="btn" href="patient-360-timeline.html">Full timeline</a></div><div class="panel-body prominent-timeline">${latestTimeline.length ? latestTimeline.map((event)=>`<div><time>${esc(dateText(event.date))}</time><span><b>${esc(event.label || event.type)}</b><small>${esc(event.type || "Clinical event")}</small></span></div>`).join("") : `<p class="overview-empty">No high-value timeline events are connected.</p>`}</div></section></div>
-    ${leaveIntakePanel()}${patientCheckinPanel(context)}
+    ${leaveIntakePanel()}${patientCheckinPanel(context)}${positiveAnaAnalysisPanel(context)}
     ${monitoringPlanPanel(context)}
     ${visitDocumentationPanel(context)}
   </section>`;
@@ -1046,7 +1071,7 @@ function planPage(context) {
 
 function dataPage(context) {
   const { conditions, medications, allergies, observations, reports, procedures, immunizations, documents, encounters, serviceRequests, tasks, carePlans, goals, preventiveCare } = context;
-  return `<section class="worksheet"><div class="worksheet-heading"><span class="section-number gold">6</span><h2>Digital Clinical Data Spine</h2><p>The complete structured record behind the overview</p></div>${leaveIntakePanel()}${patientCheckinPanel(context, { full: true })}${visitDocumentationPanel(context, { full: true })}${preventiveCarePanel(preventiveCare)}<div class="data-grid">${dataCard("Conditions & problem list", conditions, (item) => renderResourceItem(item, compact([item.clinicalStatus?.coding?.[0]?.code, item.verificationStatus?.coding?.[0]?.code, item.onsetDateTime ? `onset ${dateText(item.onsetDateTime)}` : ""]).join(" - ")), "No condition resource is connected.")}${dataCard("Medications", medications, (item) => renderResourceItem(item, medicationDetail(item)), "No medication requests are available.")}${dataCard("Allergies & intolerances", allergies, (item) => renderResourceItem(item, compact([item.clinicalStatus?.coding?.[0]?.code, item.criticality]).join(" - ")), "No allergy resource is connected.")}${dataCard("Results & trends", [...observations, ...reports], (item) => renderResourceItem(item, item.resourceType === "Observation" ? observationDetail(item) : compact([item.status, dateText(item.effectiveDateTime)]).join(" - ")), "No result or diagnostic report is connected.")}${dataCard("Procedures & imaging", procedures, (item) => renderResourceItem(item, compact([item.status, dateText(item.performedDateTime)]).join(" - ")), "No procedure or imaging resource is connected.")}${dataCard("Immunizations", immunizations, (item) => renderResourceItem(item, compact([item.status, dateText(item.occurrenceDateTime)]).join(" - ")), "No immunization resource is connected.")}${dataCard("Documents & provenance", documents, (item) => renderResourceItem(item, compact([item.status, dateText(item.date)]).join(" - ")), "No source document reference is connected.")}${dataCard("Encounters", encounters, (item) => renderResourceItem(item, compact([item.status, dateText(item.period?.start)]).join(" - ")), "No encounter resource is connected.")}${dataCard("Orders, referrals & tasks", [...serviceRequests, ...tasks], (item) => renderResourceItem(item, item.resourceType === "ServiceRequest" ? serviceRequestDetail(item) : compact([item.resourceType, item.status, item.intent]).join(" - ")), "No structured order, referral or task is connected.")}${dataCard("Care plans & goals", [...carePlans, ...goals], (item) => renderResourceItem(item, compact([item.resourceType, item.status, item.intent]).join(" - ")), "No care-plan or goal resource is connected.")}</div></section>`;
+  return `<section class="worksheet"><div class="worksheet-heading"><span class="section-number gold">6</span><h2>Digital Clinical Data Spine</h2><p>The complete structured record behind the overview</p></div>${leaveIntakePanel()}${patientCheckinPanel(context, { full: true })}${positiveAnaAnalysisPanel(context, { full: true })}${visitDocumentationPanel(context, { full: true })}${preventiveCarePanel(preventiveCare)}<div class="data-grid">${dataCard("Conditions & problem list", conditions, (item) => renderResourceItem(item, compact([item.clinicalStatus?.coding?.[0]?.code, item.verificationStatus?.coding?.[0]?.code, item.onsetDateTime ? `onset ${dateText(item.onsetDateTime)}` : ""]).join(" - ")), "No condition resource is connected.")}${dataCard("Medications", medications, (item) => renderResourceItem(item, medicationDetail(item)), "No medication requests are available.")}${dataCard("Allergies & intolerances", allergies, (item) => renderResourceItem(item, compact([item.clinicalStatus?.coding?.[0]?.code, item.criticality]).join(" - ")), "No allergy resource is connected.")}${dataCard("Results & trends", [...observations, ...reports], (item) => renderResourceItem(item, item.resourceType === "Observation" ? observationDetail(item) : compact([item.status, dateText(item.effectiveDateTime)]).join(" - ")), "No result or diagnostic report is connected.")}${dataCard("Procedures & imaging", procedures, (item) => renderResourceItem(item, compact([item.status, dateText(item.performedDateTime)]).join(" - ")), "No procedure or imaging resource is connected.")}${dataCard("Immunizations", immunizations, (item) => renderResourceItem(item, compact([item.status, dateText(item.occurrenceDateTime)]).join(" - ")), "No immunization resource is connected.")}${dataCard("Documents & provenance", documents, (item) => renderResourceItem(item, compact([item.status, dateText(item.date)]).join(" - ")), "No source document reference is connected.")}${dataCard("Encounters", encounters, (item) => renderResourceItem(item, compact([item.status, dateText(item.period?.start)]).join(" - ")), "No encounter resource is connected.")}${dataCard("Orders, referrals & tasks", [...serviceRequests, ...tasks], (item) => renderResourceItem(item, item.resourceType === "ServiceRequest" ? serviceRequestDetail(item) : compact([item.resourceType, item.status, item.intent]).join(" - ")), "No structured order, referral or task is connected.")}${dataCard("Care plans & goals", [...carePlans, ...goals], (item) => renderResourceItem(item, compact([item.resourceType, item.status, item.intent]).join(" - ")), "No care-plan or goal resource is connected.")}</div></section>`;
 }
 
 function sourcesPage(context) {
@@ -1180,7 +1205,7 @@ function wireAtlasEntry(context) {
   });
 }
 
-function render(record, workflowConnection = { connected: false, encounters: [] }, atlasConnection = { connected: false, workspace: null }, clinicalEventConnection = { connected: false, workspace: null }) {
+function render(record, workflowConnection = { connected: false, encounters: [] }, atlasConnection = { connected: false, workspace: null }, clinicalEventConnection = { connected: false, workspace: null }, positiveAnaConnection = activePositiveAnaConnection) {
   const view = document.body.dataset.p360View || "overview";
   const originalResources = allResources(record);
   const resources = originalResources.filter(isDisplayable);
@@ -1214,7 +1239,7 @@ function render(record, workflowConnection = { connected: false, encounters: [] 
   const displayName = normalizePatientName(patient.name?.[0] || {});
   const preventiveCare = record.preventiveCare || { measures: [], crisp: {} };
   const nutritionIntelligence = record.nutritionIntelligence || null;
-  const context = { record, resources, patient, displayName, conditions, observations, medications, encounters, tasks, carePlans, systems, allergies, reports, procedures, immunizations, documents, goals, serviceRequests, clinicalImpressions, careTeams, patientCheckins, monitoringPlans, monitoringModuleCatalog, preventiveCare, nutritionIntelligence, unresolvedTasks, urgentItems, timeline, frontendOmitted, sourceOmitted, gaps, workflowConnection, workflowEncounters: workflowConnection.encounters || [], atlasConnection, clinicalEventConnection };
+  const context = { record, resources, patient, displayName, conditions, observations, medications, encounters, tasks, carePlans, systems, allergies, reports, procedures, immunizations, documents, goals, serviceRequests, clinicalImpressions, careTeams, patientCheckins, monitoringPlans, monitoringModuleCatalog, preventiveCare, nutritionIntelligence, unresolvedTasks, urgentItems, timeline, frontendOmitted, sourceOmitted, gaps, workflowConnection, workflowEncounters: workflowConnection.encounters || [], atlasConnection, clinicalEventConnection, positiveAnaConnection };
   const pageRenderers = { overview: overviewPage, atlas: atlasPage, timeline: timelinePage, mechanism: mechanismPage, context: contextPage, plan: planPage, data: dataPage, sources: sourcesPage };
   const header = view === "overview" ? fullHero(context) : compactHeader(context);
   $("content").innerHTML = `${header}${pageNavigation(view)}${safeNotice(context)}${(pageRenderers[view] || overviewPage)(context)}`;
@@ -1222,6 +1247,27 @@ function render(record, workflowConnection = { connected: false, encounters: [] 
   if (view === "timeline") wireClinicalTimeline(context);
   preservePatientLinks(document);
   wireMonitoringPlanControls(context);
+}
+
+async function loadPositiveAnaConnection() {
+  if (PATIENT_ID === "BHW0000") return { connected: true, analyses: [], synthetic: true };
+  const workspace = window.bhwPatientWorkspaceContext;
+  if (!workspace || workspace.bhwPatientId !== PATIENT_ID || workspace.purposeOfUse !== "treatment") {
+    throw new Error("The Positive ANA record was not released for this patient workspace.");
+  }
+  const crewToken = sessionStorage.getItem("crewos_token") || "";
+  if (!crewToken) throw new Error("CrewOS session expired. Sign in again.");
+  const response = await fetch("/.netlify/functions/positive-ana-record", {
+    method: "POST",
+    credentials: "same-origin",
+    cache: "no-store",
+    headers: { Authorization: `Bearer ${crewToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "list", bhwPatientId: PATIENT_ID }),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw Object.assign(new Error(body.error || "Positive ANA records unavailable."), { status: response.status });
+  if (body.bhwPatientId !== PATIENT_ID) throw new Error("Positive ANA patient identity did not match this workspace.");
+  return { connected: true, analyses: Array.isArray(body.analyses) ? body.analyses : [] };
 }
 
 async function load() {
@@ -1281,11 +1327,15 @@ async function load() {
     }
     try {leaveConnection={requests:await cloudClient.listLeaveRequests(PATIENT_ID),error:""};}
     catch(error){leaveConnection={requests:[],error:"Leave intake could not be loaded from BHW Cloud. Reconnect to review submitted requests."};}
+    let positiveAnaConnection;
+    try { positiveAnaConnection = await loadPositiveAnaConnection(); }
+    catch (error) { positiveAnaConnection = { connected: false, analyses: [], error: error.message || "Positive ANA records unavailable." }; }
     activeRecord = body.healthRecord;
     activeWorkflowConnection = workflowConnection;
     activeAtlasConnection = atlasConnection;
     activeClinicalEventConnection = clinicalEventConnection;
-    render(activeRecord, activeWorkflowConnection, activeAtlasConnection, activeClinicalEventConnection);
+    activePositiveAnaConnection = positiveAnaConnection;
+    render(activeRecord, activeWorkflowConnection, activeAtlasConnection, activeClinicalEventConnection, activePositiveAnaConnection);
     $("status").className = "badge complete";
     $("status").textContent = "Health Core connected";
   } catch (error) {
