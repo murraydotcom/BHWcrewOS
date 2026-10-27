@@ -4,12 +4,12 @@ import test from "node:test";
 
 test("CrewHQ exposes the protected Website Content workflow", async () => {
   const [hq, page, client] = await Promise.all([
-    readFile(new URL("../hq.html", import.meta.url), "utf8"),
+    readFile(new URL("../hq-home.mjs", import.meta.url), "utf8"),
     readFile(new URL("../bhw-website-content.html", import.meta.url), "utf8"),
     readFile(new URL("../provider/operations-queue.mjs", import.meta.url), "utf8"),
   ]);
 
-  assert.match(hq, /name:'Website Content'.*href:'\/bhw-website-content\.html'/s);
+  assert.match(hq, /\['Website Content',.*'\/bhw-website-content\.html'\]/);
   assert.match(page, /Shade and designated staff/);
   assert.match(page, /Public content only/);
   assert.match(page, /Never place passwords, secret keys, or patient information into ChatGPT/);

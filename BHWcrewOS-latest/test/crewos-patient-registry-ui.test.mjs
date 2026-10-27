@@ -25,15 +25,15 @@ test("every CrewOS workflow picker submits the canonical BHW Registry ID", async
 });
 
 test("CrewHQ keeps patient maintenance tools inside the protected Patient Registry", async () => {
-  const hq = await readFile(new URL("../hq.html", import.meta.url), "utf8");
+  const hq = await readFile(new URL("../hq-home.mjs", import.meta.url), "utf8");
   const registry = await readFile(new URL("../provider/patient-registry.html", import.meta.url), "utf8");
   const registryApp = await readFile(new URL("../provider/patient-registry-app.mjs", import.meta.url), "utf8");
   const workflowApp = await readFile(new URL("../provider/workflow-app.mjs", import.meta.url), "utf8");
   const transcriptionApp = await readFile(new URL("../provider/transcription-app.mjs", import.meta.url), "utf8");
-  assert.match(hq, /name:'Patient Registry'.*href:'\/provider\/patient-registry\.html'/s);
-  assert.doesNotMatch(hq, /name:'Load & Reconcile Patients'/);
-  assert.doesNotMatch(hq, /name:'Repair Patient IDs'/);
-  assert.match(hq, /name:'Health 360 Care Plans'.*health-blueprint\.html/s);
+  assert.match(hq, /\['Patient Registry',.*'\/provider\/patient-registry\.html'\]/);
+  assert.doesNotMatch(hq, /Load & Reconcile Patients/);
+  assert.doesNotMatch(hq, /Repair Patient IDs/);
+  assert.match(hq, /\['Health 360 Care Plans',.*health-blueprint\.html/);
   assert.doesNotMatch(hq, /save to Notion/);
   assert.match(registry, /href="\/crewos">← CrewOS<\/a>/);
   assert.match(registry, /href="\/hq">BHW HQ<\/a>/);

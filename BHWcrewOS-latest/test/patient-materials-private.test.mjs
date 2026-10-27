@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const staffPage = fs.readFileSync(path.join(root, "bhw-patient-materials.html"), "utf8");
 const patientPage = fs.readFileSync(path.join(root, "bhw-patient-material-viewer.html"), "utf8");
-const hqPage = fs.readFileSync(path.join(root, "hq.html"), "utf8");
+const hqPage = fs.readFileSync(path.join(root, "hq-home.mjs"), "utf8");
 const patientRegistryApp = fs.readFileSync(path.join(root, "provider", "patient-registry-app.mjs"), "utf8");
 const patientRegistryPage = fs.readFileSync(path.join(root, "provider", "patient-registry.html"), "utf8");
 
@@ -34,9 +34,9 @@ test("patient viewer loads the assigned document and material-specific questions
   assert.match(patientPage, /pageTitle/);
 });
 
-test("CrewHQ has a direct patient materials tile", () => {
+test("CrewHQ has a direct patient materials directory entry", () => {
   assert.match(hqPage, /Patient Materials & Feedback/);
-  assert.match(hqPage, /href:'\/bhw-patient-materials\.html'/);
+  assert.match(hqPage, /'\/bhw-patient-materials\.html'/);
 });
 
 test("patient materials inline scripts compile", () => {

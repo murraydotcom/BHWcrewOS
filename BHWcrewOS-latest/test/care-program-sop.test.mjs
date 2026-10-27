@@ -9,7 +9,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = (name) => fs.readFileSync(path.join(root, name), "utf8");
 const sop = read("bhw-care-program-sop.html");
 const index = read("index.html");
-const hq = read("hq.html");
+const hq = read("hq-home.mjs");
 const guide = read("bhw-staff-guide.html");
 const careLog = read("bhw-care-management.html");
 
@@ -48,7 +48,7 @@ test("SOP contains the full intake, care-plan, readiness, risk, and fee referenc
 test("CrewOS exposes the SOP from the rail, HQ, Staff Guide, and Care Management Log", () => {
   assert.match(index, /data-view="pg-care-sop"/);
   assert.match(index, /src:"\/bhw-care-program-sop\.html"/);
-  assert.match(hq, /name:'Care Program SOP'[\s\S]*?href:'\/bhw-care-program-sop\.html'/);
+  assert.match(hq, /\['Care Program SOP',[^\n]*'\/bhw-care-program-sop\.html'\]/);
   assert.match(guide, /id="care-program-sop"/);
   assert.match(guide, /Closed work stays reviewable/);
   assert.match(careLog, /href="\/bhw-care-program-sop\.html"/);
