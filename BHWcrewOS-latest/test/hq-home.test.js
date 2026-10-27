@@ -55,12 +55,25 @@ test('failure cannot become zero workload or a fabricated KPI',async()=>{
  assert.deepEqual(d.metrics.items,[]);assert.equal(d.notifications.care.count,null);assert.equal(d.goals.available,false);assert(!r.body.includes('Private upstream'));
 });
 test('metrics attribute completions to stable staff identity and require dates for on-time fraction',()=>{
- const rows=[request('mine',{assignedTo:'crew:synthetic-a',updatedBy:'crew:synthetic-a',statusCategory:'completed',resolvedAt:'2026-10-26T10:00:00Z',dueAt:'2026-10-26T11:00:00Z'}),
+ const rows=[request('mine',{assignedTo:'crew:synthetic-a',updatedBy:'crew:synthetic-a',statusCategory:'completed',updatedAt:'2026-10-26T10:00:00Z',resolvedAt:'2026-10-26T10:00:00Z',dueAt:'2026-10-26T11:00:00Z'}),
   request('someone-else',{assignedTo:'crew:synthetic-a',updatedBy:'crew:other',statusCategory:'completed',resolvedAt:'2026-10-26T10:00:00Z'}),
-  request('no-due',{updatedBy:'crew:synthetic-a',statusCategory:'completed',resolvedAt:'2026-10-26T10:00:00Z'}),
+  request('no-due',{updatedBy:'crew:synthetic-a',statusCategory:'completed',updatedAt:'2026-10-26T10:00:00Z',resolvedAt:'2026-10-26T10:00:00Z'}),
   request('old',{updatedBy:'crew:synthetic-a',statusCategory:'completed',resolvedAt:'2026-09-26T10:00:00Z'})];
  const metrics=personalMetrics(rows,actor,'care-manager',time);assert.equal(metrics[0].value,2);assert.equal(metrics[2].value,'1 / 1');assert(metrics.every(m=>m.target===null));
  assert.equal(personalMetrics([],actor,'care-manager',time)[2].value,null);
+ const anotherActor=request('touched-later',{updatedBy:'crew:synthetic-a',statusCategory:'completed',resolvedAt:'2026-10-26T10:00:00Z',
+  statusHistory:[{category:'completed',actor:'crew:synthetic-b',at:'2026-10-26T10:00:00Z'}]});
+ assert.equal(personalMetrics([anotherActor],actor,'care-manager',time)[0].value,0);
+});
+test('new source replies enter the established role queue without creating or syncing records',async()=>{
+ const old=process.env.CREWHQ_CARE_TOKEN_SECRET;process.env.CREWHQ_CARE_TOKEN_SECRET='synthetic-test-only';
+ try{const calls=[];const h=handler({operationsImpl:async(url,options)=>{calls.push(options.method||'GET');return {requests:[]};},fetchImpl:async()=>Response.json({submissions:[
+  {id:'submission-new',status:'new',contentPath:'/bhw-patient-material-viewer.html',submittedAt:'2026-10-27T15:00:00Z'},
+  {id:'submission-med',status:'new',contentPath:'/bhw-medication-request.html'},
+  {id:'submission-other',status:'new',assignedTo:'crew:synthetic-b'}]})});
+ const d=JSON.parse((await h(event)).body);assert.equal(d.notifications.care.count,1);assert.equal(d.notifications.care.items[0].scope,'Your role’s review queue');
+ assert(calls.every(method=>method==='GET'));
+ }finally{if(old===undefined)delete process.env.CREWHQ_CARE_TOKEN_SECRET;else process.env.CREWHQ_CARE_TOKEN_SECRET=old;}
 });
 test('only projects assigned to exact staff identity appear as personal goals',async()=>{
  const project=(id,staff)=>({id,properties:{Project:{title:[{plain_text:'Goal '+id}]},Staff:{relation:[{id:staff}]},Status:{select:{name:'Active'}}}});

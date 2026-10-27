@@ -48,8 +48,12 @@ function handoff(r, actor) {
 function personalMetrics(rows, actor, role, now) {
   const cutoff = now - 7 * 86400000;
   const assigned = rows.filter(r => owns(r.assignedTo || r.assignedToId, actor));
-  const closedByMe = rows.filter(r => finished(r) && validDate(r.resolvedAt) && Date.parse(r.resolvedAt) >= cutoff
-    && (owns(r.updatedBy, actor) || (r.statusHistory || []).some(h => h.category === 'completed' && owns(h.actor, actor) && h.at === r.resolvedAt)));
+  const closedByMe = rows.filter(r => {
+    if(!finished(r) || !validDate(r.resolvedAt) || Date.parse(r.resolvedAt)<cutoff || Date.parse(r.resolvedAt)>now) return false;
+    const completion=(Array.isArray(r.statusHistory)?r.statusHistory:[]).filter(h=>h.category==='completed' && h.at===r.resolvedAt);
+    return completion.length ? completion.some(h=>owns(h.actor,actor))
+      : owns(r.updatedBy,actor) && r.updatedAt===r.resolvedAt;
+  });
   const timed = closedByMe.filter(r => validDate(due(r)));
   const prefixes = { provider:'Provider', 'ma-bha':'Clinical support', 'care-manager':'Care coordination', rcm:'Revenue cycle',
     'front-desk':'Patient access', 'operations-manager':'Operations', executive:'Leadership' };
@@ -101,11 +105,13 @@ function createHomeHandler({ sessionImpl=getSession, operationsImpl=operationsRe
       // projectPatientContent workflow; an existing exact assignment wins.
       const matches=contentResult.value.filter(s=>!['reviewed','closed'].includes(s.status) && s.contentPath!=='/bhw-medication-request.html')
         .map(s=>{const id=clean(s.id || s.submissionId,128);if(!/^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/.test(id))return null;
-          return routed.get(id) || {id,source:'patient-content-html',requestType:'clinical_review',assignedTeam:'clinical',
+          if(routed.has(id)) return routed.get(id);
+          if(responseRows.length>=500 && !clean(s.assignedTo || s.assignedToId)) return null;
+          return {id,source:'patient-content-html',requestType:'clinical_review',assignedTeam:'clinical',
             assignedTo:clean(s.assignedTo || s.assignedToId),assignedToName:clean(s.assignedToName),
             priority:s.priority==='same_day_review'?'time-sensitive':'routine',statusCategory:'received',
             updatedAt:clean(s.submittedAt || s.createdAt,40)};})
-        .filter(r=>r && related(r,actor,isRoleRelevantRequest) && !finished(r));
+        .filter(r=>r && related(r,actor,isRoleRelevantRequest));
       care={available:true,count:matches.length,items:matches.slice(0,10).map(r=>({id:idOf(r),label:'Patient material / care-plan response',
         scope:owns(r.assignedTo||r.assignedToId,actor)?'Assigned to you':'Your role’s review queue',at:clean(r.updatedAt,40),
         href:'/bhw-patient-materials.html'})),
