@@ -1,0 +1,31 @@
+name: CrewHQ personal home
+
+on:
+  pull_request:
+    paths:
+      - "BHWcrewOS-latest/hq.html"
+      - "BHWcrewOS-latest/hq-home.*"
+      - "BHWcrewOS-latest/netlify/functions/hq-home.js"
+      - "BHWcrewOS-latest/netlify/functions/portal-messaging.js"
+      - "BHWcrewOS-latest/bhw-alert-center.mjs"
+      - "BHWcrewOS-latest/test/hq-home.test.js"
+      - ".github/workflows/crewhq-home-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  personal-home:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check personal home modules
+        run: |
+          node --check BHWcrewOS-latest/hq-home.mjs
+          node --check BHWcrewOS-latest/netlify/functions/hq-home.js
+      - name: Verify identity, role routing, source states, and messaging gates
+        run: node --test BHWcrewOS-latest/test/hq-home.test.js BHWcrewOS-latest/test/portal-messaging.test.js
