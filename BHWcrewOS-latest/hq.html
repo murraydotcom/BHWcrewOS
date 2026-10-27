@@ -101,303 +101,42 @@ header.top{position:sticky;top:0;z-index:40;backdrop-filter:blur(12px);backgroun
 :root[data-theme="dark"] .theme-tog .lbl-dark{display:inline}
 :root[data-theme="dark"] .theme-tog .lbl-light{display:none}
 
-/* ---- hero ---- */
-.hero{position:relative;max-width:1120px;margin:0 auto;padding:60px 22px 12px;display:grid;grid-template-columns:1.1fr .9fr;gap:26px;align-items:center}
-.eyebrow{display:inline-flex;align-items:center;gap:9px;font-size:10.5px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);border:1px solid color-mix(in srgb,var(--gold) 34%,transparent);background:color-mix(in srgb,var(--gold) 8%,transparent);padding:7px 13px;border-radius:999px}
-.hero h1{font-family:var(--sans);font-weight:300;letter-spacing:-.015em;font-size:clamp(38px,5.4vw,62px);line-height:1.04;margin:20px 0 0;color:var(--heading)}
-.hero h1 .grad{font-weight:700}
-.hero h1 .grad{background:linear-gradient(96deg,var(--heading) 0%,var(--gold) 48%,var(--teal) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
-.hero p.sub{color:var(--ink-soft);font-size:16px;max-width:480px;margin:18px 0 0}
-
-/* ---- animated atom ---- */
-.atom-stage{position:relative;display:flex;align-items:center;justify-content:center;min-height:340px}
-.atom-stage::before{content:"";position:absolute;width:66%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,rgba(95,179,172,.3),rgba(224,183,94,.13) 45%,transparent 70%);filter:blur(20px)}
-.atom{width:clamp(260px,30vw,400px);height:auto;position:relative}
-.atom .ring{fill:none;stroke-width:1.4;opacity:.62}
-.atom .spin{transform-box:view-box;transform-origin:110px 110px}
-.sp1{animation:spin 18s linear infinite}.sp2{animation:spin 24s linear infinite reverse}.sp3{animation:spin 21s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.el{filter:drop-shadow(0 0 5px currentColor)}
-.core{animation:pulse 4.4s ease-in-out infinite;transform-box:view-box;transform-origin:110px 110px}
-@keyframes pulse{0%,100%{opacity:.94}50%{opacity:1;transform:scale(1.05)}}
-
-/* ---- destination cards (the core) ---- */
-.dest-wrap{max-width:1120px;margin:26px auto 0;padding:0 22px}
-.dest{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
-.dcard{position:relative;display:flex;flex-direction:column;border-radius:20px;padding:26px 24px 22px;min-height:230px;
-  background:linear-gradient(180deg,var(--panel-hi),var(--panel));border:1px solid var(--panel-line);overflow:hidden;
-  transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
-.dcard::before{content:"";position:absolute;left:0;top:0;width:100%;height:4px;background:linear-gradient(90deg,var(--accent),transparent)}
-.dcard::after{content:"";position:absolute;inset:0;opacity:0;transition:opacity .25s;background:radial-gradient(460px 220px at 24% -12%,color-mix(in srgb,var(--accent) 22%,transparent),transparent 70%)}
-.dcard:hover{transform:translateY(-5px);border-color:color-mix(in srgb,var(--accent) 55%,var(--panel-line));box-shadow:var(--shadow-card)}
-.dcard:hover::after{opacity:1}
-.dcard .ico{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;position:relative;
-  background:color-mix(in srgb,var(--accent) 18%,transparent);border:1px solid var(--panel-line);color:var(--accent)}
-.dcard .ico svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.9}
-.dcard h2{font-family:var(--sans);font-weight:700;letter-spacing:-.01em;font-size:22px;margin:16px 0 0;color:var(--heading);position:relative}
-.dcard .kick{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-top:14px;position:relative}
-.dcard p{font-size:13.5px;color:var(--ink-soft);margin-top:7px;flex:1;position:relative}
-.dcard .go{display:inline-flex;align-items:center;gap:7px;margin-top:16px;font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--accent);position:relative}
-.dcard .go .arrow{transition:transform .2s}
-.dcard:hover .go .arrow{transform:translateX(4px)}
-.dcard .ext{position:absolute;top:20px;right:20px;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);display:inline-flex;align-items:center;gap:4px}
-.dcard .ext svg{width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:2.4}
-.soon{position:absolute;top:18px;right:18px;font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#20140a;background:var(--gold);border-radius:999px;padding:3px 9px}
-
-/* ---- staff tools row ---- */
-.tools-sec{max-width:1120px;margin:40px auto 0;padding:0 22px}
-.tools-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:16px}
-.tools-head .sec-label{margin:0}
-.tools-head .sec-h{font-size:20px}
-.tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(238px,1fr));gap:14px}
-.tool{position:relative;display:flex;gap:14px;align-items:flex-start;border-radius:16px;padding:17px 18px;
-  background:linear-gradient(180deg,var(--panel-hi),var(--panel));border:1px solid var(--panel-line);
-  transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
-.tool:hover{transform:translateY(-3px);border-color:color-mix(in srgb,var(--accent) 55%,var(--panel-line));box-shadow:var(--shadow-card)}
-.tool.locked{cursor:default}
-.tool.locked:hover{transform:none;box-shadow:none;border-color:var(--panel-line)}
-.tool .tico{width:42px;height:42px;flex:none;border-radius:12px;display:flex;align-items:center;justify-content:center;
-  background:color-mix(in srgb,var(--accent) 16%,transparent);border:1px solid var(--panel-line);color:var(--accent)}
-.tool .tico svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.9}
-.tool .tbody{min-width:0}
-.tool h3{font-family:var(--sans);font-weight:700;font-size:15.5px;color:var(--heading);letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
-.tool .tag{font-size:8.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;border-radius:999px;padding:2px 7px;color:#20140a;background:var(--teal)}
-.tool .tag.soon{background:var(--gold)}
-.tool p{font-size:12.5px;color:var(--ink-soft);margin-top:4px;line-height:1.5}
-.tool .go{display:inline-flex;align-items:center;gap:6px;margin-top:9px;font-size:11.5px;font-weight:700;letter-spacing:.05em;color:var(--accent)}
-.tool .go .arrow{transition:transform .2s}
-.tool:hover .go .arrow{transform:translateX(3px)}
-
-/* ---- tagline band ---- */
-.band{max-width:1120px;margin:44px auto 0;padding:0 22px}
-.band-inner{position:relative}
-.band-inner img{width:100%;display:block;filter:brightness(var(--band-bright))}
-
-/* ---- family strip ---- */
-.section{max-width:1120px;margin:0 auto;padding:52px 22px 0}
-.sec-label{font-size:10.5px;font-weight:700;letter-spacing:.26em;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
-.sec-h{font-family:var(--sans);font-weight:700;letter-spacing:-.01em;font-size:23px;color:var(--heading)}
-.sec-lede{color:var(--ink-soft);font-size:13.5px;margin:4px 0 20px}
-.family{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
-.fam{background:var(--chip);border:1px solid var(--panel-line);border-radius:16px;padding:16px;height:116px;display:flex;align-items:center;justify-content:center;transition:.2s ease;overflow:hidden}
-.fam:hover{transform:translateY(-3px);box-shadow:var(--shadow-card),var(--glow)}
-.fam.dark{background:#0c1f2e}
-.fam img{max-width:100%;max-height:80px;object-fit:contain}
-
-/* ---- footer ---- */
-footer{max-width:1120px;margin:60px auto 0;padding:26px 22px 60px;border-top:1px solid var(--panel-line)}
-.foot-grid{display:flex;flex-wrap:wrap;gap:20px 40px;align-items:center}
-.foot-brand{display:flex;align-items:center;gap:14px}
-.foot-brand img{height:64px;width:auto;border-radius:10px}
-.foot-brand img.f-dark{display:none}
-:root[data-theme="dark"] .foot-brand img.f-dark{display:block}
-:root[data-theme="dark"] .foot-brand img.f-light{display:none}
-.foot-brand .t{font-size:12.5px;color:var(--ink-soft);max-width:250px}
-.foot-brand .t b{color:var(--heading);font-weight:700}
-.foot-links{margin-left:auto;display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12.5px;color:var(--ink-soft)}
-.foot-links a{color:var(--teal);font-weight:600}
-.foot-meta{margin-top:18px;font-size:11.5px;color:var(--ink-soft);opacity:.8}
-
-@media (max-width:900px){.dest{grid-template-columns:1fr}}
-@media (max-width:860px){.hero{grid-template-columns:1fr;padding-top:38px}.atom-stage{order:-1;min-height:260px}.foot-links{margin-left:0;width:100%}}
 </style>
+<link rel="stylesheet" href="/hq-home.css?v=home-20261027">
 </head>
 <body>
-<div class="bg-wash"></div>
-<div class="bg-grid"></div>
-
-<header class="top">
-  <div class="top-inner">
-    <div class="brand">
-      <svg class="glyph" viewBox="0 0 220 220" aria-hidden="true">
+<div class="bg-wash"></div><div class="bg-grid"></div>
+<header class="top"><div class="top-inner">
+  <a class="brand" href="/hq.html" aria-label="CrewHQ home"><svg class="glyph" viewBox="0 0 220 220" aria-hidden="true">
         <circle cx="110" cy="110" r="17" fill="#7fc98a"/>
         <ellipse cx="110" cy="110" rx="92" ry="34" fill="none" stroke="#e0b75e" stroke-width="6" transform="rotate(0 110 110)"/>
         <ellipse cx="110" cy="110" rx="92" ry="34" fill="none" stroke="#5fb3ac" stroke-width="6" transform="rotate(60 110 110)"/>
         <ellipse cx="110" cy="110" rx="92" ry="34" fill="none" stroke="#8aa9d6" stroke-width="6" transform="rotate(120 110 110)"/>
-      </svg>
-      <div class="wm">BHW <span class="accent">HQ</span></div>
-    </div>
-    <div class="top-right">
-      <button class="theme-tog" id="themeBtn" type="button" aria-label="Switch theme">
-        <span class="dot"></span><span class="lbl-dark">Black Opal</span><span class="lbl-light">Light Opal</span>
-      </button>
-      <a class="btn btn-primary" href="/crewos?next=%2Fhq.html">Sign in →</a>
-    </div>
-  </div>
-</header>
-
-<!-- HERO -->
-<section class="hero">
-  <div>
-    <span class="eyebrow">BHW Medical Group · A program of The Foundation</span>
-    <h1>Everything,<br><span class="grad">one tap away.</span></h1>
-    <p class="sub">The home base for the whole crew. Three doors — your ops hub, the billing platform, and where every new teammate starts — plus the tools that live between them.</p>
-  </div>
-  <div class="atom-stage">
-    <svg class="atom" viewBox="0 0 220 220" role="img" aria-label="The Foundation atom mark">
-      <defs><radialGradient id="core" cx="40%" cy="36%" r="68%">
-        <stop offset="0%" stop-color="#fff7de"/><stop offset="34%" stop-color="#bfe6a8"/>
-        <stop offset="68%" stop-color="#5fb3ac"/><stop offset="100%" stop-color="#2c6b8b"/>
-      </radialGradient></defs>
-      <g transform="rotate(0 110 110)"><g class="spin sp1"><ellipse cx="110" cy="110" rx="96" ry="35" class="ring" stroke="#e0b75e"/><circle cx="206" cy="110" r="5.5" class="el" fill="#e0b75e" color="#e0b75e"/></g></g>
-      <g transform="rotate(60 110 110)"><g class="spin sp2"><ellipse cx="110" cy="110" rx="96" ry="35" class="ring" stroke="#5fb3ac"/><circle cx="206" cy="110" r="5.5" class="el" fill="#5fb3ac" color="#5fb3ac"/></g></g>
-      <g transform="rotate(120 110 110)"><g class="spin sp3"><ellipse cx="110" cy="110" rx="96" ry="35" class="ring" stroke="#8aa9d6"/><circle cx="206" cy="110" r="5.5" class="el" fill="#8aa9d6" color="#8aa9d6"/></g></g>
-      <circle cx="110" cy="110" r="20" fill="url(#core)" class="core" style="filter:drop-shadow(0 0 16px rgba(127,201,138,.6))"/>
-      <circle cx="110" cy="110" r="20" fill="none" stroke="#e0b75e" stroke-width="1.3" opacity=".85"/>
-    </svg>
-  </div>
-</section>
-
-<!-- CORE DESTINATIONS -->
-<div class="dest-wrap">
-  <div class="dest">
-
-    <a class="dcard" style="--accent:var(--peri)" href="/crewos">
-      <div class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></div>
-      <div class="kick">Operations</div>
-      <h2>BHWcrewOS</h2>
-      <p>The daily operations hub — front desk, panel, care plans, clinical tools, and the whole crew. Sign in with your name and PIN.</p>
-      <span class="go">Open crewOS <span class="arrow">→</span></span>
-    </a>
-
-    <!-- NOTE: welcometoBHW is its own React/Netlify site (repo: murraydotcom/welcometobhw).
-         Confirm the deployed URL below if it differs from the repo-name default. -->
-    <a class="dcard" style="--accent:var(--green)" href="https://welcometobhw.netlify.app/" target="_blank" rel="noopener">
-      <span class="ext"><svg viewBox="0 0 24 24"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>External</span>
-      <div class="ico"><svg viewBox="0 0 24 24"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1 2.7 2.5 6 2.5s6-1.5 6-2.5v-5"/></svg></div>
-      <div class="kick">Onboarding &amp; Training</div>
-      <h2>welcometoBHW</h2>
-      <p>The onboarding portal — per-person logins, first-week checklist, credentialing gate, training, and certificate uploads. Where every new teammate starts.</p>
-      <span class="go">Open the portal <span class="arrow">→</span></span>
-    </a>
-
-  </div>
-</div>
-
-<!-- STAFF TOOLS -->
-<section class="tools-sec">
-  <div class="tools-head">
-    <span class="sec-label">Staff tools</span>
-    <h2 class="sec-h">Apps that live between the doors</h2>
-  </div>
-  <div class="tools" id="tools"></div>
-</section>
-
-<!-- TAGLINE BAND -->
-<div class="band">
-  <div class="band-inner">
-    <img src="/assets/brand/skyline.png" alt="For the City. For My Health. In Real Life. — Baltimore skyline" onerror="this.closest('.band').style.display='none'">
-  </div>
-</div>
-
-<!-- THE FAMILY -->
-<section class="section">
-  <div class="sec-label">One roof</div>
-  <h2 class="sec-h">The BHW family of programs</h2>
-  <p class="sec-lede">Same crew, same standard of care — under The Foundation.</p>
-  <div class="family" id="family"></div>
-</section>
-
-<!-- FOOTER -->
-<footer>
-  <div class="foot-grid">
-    <div class="foot-brand">
-      <img class="f-dark" src="/assets/brand/foundation-dark.png" alt="The Foundation — Baltimore, MD" onerror="this.style.display='none'">
-      <img class="f-light" src="/assets/brand/foundation-light.png" alt="The Foundation — Baltimore, MD" onerror="this.style.display='none'">
-      <div class="t"><b>The Foundation</b> · Baltimore, MD · Est. 2026<br>BHW Medical Group is a program of The Foundation.</div>
-    </div>
-    <div class="foot-links">
-      <a href="/crewos?next=%2Fhq.html">Sign in to crewOS</a>
-      <a href="https://welcometobhw.netlify.app/" target="_blank" rel="noopener">welcometoBHW</a>
-      <span>Main line (443) 762-5343</span>
-      <span>info@bhwmedical.org</span>
-    </div>
-  </div>
-  <div class="foot-meta">For the City. For My Health. In Real Life.</div>
-</footer>
-
-<script>
-/* theme toggle */
-document.getElementById('themeBtn').addEventListener('click',function(){
-  var cur=document.documentElement.getAttribute('data-theme')==='light'?'light':'dark';
-  var next=cur==='light'?'dark':'light';
-  document.documentElement.setAttribute('data-theme',next);
-  try{localStorage.setItem('bhw-theme',next);}catch(e){}
-  document.querySelector('meta[name=theme-color]').setAttribute('content',next==='light'?'#f4eede':'#0e2233');
-});
-
-/* staff tools row — add an app by adding a row here (config-driven).
-   href:null renders a locked "soon" tile until the app has a URL. */
-const TOOLS=[
-  {name:'Patient Registry',accent:'var(--teal)',tag:'Live',href:'/provider/patient-registry.html',
-   desc:'The protected Google Cloud master list for every CrewOS patient search and workflow dropdown — search by BHW ID, name, phone, payer, or status.',
-   icon:'<circle cx="12" cy="8" r="4"/><path d="M4 21v-2a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v2"/><path d="M18 4h4M20 2v4"/>'},
-  {name:'Patient Requests',accent:'var(--green)',tag:'Live',href:'/bhw-requests.html',
-   desc:'The shared request journey — every patient message, call, voicemail and fax in one timeline, who owns it, and where it is. Claim, work, and complete so nothing falls through.',
-   icon:'<path d="M4 5h16v11H8l-4 3z"/><path d="M8 9h8M8 12h5"/>'},
-  {name:'Notion Connections',accent:'var(--gold)',tag:'Live',href:'/bhw-intel-connections.html',
-   desc:'Complete the Notion exit and manage employees, referral templates, rooms, resources, projects, and specialist records inside BHWcrewOS.',
-   icon:'<circle cx="6" cy="12" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M8.7 10.7l6.6-3.4M8.7 13.3l6.6 3.4"/>'},
-  {name:'Care Program SOP',accent:'var(--green)',tag:'2026',href:'/bhw-care-program-sop.html',
-   desc:'Staff intake and enrollment training for APCM, CCM, PCM, BHI/CoCM, CHI, PIN, RPM/RTM, and TCM, with care-plan, readiness, risk, and Baltimore Medicare fee guidance.',
-   icon:'<path d="M6 3h12v18H6z"/><path d="M9 7h6M9 11h6M9 15h4"/><path d="M3 6h3M3 10h3M3 14h3"/>'},
-  {name:'Paperwork Studio',accent:'var(--teal)',tag:'Live',href:'/bhw-paperwork.html',
-   desc:'Chart pulls, prior auth, disability, FMLA & MTA — pre-written explanations, real PDF fill, and AI prefill.',
-   icon:'<path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-3"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M8 11h8M8 15h6"/>'},
-  {name:'Health 360 Care Plans',accent:'var(--green)',tag:'Protected',href:'https://rcm.bhwmedical.org/provider/health-blueprint.html',
-   desc:'Create and review patient Health Blueprints and program care plans from the protected Google Cloud Patient Registry, then mark approved versions ready to share.',
-   icon:'<path d="M9 12l2 2 4-4"/><path d="M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M14 3v5h5"/>'},
-  {name:'Patient Education & Documents',accent:'var(--peri)',tag:'Live',href:'/bhw-documents.html',
-   desc:'Create education handouts in Document Builder, review and print/Save-PDF, then open Patient Materials & Feedback for protected sharing. Also includes visit summaries, care plans, letters, and medication lists.',
-   icon:'<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-7"/><path d="M8 8h6M8 12h6M8 16h4"/><path d="M18.5 3.5a2 2 0 0 1 3 3L15 13l-4 1 1-4z"/>'},
-  {name:'Website Content',accent:'var(--gold)',tag:'Review',href:'/bhw-website-content.html',
-   desc:'Draft, preview, schedule, and publish Care Connect announcements, resource links, and approved practice details with Google Cloud history.',
-   icon:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/><path d="M15.5 7.5l2 2-5.5 5.5-3 1 1-3z"/>'},
-  {name:'Patient Monitor',accent:'var(--peri)',tag:'Live',href:'/bhw-patient-monitor-list.html',
-   desc:'Live roster of who is checking in and active today — click any patient to open their monitor: activity, next-recheck, vitals, labs and care flags on one screen.',
-   icon:'<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/><path d="M6.5 10l2.5 2 2-4 2 5 1.5-3H18"/>'},
-  {name:'Patient Materials & Feedback',accent:'var(--teal)',tag:'Live',href:'/bhw-patient-materials.html',
-   desc:'Privately upload an individualized PDF or HTML, choose what the patient should complete, generate an expiring link, and review the response.',
-   icon:'<path d="M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M14 3v5h5"/><path d="M8 12h8M8 16h5"/><path d="M3 17l2 2 4-5"/>'},
-  {name:'Medication Request Links',accent:'var(--clay)',tag:'Shadow',href:'/bhw-medication-request-links.html',
-   desc:'Generate a private medication-intake link, record how it was sent, and review the patient-reported medication, pharmacy, refill, question, or side-effect details.',
-   icon:'<path d="M10 5.5l8.5 8.5a4 4 0 0 1-5.7 5.7L4.3 11.2A4 4 0 0 1 10 5.5z"/><path d="M8 8l8 8"/><path d="M5.5 13.5l8-8"/>'},
-  {name:'Medicare (DPC)',accent:'var(--peri)',tag:'Setup',href:'/bhw-dpc.html',
-   desc:'Check the CMS Data at the Point of Care connection and read each patient’s last Annual Wellness Visit from Medicare claims.',
-   icon:'<path d="M3 12h4l2 5 4-10 2 5h6"/>'},
-  {name:'Visit Documentation Assistance',accent:'var(--gold)',tag:'Live',href:'/provider/workflow.html',
-   desc:'Capture, documentation review, coding intelligence, and provider approval for the encounter before claim processing.',
-   icon:'<path d="M3 9h18M7 15h2m4 0h4"/><rect x="3" y="4" width="18" height="16" rx="2.5"/>'},
-  {name:'CRISP Flow',accent:'var(--peri)',tag:'Live',href:'/provider/tcm.html',
-   desc:'Authenticated hospital and ambulatory follow-through with Care Management contact and visit updates in one shared view.',
-   icon:'<path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/><path d="M16 16l2 2 3-4"/>'},
-  {name:'Send a Fax',accent:'var(--teal)',tag:'Live',href:'/bhw-fax.html',
-   desc:'Fax any PDF out through Dialpad — pick a document, enter the number (or look up a patient), and send from the practice line. For documents made outside the studios.',
-   icon:'<path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="8" rx="2"/><path d="M8 17v4h8v-4"/><path d="M16 13h.01"/>'},
-];
-document.getElementById('tools').innerHTML=TOOLS.map(function(t){
-  var inner='<div class="tico" style="--accent:'+t.accent+'"><svg viewBox="0 0 24 24">'+t.icon+'</svg></div>'+
-    '<div class="tbody"><h3>'+t.name+' <span class="tag'+(t.tag==='Soon'?' soon':'')+'">'+t.tag+'</span></h3>'+
-    '<p>'+t.desc+'</p>'+
-    (t.href?'<span class="go">Open <span class="arrow">→</span></span>':'<span class="go" style="opacity:.7">Not yet live</span>')+'</div>';
-  return t.href
-    ? '<a class="tool" style="--accent:'+t.accent+'" href="'+t.href+'"'+(t.external?' target="_blank" rel="noopener"':'')+'>'+inner+'</a>'
-    : '<div class="tool locked" style="--accent:'+t.accent+'">'+inner+'</div>';
-}).join('');
-
-/* brand family strip */
-const FAMILY=[
-  {name:'The Foundation',logo:'/assets/brand/foundation-dark.png',dark:true},
-  {name:'BHW Medical',logo:'/assets/brand/bhw-medical.png'},
-  {name:'Baltimore Healthcare & Wellness',logo:'/assets/brand/bhw-wellness.png'},
-  {name:'CharmEd Minds',logo:'/assets/brand/charmed-minds.png',dark:true},
-  {name:'Flow — Vascular Stabilization',logo:'/assets/brand/flow.png'},
-  {name:'Mind & Mood Recovery',logo:'/assets/brand/mind-mood.png'},
-];
-document.getElementById('family').innerHTML=FAMILY.map(f=>
-  `<div class="fam${f.dark?' dark':''}" title="${f.name}"><img src="${f.logo}" alt="${f.name}" loading="lazy" onerror="this.parentElement.innerHTML='<span style=&quot;color:var(--ink-soft);font-size:12px;font-weight:600&quot;>${f.name}</span>'"></div>`
-).join('');
-</script>
+      </svg><div class="wm">BHW <span class="accent">HQ</span></div></a>
+  <nav class="workspace-links" aria-label="BHW workspaces">
+    <a class="current" href="/hq.html" aria-current="page">Crew home</a><a href="/crewos">crewOS ↗</a>
+    <a href="https://rcm.bhwmedical.org" target="_blank" rel="noopener noreferrer">BHW RCM ↗</a>
+    <a href="https://bhw-health-core-ehr-awknhudemq-uk.a.run.app/clinical-access.html" target="_blank" rel="noopener noreferrer">Health Core ↗</a>
+    <a href="https://bhw-health-core-ehr-awknhudemq-uk.a.run.app/provider-360.html" target="_blank" rel="noopener noreferrer">Provider 360 resources ↗</a>
+  </nav>
+  <div class="top-right"><button class="theme-tog" id="themeBtn" type="button" aria-label="Switch theme"><span class="dot"></span><span class="lbl-dark">Black Opal</span><span class="lbl-light">Light Opal</span></button><a class="btn btn-primary" id="signIn" href="/crewos?next=%2Fhq.html">Sign in →</a></div>
+</div></header>
+<main class="home" id="crewHome">
+  <div class="home-heading"><div><h1>Your crew. <span>One place.</span></h1><p id="personScope">Your updates, your handoffs, and the tools for your day.</p></div><label class="tool-search"><span aria-hidden="true">⌕</span><input id="toolSearch" type="search" aria-label="Search all CrewHQ tools" placeholder="Find a tool…"></label></div>
+  <p class="home-status" id="homeStatus" role="status">Sign in to see your personal work.</p>
+  <section aria-labelledby="updatesTitle"><div class="section-heading"><h2 id="updatesTitle">Care &amp; myBHW updates</h2><button class="refresh" id="refreshHome" type="button" hidden>Refresh</button></div>
+    <div class="update-grid">
+      <article class="update"><h3>Care-plan replies <span class="update-count" id="careCount" aria-label="Care-plan responses needing review">—</span></h3><p id="careStatus">Sign in to see responses relevant to you.</p><a href="/bhw-patient-materials.html">Review replies →</a><details id="careDetails" hidden><summary>Recent responses</summary><ul id="careItems"></ul></details></article>
+      <article class="update portal"><h3>myBHW updates <span class="update-count" id="portalCount" aria-label="myBHW unread messages">—</span></h3><p id="portalStatus">Sign in to see your messaging availability.</p><a href="/bhw-portal-messages.html">Review myBHW →</a><details id="portalDetails" hidden><summary>Recent messages</summary><ul id="portalItems"></ul></details></article>
+    </div><p class="scope">Care plans &amp; myBHW only · FrontdeskOS communications stay separate.</p>
+  </section>
+  <section class="handoffs" aria-labelledby="handoffsTitle"><div class="section-heading"><h2 id="handoffsTitle">My handoffs &amp; referrals</h2><small>My assignments · My area · Sent by me</small></div><p class="state-note" id="handoffStatus">Sign in to see your handoffs and referrals.</p><div class="list" id="handoffItems"></div><details class="closed" id="closedDetails" hidden><summary>Recently closed</summary><div id="closedItems"></div></details></section>
+  <section class="shortcuts" aria-labelledby="shortcutsTitle"><div class="section-heading"><h2 id="shortcutsTitle">Start here</h2><small>Your everyday shortcuts</small></div><div class="shortcut-grid"><a class="shortcut" href="/provider/patient-registry.html">Find a patient</a><a class="shortcut" href="#handoffsTitle">My handoffs</a><a class="shortcut" href="/bhw-paperwork.html">Prepare paperwork</a><a class="shortcut" href="/provider/workflow.html">Visit documentation</a></div></section>
+  <section class="directory" aria-labelledby="toolsTitle"><div class="section-heading"><h2 id="toolsTitle">All tools</h2><small id="toolCount"></small></div><div class="groups" id="toolGroups" role="group" aria-label="Tool groups"></div><div id="toolList"></div></section>
+  <section class="personal" aria-labelledby="goalsTitle"><div class="section-heading"><h2 id="goalsTitle">My goals &amp; progress</h2><small>Personal measures · Recorded work</small></div><p class="state-note" id="metricStatus">Sign in to see measures for your role.</p><div class="measure-grid" id="measureItems"></div><div class="goals" id="goalItems"></div></section>
+</main>
+<footer class="home-footer"><div><strong>BHW Medical Group</strong> · The Foundation · Baltimore</div><details><summary>Our programs</summary><p>BHW Medical · Baltimore Healthcare &amp; Wellness · CharmEd Minds · Flow · Mind &amp; Mood Recovery</p></details><a href="https://welcometobhw.netlify.app" target="_blank" rel="noopener noreferrer">Onboarding &amp; training ↗</a></footer>
+<script type="module" src="/hq-home.mjs?v=home-20261027"></script>
 <script src="/staff-chat-launcher.js" defer></script>
 </body>
 </html>

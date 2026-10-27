@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const staff = fs.readFileSync(path.join(root, "bhw-medication-request-links.html"), "utf8");
 const patient = fs.readFileSync(path.join(root, "bhw-medication-request.html"), "utf8");
-const hq = fs.readFileSync(path.join(root, "hq.html"), "utf8");
+const hq = fs.readFileSync(path.join(root, "hq-home.mjs"), "utf8");
 
 function compileInline(html, name) {
   const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].map((match) => match[1].trim()).filter(Boolean);
@@ -17,7 +17,7 @@ function compileInline(html, name) {
 
 test("CrewHQ exposes the dedicated medication request link workflow", () => {
   assert.match(hq, /Medication Request Links/);
-  assert.match(hq, /href:'\/bhw-medication-request-links\.html'/);
+  assert.match(hq, /'\/bhw-medication-request-links\.html'/);
   assert.match(staff, /\.netlify\/functions\/patient-registry/);
   assert.match(staff, /bhwPatientId:'BHW0000'/);
   assert.match(staff, /TEST ONLY/);

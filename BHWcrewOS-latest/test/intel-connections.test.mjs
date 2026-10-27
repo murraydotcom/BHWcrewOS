@@ -94,7 +94,7 @@ test("after cutover the report reads CrewHQ Database and never calls Notion", as
 test("BHW Intel page is session-gated and linked from CrewHQ", async () => {
   const [page, hq, source] = await Promise.all([
     readFile(new URL("../bhw-intel-connections.html", import.meta.url), "utf8"),
-    readFile(new URL("../hq.html", import.meta.url), "utf8"),
+    readFile(new URL("../hq-home.mjs", import.meta.url), "utf8"),
     readFile(new URL("../netlify/functions/intel-connections.js", import.meta.url), "utf8"),
   ]);
   assert.match(page, /crew-provider-gate\.js/);
@@ -102,7 +102,7 @@ test("BHW Intel page is session-gated and linked from CrewHQ", async () => {
   assert.match(page, /DISCONNECT NOTION/);
   assert.match(page, /notion-cutover/);
   assert.match(page, /patient rows read/);
-  assert.match(hq, /Notion Connections/);
+  assert.match(hq, /Practice Connections & Resources/);
   assert.match(hq, /bhw-intel-connections\.html/);
   assert.match(source, /Administrator access is required/);
   assert.doesNotMatch(source, /queryDb\(LEGACY_WORKFLOW_DB/);
