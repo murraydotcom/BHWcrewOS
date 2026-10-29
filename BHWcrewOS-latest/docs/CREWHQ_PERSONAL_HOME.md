@@ -14,6 +14,8 @@ The landing page at `/` and `/hq.html` uses the approved compact layout while re
 
 Lists are bounded by their source windows (500 per Operations source, 100 recent patient-content responses, and the existing portal inbox page). A reached boundary is labeled as recent/window-limited work. Counts are not represented as complete historical performance totals. The page refreshes while visible every two minutes and supports manual refresh.
 
+The session-expiry timer uses the signed session's actual expiry, independently of the refresh interval. A slow poll keeps the existing identity visible while it is in flight; an expired session, changed identity, or failed refresh still clears personal data.
+
 FrontdeskOS phone/SMS/fax/email/general intake is not included in these home notification blocks. The existing Patient Requests tool remains in the searchable directory.
 
 ## Navigation
