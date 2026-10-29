@@ -1,6 +1,6 @@
 // Read-only, identity-scoped projection of existing records. No new queue,
 // patient writes, clinical activation, or outbound notifications.
-const { getSession, json, DB, P, normalizeDivision } = require('./_lib');
+const { getSession, json, DB, P, DIVISIONS, normalizeDivision } = require('./_lib');
 const { operationsRequest } = require('./lib/operations-cloud');
 const { queryOperational } = require('./lib/operational-store');
 const { careCloudToken, medicationApiBase } = require('./lib/care-cloud-auth');
@@ -24,11 +24,15 @@ function related(r, actor, roleRelevant, { outgoing = false } = {}) {
   if (outgoing && owns(r.createdBy, actor)) return true;
   // A legacy name alone is not a verified personal assignment.
   if (clean(r.assignedToName)) return false;
+  // "All" is an existing staff-area setting, not a division name. Expand it
+  // only for area matching; personal assignments and role routing still apply.
+  const areaActor = actor.divisions.some(d => ['All','All Divisions'].includes(d))
+    ? { ...actor, divisions: DIVISIONS } : actor;
   if (kind(r)) {
     const division = normalizeDivision(r.workflowContext?.toDivision);
-    if (!division || !actor.divisions.includes(division)) return false;
+    if (!division || !areaActor.divisions.includes(division)) return false;
   }
-  return roleRelevant(r, actor);
+  return roleRelevant(r, areaActor);
 }
 function handoff(r, actor) {
   const context = r.workflowContext || {};
