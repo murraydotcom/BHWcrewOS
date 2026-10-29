@@ -11,7 +11,7 @@ const request=(id,extra={})=>({id,source:'crewos',workflowContext:{kind:'handoff
 const event={httpMethod:'GET',headers:{}};
 function handler({rows=[],projects=[],portal={statusCode:503,body:'{}'},...overrides}={}){
  return createHomeHandler({sessionImpl:()=>actor,now:()=>time,operationsImpl:async url=>({requests:rows.filter(r=>r.source===new URL('https://example.test'+url).searchParams.get('source'))}),
-  queryImpl:async()=>projects,portalImpl:async()=>portal,fetchImpl:async()=>Response.json({submissions:[]}),...overrides});
+  queryImpl:async()=>projects,portalImpl:async()=>portal,fetchImpl:async()=>Response.json({submissions:[],assignments:[]}),...overrides});
 }
 test('anonymous and forged/expired sessions receive no home data or downstream calls',async()=>{
  let calls=0;const h=handler({sessionImpl:()=>null,operationsImpl:async()=>{calls++;}});
@@ -38,7 +38,8 @@ test('care replies require current protected source status and exact identity or
  try{const rows=[request('content-own',{source:'patient-content-html',workflowContext:{},assignedTeam:'clinical',assignedTo:'crew:synthetic-a',sourceReference:'submission-a',summary:'DO NOT COPY'}),
   request('content-other',{source:'patient-content-html',workflowContext:{},assignedTeam:'clinical',assignedTo:'crew:synthetic-b',sourceReference:'submission-b'}),
   request('content-reviewed',{source:'patient-content-html',workflowContext:{},assignedTeam:'clinical',assignedTo:'crew:synthetic-a',sourceReference:'submission-c'})];
- const h=handler({rows,fetchImpl:async()=>Response.json({submissions:[{id:'submission-a',status:'new',feedback:'SECRET ANSWER'},{id:'submission-b',status:'new'},{id:'submission-c',status:'reviewed'}]})});
+ const h=handler({rows,fetchImpl:async url=>Response.json(url.includes('/content-assignments?')?{assignments:[{id:'assignment-b',createdBy:'crew:synthetic-b'}]}:
+  {submissions:[{id:'submission-a',status:'new',feedback:'SECRET ANSWER'},{id:'submission-b',assignmentId:'assignment-b',status:'new'},{id:'submission-c',status:'reviewed'}]})});
  const r=await h(event);const d=JSON.parse(r.body);assert.equal(d.notifications.care.count,1);assert.equal(d.notifications.care.items[0].id,'content-own');
  assert(!r.body.includes('SECRET ANSWER'));assert(!r.body.includes('DO NOT COPY'));
  }finally{if(old===undefined)delete process.env.CREWHQ_CARE_TOKEN_SECRET;else process.env.CREWHQ_CARE_TOKEN_SECRET=old;}
@@ -82,12 +83,48 @@ test('metrics attribute completions to stable staff identity and require dates f
 });
 test('new source replies enter the established role queue without creating or syncing records',async()=>{
  const old=process.env.CREWHQ_CARE_TOKEN_SECRET;process.env.CREWHQ_CARE_TOKEN_SECRET='synthetic-test-only';
- try{const calls=[];const h=handler({operationsImpl:async(url,options)=>{calls.push(options.method||'GET');return {requests:[]};},fetchImpl:async()=>Response.json({submissions:[
+ try{const calls=[];const h=handler({operationsImpl:async(url,options)=>{calls.push(options.method||'GET');return {requests:[]};},fetchImpl:async url=>Response.json(url.includes('/content-assignments?')?{assignments:[{id:'assignment-other',createdBy:'crew:synthetic-b'}]}:{submissions:[
   {id:'submission-new',status:'new',contentPath:'/bhw-patient-material-viewer.html',submittedAt:'2026-10-27T15:00:00Z'},
   {id:'submission-med',status:'new',contentPath:'/bhw-medication-request.html'},
-  {id:'submission-other',status:'new',assignedTo:'crew:synthetic-b'}]})});
+  {id:'submission-other',assignmentId:'assignment-other',status:'new',assignedTo:'crew:synthetic-b'}]})});
  const d=JSON.parse((await h(event)).body);assert.equal(d.notifications.care.count,1);assert.equal(d.notifications.care.items[0].scope,'Your role’s review queue');
  assert(calls.every(method=>method==='GET'));
+ }finally{if(old===undefined)delete process.env.CREWHQ_CARE_TOKEN_SECRET;else process.env.CREWHQ_CARE_TOKEN_SECRET=old;}
+});
+
+test('replies to my sent items appear without claiming another staff member’s review',async()=>{
+ const old=process.env.CREWHQ_CARE_TOKEN_SECRET;process.env.CREWHQ_CARE_TOKEN_SECRET='synthetic-test-only';
+ try{
+  const submissions=[{id:'reply-sent-by-me',assignmentId:'assignment-mine',status:'new'},
+   {id:'reply-creator-fallback',assignmentId:'assignment-created',status:'follow_up'},
+   {id:'reply-sent-by-other',assignmentId:'assignment-other',status:'new'},
+   {id:'reply-already-reviewed',assignmentId:'assignment-mine',status:'reviewed'},
+   {id:'reply-medication',assignmentId:'assignment-mine',status:'new',contentPath:'/bhw-medication-request.html'}];
+  const assignments=[{id:'assignment-mine',sentBy:'crew:synthetic-a',createdBy:'crew:synthetic-b'},
+   {id:'assignment-created',createdBy:'synthetic-a'},
+   {id:'assignment-other',sentBy:'synthetic-b',createdBy:'synthetic-a'}];
+  const rows=[request('review-owned-by-other',{source:'patient-content-html',sourceReference:'reply-sent-by-me',assignedTo:'crew:synthetic-b',workflowContext:{}})];
+  const calls=[];
+  const d=JSON.parse((await handler({rows,sessionImpl:()=>({...actor,role:'CRNP'}),fetchImpl:async(url,options)=>{
+   calls.push(options.method||'GET');return Response.json(url.includes('/content-assignments?')?{assignments}:{submissions});}})(event)).body);
+  assert.equal(d.notifications.care.count,2);
+  assert.deepEqual(d.notifications.care.items.map(i=>i.id),['review-owned-by-other','reply-creator-fallback']);
+  assert(d.notifications.care.items.every(i=>i.scope==='Reply to an item you sent'));
+  assert(calls.every(method=>method==='GET'));
+ }finally{if(old===undefined)delete process.env.CREWHQ_CARE_TOKEN_SECRET;else process.env.CREWHQ_CARE_TOKEN_SECRET=old;}
+});
+
+test('missing sender metadata never becomes a misleading zero for provider replies',async()=>{
+ const old=process.env.CREWHQ_CARE_TOKEN_SECRET;process.env.CREWHQ_CARE_TOKEN_SECRET='synthetic-test-only';
+ try{
+  for(const failLookup of [true,false]){
+   const d=JSON.parse((await handler({sessionImpl:()=>({...actor,role:'CRNP'}),fetchImpl:async url=>{
+    if(url.includes('/content-assignments?')){if(failLookup)throw Error('Private service error');return Response.json({assignments:[]});}
+    return Response.json({submissions:[{id:'reply-with-unknown-sender',assignmentId:'missing-assignment',status:'new'}]});}})(event)).body);
+   assert.equal(d.notifications.care.available,false);assert.equal(d.notifications.care.count,null);
+   assert.match(d.notifications.care.message,/senders could not be verified/);
+   assert(!JSON.stringify(d).includes('Private service error'));
+  }
  }finally{if(old===undefined)delete process.env.CREWHQ_CARE_TOKEN_SECRET;else process.env.CREWHQ_CARE_TOKEN_SECRET=old;}
 });
 test('only projects assigned to exact staff identity appear as personal goals',async()=>{
