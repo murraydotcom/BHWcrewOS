@@ -87,7 +87,11 @@ function createHomeHandler({ sessionImpl=getSession, operationsImpl=operationsRe
       (async()=>{const r=await fetchImpl(`${medicationApiBase()}/v1/staff/content-submissions?limit=100`,{
         headers:{Authorization:`Bearer ${careCloudToken(session)}`},redirect:'error',signal:AbortSignal.timeout(8000)});
         if(!r.ok) throw Error('Patient responses unavailable'); const data=await r.json();
-        if(!Array.isArray(data.submissions)) throw Error('Invalid response list');return data.submissions;})()]);
+        if(!Array.isArray(data.submissions)) throw Error('Invalid response list');return data.submissions;})(),
+      (async()=>{const r=await fetchImpl(`${medicationApiBase()}/v1/staff/content-assignments?limit=200`,{
+        headers:{Authorization:`Bearer ${careCloudToken(session)}`},redirect:'error',signal:AbortSignal.timeout(8000)});
+        if(!r.ok) throw Error('Response senders unavailable');const data=await r.json();
+        if(!Array.isArray(data.assignments)) throw Error('Invalid assignment list');return data.assignments;})()]);
     const records = i => {
       const value=settled[i]; if(value.status!=='fulfilled') return null;
       const list=value.value?.requests || value.value?.patientRequests;
@@ -104,22 +108,32 @@ function createHomeHandler({ sessionImpl=getSession, operationsImpl=operationsRe
     let care=unavailable('Care-plan responses could not be verified. Open Patient Materials & Feedback.');
     if(responseRows && contentResult.status==='fulfilled') {
       const routed=new Map(responseRows.map(r=>[clean(r.sourceReference || r.sourceMetadata?.sourceRecordId,128),r]));
+      // The protected service records the actual sending staff ID separately
+      // from the creator. Never infer a sender from a name or patient identity.
+      const assignmentResult=settled[6];
+      const assignments=new Map((assignmentResult.status==='fulfilled'?assignmentResult.value:[]).map(a=>[clean(a.id,128),a]));
+      let senderUnknown=false;
       // Use fresh source responses without creating projection records. Unassigned
       // material responses use the same clinical-review role queue as the existing
       // projectPatientContent workflow; an existing exact assignment wins.
       const matches=contentResult.value.filter(s=>!['reviewed','closed'].includes(s.status) && s.contentPath!=='/bhw-medication-request.html')
         .map(s=>{const id=clean(s.id || s.submissionId,128);if(!/^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/.test(id))return null;
-          if(routed.has(id)) return routed.get(id);
-          if(responseRows.length>=500 && !clean(s.assignedTo || s.assignedToId)) return null;
-          return {id,source:'patient-content-html',requestType:'clinical_review',assignedTeam:'clinical',
+          const assignment=assignments.get(clean(s.assignmentId,128));
+          const sent=Boolean(assignment && owns(assignment.sentBy || assignment.createdBy,actor));
+          if(routed.has(id))return {row:routed.get(id),sent,knownSender:Boolean(assignment)};
+          if(responseRows.length>=500 && !clean(s.assignedTo || s.assignedToId) && !sent){senderUnknown=true;return null;}
+          return {sent,knownSender:Boolean(assignment),row:{id,source:'patient-content-html',requestType:'clinical_review',assignedTeam:'clinical',
             assignedTo:clean(s.assignedTo || s.assignedToId),assignedToName:clean(s.assignedToName),
             priority:s.priority==='same_day_review'?'time-sensitive':'routine',statusCategory:'received',
-            updatedAt:clean(s.submittedAt || s.createdAt,40)};})
-        .filter(r=>r && related(r,actor,isRoleRelevantRequest));
-      care={available:true,count:matches.length,items:matches.slice(0,10).map(r=>({id:idOf(r),label:'Patient material / care-plan response',
-        scope:owns(r.assignedTo||r.assignedToId,actor)?'Assigned to you':'Your role’s review queue',at:clean(r.updatedAt,40),
+            updatedAt:clean(s.submittedAt || s.createdAt,40)}};})
+        .filter(item=>{if(!item)return false;const included=item.sent || related(item.row,actor,isRoleRelevantRequest);
+          if(!included && !item.knownSender)senderUnknown=true;return included;});
+      care={available:!senderUnknown,count:senderUnknown?null:matches.length,items:matches.slice(0,10).map(({row:r,sent})=>({id:idOf(r),label:'Patient material / care-plan response',
+        scope:owns(r.assignedTo||r.assignedToId,actor)?'Assigned to you':sent?'Reply to an item you sent':'Your role’s review queue',at:clean(r.updatedAt,40),
         href:'/bhw-patient-materials.html'})),
-        message:'Responses needing review · your assignments and role queue',limited:responseRows.length>=500 || contentResult.value.length>=100};
+        message:senderUnknown?'Some response senders could not be verified. Known replies are shown; refresh or open Patient Materials & Feedback.'
+          :'Responses needing review · your assignments, items you sent, and role queue',
+        limited:responseRows.length>=500 || contentResult.value.length>=100 || assignments.size>=200};
     }
     let portal=unavailable('myBHW messaging is not available for this staff session.');
     const portalResult=settled[4];
