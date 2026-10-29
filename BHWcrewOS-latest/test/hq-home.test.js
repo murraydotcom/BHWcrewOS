@@ -42,6 +42,20 @@ test('care replies require current protected source status and exact identity or
  assert(!r.body.includes('SECRET ANSWER'));assert(!r.body.includes('DO NOT COPY'));
  }finally{if(old===undefined)delete process.env.CREWHQ_CARE_TOKEN_SECRET;else process.env.CREWHQ_CARE_TOKEN_SECRET=old;}
 });
+
+test('all-area staff retain role filtering and exact assignment ownership',async()=>{
+ const rows=[request('provider-attention',{requestType:'clinical_review',assignedTeam:'provider_review',status:'waiting_on_clinician'}),
+  request('routine-team'),request('other-owner',{assignedTo:'crew:synthetic-b',assignedTeam:'provider_review',status:'waiting_on_clinician'}),
+  request('unknown-area',{assignedTeam:'provider_review',status:'waiting_on_clinician',workflowContext:{kind:'handoff',toDivision:'Unknown'}})];
+ for(const all of ['All','All Divisions']){
+  const provider={...actor,role:'CRNP',divisions:[all]};
+  const d=JSON.parse((await handler({rows,sessionImpl:()=>provider})(event)).body);
+  assert.deepEqual(d.handoffs.items.map(r=>r.id),['provider-attention']);
+  assert.deepEqual(d.user.divisions,[all]);
+  const care=JSON.parse((await handler({rows,sessionImpl:()=>({...actor,divisions:[all]})})(event)).body);
+  assert.deepEqual(new Set(care.handoffs.items.map(r=>r.id)),new Set(['provider-attention','routine-team']));
+ }
+});
 test('myBHW uses existing inbox grants, shows own unread threads, and preserves pilot status',async()=>{
  const h=handler({portal:{statusCode:200,body:JSON.stringify({ok:true,actor:{id:'granted-staff-a'},threads:[
   {id:'thread-own',assignedTo:'granted-staff-a',unreadCount:2,subject:'PRIVATE SUBJECT'},
