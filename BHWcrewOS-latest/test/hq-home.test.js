@@ -2,6 +2,7 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
+const vm=require('node:vm');
 const {createHomeHandler,personalMetrics}=require('../netlify/functions/hq-home')._test;
 const actor={staffId:'synthetic-a',name:'Synthetic staff',role:'care-manager',divisions:['Care Management']};
 const time=Date.parse('2026-10-27T16:00:00Z');
@@ -104,4 +105,36 @@ test('approved layout keeps original palette and resource links without mockup d
  assert.match(html,/clinical-access\.html/);assert.match(html,/provider-360\.html/);assert.match(html,/FrontdeskOS communications stay separate/);
  assert(html.indexOf('id="goalsTitle"')>html.indexOf('id="toolsTitle"'));
  assert(!/Demo patient|Preview role|Work requests/.test(html+js));assert.match(js,/cache:'no-store'/);
+});
+
+test('a slow two-minute refresh keeps the current person visible until actual session expiry',async()=>{
+ let clock=Date.parse('2026-10-29T04:00:00Z'),sequence=0,resolveRefresh,calls=0;
+ const expires=clock+3600000,timers=new Map(),nodes=new Map();
+ function node(){return {value:'',textContent:'',children:[],hidden:false,disabled:false,
+  append(...children){this.children.push(...children);},replaceChildren(...children){this.children=children;},
+  setAttribute(){},addEventListener(){}};}
+ const get=id=>{if(!nodes.has(id))nodes.set(id,node());return nodes.get(id);};
+ const data={ok:true,user:{name:'Synthetic provider',role:'CRNP',divisions:['All']},checkedAt:new Date(clock).toISOString(),
+  notifications:{care:{available:true,count:0,message:'No replies',items:[]},portal:{available:false,message:'Pilot disabled',items:[]}},
+  handoffs:{available:true,items:[],recentClosed:[]},metrics:{available:true,period:'Last 7 days',items:[]},goals:{available:true,items:[]}};
+ const schedule=(fn,ms,repeat=false)=>{const id=++sequence;timers.set(id,{fn,at:clock+ms,ms,repeat});return id;};
+ const token=Buffer.from(JSON.stringify({exp:expires})).toString('base64url')+'.synthetic';
+ const context=vm.createContext({document:{getElementById:get,createElement:node,hidden:false,addEventListener(){},documentElement:{dataset:{theme:'dark'}}},
+  window:{addEventListener(){}},sessionStorage:{getItem:()=>token},localStorage:{setItem(){}},
+  Date:class extends Date{static now(){return clock;}},atob:s=>Buffer.from(s,'base64').toString(),AbortSignal,
+  setTimeout:(fn,ms)=>schedule(fn,ms),clearTimeout:id=>timers.delete(id),setInterval:(fn,ms)=>schedule(fn,ms,true),clearInterval:id=>timers.delete(id),
+  fetch:async()=>{calls++;if(clock>=expires)return Response.json({error:'expired'},{status:401});
+   if(calls===2)return new Promise(resolve=>{resolveRefresh=()=>resolve(Response.json(data));});return Response.json(data);}});
+ vm.runInContext(fs.readFileSync(path.join(__dirname,'../hq-home.mjs'),'utf8'),context);
+ const flush=()=>new Promise(resolve=>setImmediate(resolve));await flush();
+ assert.match(get('personScope').textContent,/Synthetic provider/);
+ clock+=120000;
+ for(const [id,t] of [...timers])if(t.at<=clock){if(t.repeat)t.at+=t.ms;else timers.delete(id);t.fn();}
+ await flush();assert.equal(calls,2);
+ assert.match(get('personScope').textContent,/Synthetic provider/,'in-flight refresh must not blank the current identity');
+ resolveRefresh();await flush();assert.match(get('personScope').textContent,/Synthetic provider/);
+ clock=expires;
+ for(const [id,t] of [...timers])if(t.at<=clock){if(t.repeat)t.at+=t.ms;else timers.delete(id);t.fn();}
+ await flush();assert.doesNotMatch(get('personScope').textContent,/Synthetic provider/);
+ assert.equal(get('careCount').textContent,'—');
 });

@@ -82,7 +82,9 @@ async function refresh(){const currentToken=token();if(currentToken!==actorToken
     if(response.status===401){clearPersonal('Your staff session expired. Sign in again.');return;}
     if(!response.ok||data?.ok!==true)throw Error('Home unavailable');renderHome(data);
     // The decoded expiry schedules clearing only. The server validates all identity and access.
-    let expires=Date.now()+120000;try{const p=JSON.parse(atob(currentToken.split('.')[0].replace(/-/g,'+').replace(/_/g,'/')));expires=Math.min(Number(p.exp)||expires,expires);}catch{}
+    // Refreshing data and expiring a session are separate clocks. Clearing at
+    // the polling interval can invalidate a refresh that is already in flight.
+    let expires=Date.now()+120000;try{const p=JSON.parse(atob(currentToken.split('.')[0].replace(/-/g,'+').replace(/_/g,'/')));expires=Number(p.exp)||expires;}catch{}
     clearTimeout(expiryTimer);expiryTimer=setTimeout(()=>{clearPersonal('Refresh or sign in to load your personal work.');void refresh();},Math.max(0,expires-Date.now()));
   }catch{if(version===generation&&currentToken===token()){clearPersonal('Personal work could not be refreshed. Open crewOS or try again.');$('refreshHome').hidden=false;}}
   finally{loading=false;$('refreshHome').disabled=false;}
