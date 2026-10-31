@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>CharmEd Minds | Neurodivergence Self-Reflection Workbook</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/charmed-minds-design-system-3ab9ff11-c447-4fdd-a1c0-e44555bf08f1/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/charmed-minds-design-system-3ab9ff11-c447-4fdd-a1c0-e44555bf08f1/tokens/colors.css">
+<link rel="stylesheet" href="_ds/charmed-minds-design-system-3ab9ff11-c447-4fdd-a1c0-e44555bf08f1/tokens/typography.css">
+<link rel="stylesheet" href="_ds/charmed-minds-design-system-3ab9ff11-c447-4fdd-a1c0-e44555bf08f1/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/charmed-minds-design-system-3ab9ff11-c447-4fdd-a1c0-e44555bf08f1/tokens/elevation.css">
+<link rel="stylesheet" href="_ds/charmed-minds-design-system-3ab9ff11-c447-4fdd-a1c0-e44555bf08f1/tokens/motion.css">
+<link rel="stylesheet" href="_ds/charmed-minds-design-system-3ab9ff11-c447-4fdd-a1c0-e44555bf08f1/tokens/base.css">
+<link rel="stylesheet" href="_ds/charmed-minds-design-system-3ab9ff11-c447-4fdd-a1c0-e44555bf08f1/styles.css">
+<script src="_ds/charmed-minds-design-system-3ab9ff11-c447-4fdd-a1c0-e44555bf08f1/_ds_bundle.js"></script>
+<script src="./workbook-data.js"></script>
+<script src="./workbook-bands.js"></script>
+<style>
+body{margin:0;background:#020b1c}
+a{color:var(--teal-500,#1f99a2);text-decoration:none}
+a:hover{color:var(--gold-500,#f0a828)}
+*{-webkit-tap-highlight-color:transparent}
+</style>
+</helmet>
+
+<div style="min-height:100vh;box-sizing:border-box;padding:56px 24px 72px;background:radial-gradient(900px 520px at 12% -6%, rgba(31,153,162,.30), transparent 60%), radial-gradient(760px 480px at 92% -10%, rgba(240,168,40,.22), transparent 62%), #04122d">
+<div style="max-width:860px;margin:0 auto">
+
+<div style="font:600 10px/1 var(--font-body,'Instrument Sans',sans-serif);letter-spacing:.22em;color:var(--teal-400,#4cc2c9);text-transform:uppercase">CharmEd Minds · BHW Medical Group</div>
+<h1 style="font:200 clamp(30px,5vw,46px)/1.1 var(--font-display,'Sora',sans-serif);letter-spacing:-.03em;color:#fefcf7;margin:16px 0 14px;text-wrap:pretty">Self-reflection workbook, by age.</h1>
+<p style="max-width:56ch;font:400 16px/1.62 var(--font-body,'Instrument Sans',sans-serif);color:rgba(254,252,247,.72);margin:0 0 12px;text-wrap:pretty">Seven versions of the same workbook. The questions, the reading level, the rating scales, and which pages appear all change with the band. Under 6, a parent or guardian answers as an interview about their child.</p>
+<p style="max-width:56ch;font:400 15px/1.6 var(--font-body,'Instrument Sans',sans-serif);color:rgba(254,252,247,.55);margin:0 0 34px">Each version saves separately on the device, and none of them expects to be finished in one sitting.</p>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:14px">
+<sc-for list="{{ bands }}" as="b" hint-placeholder-count="7">
+<a href="{{ b.href }}" style="display:block;border-radius:22px;border:1px solid rgba(254,252,247,.14);background:rgba(254,252,247,.045);padding:22px 22px 20px;transition:background .18s cubic-bezier(.2,.7,.3,1),transform .18s cubic-bezier(.2,.7,.3,1)" style-hover="background:rgba(254,252,247,.075);transform:translateY(-3px);box-shadow:0 0 0 1px rgba(31,153,162,.35),0 16px 36px rgba(31,153,162,.16)">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:0 0 10px">
+<span style="font:300 24px/1.1 var(--font-display,'Sora',sans-serif);letter-spacing:-.02em;color:#fefcf7">{{ b.label }}</span>
+<span style="font:500 11px/1 var(--font-mono,'IBM Plex Mono',monospace);color:var(--gold-500,#f0a828)">{{ b.count }}</span>
+</div>
+<div style="font:500 12px/1.4 var(--font-body,'Instrument Sans',sans-serif);color:var(--teal-400,#4cc2c9);margin:0 0 10px">{{ b.audience }}</div>
+<div style="font:400 13px/1.55 var(--font-body,'Instrument Sans',sans-serif);color:rgba(254,252,247,.6);margin:0 0 14px">{{ b.scaleNote }}</div>
+<div style="font:600 10px/1 var(--font-body,'Instrument Sans',sans-serif);letter-spacing:.16em;text-transform:uppercase;color:rgba(254,252,247,.5)">Open →</div>
+</a>
+</sc-for>
+</div>
+
+<div style="margin:34px 0 0;padding:20px 22px;border-radius:20px;border:1px solid rgba(254,252,247,.12)">
+<div style="font:600 10px/1 var(--font-body,'Instrument Sans',sans-serif);letter-spacing:.16em;text-transform:uppercase;color:rgba(254,252,247,.5);margin:0 0 10px">Print version</div>
+<div style="font:400 14px/1.6 var(--font-body,'Instrument Sans',sans-serif);color:rgba(254,252,247,.7)">The full 29-form printable workbook is still available: <a href="Neurodivergence%20Self-Reflection%20Workbook.dc.html">Neurodivergence Self-Reflection Workbook</a>. Age-specific print versions are not built yet.</div>
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const FILES = {
+  "0-5": "Workbook App 0-5.dc.html",
+  "6-7": "Workbook App 6-7.dc.html",
+  "8-12": "Workbook App 8-12.dc.html",
+  "13-18": "Workbook App 13-18.dc.html",
+  "19-29": "Workbook App 19-29.dc.html",
+  "30-54": "Workbook App 30-54.dc.html",
+  "55+": "Workbook App 55plus.dc.html"
+};
+
+class Component extends DCLogic {
+  state = { ready: false };
+  componentDidMount() {
+    const wait = () => window.WORKBOOK_BANDS ? this.setState({ ready: true }) : setTimeout(wait, 60);
+    wait();
+  }
+  renderVals() {
+    const defs = window.WORKBOOK_BANDS || {};
+    const bands = Object.keys(FILES).filter(id => defs[id]).map(id => {
+      const b = defs[id];
+      const s = b.scale || {};
+      return {
+        label: b.label,
+        audience: b.audience,
+        count: b.forms.length + ' pages',
+        scaleNote: s.labels ? 'Ratings in words: ' + s.labels.join(' / ') : 'Ratings 0–10',
+        href: encodeURI(FILES[id])
+      };
+    });
+    return { bands };
+  }
+}
+</script>
+</body>
+</html>

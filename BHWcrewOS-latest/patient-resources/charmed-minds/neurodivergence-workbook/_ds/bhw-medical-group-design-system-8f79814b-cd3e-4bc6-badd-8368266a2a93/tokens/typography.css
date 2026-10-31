@@ -1,0 +1,37 @@
+/* BHW Medical Group — Typography Tokens
+ * Single family: Montserrat. Sizes are authored in pt to match the print
+ * document system (1pt ≈ 1.333px on screen). Hierarchy: H1 > H2 > Body > Small. */
+:root {
+  --font-sans: 'Montserrat', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* ---- Weights ---- */
+  --fw-regular: 400; /* @kind font */
+  --fw-medium: 500; /* @kind font */
+  --fw-semibold: 600; /* @kind font */
+  --fw-bold: 700; /* @kind font */
+
+  /* ---- Type scale (print-canonical, pt) ---- */
+  --fs-h1: 21pt; /* @kind font */        /* Page title */
+  --fs-subtitle: 11pt; /* @kind font */  /* Header subtitle */
+  --fs-h2: 12.5pt; /* @kind font */      /* Section header */
+  --fs-box-header: 10.5pt; /* @kind font */
+  --fs-mono: 10.5pt; /* @kind font */    /* List/table headers on color */
+  --fs-body: 9.5pt; /* @kind font */     /* Body text */
+  --fs-table: 9pt; /* @kind font */      /* Table content + headers */
+  --fs-small: 8.5pt; /* @kind font */    /* Captions */
+  --fs-footer: 8pt; /* @kind font */     /* Footer text */
+  --fs-fineprint: 7pt; /* @kind font */  /* Disclaimers */
+
+  /* ---- Line heights ---- */
+  --lh-tight: 1.2; /* @kind font */
+  --lh-heading: 1.3; /* @kind font */
+  --lh-body: 1.4; /* @kind font */
+  --lh-mono: 1.5; /* @kind font */
+
+  /* ---- Semantic roles ---- */
+  --type-h1: var(--fw-bold) var(--fs-h1)/var(--lh-heading) var(--font-sans); /* @kind font */
+  --type-h2: var(--fw-bold) var(--fs-h2)/var(--lh-heading) var(--font-sans); /* @kind font */
+  --type-body: var(--fw-regular) var(--fs-body)/var(--lh-body) var(--font-sans); /* @kind font */
+  --type-box-header: var(--fw-semibold) var(--fs-box-header)/var(--lh-heading) var(--font-sans); /* @kind font */
+  --type-footer: var(--fw-regular) var(--fs-footer)/var(--lh-tight) var(--font-sans); /* @kind font */
+}

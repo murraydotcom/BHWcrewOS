@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Neurodivergence Workbook | Ages 6–7</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/charmed-minds-design-system-3ab9ff11-c447-4fdd-a1c0-e44555bf08f1/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/charmed-minds-design-system-3ab9ff11-c447-4fdd-a1c0-e44555bf08f1/tokens/colors.css">
+<link rel="stylesheet" href="_ds/charmed-minds-design-system-3ab9ff11-c447-4fdd-a1c0-e44555bf08f1/tokens/typography.css">
+<link rel="stylesheet" href="_ds/charmed-minds-design-system-3ab9ff11-c447-4fdd-a1c0-e44555bf08f1/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/charmed-minds-design-system-3ab9ff11-c447-4fdd-a1c0-e44555bf08f1/tokens/elevation.css">
+<link rel="stylesheet" href="_ds/charmed-minds-design-system-3ab9ff11-c447-4fdd-a1c0-e44555bf08f1/tokens/motion.css">
+<link rel="stylesheet" href="_ds/charmed-minds-design-system-3ab9ff11-c447-4fdd-a1c0-e44555bf08f1/tokens/base.css">
+<link rel="stylesheet" href="_ds/charmed-minds-design-system-3ab9ff11-c447-4fdd-a1c0-e44555bf08f1/styles.css">
+<script src="_ds/charmed-minds-design-system-3ab9ff11-c447-4fdd-a1c0-e44555bf08f1/_ds_bundle.js"></script>
+<script src="./workbook-data.js"></script>
+<script src="./workbook-bands.js"></script>
+<script src="./workbook-choices.js"></script>
+<script src="./workbook-icons.js"></script>
+<style>
+body{margin:0;background:#020b1c}
+a{color:var(--teal-500,#1f99a2);text-decoration:none}
+a:hover{color:var(--gold-500,#f0a828)}
+textarea,select,input{font-family:var(--font-body,'Instrument Sans',sans-serif)}
+textarea::placeholder{color:rgba(254,252,247,.32)}
+*{-webkit-tap-highlight-color:transparent}
+@keyframes charmed-travel{0%{background-position:0% 50%}100%{background-position:200% 50%}}
+</style>
+</helmet>
+
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px;background:radial-gradient(900px 520px at 12% -6%, rgba(31,153,162,.30), transparent 60%), radial-gradient(760px 480px at 92% -10%, rgba(240,168,40,.22), transparent 62%), #04122d">
+
+<div style="width:100%;max-width:412px;height:872px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;border-radius:38px;border:1px solid rgba(254,252,247,.16);background:#04122d;box-shadow:0 40px 90px rgba(0,0,0,.55)">
+
+<div style="flex:none;display:flex;align-items:center;justify-content:space-between;padding:14px 26px 6px;font:500 12px/1 var(--font-mono,'IBM Plex Mono',monospace);color:rgba(254,252,247,.6);letter-spacing:.04em">
+<span>9:41</span>
+<span style="display:flex;gap:6px;align-items:center"><span style="width:16px;height:7px;border-radius:2px;background:rgba(254,252,247,.6)"></span><span style="width:22px;height:9px;border-radius:3px;border:1px solid rgba(254,252,247,.5)"></span></span>
+</div>
+
+<sc-if value="{{ onIntro }}" hint-placeholder-val="{{ true }}">
+<div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;padding:24px 26px 26px">
+<div style="font:600 10px/1 var(--font-body,'Instrument Sans',sans-serif);letter-spacing:.22em;color:var(--teal-400,#4cc2c9);text-transform:uppercase">CharmEd Minds</div>
+<h1 style="font:200 32px/1.14 var(--font-display,'Sora',sans-serif);letter-spacing:-.025em;color:#fefcf7;margin:14px 0 4px;text-wrap:pretty">Knowing how your own brain works.</h1>
+<div style="font:500 13px/1 var(--font-mono,'IBM Plex Mono',monospace);color:var(--gold-500,#f0a828);margin:0 0 18px">{{ bandLabel }} · {{ bandAudience }}</div>
+<p style="font:400 15px/1.62 var(--font-body,'Instrument Sans',sans-serif);color:rgba(254,252,247,.78);margin:0 0 18px;text-wrap:pretty">{{ purpose }}</p>
+<div style="border-radius:16px;border:1px solid rgba(31,153,162,.34);background:rgba(31,153,162,.10);padding:15px 17px;margin:0 0 18px">
+<div style="font:600 10px/1 var(--font-body,'Instrument Sans',sans-serif);letter-spacing:.16em;color:var(--teal-400,#4cc2c9);margin:0 0 8px">TAKE YOUR TIME</div>
+<div style="font:400 14px/1.6 var(--font-body,'Instrument Sans',sans-serif);color:rgba(254,252,247,.82)">{{ reassure }}</div>
+</div>
+<div style="flex:1"></div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<button onClick="{{ startApp }}" style="min-height:52px;border-radius:999px;border:0;background:var(--gold-500,#f0a828);color:#04122d;font:600 12px/1 var(--font-body,'Instrument Sans',sans-serif);letter-spacing:.14em;text-transform:uppercase;cursor:pointer;box-shadow:0 0 30px rgba(240,168,40,.3)" style-hover="background:#f7b843">Begin</button>
+<div style="font:400 12px/1.5 var(--font-body,'Instrument Sans',sans-serif);color:rgba(254,252,247,.45);text-align:center">Answers stay on this device. Nothing is sent anywhere.</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ onHome }}" hint-placeholder-val="{{ false }}">
+<div style="flex:none;padding:12px 22px 14px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+<div style="font:600 10px/1 var(--font-body,'Instrument Sans',sans-serif);letter-spacing:.2em;color:var(--teal-400,#4cc2c9);text-transform:uppercase">{{ bandLabel }}</div>
+<button onClick="{{ openAbout }}" style="border:0;background:transparent;color:rgba(254,252,247,.5);font:400 12px/1 var(--font-body,'Instrument Sans',sans-serif);cursor:pointer;padding:6px">Why this exists</button>
+</div>
+<h1 style="font:200 27px/1.18 var(--font-display,'Sora',sans-serif);letter-spacing:-.02em;color:#fefcf7;margin:8px 0 14px;text-wrap:pretty">{{ homeHeading }}</h1>
+<div style="display:flex;align-items:baseline;justify-content:space-between;margin:0 0 8px">
+<span style="font:600 10px/1 var(--font-body,'Instrument Sans',sans-serif);letter-spacing:.14em;color:rgba(254,252,247,.5);text-transform:uppercase">Progress</span>
+<span style="font:500 13px/1 var(--font-mono,'IBM Plex Mono',monospace);color:var(--gold-500,#f0a828)">{{ overallLabel }}</span>
+</div>
+<div style="height:4px;border-radius:999px;background:rgba(254,252,247,.12);overflow:hidden">
+<div style="height:100%;border-radius:999px;width:{{ overallPct }}%;background:linear-gradient(90deg,#1f99a2,#f0a828,#1f99a2);background-size:200% 100%;animation:charmed-travel 1.6s linear infinite;transition:width .42s cubic-bezier(.2,.7,.3,1)"></div>
+</div>
+</div>
+
+<div style="flex:1;overflow-y:auto;padding:4px 22px 18px;display:flex;flex-direction:column;gap:10px">
+
+<sc-if value="{{ showResume }}" hint-placeholder-val="{{ false }}">
+<button onClick="{{ resume }}" style="display:block;width:100%;text-align:left;border-radius:18px;border:1px solid rgba(240,168,40,.45);background:rgba(240,168,40,.12);padding:16px 18px;cursor:pointer" style-hover="background:rgba(240,168,40,.18)">
+<div style="font:600 10px/1 var(--font-body,'Instrument Sans',sans-serif);letter-spacing:.16em;text-transform:uppercase;color:var(--gold-500,#f0a828);margin:0 0 7px">Pick up where you left off</div>
+<div style="font:300 17px/1.3 var(--font-display,'Sora',sans-serif);color:#fefcf7">{{ resumeTitle }}</div>
+</button>
+</sc-if>
+
+<sc-for list="{{ visibleForms }}" as="f" hint-placeholder-count="6">
+<button onClick="{{ f.open }}" style="display:block;width:100%;text-align:left;border-radius:18px;border:1px solid rgba(254,252,247,.14);background:rgba(254,252,247,.045);padding:16px 18px;cursor:pointer;transition:background .16s cubic-bezier(.2,.7,.3,1),transform .16s cubic-bezier(.2,.7,.3,1)" style-hover="background:rgba(254,252,247,.075);transform:translateY(-2px);box-shadow:0 0 0 1px rgba(31,153,162,.35),0 12px 30px rgba(31,153,162,.18)">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 6px">
+<span style="font:500 11px/1 var(--font-mono,'IBM Plex Mono',monospace);letter-spacing:.1em;color:var(--teal-400,#4cc2c9)">{{ f.stepLabel }}</span>
+<span style="font:500 11px/1 var(--font-mono,'IBM Plex Mono',monospace);color:{{ f.statusInk }}">{{ f.status }}</span>
+</div>
+<div style="font:300 17px/1.3 var(--font-display,'Sora',sans-serif);letter-spacing:-.01em;color:#fefcf7;margin:0 0 10px;text-wrap:pretty">{{ f.title }}</div>
+<div style="height:3px;border-radius:999px;background:rgba(254,252,247,.1);overflow:hidden">
+<div style="height:100%;border-radius:999px;background:{{ f.barColor }};width:{{ f.pct }}%"></div>
+</div>
+</button>
+</sc-for>
+
+<div style="border-radius:18px;border:1px solid rgba(254,252,247,.14);padding:16px 18px;margin-top:6px">
+<div style="font:600 10px/1 var(--font-body,'Instrument Sans',sans-serif);letter-spacing:.16em;text-transform:uppercase;color:rgba(254,252,247,.55);margin:0 0 6px">Remind me to come back</div>
+<div style="font:400 13px/1.55 var(--font-body,'Instrument Sans',sans-serif);color:rgba(254,252,247,.62);margin:0 0 12px">{{ reminderNote }}</div>
+<div style="display:flex;gap:8px">
+<select onChange="{{ setDay }}" value="{{ remDay }}" style="flex:1;min-height:44px;border-radius:12px;border:1px solid rgba(254,252,247,.18);background:rgba(4,18,45,.7);color:#fefcf7;font:400 14px/1 var(--font-body,'Instrument Sans',sans-serif);padding:0 12px">
+<option value="">No reminder</option>
+<option value="Monday">Monday</option>
+<option value="Tuesday">Tuesday</option>
+<option value="Wednesday">Wednesday</option>
+<option value="Thursday">Thursday</option>
+<option value="Friday">Friday</option>
+<option value="Saturday">Saturday</option>
+<option value="Sunday">Sunday</option>
+</select>
+<input type="time" onChange="{{ setTime }}" value="{{ remTime }}" style="flex:none;width:130px;min-height:44px;box-sizing:border-box;border-radius:12px;border:1px solid rgba(254,252,247,.18);background:rgba(4,18,45,.7);color:#fefcf7;font:400 14px/1 var(--font-body,'Instrument Sans',sans-serif);padding:0 12px">
+</div>
+</div>
+
+<button onClick="{{ openReview }}" style="margin-top:2px;min-height:48px;border-radius:999px;border:1px solid rgba(254,252,247,.24);background:transparent;color:#fefcf7;font:600 11px/1 var(--font-body,'Instrument Sans',sans-serif);letter-spacing:.12em;text-transform:uppercase;cursor:pointer" style-hover="background:rgba(254,252,247,.07)">Review &amp; share</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ onForm }}" hint-placeholder-val="{{ false }}">
+<div style="flex:none;display:flex;align-items:center;gap:12px;padding:10px 18px 12px;border-bottom:1px solid rgba(254,252,247,.1)">
+<button onClick="{{ goHome }}" style="width:44px;height:44px;flex:none;border-radius:999px;border:1px solid rgba(254,252,247,.18);background:transparent;color:#fefcf7;font:400 18px/1 var(--font-body,'Instrument Sans',sans-serif);cursor:pointer" style-hover="background:rgba(254,252,247,.07)">←</button>
+<div style="flex:1;min-width:0">
+<div style="font:500 10px/1 var(--font-mono,'IBM Plex Mono',monospace);letter-spacing:.12em;color:var(--teal-400,#4cc2c9)">{{ activeStep }}</div>
+<div style="font:400 13px/1.3 var(--font-body,'Instrument Sans',sans-serif);color:rgba(254,252,247,.7);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ activeTitle }}</div>
+</div>
+<span style="font:500 12px/1 var(--font-mono,'IBM Plex Mono',monospace);color:var(--gold-500,#f0a828)">{{ activeStatus }}</span>
+</div>
+
+<div style="flex:1;overflow-y:auto;padding:20px 22px 24px">
+<h2 style="font:200 26px/1.2 var(--font-display,'Sora',sans-serif);letter-spacing:-.02em;color:#fefcf7;margin:0 0 8px;text-wrap:pretty">{{ activeTitle }}</h2>
+<p style="font:400 14px/1.55 var(--font-body,'Instrument Sans',sans-serif);color:rgba(254,252,247,.62);margin:0 0 20px;text-wrap:pretty">{{ activeSub }}</p>
+
+<sc-for list="{{ activeItems }}" as="it" hint-placeholder-count="4">
+<div style="margin:0 0 18px">
+<sc-if value="{{ it.isNote }}" hint-placeholder-val="{{ false }}">
+<div style="border-radius:14px;border:1px solid rgba(31,153,162,.34);background:rgba(31,153,162,.10);padding:14px 16px">
+<div style="font:600 10px/1 var(--font-body,'Instrument Sans',sans-serif);letter-spacing:.16em;color:var(--teal-400,#4cc2c9);margin:0 0 8px">{{ it.label }}</div>
+<div style="font:400 13px/1.6 var(--font-body,'Instrument Sans',sans-serif);color:rgba(254,252,247,.8)">{{ it.x }}</div>
+</div>
+</sc-if>
+<sc-if value="{{ it.isP }}" hint-placeholder-val="{{ false }}">
+<p style="font:400 14px/1.65 var(--font-body,'Instrument Sans',sans-serif);color:rgba(254,252,247,.72);margin:0;text-wrap:pretty">{{ it.x }}</p>
+</sc-if>
+<sc-if value="{{ it.isH }}" hint-placeholder-val="{{ false }}">
+<div style="font:600 10px/1 var(--font-body,'Instrument Sans',sans-serif);letter-spacing:.16em;text-transform:uppercase;color:rgba(254,252,247,.52)">{{ it.x }}</div>
+</sc-if>
+<sc-if value="{{ it.isList }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{ it.rows }}" as="r" hint-placeholder-count="3">
+<div style="display:flex;gap:10px;font:400 13px/1.55 var(--font-body,'Instrument Sans',sans-serif);color:rgba(254,252,247,.72)">
+<span style="flex:none;width:5px;height:5px;margin-top:8px;border-radius:999px;background:var(--gold-500,#f0a828)"></span>
+<span>{{ r.x }}</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{ it.isText }}" hint-placeholder-val="{{ false }}">
+<label style="display:block">
+<span style="display:block;font:500 14px/1.45 var(--font-body,'Instrument Sans',sans-serif);color:#fefcf7;margin:0 0 8px;text-wrap:pretty">{{ it.x }}</span>
+<textarea onChange="{{ it.onInput }}" value="{{ it.value }}" rows="{{ it.rows }}" placeholder="Type, or leave blank." style="width:100%;box-sizing:border-box;border-radius:12px;border:1px solid rgba(254,252,247,.16);background:rgba(254,252,247,.045);color:#fefcf7;font:400 14px/1.6 var(--font-body,'Instrument Sans',sans-serif);padding:12px 14px;outline:none;resize:vertical" style-focus="border-color:#1f99a2;box-shadow:0 0 0 3px rgba(31,153,162,.22)"></textarea>
+</label>
+</sc-if>
+<sc-if value="{{ it.isPick }}" hint-placeholder-val="{{ false }}">
+<div>
+<div style="font:500 15px/1.45 var(--font-body,'Instrument Sans',sans-serif);color:#fefcf7;margin:0 0 10px;text-wrap:pretty">{{ it.x }}</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<sc-for list="{{ it.opts }}" as="o" hint-placeholder-count="6">
+<button onClick="{{ o.toggle }}" style="display:flex;align-items:center;gap:8px;min-height:48px;border-radius:16px;padding:0 15px;cursor:pointer;text-align:left;font:500 14px/1.25 var(--font-body,'Instrument Sans',sans-serif);border:1px solid {{ o.border }};background:{{ o.bg }};color:{{ o.ink }};transition:background .16s cubic-bezier(.2,.7,.3,1)">
+<span style="font-size:20px;line-height:1">{{ o.icon }}</span>
+<span>{{ o.label }}</span>
+</button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ it.isCheck }}" hint-placeholder-val="{{ false }}">
+<div>
+<div style="font:500 14px/1.45 var(--font-body,'Instrument Sans',sans-serif);color:#fefcf7;margin:0 0 10px;text-wrap:pretty">{{ it.x }}</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<sc-for list="{{ it.opts }}" as="o" hint-placeholder-count="4">
+<button onClick="{{ o.toggle }}" style="display:flex;align-items:center;gap:8px;min-height:46px;border-radius:16px;padding:0 15px;cursor:pointer;text-align:left;font:500 13px/1.25 var(--font-body,'Instrument Sans',sans-serif);border:1px solid {{ o.border }};background:{{ o.bg }};color:{{ o.ink }};transition:background .16s cubic-bezier(.2,.7,.3,1)"><span style="font-size:19px;line-height:1">{{ o.icon }}</span><span>{{ o.label }}</span></button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ it.isScale }}" hint-placeholder-val="{{ false }}">
+<div style="border-radius:16px;border:1px solid rgba(254,252,247,.12);background:rgba(254,252,247,.04);padding:14px 16px">
+<div style="font:500 13px/1.5 var(--font-body,'Instrument Sans',sans-serif);color:#fefcf7;margin:0 0 12px;text-wrap:pretty">{{ it.cap }}</div>
+<div style="display:flex;flex-wrap:wrap;gap:6px">
+<sc-for list="{{ it.opts }}" as="o" hint-placeholder-count="5">
+<button onClick="{{ o.pick }}" style="min-width:44px;min-height:44px;padding:0 14px;border-radius:999px;cursor:pointer;font:500 13px/1 var(--font-body,'Instrument Sans',sans-serif);border:1px solid {{ o.border }};background:{{ o.bg }};color:{{ o.ink }}">{{ o.label }}</button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ it.isGrid }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:12px">
+<sc-for list="{{ it.rows }}" as="r" hint-placeholder-count="3">
+<div style="border-radius:16px;border:1px solid rgba(254,252,247,.12);background:rgba(254,252,247,.04);padding:14px 16px">
+<div style="font:500 14px/1.4 var(--font-body,'Instrument Sans',sans-serif);color:#fefcf7;margin:0 0 10px">{{ r.label }}</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px">
+<sc-for list="{{ r.ticks }}" as="k" hint-placeholder-count="3">
+<button onClick="{{ k.toggle }}" style="min-height:44px;border-radius:999px;padding:0 15px;cursor:pointer;font:500 13px/1 var(--font-body,'Instrument Sans',sans-serif);border:1px solid {{ k.border }};background:{{ k.bg }};color:{{ k.ink }};transition:background .16s cubic-bezier(.2,.7,.3,1)">{{ k.label }}</button>
+</sc-for>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="1">
+<label style="display:block">
+<span style="display:block;font:400 11px/1 var(--font-body,'Instrument Sans',sans-serif);letter-spacing:.1em;text-transform:uppercase;color:rgba(254,252,247,.5);margin:0 0 6px">{{ c.col }}</span>
+<textarea onChange="{{ c.onInput }}" value="{{ c.value }}" rows="2" style="width:100%;box-sizing:border-box;border-radius:10px;border:1px solid rgba(254,252,247,.16);background:rgba(4,18,45,.6);color:#fefcf7;font:400 13px/1.55 var(--font-body,'Instrument Sans',sans-serif);padding:10px 12px;outline:none;resize:vertical" style-focus="border-color:#1f99a2;box-shadow:0 0 0 3px rgba(31,153,162,.22)"></textarea>
+</label>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</sc-for>
+
+<div style="display:flex;gap:10px;margin:8px 0 0">
+<button onClick="{{ goPrev }}" style="flex:none;min-height:48px;padding:0 18px;border-radius:999px;border:1px solid rgba(254,252,247,.22);background:transparent;color:#fefcf7;font:600 11px/1 var(--font-body,'Instrument Sans',sans-serif);letter-spacing:.12em;text-transform:uppercase;cursor:pointer" style-hover="background:rgba(254,252,247,.07)">Prev</button>
+<button onClick="{{ goNext }}" style="flex:1;min-height:48px;border-radius:999px;border:0;background:var(--gold-500,#f0a828);color:#04122d;font:600 11px/1 var(--font-body,'Instrument Sans',sans-serif);letter-spacing:.12em;text-transform:uppercase;cursor:pointer;box-shadow:0 0 28px rgba(240,168,40,.3)" style-hover="background:#f7b843">{{ nextLabel }}</button>
+</div>
+<div style="font:400 12px/1.5 var(--font-body,'Instrument Sans',sans-serif);color:rgba(254,252,247,.42);text-align:center;margin:12px 0 0">Stop whenever you want. This page is saved.</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ onReview }}" hint-placeholder-val="{{ false }}">
+<div style="flex:none;display:flex;align-items:center;gap:12px;padding:10px 18px 12px;border-bottom:1px solid rgba(254,252,247,.1)">
+<button onClick="{{ goHome }}" style="width:44px;height:44px;flex:none;border-radius:999px;border:1px solid rgba(254,252,247,.18);background:transparent;color:#fefcf7;font:400 18px/1 var(--font-body,'Instrument Sans',sans-serif);cursor:pointer" style-hover="background:rgba(254,252,247,.07)">←</button>
+<div style="font:600 10px/1 var(--font-body,'Instrument Sans',sans-serif);letter-spacing:.16em;text-transform:uppercase;color:rgba(254,252,247,.6)">Review &amp; share</div>
+</div>
+<div style="flex:1;overflow-y:auto;padding:18px 22px 24px">
+<p style="font:400 14px/1.6 var(--font-body,'Instrument Sans',sans-serif);color:rgba(254,252,247,.7);margin:0 0 18px">Only answered questions appear here. Bring one section to a session, or export the whole set.</p>
+<sc-for list="{{ reviewForms }}" as="f" hint-placeholder-count="2">
+<div style="border-radius:18px;border:1px solid rgba(254,252,247,.14);background:rgba(254,252,247,.045);padding:16px 18px;margin:0 0 12px">
+<div style="font:500 11px/1 var(--font-mono,'IBM Plex Mono',monospace);letter-spacing:.1em;color:var(--teal-400,#4cc2c9);margin:0 0 6px">{{ f.stepLabel }}</div>
+<div style="font:300 17px/1.3 var(--font-display,'Sora',sans-serif);color:#fefcf7;margin:0 0 12px">{{ f.title }}</div>
+<sc-for list="{{ f.answers }}" as="a" hint-placeholder-count="2">
+<div style="padding:10px 0;border-top:1px solid rgba(254,252,247,.1)">
+<div style="font:400 12px/1.4 var(--font-body,'Instrument Sans',sans-serif);color:rgba(254,252,247,.55);margin:0 0 4px">{{ a.q }}</div>
+<div style="font:400 14px/1.55 var(--font-body,'Instrument Sans',sans-serif);color:#fefcf7">{{ a.v }}</div>
+</div>
+</sc-for>
+</div>
+</sc-for>
+<sc-if value="{{ reviewEmpty }}" hint-placeholder-val="{{ false }}">
+<div style="border-radius:18px;border:1px dashed rgba(254,252,247,.2);padding:22px;font:400 14px/1.6 var(--font-body,'Instrument Sans',sans-serif);color:rgba(254,252,247,.6)">Nothing answered yet. Start with the first page.</div>
+</sc-if>
+<div style="display:flex;flex-direction:column;gap:10px;margin:16px 0 0">
+<button onClick="{{ doPrint }}" style="min-height:48px;border-radius:999px;border:0;background:var(--gold-500,#f0a828);color:#04122d;font:600 11px/1 var(--font-body,'Instrument Sans',sans-serif);letter-spacing:.12em;text-transform:uppercase;cursor:pointer">Export as PDF</button>
+<button onClick="{{ doClear }}" style="min-height:48px;border-radius:999px;border:1px solid rgba(214,69,65,.5);background:transparent;color:#e88b88;font:600 11px/1 var(--font-body,'Instrument Sans',sans-serif);letter-spacing:.12em;text-transform:uppercase;cursor:pointer" style-hover="background:rgba(214,69,65,.12)">Clear all answers</button>
+</div>
+</div>
+</sc-if>
+
+<div style="flex:none;display:flex;align-items:center;justify-content:space-between;padding:10px 22px 16px;border-top:1px solid rgba(254,252,247,.08)">
+<span style="font:400 11px/1.4 var(--font-body,'Instrument Sans',sans-serif);color:rgba(254,252,247,.45)">{{ saveNote }}</span>
+<span style="font:600 9px/1 var(--font-body,'Instrument Sans',sans-serif);letter-spacing:.22em;color:rgba(254,252,247,.35)">BHW MEDICAL GROUP</span>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:480,&quot;height&quot;:940}}">
+const BAND = "6-7";
+
+class Component extends DCLogic {
+  state = { screen: 'intro', idx: 0, answers: {}, ready: false, saveNote: 'Saved on this device' };
+
+  componentDidMount() {
+    this.key = 'ndwb-' + BAND;
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(this.key) || '{}'); } catch (e) {}
+    const wait = () => {
+      if (window.WORKBOOK && window.WORKBOOK_BANDS) {
+        this.band = window.WORKBOOK_BANDS[BAND];
+        this.choices = (window.WORKBOOK_CHOICES || {})[BAND] || {};
+        this.icons = (window.WORKBOOK_ICONS || {})[BAND] || {};
+        const keep = this.band.forms;
+        this.forms = window.WORKBOOK.filter(f => keep.indexOf(f.num) >= 0);
+        const started = Object.keys(saved).some(k => k.charAt(0) === 'f');
+        this.setState({ ready: true, answers: saved, screen: started || saved.__seen ? 'home' : 'intro' });
+      } else setTimeout(wait, 60);
+    };
+    wait();
+  }
+
+  persist(answers) {
+    try { localStorage.setItem(this.key, JSON.stringify(answers)); } catch (e) {}
+    this.setState({ answers, saveNote: 'Saved just now' });
+    clearTimeout(this._t);
+    this._t = setTimeout(() => this.setState({ saveNote: 'Saved on this device' }), 2000);
+  }
+  set(k, v) { this.persist(Object.assign({}, this.state.answers, { [k]: v })); }
+
+  // per-band wording override for a form
+  ov(f) { return (this.band && this.band.text && this.band.text[f.num]) || {}; }
+  label(f, it) {
+    const o = this.ov(f);
+    if (it.t === 'scale') return o[it.k] != null ? o[it.k] : (it.cap || 'Rating');
+    if (it.nk && o[it.nk] != null) return o[it.nk];
+    if (it.t === 'note' && this.band && this.band.note != null) return this.band.note;
+    if (it.k && o[it.k] != null) return o[it.k];
+    return it.x;
+  }
+  // a band may replace a note/paragraph/list/heading, or suppress it with ""
+  hidden(f, it) {
+    const o = this.ov(f);
+    return !!it.nk && o[it.nk] === '';
+  }
+  // note eyebrow: per-form override (nk + "Label"), then band default, then source
+  noteLabel(f, it) {
+    if (!f) return it.label;
+    const perForm = this.ov(f)[it.nk + 'Label'];
+    if (perForm != null) return perForm;
+    if (this.band && this.band.noteLabel != null) return this.band.noteLabel;
+    return it.label;
+  }
+  optLabel(f, o) {
+    const ov = this.ov(f)[o.k];
+    if (ov === '') return null;              // option dropped for this band
+    return ov != null ? ov : o.label;
+  }
+  icon(f, o) { return (((this.icons || {})[f.num] || {})[o.k]) || ''; }
+
+  keysOf(f) {
+    const ks = [];
+    (f.items || []).forEach(it => {
+      if (it.t === 'text' || it.t === 'scale') ks.push(it.k);
+      if (it.t === 'check') it.opts.forEach(o => { if (this.optLabel(f, o) != null) ks.push(o.k); });
+      if (it.t === 'grid') it.rows.forEach(r => r.cells.forEach(c => ks.push(c.k)));
+    });
+    return ks.filter(Boolean);
+  }
+  picks(f, k) { return ((this.choices || {})[f.num] || {})[k] || null; }
+  cellLabel(c) {
+    return (c.label && c.label !== c.col) ? c.col + ': ' + c.label : c.col;
+  }
+  filled(f) {
+    const a = this.state.answers;
+    return this.keysOf(f).filter(k => {
+      const v = a[k];
+      return v === true || (typeof v === 'string' && v.trim()) || typeof v === 'number' || (Array.isArray(v) && v.length > 0);
+    }).length;
+  }
+
+  renderVals() {
+    const forms = this.forms || [];
+    const band = this.band || { label: '', audience: '', purpose: '', reassure: '', scale: { max: 10 } };
+    const { screen, idx, answers } = this.state;
+    const active = forms[idx];
+    const totalK = forms.reduce((n, f) => n + this.keysOf(f).length, 0);
+    const doneK = forms.reduce((n, f) => n + this.filled(f), 0);
+    const pct = totalK ? Math.round(doneK / totalK * 100) : 0;
+    const chip = sel => ({
+      border: sel ? 'transparent' : 'rgba(254,252,247,.2)',
+      bg: sel ? '#f0a828' : 'transparent',
+      ink: sel ? '#04122d' : 'rgba(254,252,247,.8)'
+    });
+    const step = i => 'Page ' + (i + 1) + ' of ' + forms.length;
+
+    const list = forms.map((f, i) => {
+      const n = this.keysOf(f).length, d = this.filled(f), p = n ? Math.round(d / n * 100) : 0;
+      return {
+        stepLabel: step(i), title: this.ov(f).title || f.title, pct: p,
+        status: d ? d + '/' + n : 'Not started',
+        statusInk: d ? '#f0a828' : 'rgba(254,252,247,.4)',
+        barColor: p === 100 ? '#f0a828' : '#1f99a2',
+        open: () => this.setState({ screen: 'form', idx: i })
+      };
+    });
+
+    // first form with some progress but not complete, else first untouched
+    let resumeAt = -1;
+    for (let i = 0; i < forms.length; i++) {
+      const n = this.keysOf(forms[i]).length, d = this.filled(forms[i]);
+      if (d > 0 && d < n) { resumeAt = i; break; }
+    }
+    if (resumeAt < 0) for (let i = 0; i < forms.length; i++) { if (this.filled(forms[i]) === 0) { resumeAt = i; break; } }
+
+    const scaleOpts = (it, f) => {
+      const s = band.scale || { max: 10 };
+      const max = s.labels ? s.labels.length - 1 : (s.max != null ? s.max : it.max);
+      return Array.from({ length: max + 1 }, (_, v) => {
+        const sel = answers[it.k] === v;
+        return Object.assign({ v, label: s.labels ? s.labels[v] : String(v), pick: () => this.set(it.k, v) }, chip(sel));
+      });
+    };
+
+    const items = (active ? active.items : []).filter(it => !this.hidden(active, it)).map(it => {
+      const base = {
+        isNote: it.t === 'note', isP: it.t === 'p', isH: it.t === 'h', isList: it.t === 'list',
+        isText: it.t === 'text', isCheck: it.t === 'check', isScale: it.t === 'scale', isGrid: it.t === 'grid',
+        x: active ? this.label(active, it) : it.x, cap: it.cap,
+        label: it.t === 'note' ? this.noteLabel(active, it) : it.label
+      };
+      if (it.t === 'list') {
+        const ovList = this.ov(active)[it.nk];
+        base.rows = (Array.isArray(ovList) ? ovList : (it.x || [])).map(x => ({ x }));
+      }
+      const opt = active && it.t === 'text' ? this.picks(active, it.k) : null;
+      if (opt) {
+        base.isText = false;
+        base.isPick = true;
+        const chosen = Array.isArray(answers[it.k]) ? answers[it.k] : [];
+        base.opts = opt.map(o => {
+          const icon = o[0], label = o[1], sel = chosen.indexOf(label) >= 0;
+          return Object.assign({
+            icon, label,
+            toggle: () => this.set(it.k, sel ? chosen.filter(v => v !== label) : chosen.concat([label]))
+          }, chip(sel));
+        });
+      } else if (it.t === 'text') {
+        base.value = answers[it.k] || '';
+        base.rows = it.big ? 5 : 3;
+        base.onInput = e => this.set(it.k, e.target.value);
+      }
+      if (it.t === 'check') base.opts = it.opts.map(o => {
+        const lab = this.optLabel(active, o);
+        if (lab == null) return null;
+        const sel = !!answers[o.k];
+        return Object.assign({ label: lab, icon: this.icon(active, o), toggle: () => this.set(o.k, !sel) }, chip(sel));
+      }).filter(Boolean);
+      if (it.t === 'scale') {
+        base.opts = scaleOpts(it, active);
+        base.cap = this.label(active, it);
+      }
+      if (it.t === 'grid') base.rows = it.rows.map(r => ({
+        label: r.label,
+        ticks: r.cells.filter(c => c.type === 'tick' && c.k).map(c => {
+          const sel = !!answers[c.k];
+          return Object.assign({ label: c.label || c.col, toggle: () => this.set(c.k, !sel) }, chip(sel));
+        }),
+        cells: r.cells.filter(c => c.type !== 'tick' && c.k).map(c => ({
+          col: c.col, value: answers[c.k] || '', onInput: e => this.set(c.k, e.target.value)
+        }))
+      }));
+      return base;
+    });
+
+    const keyLabel = (f, k) => {
+      let out = k;
+      (f.items || []).forEach(it => {
+        if ((it.t === 'text' || it.t === 'scale') && it.k === k) out = this.label(f, it);
+        if (it.t === 'check') it.opts.forEach(o => { if (o.k === k) out = (this.label(f, it) ? this.label(f, it) + ' ' : '') + (this.optLabel(f, o) || o.label); });
+        if (it.t === 'grid') it.rows.forEach(r => r.cells.forEach(c => { if (c.k === k) out = r.label + ' · ' + this.cellLabel(c); }));
+      });
+      return out;
+    };
+    const scaleWord = v => (band.scale && band.scale.labels) ? (band.scale.labels[v] || String(v)) : String(v);
+    const review = forms.map((f, i) => {
+      const rows = this.keysOf(f).map(k => {
+        const v = answers[k];
+        if (Array.isArray(v)) return v.length ? { q: keyLabel(f, k), v: v.join(' · ') } : null;
+        if (v === true) return { q: keyLabel(f, k), v: 'Yes' };
+        if (typeof v === 'number') return { q: keyLabel(f, k), v: scaleWord(v) };
+        if (typeof v === 'string' && v.trim()) return { q: keyLabel(f, k), v };
+        return null;
+      }).filter(Boolean);
+      return { stepLabel: step(i), title: this.ov(f).title || f.title, answers: rows };
+    }).filter(f => f.answers.length);
+
+    const activeN = active ? this.keysOf(active).length : 0;
+    const remDay = answers.__remDay || '';
+    const remTime = answers.__remTime || '';
+
+    return {
+      onIntro: screen === 'intro', onHome: screen === 'home', onForm: screen === 'form' && !!active, onReview: screen === 'review',
+      bandLabel: band.label, bandAudience: band.audience, purpose: band.purpose, reassure: band.reassure,
+      homeHeading: doneK ? 'Keep going when you have the energy.' : 'Start anywhere. Skip anything.',
+      startApp: () => { this.set('__seen', true); this.setState({ screen: 'home' }); },
+      openAbout: () => this.setState({ screen: 'intro' }),
+      overallPct: pct, overallLabel: pct + '%  ·  ' + doneK + ' answered',
+      visibleForms: list,
+      showResume: doneK > 0 && resumeAt >= 0,
+      resumeTitle: resumeAt >= 0 ? (this.ov(forms[resumeAt]).title || forms[resumeAt].title) : '',
+      resume: () => this.setState({ screen: 'form', idx: Math.max(0, resumeAt) }),
+      activeStep: active ? step(idx) : '',
+      activeTitle: active ? (this.ov(active).title || active.title) : '',
+      activeSub: active ? (this.ov(active).sub || active.sub) : '',
+      activeStatus: active ? this.filled(active) + '/' + activeN : '',
+      activeItems: items,
+      nextLabel: idx >= forms.length - 1 ? 'Done for now' : 'Next page',
+      goHome: () => this.setState({ screen: 'home' }),
+      goPrev: () => idx === 0 ? this.setState({ screen: 'home' }) : this.setState({ idx: idx - 1 }),
+      goNext: () => idx >= forms.length - 1 ? this.setState({ screen: 'home' }) : this.setState({ idx: idx + 1 }),
+      openReview: () => this.setState({ screen: 'review' }),
+      reviewForms: review, reviewEmpty: review.length === 0,
+      remDay, remTime,
+      reminderNote: remDay ? 'We will nudge you ' + remDay + (remTime ? ' at ' + remTime : '') + '.' : 'Pick a day and time that usually works for you.',
+      setDay: e => this.set('__remDay', e.target.value),
+      setTime: e => this.set('__remTime', e.target.value),
+      doPrint: () => window.print(),
+      doClear: () => { if (confirm('Clear every answer on this device?')) { try { localStorage.removeItem(this.key); } catch (e) {} this.setState({ answers: {} }); } },
+      saveNote: this.state.saveNote
+    };
+  }
+}
+</script>
+</body>
+</html>
