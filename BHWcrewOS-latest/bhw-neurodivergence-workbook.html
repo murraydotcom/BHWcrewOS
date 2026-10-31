@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>Neurodivergence Self-Reflection Workbook — CharmEd Minds</title>
+  <link rel="stylesheet" href="/assets/bhw-tokens.css">
+  <style>
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:var(--sans);color:var(--ink);background:var(--page-wash),var(--bg)}.top{background:var(--deep-grad);color:white;padding:16px 22px}.brand{max-width:1380px;margin:auto;display:flex;align-items:center;gap:12px}.mark{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:rgba(255,255,255,.12);font-weight:850}.brand h1{font-size:17px;margin:0}.brand p{font-size:11px;color:#dce8eb;margin:3px 0 0}.notice{max-width:1380px;margin:14px auto;padding:12px 14px;border:1px solid #cfe0d3;background:#edf5eb;border-radius:12px;font-size:11px;line-height:1.55}.notice strong{display:block;font-size:12px;margin-bottom:2px}.frame{display:block;width:min(1380px,calc(100% - 28px));height:calc(100vh - 155px);min-height:680px;margin:0 auto 14px;border:1px solid var(--line);border-radius:18px;background:#04122d;box-shadow:var(--shadow)}.loading{max-width:760px;margin:48px auto;padding:28px;text-align:center;background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);font-size:13px;line-height:1.6}@media(max-width:720px){.top{padding:13px 14px}.brand h1{font-size:14px}.notice{margin:10px 10px;padding:10px}.frame{width:calc(100% - 12px);height:calc(100vh - 178px);min-height:560px;margin-bottom:6px;border-radius:12px}}
+  </style>
+</head>
+<body>
+  <header class="top"><div class="brand"><div class="mark">CM</div><div><h1>CharmEd Minds</h1><p>Neurodivergence Self-Reflection Workbook</p></div></div></header>
+  <main id="app"><div class="loading">Opening your workbook…</div></main>
+  <script>
+    const API='https://bhw-medication-api-343692256275.us-east4.run.app';
+    const CONTENT_PATH='/bhw-neurodivergence-workbook.html';
+    const WORKBOOK_PATH='/patient-resources/charmed-minds/neurodivergence-workbook/';
+    const params=new URLSearchParams(location.search),assignmentId=params.get('assignment')||'',token=params.get('token')||'',app=document.getElementById('app');
+    function unavailable(message){app.innerHTML=`<section class="loading"><strong>This workbook link is unavailable.</strong><br>${message}</section>`}
+    function render(){app.innerHTML='<aside class="notice"><strong>Your answers stay on this device.</strong>This workbook does not send answers to BHW automatically. Use a private device. When you are ready, use the workbook&rsquo;s PDF export and return it only through a private channel approved by your care team.</aside><iframe class="frame" title="Neurodivergence Self-Reflection Workbook" src="'+WORKBOOK_PATH+'"></iframe>'}
+    async function load(){if(!assignmentId||!token){unavailable('Please use the complete link sent by BHW.');return}try{const response=await fetch(`${API}/v1/public/content-assignments/${encodeURIComponent(assignmentId)}?token=${encodeURIComponent(token)}`);const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Link unavailable');if(data.contentPath!==CONTENT_PATH)throw new Error('Wrong resource');render()}catch(error){unavailable('It may have expired or been revoked. Please contact BHW for a new link.')}}
+    load();
+  </script>
+</body>
+</html>

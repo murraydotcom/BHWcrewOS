@@ -1,0 +1,8 @@
+/* BHW Medical Group — Webfonts
+ * Brand font: Montserrat (Regular 400, Medium 500, SemiBold 600, Bold 700, Italic 400).
+ * NOTE: The brand spec references self-hosted TTF files
+ * (Montserrat-Regular.ttf, -Medium.ttf, -SemiBold.ttf, -Bold.ttf, -Italic.ttf).
+ * Those binaries were not provided, so we load the identical Montserrat family
+ * from Google Fonts. Drop the TTFs into assets/fonts/ and swap to @font-face
+ * rules for fully offline / production use. */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&display=swap');

@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const staffPage = fs.readFileSync(path.join(root, "bhw-patient-materials.html"), "utf8");
 const patientPage = fs.readFileSync(path.join(root, "bhw-patient-material-viewer.html"), "utf8");
+const workbookPage = fs.readFileSync(path.join(root, "bhw-neurodivergence-workbook.html"), "utf8");
 const hqPage = fs.readFileSync(path.join(root, "hq-home.mjs"), "utf8");
 const patientRegistryApp = fs.readFileSync(path.join(root, "provider", "patient-registry-app.mjs"), "utf8");
 const patientRegistryPage = fs.readFileSync(path.join(root, "provider", "patient-registry.html"), "utf8");
@@ -42,6 +43,21 @@ test("CrewHQ has a direct patient materials directory entry", () => {
 test("patient materials inline scripts compile", () => {
   assertInlineScriptsCompile(staffPage, "bhw-patient-materials.html");
   assertInlineScriptsCompile(patientPage, "bhw-patient-material-viewer.html");
+  assertInlineScriptsCompile(workbookPage, "bhw-neurodivergence-workbook.html");
+});
+
+test("staff can select the reviewed CharmEd Minds workbook from the HTML library", () => {
+  assert.match(staffPage, /value="library">\s*Use the reviewed HTML library/);
+  assert.match(staffPage, /id="libraryMaterial"/);
+  assert.match(staffPage, /value="\/bhw-neurodivergence-workbook\.html"/);
+  assert.match(staffPage, /assignment\.contentPath=contentPath/);
+  assert.match(staffPage, /charmed_minds_neurodivergence_workbook/);
+  assert.match(staffPage, /answers remain on the patient device/i);
+  assert.match(staffPage, /does not send responses back to CrewOS/i);
+  assert.match(workbookPage, /\/v1\/public\/content-assignments/);
+  assert.match(workbookPage, /data\.contentPath!==CONTENT_PATH/);
+  assert.match(workbookPage, /patient-resources\/charmed-minds\/neurodivergence-workbook/);
+  assert.match(workbookPage, /does not send answers to BHW automatically/i);
 });
 
 test("staff page selects a verified Patient 360 record", () => {

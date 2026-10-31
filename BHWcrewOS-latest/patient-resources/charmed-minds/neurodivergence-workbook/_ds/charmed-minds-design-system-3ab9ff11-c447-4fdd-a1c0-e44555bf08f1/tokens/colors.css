@@ -1,0 +1,45 @@
+:root{
+/* --- Base palette: sampled from the CharmEd Minds logo lockup --- */
+--navy-900:#02091c;--navy-800:#04122d;--navy-700:#0a1c40;--navy-600:#122a55;--navy-500:#1d3a6d;--navy-400:#2f5288;
+--teal-700:#0f6f77;--teal-600:#17858e;--teal-500:#1f99a2;--teal-400:#3fb6bd;--teal-300:#7ed4d8;--teal-200:#c2ebed;
+--gold-700:#b87914;--gold-600:#d9911d;--gold-500:#f0a828;--gold-400:#f6be55;--gold-300:#fbd894;--gold-200:#fdeecb;
+--cream-100:#fefcf7;--cream-200:#f6f1e6;--cream-300:#e7dfcd;
+--slate-100:#eef1f6;--slate-200:#d9dfea;--slate-300:#b3bccd;--slate-400:#7e8aa1;--slate-500:#55617a;
+--signal-red:#e5484d;--signal-green:#3aa675;--signal-amber:#f0a828;
+
+/* --- Semantic: dark surfaces are the brand default --- */
+--surface-base:var(--navy-800);
+--surface-raised:var(--navy-700);
+--surface-card:rgba(255,255,255,.045);
+--surface-card-hover:rgba(255,255,255,.075);
+--surface-inset:rgba(2,9,28,.55);
+--surface-light:var(--cream-100);
+--surface-light-alt:var(--cream-200);
+
+--text-display:var(--cream-100);
+--text-body:rgba(254,252,247,.82);
+--text-muted:rgba(254,252,247,.55);
+--text-on-light:var(--navy-800);
+--text-on-light-muted:var(--slate-500);
+--text-accent:var(--gold-500);
+--text-link:var(--teal-300);
+--text-link-hover:var(--gold-400);
+
+--border-hairline:rgba(254,252,247,.14);
+--border-strong:rgba(254,252,247,.28);
+--border-on-light:var(--cream-300);
+
+--accent-primary:var(--gold-500);
+--accent-primary-press:var(--gold-600);
+--accent-secondary:var(--teal-500);
+--accent-secondary-press:var(--teal-600);
+
+--focus-ring:var(--teal-400);
+
+/* --- Charge: the electric layer. Used for glow, never for large fills --- */
+--charge-teal:0 0 0 1px rgba(31,153,162,.35),0 0 24px rgba(31,153,162,.35); /* @kind color */
+--charge-gold:0 0 0 1px rgba(240,168,40,.35),0 0 28px rgba(240,168,40,.32); /* @kind color */
+--gradient-synapse:radial-gradient(120% 100% at 15% 0%,rgba(31,153,162,.30) 0%,rgba(31,153,162,0) 55%),radial-gradient(110% 90% at 95% 15%,rgba(240,168,40,.22) 0%,rgba(240,168,40,0) 60%); /* @kind color */
+--gradient-filament:linear-gradient(90deg,var(--teal-400) 0%,var(--gold-500) 100%); /* @kind color */
+--gradient-protect:linear-gradient(180deg,rgba(4,18,45,0) 0%,rgba(4,18,45,.92) 78%); /* @kind color */
+}

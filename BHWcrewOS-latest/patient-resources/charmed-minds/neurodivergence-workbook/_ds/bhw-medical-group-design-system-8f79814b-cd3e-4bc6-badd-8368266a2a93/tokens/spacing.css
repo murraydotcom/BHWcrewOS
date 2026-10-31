@@ -1,0 +1,35 @@
+/* BHW Medical Group — Spacing & Layout Tokens
+ * Print-derived scale (pt) plus page geometry for Letter (8.5" × 11"). */
+:root {
+  /* ---- Spacing scale ---- */
+  --space-xs: 2pt;   /* fine borders, subtle dividers */
+  --space-s: 5pt;    /* table padding, tight spacing */
+  --space-m: 10pt;   /* section margins, breathing room */
+  --space-l: 14pt;   /* list indents, component gaps */
+  --space-xl: 20pt;  /* section breaks, major spacing */
+
+  /* ---- Component spacing ---- */
+  --section-space-before: 10pt; /* @kind spacing */
+  --section-space-after: 5pt; /* @kind spacing */
+  --bullet-indent: 14pt; /* @kind spacing */
+  --bullet-gap: 4pt; /* @kind spacing */
+  --box-padding: 12pt; /* @kind spacing */
+  --table-pad-x: 10pt; /* @kind spacing */
+  --table-pad-y: 5pt; /* @kind spacing */
+
+  /* ---- Page geometry (Letter) ---- */
+  --page-width: 8.5in; /* @kind spacing */
+  --page-height: 11in; /* @kind spacing */
+  --page-margin-x: 0.75in;
+  --page-margin-top: 1.75in;
+  --page-margin-bottom: 0.9in;
+  --header-height: 1.5in; /* @kind spacing */
+  --footer-height: 0.62in; /* @kind spacing */
+
+  /* ---- Radii & lines (documents are crisp, minimal rounding) ---- */
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --line-thin: 0.5pt; /* @kind spacing */
+  --line-stripe: 5pt; /* @kind spacing */
+  --line-footer: 3pt; /* @kind spacing */
+}

@@ -1,0 +1,41 @@
+/* BHW Medical Group — Color Tokens
+ * Warm, clinical palette: teal authority + rust warmth + earthen neutrals.
+ * Every pairing in this system meets WCAG AA or better. */
+:root {
+  /* ---- Base palette ---- */
+  --bhw-teal: #80abbd;        /* Primary brand — calm, clinical */
+  --bhw-teal-dark: #5d8a9e;   /* Secondary — emphasis, headers */
+  --bhw-rust: #b07a55;        /* Accent — attention, warnings */
+  --bhw-sage: #a8b59a;        /* Soft supporting background */
+  --bhw-sand: #dcc8b1;        /* Borders, dividers */
+  --bhw-cream: #f7f5f2;       /* Warm content background */
+  --bhw-ink: #2A3038;         /* Body text, near-black */
+  --bhw-white: #ffffff;
+
+  /* ---- Tints (derived, for hover/subtle fills) ---- */
+  --bhw-teal-tint: #e6eef2;
+  --bhw-rust-tint: #f1e6dd;
+  --bhw-sage-tint: #eef1e9;
+
+  /* ---- Semantic aliases ---- */
+  --text-body: var(--bhw-ink);
+  --text-heading: var(--bhw-teal-dark);
+  --text-on-color: var(--bhw-white);
+  --text-muted: #6b727b;
+
+  --surface-page: var(--bhw-white);
+  --surface-content: var(--bhw-cream);
+  --surface-header: var(--bhw-teal);
+  --surface-table-alt: var(--bhw-cream);
+
+  --accent: var(--bhw-rust);
+  --accent-stripe: var(--bhw-rust);
+
+  --border-subtle: var(--bhw-sand);
+  --border-footer: var(--bhw-sage);
+
+  /* ---- Information-box header colors (by intent) ---- */
+  --box-info: var(--bhw-teal-dark);   /* reason, history, plan */
+  --box-warn: var(--bhw-rust);        /* warnings, when to call, next steps */
+  --box-tip: var(--bhw-sage);         /* daily goals, pro tips */
+}
