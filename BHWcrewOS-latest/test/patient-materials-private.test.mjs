@@ -53,11 +53,27 @@ test("staff can select the reviewed CharmEd Minds workbook from the HTML library
   assert.match(staffPage, /assignment\.contentPath=contentPath/);
   assert.match(staffPage, /charmed_minds_neurodivergence_workbook/);
   assert.match(staffPage, /answers remain on the patient device/i);
-  assert.match(staffPage, /does not send responses back to CrewOS/i);
+  assert.match(staffPage, /does not send entries back to CrewOS/i);
+  assert.match(staffPage, /id="workbookAgeBand"/);
+  assert.match(staffPage, /id="allowAgeAdjustment"/);
+  assert.match(staffPage, /BHWNeuroWorkbook\.addSelectionToPatientLink/);
+  assert.match(staffPage, /BHWNeuroWorkbook\.assignedTitle/);
+  assert.match(staffPage, /id="assignmentSummary"/);
   assert.match(workbookPage, /\/v1\/public\/content-assignments/);
   assert.match(workbookPage, /data\.contentPath!==CONTENT_PATH/);
   assert.match(workbookPage, /patient-resources\/charmed-minds\/neurodivergence-workbook/);
-  assert.match(workbookPage, /does not send answers to BHW automatically/i);
+  assert.match(workbookPage, /Nothing is sent to BHW automatically/i);
+  assert.match(workbookPage, /selection\.allowAdjustment/);
+  assert.match(workbookPage, /BHWNeuroWorkbook\.workbookUrl/);
+});
+
+test("workbook remains voluntary and does not expose an unverified PHI upload", () => {
+  assert.match(staffPage, /optional personal journaling, not a formal intake or assessment/i);
+  assert.match(staffPage, /Voluntary PDF return is not enabled online/i);
+  assert.match(workbookPage, /Optional personal journaling — not a clinical intake or assessment/i);
+  assert.match(workbookPage, /Secure online PDF return is not enabled through this link/i);
+  assert.doesNotMatch(workbookPage, /type=["']file["']/i);
+  assert.doesNotMatch(workbookPage, /content-submissions/);
 });
 
 test("staff page selects a verified Patient 360 record", () => {
@@ -67,6 +83,15 @@ test("staff page selects a verified Patient 360 record", () => {
   assert.match(staffPage, /JSON\.stringify\(\{action:'list'\}\)/);
   assert.doesNotMatch(staffPage, /rcm-cloud-config/);
   assert.doesNotMatch(staffPage, /value="BHW0000"/);
+  assert.match(staffPage, /assignment=\{patientId,title:storedTitle/);
+  assert.match(staffPage, /Bound to verified Patient 360 ID/);
+});
+
+test("existing response routing remains in Patient Materials & Feedback staff review", () => {
+  assert.match(staffPage, /\/v1\/staff\/content-submissions\?limit=50/);
+  assert.match(staffPage, /\/v1\/staff\/content-submissions\/\$\{encodeURIComponent\(id\)\}\/review/);
+  assert.match(staffPage, /Mark reviewed/);
+  assert.doesNotMatch(workbookPage, /chart|formal assessment completed/i);
 });
 
 test("staff page records sent communication, supports revocation, and offers longer links", () => {

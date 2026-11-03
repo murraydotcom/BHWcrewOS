@@ -6,8 +6,9 @@
   <meta name="robots" content="noindex,nofollow,noarchive">
   <title>Neurodivergence Self-Reflection Workbook — CharmEd Minds</title>
   <link rel="stylesheet" href="/assets/bhw-tokens.css">
+  <script src="/assets/bhw-neurodivergence-assignment.js"></script>
   <style>
-    *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:var(--sans);color:var(--ink);background:var(--page-wash),var(--bg)}.top{background:var(--deep-grad);color:white;padding:16px 22px}.brand{max-width:1380px;margin:auto;display:flex;align-items:center;gap:12px}.mark{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:rgba(255,255,255,.12);font-weight:850}.brand h1{font-size:17px;margin:0}.brand p{font-size:11px;color:#dce8eb;margin:3px 0 0}.notice{max-width:1380px;margin:14px auto;padding:12px 14px;border:1px solid #cfe0d3;background:#edf5eb;border-radius:12px;font-size:11px;line-height:1.55}.notice strong{display:block;font-size:12px;margin-bottom:2px}.frame{display:block;width:min(1380px,calc(100% - 28px));height:calc(100vh - 155px);min-height:680px;margin:0 auto 14px;border:1px solid var(--line);border-radius:18px;background:#04122d;box-shadow:var(--shadow)}.loading{max-width:760px;margin:48px auto;padding:28px;text-align:center;background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);font-size:13px;line-height:1.6}@media(max-width:720px){.top{padding:13px 14px}.brand h1{font-size:14px}.notice{margin:10px 10px;padding:10px}.frame{width:calc(100% - 12px);height:calc(100vh - 178px);min-height:560px;margin-bottom:6px;border-radius:12px}}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:var(--sans);color:var(--ink);background:var(--page-wash),var(--bg)}.top{background:var(--deep-grad);color:white;padding:16px 22px}.brand{max-width:1380px;margin:auto;display:flex;align-items:center;gap:12px}.mark{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:rgba(255,255,255,.12);font-weight:850}.brand h1{font-size:17px;margin:0}.brand p{font-size:11px;color:#dce8eb;margin:3px 0 0}.controls,.notice,.sharing{max-width:1380px;margin:14px auto;padding:12px 14px;border-radius:12px;font-size:11px;line-height:1.55}.notice{border:1px solid #cfe0d3;background:#edf5eb}.notice strong,.sharing strong{display:block;font-size:12px;margin-bottom:2px}.sharing{border:1px solid #ead2aa;background:#fff7e9}.controls{display:flex;align-items:end;gap:12px;border:1px solid var(--line);background:var(--card)}.controls .field{min-width:260px}.controls label{display:block;font-size:10px;font-weight:750;margin-bottom:5px}.controls select{width:100%;border:1px solid var(--line);border-radius:9px;padding:8px;background:white;color:var(--ink);font:600 11px var(--sans)}.controls p{margin:0;color:var(--ink-soft)}.frame{display:block;width:min(1380px,calc(100% - 28px));height:calc(100vh - 255px);min-height:680px;margin:0 auto 14px;border:1px solid var(--line);border-radius:18px;background:#04122d;box-shadow:var(--shadow)}.loading{max-width:760px;margin:48px auto;padding:28px;text-align:center;background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);font-size:13px;line-height:1.6}@media(max-width:720px){.top{padding:13px 14px}.brand h1{font-size:14px}.controls,.notice,.sharing{margin:10px;padding:10px}.controls{display:block}.controls p{margin-top:8px}.frame{width:calc(100% - 12px);height:calc(100vh - 300px);min-height:560px;margin-bottom:6px;border-radius:12px}}
   </style>
 </head>
 <body>
@@ -19,8 +20,33 @@
     const WORKBOOK_PATH='/patient-resources/charmed-minds/neurodivergence-workbook/';
     const params=new URLSearchParams(location.search),assignmentId=params.get('assignment')||'',token=params.get('token')||'',app=document.getElementById('app');
     function unavailable(message){app.innerHTML=`<section class="loading"><strong>This workbook link is unavailable.</strong><br>${message}</section>`}
-    function render(){app.innerHTML='<aside class="notice"><strong>Your answers stay on this device.</strong>This workbook does not send answers to BHW automatically. Use a private device. When you are ready, use the workbook&rsquo;s PDF export and return it only through a private channel approved by your care team.</aside><iframe class="frame" title="Neurodivergence Self-Reflection Workbook" src="'+WORKBOOK_PATH+'"></iframe>'}
-    async function load(){if(!assignmentId||!token){unavailable('Please use the complete link sent by BHW.');return}try{const response=await fetch(`${API}/v1/public/content-assignments/${encodeURIComponent(assignmentId)}?token=${encodeURIComponent(token)}`);const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Link unavailable');if(data.contentPath!==CONTENT_PATH)throw new Error('Wrong resource');render()}catch(error){unavailable('It may have expired or been revoked. Please contact BHW for a new link.')}}
+    function node(tag,className,text){const element=document.createElement(tag);if(className)element.className=className;if(text)element.textContent=text;return element}
+    function render(){
+      const selection=BHWNeuroWorkbook.selectionFromSearch(location.search);
+      if(selection.requested&&!selection.band){unavailable('The assigned age version is not recognized. Please contact BHW for a corrected link.');return}
+      const assignedBand=selection.band;
+      const notice=node('aside','notice');notice.append(node('strong','',"Optional personal journaling — not a clinical intake or assessment."),document.createTextNode(' Your entries save only on this device. Nothing is sent to BHW automatically, and you may skip any item or stop at any time. Use a private device when possible.'));
+      const sharing=node('aside','sharing');sharing.append(node('strong','',"Sharing is your choice."),document.createTextNode(' Exporting or printing a PDF saves a copy for you; it does not submit it. Secure online PDF return is not enabled through this link. If you decide to share, contact BHW and use only the private return method staff confirms.'));
+      app.replaceChildren(notice);
+      let src=WORKBOOK_PATH;
+      if(assignedBand){src=BHWNeuroWorkbook.workbookUrl(assignedBand.id)}
+      if(assignedBand){
+        const controls=node('section','controls');
+        const field=node('div','field');field.append(node('label','',selection.allowAdjustment?'Workbook version on this device':'Assigned workbook version'));
+        if(selection.allowAdjustment){
+          const select=document.createElement('select');select.setAttribute('aria-label','Workbook age band');
+          BHWNeuroWorkbook.AGE_BANDS.forEach(band=>{const option=document.createElement('option');option.value=band.id;option.textContent=`${band.label} · ${band.audience}`;option.selected=band.id===assignedBand.id;select.append(option)});
+          field.append(select);controls.append(field,node('p','',`BHW assigned ${assignedBand.label}. You or a parent/guardian may use a different version if it fits better. This device-only change is not sent to BHW and does not change the staff assignment record.`));
+          select.addEventListener('change',()=>{const frame=document.getElementById('workbookFrame');frame.src=BHWNeuroWorkbook.workbookUrl(select.value)});
+        }else{field.append(node('div','',`${assignedBand.label} · ${assignedBand.audience}`));controls.append(field,node('p','',"If this version does not fit, contact BHW for a corrected private link."))}
+        app.append(controls);
+      }else{
+        const controls=node('section','controls');controls.append(node('p','',"This older assignment did not store an age band. Choose the version that fits on the workbook page. Your choice stays on this device."));app.append(controls);
+      }
+      app.append(sharing);
+      const frame=node('iframe','frame');frame.id='workbookFrame';frame.title=assignedBand?`Neurodivergence Self-Reflection Workbook — ${assignedBand.label}`:'Neurodivergence Self-Reflection Workbook';frame.referrerPolicy='no-referrer';frame.src=src;app.append(frame);
+    }
+    async function load(){if(!assignmentId||!token){unavailable('Please use the complete link sent by BHW.');return}try{const response=await fetch(`${API}/v1/public/content-assignments/${encodeURIComponent(assignmentId)}?token=${encodeURIComponent(token)}`,{cache:'no-store'});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Link unavailable');if(data.contentPath!==CONTENT_PATH)throw new Error('Wrong resource');render()}catch(error){unavailable('It may have expired or been revoked. Please contact BHW for a new link.')}}
     load();
   </script>
 </body>
