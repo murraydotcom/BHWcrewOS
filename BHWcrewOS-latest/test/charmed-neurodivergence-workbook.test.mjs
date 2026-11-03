@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
+import { webcrypto } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import vm from "node:vm";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
@@ -23,6 +25,11 @@ test("workbook keeps all seven age bands, local autosave, and PDF export", () =>
   for (const file of ageFiles) {
     const page = fs.readFileSync(path.join(resource, file), "utf8");
     assert.match(page, /localStorage\.setItem/);
+    assert.match(page, /ndwb-v2-/);
+    assert.match(page, /new URLSearchParams\(location\.hash\.slice\(1\)\)/);
+    assert.match(page, /Preview only — entries are not saved/);
+    assert.match(page, /if \(this\.key\).*localStorage\.setItem/);
+    assert.doesNotMatch(page, /this\.key = 'ndwb-' \+ BAND/);
     assert.match(page, /doPrint: \(\) => window\.print\(\)/);
   }
   const printable = fs.readFileSync(path.join(resource, "Neurodivergence Self-Reflection Workbook.dc.html"), "utf8");
@@ -31,6 +38,34 @@ test("workbook keeps all seven age bands, local autosave, and PDF export", () =>
   assert.match(support, /\.\/vendor\/react\.production\.min\.js/);
   assert.match(support, /remote JSX imports are disabled/);
   assert.doesNotMatch(support, /unpkg\.com/);
+});
+
+test("all age-specific workbook scripts compile after private-resume isolation", () => {
+  for (const file of ageFiles) {
+    const page = fs.readFileSync(path.join(resource, file), "utf8");
+    const match = page.match(/<script type="text\/x-dc"[^>]*>([\s\S]*?)<\/script>/i);
+    assert.ok(match, `${file} data script is missing`);
+    assert.doesNotThrow(() => new vm.Script(match[1]), `${file} data script must compile`);
+  }
+});
+
+test("private resume storage is deterministic per assignment and never exposes its capability to the iframe", async () => {
+  const first = await assignment.privateResumeScope("synthetic-assignment-a", "synthetic-capability-a", webcrypto);
+  const repeated = await assignment.privateResumeScope("synthetic-assignment-a", "synthetic-capability-a", webcrypto);
+  const anotherAssignment = await assignment.privateResumeScope("synthetic-assignment-b", "synthetic-capability-a", webcrypto);
+  const anotherCapability = await assignment.privateResumeScope("synthetic-assignment-a", "synthetic-capability-b", webcrypto);
+  assert.match(first, /^[a-f0-9]{64}$/);
+  assert.equal(first, repeated);
+  assert.notEqual(first, anotherAssignment);
+  assert.notEqual(first, anotherCapability);
+
+  const workbook = assignment.workbookUrl("8-12", first);
+  const index = assignment.workbookIndexUrl(first);
+  assert.equal(new URL(workbook, "https://crewhq.bhwmedical.org").hash, `#resume=${first}`);
+  assert.equal(new URL(index, "https://crewhq.bhwmedical.org").hash, `#resume=${first}`);
+  assert.doesNotMatch(workbook, /synthetic-assignment|synthetic-capability/);
+  assert.doesNotMatch(index, /synthetic-assignment|synthetic-capability/);
+  assert.throws(() => assignment.workbookUrl("8-12", "not-a-safe-scope"), /resume scope is invalid/);
 });
 
 test("assignment helper supports every exact workbook age band and existing file", () => {

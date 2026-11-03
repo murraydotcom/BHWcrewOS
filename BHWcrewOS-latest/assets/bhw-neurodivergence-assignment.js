@@ -16,6 +16,7 @@
   ]);
 
   const byId = new Map(AGE_BANDS.map((band) => [band.id, band]));
+  const RESUME_SCOPE_PATTERN = /^[a-f0-9]{64}$/;
 
   function getAgeBand(id) {
     return byId.get(String(id || "").trim()) || null;
@@ -42,10 +43,32 @@
     };
   }
 
-  function workbookUrl(ageBandId) {
+  function withResumeScope(path, resumeScope) {
+    if (!resumeScope) return path;
+    if (!RESUME_SCOPE_PATTERN.test(String(resumeScope))) throw new Error("Private resume scope is invalid");
+    return `${path}#resume=${resumeScope}`;
+  }
+
+  function workbookUrl(ageBandId, resumeScope) {
     const band = getAgeBand(ageBandId);
     if (!band) return "";
-    return "/patient-resources/charmed-minds/neurodivergence-workbook/" + encodeURIComponent(band.file).replace(/%2F/gi, "/");
+    const path = "/patient-resources/charmed-minds/neurodivergence-workbook/" + encodeURIComponent(band.file).replace(/%2F/gi, "/");
+    return withResumeScope(path, resumeScope);
+  }
+
+  function workbookIndexUrl(resumeScope) {
+    return withResumeScope("/patient-resources/charmed-minds/neurodivergence-workbook/", resumeScope);
+  }
+
+  async function privateResumeScope(assignmentId, token, cryptoApi) {
+    const assignment = String(assignmentId || "");
+    const capability = String(token || "");
+    const runtimeCrypto = cryptoApi || (typeof globalThis !== "undefined" ? globalThis.crypto : null);
+    if (!assignment || !capability) throw new Error("Private assignment capability is incomplete");
+    if (!runtimeCrypto?.subtle || typeof TextEncoder === "undefined") throw new Error("Private device resume is not supported by this browser");
+    const input = new TextEncoder().encode(`bhw-neuro-workbook-v2\u0000${assignment}\u0000${capability}`);
+    const digest = await runtimeCrypto.subtle.digest("SHA-256", input);
+    return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
   }
 
   function assignedTitle(title, ageBandId) {
@@ -58,5 +81,5 @@
     return value;
   }
 
-  return Object.freeze({ AGE_BANDS, getAgeBand, addSelectionToPatientLink, selectionFromSearch, workbookUrl, assignedTitle });
+  return Object.freeze({ AGE_BANDS, getAgeBand, addSelectionToPatientLink, selectionFromSearch, workbookUrl, workbookIndexUrl, privateResumeScope, assignedTitle });
 }));

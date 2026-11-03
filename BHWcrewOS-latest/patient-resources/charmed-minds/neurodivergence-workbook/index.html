@@ -35,7 +35,7 @@ a:hover{color:var(--gold-500,#f0a828)}
 <div style="font:600 10px/1 var(--font-body,'Instrument Sans',sans-serif);letter-spacing:.22em;color:var(--teal-400,#4cc2c9);text-transform:uppercase">CharmEd Minds · BHW Medical Group</div>
 <h1 style="font:200 clamp(30px,5vw,46px)/1.1 var(--font-display,'Sora',sans-serif);letter-spacing:-.03em;color:#fefcf7;margin:16px 0 14px;text-wrap:pretty">Self-reflection workbook, by age.</h1>
 <p style="max-width:56ch;font:400 16px/1.62 var(--font-body,'Instrument Sans',sans-serif);color:rgba(254,252,247,.72);margin:0 0 12px;text-wrap:pretty">Seven versions of the same workbook. The questions, the reading level, the rating scales, and which pages appear all change with the band. Under 6, a parent or guardian answers as an interview about their child.</p>
-<p style="max-width:56ch;font:400 15px/1.6 var(--font-body,'Instrument Sans',sans-serif);color:rgba(254,252,247,.55);margin:0 0 34px">Each version saves separately on the device, and none of them expects to be finished in one sitting.</p>
+<p style="max-width:56ch;font:400 15px/1.6 var(--font-body,'Instrument Sans',sans-serif);color:rgba(254,252,247,.55);margin:0 0 34px">Through a private BHW assignment, each person&rsquo;s version saves only for that private link in that browser on that device. Public preview pages do not keep journal entries.</p>
 
 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:14px">
 <sc-for list="{{ bands }}" as="b" hint-placeholder-count="7">
@@ -78,6 +78,8 @@ class Component extends DCLogic {
   }
   renderVals() {
     const defs = window.WORKBOOK_BANDS || {};
+    const requestedResume = new URLSearchParams(location.hash.slice(1)).get('resume') || '';
+    const resume = /^[a-f0-9]{64}$/.test(requestedResume) ? requestedResume : '';
     const bands = Object.keys(FILES).filter(id => defs[id]).map(id => {
       const b = defs[id];
       const s = b.scale || {};
@@ -86,7 +88,7 @@ class Component extends DCLogic {
         audience: b.audience,
         count: b.forms.length + ' pages',
         scaleNote: s.labels ? 'Ratings in words: ' + s.labels.join(' / ') : 'Ratings 0–10',
-        href: encodeURI(FILES[id])
+        href: encodeURI(FILES[id]) + (resume ? '#resume=' + resume : '')
       };
     });
     return { bands };

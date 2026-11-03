@@ -65,6 +65,9 @@ test("staff can select the reviewed CharmEd Minds workbook from the HTML library
   assert.match(workbookPage, /Nothing is sent to BHW automatically/i);
   assert.match(workbookPage, /selection\.allowAdjustment/);
   assert.match(workbookPage, /BHWNeuroWorkbook\.workbookUrl/);
+  assert.match(workbookPage, /BHWNeuroWorkbook\.privateResumeScope\(assignmentId,token\)/);
+  assert.match(workbookPage, /same link and browser to continue/i);
+  assert.match(staffPage, /another assignment link cannot load those entries/i);
 });
 
 test("workbook remains voluntary and does not expose an unverified PHI upload", () => {

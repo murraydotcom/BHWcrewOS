@@ -17,19 +17,18 @@
   <script>
     const API='https://bhw-medication-api-343692256275.us-east4.run.app';
     const CONTENT_PATH='/bhw-neurodivergence-workbook.html';
-    const WORKBOOK_PATH='/patient-resources/charmed-minds/neurodivergence-workbook/';
     const params=new URLSearchParams(location.search),assignmentId=params.get('assignment')||'',token=params.get('token')||'',app=document.getElementById('app');
     function unavailable(message){app.innerHTML=`<section class="loading"><strong>This workbook link is unavailable.</strong><br>${message}</section>`}
     function node(tag,className,text){const element=document.createElement(tag);if(className)element.className=className;if(text)element.textContent=text;return element}
-    function render(){
+    function render(resumeScope){
       const selection=BHWNeuroWorkbook.selectionFromSearch(location.search);
       if(selection.requested&&!selection.band){unavailable('The assigned age version is not recognized. Please contact BHW for a corrected link.');return}
       const assignedBand=selection.band;
-      const notice=node('aside','notice');notice.append(node('strong','',"Optional personal journaling — not a clinical intake or assessment."),document.createTextNode(' Your entries save only on this device. Nothing is sent to BHW automatically, and you may skip any item or stop at any time. Use a private device when possible.'));
+      const notice=node('aside','notice');notice.append(node('strong','',"Optional personal journaling — not a clinical intake or assessment."),document.createTextNode(' Your entries save only for this private link in this browser on this device. Return with the same link and browser to continue. Nothing is sent to BHW automatically, and you may skip any item or stop at any time. Other BHW workbook links cannot open these entries. On a shared device, use a separate browser profile or private device when possible.'));
       const sharing=node('aside','sharing');sharing.append(node('strong','',"Sharing is your choice."),document.createTextNode(' Exporting or printing a PDF saves a copy for you; it does not submit it. Secure online PDF return is not enabled through this link. If you decide to share, contact BHW and use only the private return method staff confirms.'));
       app.replaceChildren(notice);
-      let src=WORKBOOK_PATH;
-      if(assignedBand){src=BHWNeuroWorkbook.workbookUrl(assignedBand.id)}
+      let src=BHWNeuroWorkbook.workbookIndexUrl(resumeScope);
+      if(assignedBand){src=BHWNeuroWorkbook.workbookUrl(assignedBand.id,resumeScope)}
       if(assignedBand){
         const controls=node('section','controls');
         const field=node('div','field');field.append(node('label','',selection.allowAdjustment?'Workbook version on this device':'Assigned workbook version'));
@@ -37,7 +36,7 @@
           const select=document.createElement('select');select.setAttribute('aria-label','Workbook age band');
           BHWNeuroWorkbook.AGE_BANDS.forEach(band=>{const option=document.createElement('option');option.value=band.id;option.textContent=`${band.label} · ${band.audience}`;option.selected=band.id===assignedBand.id;select.append(option)});
           field.append(select);controls.append(field,node('p','',`BHW assigned ${assignedBand.label}. You or a parent/guardian may use a different version if it fits better. This device-only change is not sent to BHW and does not change the staff assignment record.`));
-          select.addEventListener('change',()=>{const frame=document.getElementById('workbookFrame');frame.src=BHWNeuroWorkbook.workbookUrl(select.value)});
+          select.addEventListener('change',()=>{const frame=document.getElementById('workbookFrame');frame.src=BHWNeuroWorkbook.workbookUrl(select.value,resumeScope)});
         }else{field.append(node('div','',`${assignedBand.label} · ${assignedBand.audience}`));controls.append(field,node('p','',"If this version does not fit, contact BHW for a corrected private link."))}
         app.append(controls);
       }else{
@@ -46,7 +45,7 @@
       app.append(sharing);
       const frame=node('iframe','frame');frame.id='workbookFrame';frame.title=assignedBand?`Neurodivergence Self-Reflection Workbook — ${assignedBand.label}`:'Neurodivergence Self-Reflection Workbook';frame.referrerPolicy='no-referrer';frame.src=src;app.append(frame);
     }
-    async function load(){if(!assignmentId||!token){unavailable('Please use the complete link sent by BHW.');return}try{const response=await fetch(`${API}/v1/public/content-assignments/${encodeURIComponent(assignmentId)}?token=${encodeURIComponent(token)}`,{cache:'no-store'});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Link unavailable');if(data.contentPath!==CONTENT_PATH)throw new Error('Wrong resource');render()}catch(error){unavailable('It may have expired or been revoked. Please contact BHW for a new link.')}}
+    async function load(){if(!assignmentId||!token){unavailable('Please use the complete link sent by BHW.');return}try{const response=await fetch(`${API}/v1/public/content-assignments/${encodeURIComponent(assignmentId)}?token=${encodeURIComponent(token)}`,{cache:'no-store'});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Link unavailable');if(data.contentPath!==CONTENT_PATH)throw new Error('Wrong resource');const resumeScope=await BHWNeuroWorkbook.privateResumeScope(assignmentId,token);render(resumeScope)}catch(error){unavailable(error.message==='Private device resume is not supported by this browser'?'This browser cannot create a private local save. Please use a current browser or contact BHW.':'It may have expired or been revoked. Please contact BHW for a new link.')}}
     load();
   </script>
 </body>
