@@ -227,7 +227,7 @@ textarea::placeholder{color:rgba(254,252,247,.32)}
 <button onClick="{{ goPrev }}" style="flex:none;min-height:48px;padding:0 18px;border-radius:999px;border:1px solid rgba(254,252,247,.22);background:transparent;color:#fefcf7;font:600 11px/1 var(--font-body,'Instrument Sans',sans-serif);letter-spacing:.12em;text-transform:uppercase;cursor:pointer" style-hover="background:rgba(254,252,247,.07)">Prev</button>
 <button onClick="{{ goNext }}" style="flex:1;min-height:48px;border-radius:999px;border:0;background:var(--gold-500,#f0a828);color:#04122d;font:600 11px/1 var(--font-body,'Instrument Sans',sans-serif);letter-spacing:.12em;text-transform:uppercase;cursor:pointer;box-shadow:0 0 28px rgba(240,168,40,.3)" style-hover="background:#f7b843">{{ nextLabel }}</button>
 </div>
-<div style="font:400 12px/1.5 var(--font-body,'Instrument Sans',sans-serif);color:rgba(254,252,247,.42);text-align:center;margin:12px 0 0">Stop whenever you want. This page is saved.</div>
+<div style="font:400 12px/1.5 var(--font-body,'Instrument Sans',sans-serif);color:rgba(254,252,247,.42);text-align:center;margin:12px 0 0">Stop whenever you want. A private BHW link saves only for that link on this device.</div>
 </div>
 </sc-if>
 
@@ -271,12 +271,14 @@ textarea::placeholder{color:rgba(254,252,247,.32)}
 const BAND = "6-7";
 
 class Component extends DCLogic {
-  state = { screen: 'intro', idx: 0, answers: {}, ready: false, saveNote: 'Saved on this device' };
+  state = { screen: 'intro', idx: 0, answers: {}, ready: false, saveNote: 'Preparing private save…' };
 
   componentDidMount() {
-    this.key = 'ndwb-' + BAND;
+    const requestedResume = new URLSearchParams(location.hash.slice(1)).get('resume') || '';
+    const resume = /^[a-f0-9]{64}$/.test(requestedResume) ? requestedResume : '';
+    this.key = resume ? 'ndwb-v2-' + BAND + '-' + resume : '';
     let saved = {};
-    try { saved = JSON.parse(localStorage.getItem(this.key) || '{}'); } catch (e) {}
+    if (this.key) { try { saved = JSON.parse(localStorage.getItem(this.key) || '{}'); } catch (e) {} }
     const wait = () => {
       if (window.WORKBOOK && window.WORKBOOK_BANDS) {
         this.band = window.WORKBOOK_BANDS[BAND];
@@ -285,17 +287,17 @@ class Component extends DCLogic {
         const keep = this.band.forms;
         this.forms = window.WORKBOOK.filter(f => keep.indexOf(f.num) >= 0);
         const started = Object.keys(saved).some(k => k.charAt(0) === 'f');
-        this.setState({ ready: true, answers: saved, screen: started || saved.__seen ? 'home' : 'intro' });
+        this.setState({ ready: true, answers: saved, screen: started || saved.__seen ? 'home' : 'intro', saveNote: this.key ? 'Saved only for this private link on this device' : 'Preview only — entries are not saved' });
       } else setTimeout(wait, 60);
     };
     wait();
   }
 
   persist(answers) {
-    try { localStorage.setItem(this.key, JSON.stringify(answers)); } catch (e) {}
-    this.setState({ answers, saveNote: 'Saved just now' });
+    if (this.key) { try { localStorage.setItem(this.key, JSON.stringify(answers)); } catch (e) {} }
+    this.setState({ answers, saveNote: this.key ? 'Saved just now for this private link' : 'Preview only — entries are not saved' });
     clearTimeout(this._t);
-    this._t = setTimeout(() => this.setState({ saveNote: 'Saved on this device' }), 2000);
+    if (this.key) this._t = setTimeout(() => this.setState({ saveNote: 'Saved only for this private link on this device' }), 2000);
   }
   set(k, v) { this.persist(Object.assign({}, this.state.answers, { [k]: v })); }
 
@@ -497,7 +499,7 @@ class Component extends DCLogic {
       setDay: e => this.set('__remDay', e.target.value),
       setTime: e => this.set('__remTime', e.target.value),
       doPrint: () => window.print(),
-      doClear: () => { if (confirm('Clear every answer on this device?')) { try { localStorage.removeItem(this.key); } catch (e) {} this.setState({ answers: {} }); } },
+      doClear: () => { if (confirm(this.key ? 'Clear every answer saved for this private link on this device?' : 'Clear every answer in this preview?')) { if (this.key) { try { localStorage.removeItem(this.key); } catch (e) {} } this.setState({ answers: {} }); } },
       saveNote: this.state.saveNote
     };
   }

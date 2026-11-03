@@ -11,9 +11,23 @@
 
 The age-band query value is routing metadata, not an authorization control. The assignment ID and bearer link token remain the authorization material and are validated by the existing Cloud Run assignment endpoint before any workbook is displayed.
 
+## Assignment-isolated local resume
+
+After the Cloud Run service validates the private assignment, the wrapper derives a one-way SHA-256 resume scope from the opaque assignment ID and its bearer capability. Only that 64-character digest is passed to the workbook, in the iframe URL fragment so it is not sent in the HTTP request or referrer. The iframe receives no patient ID, name, date of birth, assignment token, or other Patient 360 data.
+
+Every age workbook stores answers under `ndwb-v2-<band>-<resume-scope>`. Therefore:
+
+- the same private link in the same browser on the same device resumes that assignment;
+- another assignment link derives a different key and cannot load those answers through the workbook UI;
+- changing age versions within one allowed assignment retains the same assignment scope while keeping each age version separate;
+- public preview pages have no private resume scope and do not persist journal entries;
+- the former band-wide `ndwb-<band>` keys are never read or migrated, because their owner cannot be established safely.
+
+Local browser storage is not a substitute for an operating-system account boundary. Someone with administrative access or browser developer tools on the same profile may be able to inspect origin storage. Patient copy therefore recommends a private device or separate browser profile on a shared device. The private assignment link and same browser/device are both required for normal resume behavior, and clearing browser data removes the local journal.
+
 ## Privacy and clinical status
 
-The workbook is optional personal journaling/reflection. It is not a formal clinical intake, assessment, diagnosis, or chart entry. Workbook entries use the existing device-local autosave. Opening the link, switching versions, writing entries, and exporting/printing a PDF do not submit content to BHW.
+The workbook is optional personal journaling/reflection. It is not a formal clinical intake, assessment, diagnosis, or chart entry. Workbook entries use assignment-isolated device-local autosave. Opening the link, switching versions, writing entries, and exporting/printing a PDF do not submit content to BHW.
 
 ## Secure PDF return: blocked, not represented as available
 
