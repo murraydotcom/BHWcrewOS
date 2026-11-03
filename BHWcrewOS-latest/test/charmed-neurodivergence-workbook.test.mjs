@@ -2,11 +2,14 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const resource = path.join(root, "patient-resources", "charmed-minds", "neurodivergence-workbook");
 const ageFiles = ["0-5", "6-7", "8-12", "13-18", "19-29", "30-54", "55plus"].map(band => `Workbook App ${band}.dc.html`);
+const require = createRequire(import.meta.url);
+const assignment = require(path.join(root, "assets", "bhw-neurodivergence-assignment.js"));
 
 test("CrewOS publishes the complete CharmEd Minds workbook bundle", () => {
   for (const file of ["index.html", ...ageFiles, "Neurodivergence Self-Reflection Workbook.dc.html", "support.js", "workbook-data.js", "workbook-bands.js", "workbook-choices.js", "workbook-icons.js", "doc-page.js", "vendor/react.production.min.js", "vendor/react-dom.production.min.js"]) {
@@ -28,4 +31,33 @@ test("workbook keeps all seven age bands, local autosave, and PDF export", () =>
   assert.match(support, /\.\/vendor\/react\.production\.min\.js/);
   assert.match(support, /remote JSX imports are disabled/);
   assert.doesNotMatch(support, /unpkg\.com/);
+});
+
+test("assignment helper supports every exact workbook age band and existing file", () => {
+  assert.deepEqual(assignment.AGE_BANDS.map(({ id }) => id), ["0-5", "6-7", "8-12", "13-18", "19-29", "30-54", "55+"]);
+  for (const band of assignment.AGE_BANDS) {
+    assert.equal(fs.existsSync(path.join(resource, band.file)), true, `${band.id} workbook file is missing`);
+    assert.equal(assignment.getAgeBand(band.id)?.label, band.label);
+    assert.match(assignment.workbookUrl(band.id), /^\/patient-resources\/charmed-minds\/neurodivergence-workbook\/Workbook%20App%20/);
+  }
+});
+
+test("private assignment link opens the selected version and records optional adjustment", () => {
+  const base = "https://crewhq.bhwmedical.org/bhw-neurodivergence-workbook.html?assignment=synthetic-assignment&token=synthetic-token";
+  const adjusted = new URL(assignment.addSelectionToPatientLink(base, "8-12", true));
+  assert.equal(adjusted.searchParams.get("assignment"), "synthetic-assignment");
+  assert.equal(adjusted.searchParams.get("token"), "synthetic-token");
+  assert.equal(adjusted.searchParams.get("ageBand"), "8-12");
+  assert.equal(adjusted.searchParams.get("adjustAge"), "1");
+  assert.equal(assignment.selectionFromSearch(adjusted.search).band.id, "8-12");
+  assert.equal(assignment.selectionFromSearch(adjusted.search).allowAdjustment, true);
+
+  const fixed = new URL(assignment.addSelectionToPatientLink(base, "55+", false));
+  assert.equal(fixed.searchParams.get("ageBand"), "55+");
+  assert.equal(fixed.searchParams.get("adjustAge"), "0");
+  assert.equal(assignment.assignedTitle("Reflection workbook", "55+"), "Reflection workbook — Ages 55+");
+  assert.throws(() => assignment.addSelectionToPatientLink(base, "adult", true), /supported workbook age band/);
+  assert.throws(() => assignment.addSelectionToPatientLink("http://example.test/private", "19-29", true), /must use HTTPS/);
+  assert.throws(() => assignment.addSelectionToPatientLink("https://example.test/private", "19-29", true), /approved CrewHQ origin/);
+  assert.throws(() => assignment.assignedTitle("x".repeat(200), "0-5"), /Shorten the workbook assignment title/);
 });
