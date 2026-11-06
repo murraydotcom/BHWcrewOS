@@ -6,6 +6,7 @@ const { queryOperational } = require("./lib/operational-store");
 const { cloudRequest, listCloudPatients } = require("./lib/cloud-patients");
 const { buildPatientDirectory } = require("./lib/crew-patient-directory");
 const { operationsRequest } = require("./lib/operations-cloud");
+const { canAccessOperationsOverview } = require("./lib/staff-access");
  
 function shapeReferral(request) {
   const context = request.workflowContext || {};
@@ -90,6 +91,7 @@ exports.handler = async (event) => {
  
   const vis = visibleDivisions(session);
   const isAdmin = session.access === "Admin";
+  const canOperationsOverview = canAccessOperationsOverview(session);
   const inVis = (d) => vis.includes(d);
  
   try {
@@ -264,8 +266,7 @@ exports.handler = async (event) => {
       }));
     }
  
-    // Admin Master stays admin-only. Elevated Wellness census opens to everyone naturally,
-    // via the "vis" division wall above (now unrestricted) — no special case needed here.
+    // The operations overview shares aggregate coordination data, not Admin authority.
     let adminRollup = null;
     let porterhouse = null;
     if (isAdmin || vis.includes("Elevated Wellness")) {
@@ -279,7 +280,7 @@ exports.handler = async (event) => {
         admit: plan.moveInDate || "",
       }));
     }
-    if (isAdmin) {
+    if (canOperationsOverview) {
       adminRollup = {};
       for (const log of minuteRows) {
         const d = log.serviceMonth || log.episodeDate || "";
@@ -302,7 +303,7 @@ exports.handler = async (event) => {
       .sort((a, b) => (b.pinned - a.pinned) || a.title.localeCompare(b.title));
  
     return json(200, {
-      user: { name: session.name, divisions: session.divisions, access: session.access, landing: session.landing, canSchedule: session.canSchedule, staffId: session.staffId },
+      user: { name: session.name, role: session.role, divisions: session.divisions, access: session.access, landing: session.landing, canSchedule: session.canSchedule, canOperationsOverview, staffId: session.staffId },
       visibleDivisions: vis,
       staff: staff.filter((s) => s.active).map(({ id, name, role, divisions }) => ({ id, name, role, divisions })),
       staffName,

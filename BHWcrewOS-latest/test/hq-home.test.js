@@ -65,6 +65,17 @@ test('myBHW uses existing inbox grants, shows own unread threads, and preserves 
  const r=await h(event),d=JSON.parse(r.body);assert.equal(d.notifications.portal.count,2);assert.equal(d.notifications.portal.pilot,true);
  assert(!r.body.includes('PRIVATE SUBJECT'));assert(!r.body.includes('thread-other'));
 });
+
+test('operations leads receive the overview route while personal assignment ownership is preserved',async()=>{
+ const lead={...actor,role:'Operations and Coordination Lead',access:'Division Admin',divisions:['All']};
+ const d=JSON.parse((await handler({sessionImpl:()=>lead,rows:[request('mine',{assignedTo:'crew:synthetic-a'}),
+  request('another-owner',{assignedTo:'crew:synthetic-b'})]})(event)).body);
+ assert.equal(d.role,'operations-manager');
+ assert.equal(d.operationsOverview.href,'/crewos?view=operations-overview');
+ assert(!d.handoffs.items.some(r=>r.id==='another-owner'));
+ const ordinary=JSON.parse((await handler()(event)).body);
+ assert.equal(ordinary.operationsOverview,null);
+});
 test('failure cannot become zero workload or a fabricated KPI',async()=>{
  const h=handler({operationsImpl:async()=>{throw Error('Private upstream error');},queryImpl:async()=>{throw Error('private');}});
  const r=await h(event),d=JSON.parse(r.body);assert.equal(d.handoffs.available,false);assert.equal(d.metrics.available,false);
