@@ -5,6 +5,7 @@ const { operationsRequest } = require('./lib/operations-cloud');
 const { queryOperational } = require('./lib/operational-store');
 const { careCloudToken, medicationApiBase } = require('./lib/care-cloud-auth');
 const { handler: portalInbox } = require('./portal-messaging');
+const { canAccessOperationsOverview } = require('./lib/staff-access');
 const clean = (v, max = 200) => String(v ?? '').trim().slice(0, max);
 const identity = v => clean(v).replace(/^crew:/, '');
 const owns = (v, actor) => Boolean(identity(v) && identity(v) === actor.staffId);
@@ -152,6 +153,7 @@ function createHomeHandler({ sessionImpl=getSession, operationsImpl=operationsRe
     const goals=projects ? projects.filter(pg=>P.rel(pg.properties?.Staff).some(v=>owns(v,actor))).map(pg=>({
       id:clean(pg.id),title:P.title(pg.properties?.Project),status:P.sel(pg.properties?.Status),dueAt:P.date(pg.properties?.['Due Date']),href:'/crewos?view=myspace'})) : null;
     return {...json(200,{ok:true,user:actor,role,checkedAt:new Date(now()).toISOString(),
+      operationsOverview:canAccessOperationsOverview(session)?{href:session.access==='Admin'?'/crewos?view=admin-master':'/crewos?view=operations-overview'}:null,
       notifications:{care,portal},handoffs:{available:workflowReady,partial:!workflowReady && workflowLists.some(Boolean),limited:limitReached,
         items:relevant.filter(r=>!finished(r)).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt))).slice(0,8).map(r=>handoff(r,actor)),
         recentClosed:relevant.filter(finished).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt))).slice(0,5).map(r=>handoff(r,actor))},

@@ -9,6 +9,10 @@ on:
       - "BHWcrewOS-latest/netlify/functions/portal-messaging.js"
       - "BHWcrewOS-latest/bhw-alert-center.mjs"
       - "BHWcrewOS-latest/test/hq-home.test.js"
+      - "BHWcrewOS-latest/index.html"
+      - "BHWcrewOS-latest/netlify/functions/ops-data.js"
+      - "BHWcrewOS-latest/netlify/functions/lib/staff-access.js"
+      - "BHWcrewOS-latest/test/operations-access.test.js"
       - ".github/workflows/crewhq-home-tests.yml"
   workflow_dispatch:
 
@@ -28,4 +32,4 @@ jobs:
           node --check BHWcrewOS-latest/hq-home.mjs
           node --check BHWcrewOS-latest/netlify/functions/hq-home.js
       - name: Verify identity, role routing, source states, and messaging gates
-        run: node --test BHWcrewOS-latest/test/hq-home.test.js BHWcrewOS-latest/test/portal-messaging.test.js
+        run: node --test BHWcrewOS-latest/test/hq-home.test.js BHWcrewOS-latest/test/portal-messaging.test.js BHWcrewOS-latest/test/operations-access.test.js

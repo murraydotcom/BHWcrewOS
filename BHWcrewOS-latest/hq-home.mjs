@@ -50,7 +50,7 @@ $('themeBtn').addEventListener('click',()=>{const next=document.documentElement.
   try{localStorage.setItem('bhw-theme',next);}catch{}document.querySelector('meta[name=theme-color]').content=next==='light'?'#f4eede':'#0e2233';});
 function clearPersonal(message='Sign in to see your personal work.'){
   generation++;clearTimeout(expiryTimer);$('personScope').textContent='Your updates, your handoffs, and the tools for your day.';
-  $('homeStatus').textContent=message;$('signIn').textContent='Sign in →';$('refreshHome').hidden=true;
+  $('homeStatus').textContent=message;$('signIn').textContent='Sign in →';$('signIn').href='/crewos?next=%2Fhq.html';$('refreshHome').hidden=true;
   for(const id of ['care','portal']){$(id+'Count').textContent='—';$(id+'Status').textContent='Sign in to see your updates.';$(id+'Items').replaceChildren();$(id+'Details').hidden=true;}
   for(const id of ['handoffItems','closedItems','measureItems','goalItems'])$(id).replaceChildren();
   $('closedDetails').hidden=true;$('handoffStatus').textContent='Sign in to see your handoffs and referrals.';$('metricStatus').textContent='Sign in to see measures for your role.';
@@ -64,7 +64,9 @@ function workflowRow(item){const a=link('',item.href,'workflow-row');const copy=
   copy.append(element('strong',item.title+(item.to?' · '+item.to:'')),element('small',[item.from&&`From ${item.from}`,item.relationship,`Owner: ${item.owner}`].filter(Boolean).join(' · ')),element('small',item.nextAction || 'Open the original '+(item.kind==='referral'?'referral':'handoff')+' for its next action.'));
   const end=element('div',undefined,'workflow-end');end.append(element('span',item.status,'status-pill'+(item.dueAt&&Date.parse(item.dueAt)<Date.now()&&!item.completed?' late':'')),element('small',item.dueAt?'Due '+fmt(item.dueAt):'Due date not recorded'));a.append(copy,end);return a;}
 function renderHome(data){$('personScope').textContent=`${data.user.name} · ${data.user.role || 'Staff'}${data.user.divisions.length?' · '+data.user.divisions.join(', '):''}`;
-  $('homeStatus').textContent='Updated '+fmt(data.checkedAt)+'. Your assignments and role queue.';$('signIn').textContent='Open crewOS →';$('refreshHome').hidden=false;
+  $('homeStatus').textContent='Updated '+fmt(data.checkedAt)+'. Your assignments and role queue.';
+  $('signIn').textContent=data.operationsOverview?'Operations overview →':'Open crewOS →';
+  $('signIn').href=data.operationsOverview?.href || '/crewos';$('refreshHome').hidden=false;
   notification('care',data.notifications.care);notification('portal',data.notifications.portal);
   const h=data.handoffs;$('handoffStatus').textContent=h.available?(h.limited?'Recent recorded work; the source window reached its limit. Open crewOS for full history.':'Your assignments, incoming work for your area, and handoffs you sent.'):(h.partial?'Some handoffs could not be loaded. Available items are shown below.':'Handoffs are unavailable. Open crewOS or refresh.');
   $('handoffItems').replaceChildren(...h.items.map(workflowRow));if(h.available&&!h.items.length)$('handoffItems').append(element('p','No open handoffs or referrals in your current home view.','empty'));

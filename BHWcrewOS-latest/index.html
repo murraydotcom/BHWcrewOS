@@ -271,7 +271,7 @@ if("serviceWorker" in navigator && navigator.serviceWorker.getRegistrations){
 const DIV_COLORS = {
   "Primary Care":"var(--pc-primary)", "CharmEd Minds":"var(--pc-charmed)",
   "Mind & Mood Recovery":"var(--pc-mind)", "Elevated Wellness":"var(--pc-porter)",
-  "Care Management":"var(--pc-chronic)", "Flow":"var(--pc-flow)", "Admin Master":"var(--pc-admin)"
+  "Care Management":"var(--pc-chronic)", "Flow":"var(--pc-flow)", "Admin Master":"var(--pc-admin)", "Operations Overview":"var(--pc-admin)"
 };
 const DIV_BLURBS = {
   "Primary Care":"Panel care, referrals out, and warm handoffs across BHW.",
@@ -429,12 +429,14 @@ function buildRail(){
   let html = `<div class="rail-label">My pages</div>`;
   const pages = [];
   if(D.user.access==="Admin") pages.push("Admin Master");
+  else if(D.user.canOperationsOverview) pages.push("Operations Overview");
   for(const div of D.visibleDivisions) pages.push(div);
   for(const p of pages){
-    const c = p==="Admin Master" ? {rIn:D.referrals.filter(r=>!["Completed","Declined/Redirect"].includes(r.status)).length, hIn:D.handoffs.filter(h=>h.status!=="Completed").length} : counts(p);
+    const overview = p==="Admin Master" || p==="Operations Overview";
+    const c = overview ? {rIn:D.referrals.filter(r=>!["Completed","Declined/Redirect"].includes(r.status)).length, hIn:D.handoffs.filter(h=>h.status!=="Completed").length} : counts(p);
     const sig = (p==="Primary Care"||p==="Admin Master") ? awvPending().length : 0;
-    const rts = (p==="CharmEd Minds"||p==="Admin Master") && D.charmedProgram ? D.charmedProgram.filter(e=>!["Graduated","Withdrawn","Retest Complete"].includes(e.stage) && cpWeek(e.startDate)>=12).length : 0;
-    const lch = (p==="Elevated Wellness"||p==="Admin Master") && D.phPlans ? D.phPlans.filter(x=>!["Graduated — Independent","Discharged — Other","Extended Stay"].includes(x.stage) && phWeek(x.moveIn)>=14).length : 0;
+    const rts = (p==="CharmEd Minds"||overview) && D.charmedProgram ? D.charmedProgram.filter(e=>!["Graduated","Withdrawn","Retest Complete"].includes(e.stage) && cpWeek(e.startDate)>=12).length : 0;
+    const lch = (p==="Elevated Wellness"||overview) && D.phPlans ? D.phPlans.filter(x=>!["Graduated — Independent","Discharged — Other","Extended Stay"].includes(x.stage) && phWeek(x.moveIn)>=14).length : 0;
     const badge = (c.rIn + c.hIn + sig + rts + lch) || "";
     html += `<button class="tab" data-view="${cssId(p)}" style="--spine:${DIV_COLORS[p]}">${esc(p)}<span class="badge">${badge}</span></button>`;
   }
@@ -512,6 +514,7 @@ function buildViews(){
   const host = document.getElementById("views");
   let html = "";
   if(D.user.access==="Admin") html += adminView();
+  else if(D.user.canOperationsOverview) html += adminView("Operations Overview");
   for(const div of D.visibleDivisions) html += divisionView(div);
   html += frontDeskView();
   for(const e of PAGE_EMBEDS) html += embedView(e);
@@ -796,7 +799,7 @@ function porterCensus(){
 }
 
 /* ---------- admin master ---------- */
-function adminView(){
+function adminView(title="Admin Master"){
   const openR = D.referrals.filter(r=>!["Completed","Declined/Redirect"].includes(r.status));
   const openH = D.handoffs.filter(h=>h.status!=="Completed");
   const todayStr = new Date().toISOString().slice(0,10);
@@ -804,8 +807,8 @@ function adminView(){
   const aging = openR.map(r=>({...r, days: r.sentDate? Math.floor((Date.now()-new Date(r.sentDate))/86400000):0})).sort((a,b)=>b.days-a.days);
   const rollup = D.adminRollup||{};
   const divs = ["Primary Care","CharmEd Minds","Mind & Mood Recovery","Elevated Wellness","Care Management","Flow"];
-  return `<section class="view" id="view-admin-master" style="--pc:var(--pc-admin)">
-    <div class="prog-head"><div class="bar"></div><div><h1>Admin Master</h1><p>${DIV_BLURBS["Admin Master"]}</p></div></div>
+  return `<section class="view" id="view-${cssId(title)}" style="--pc:var(--pc-admin)">
+    <div class="prog-head"><div class="bar"></div><div><h1>${esc(title)}</h1><p>${title==="Admin Master"?DIV_BLURBS["Admin Master"]:"Cross-program coordination: referrals, handoffs, scheduling, and documented care activity."}</p></div></div>
     <div class="kpis">
       <div class="kpi" style="--kc:var(--alert)"><div class="n">${openR.length}</div><div class="l">Open referrals · all divisions</div></div>
       <div class="kpi" style="--kc:var(--warn)"><div class="n">${openH.length}</div><div class="l">Open warm handoffs</div></div>
