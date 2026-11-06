@@ -10,6 +10,7 @@ const GROUPS = [
   ['Visits & Care Plans', [
     ['Health Core','Open the protected clinical access workspace.','https://bhw-health-core-ehr-awknhudemq-uk.a.run.app/clinical-access.html'],
     ['Provider 360 resources','Provider reference library, atlas, and clinical sources.','https://bhw-health-core-ehr-awknhudemq-uk.a.run.app/provider-360.html'],
+    ['Cell-Up · Lab Interpretation & Health Blueprint','Provider resource for reviewing lab patterns and building the Personal Health Blueprint. Sign in with your authorized BHW Google account.','https://cellup.bhwmedical.org'],
     ['Visit Documentation Assistance','Capture, review, and approve visit documentation.','/provider/workflow.html'],
     ['Health 360 Care Plans','Create and review patient care plans.','https://rcm.bhwmedical.org/provider/health-blueprint.html'],
   ]],
