@@ -636,7 +636,7 @@ document.getElementById('verify-run').addEventListener('click', async () => {
   const kind=document.getElementById('verify-kind').value;
   const patient=window.lastPatient;
   const id=String(patient?.ctl||patient?.bhwPatientId||'').toUpperCase();
-  if(!/^BHW\\d{4}$/.test(id) || id==='BHW0000'){
+  if(!/^BHW\d{4}$/.test(id) || id==='BHW0000'){
     result.textContent='Select a verified, non-synthetic Patient Registry record first.';return;
   }
   if(!['coverage','wellness'].includes(kind)){
@@ -651,7 +651,7 @@ document.getElementById('verify-run').addEventListener('click', async () => {
     const response=await crewFetch(VERIFY_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'check',patientId:id})});
     const data=await response.json().catch(()=>({}));
     if(!response.ok || data.error)throw new Error(data.error||'Eligibility request failed');
-    const parts=kind==='wellness'?['AWV: '+(data.awvStatus||'Unknown'),'Next eligible: '+(data.awvNext||'Not returned')]:['Coverage: '+(data.coverage||'Unknown'),'Plan: '+(data.planType||'Not returned')];
+    const parts=kind==='wellness'?['AWV: '+(data.awvStatus||'Unknown'),'Next eligible: '+(data.awvNext||'Not returned')]:['Medicare status: '+(data.active===true?'Active':data.active===false?'Inactive':'Unknown'),'Benefit scope: '+(data.requestScope||'Not returned')];
     result.textContent=parts.join(' · ')+' · Checked just now. Confirm in the protected patient record.';
   }catch(e){result.textContent='Not verified: '+String(e.message||e).slice(0,180);}
   finally{button.disabled=false;}
