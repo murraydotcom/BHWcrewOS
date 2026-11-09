@@ -2530,7 +2530,7 @@ function primaryRosterRows(){
   const registry=new Map((D.patients||[]).map(p=>[p.id,p]));
   const preventive=new Map((D.prevention||[]).map(p=>[p.patient,p]));
   return appointments.map(b=>{
-    const validId=/^BHW\\d{4}$/.test(b.bhwPatientId||"") && b.bhwPatientId!=="BHW0000";
+    const validId=/^BHW\d{4}$/.test(b.bhwPatientId||"") && b.bhwPatientId!=="BHW0000";
     const p=validId?registry.get(b.bhwPatientId):null;
     return {b,p,wellness:p?preventive.get(p.id):null};
   }).sort((a,b)=>(a.b.start||"").localeCompare(b.b.start||""));
