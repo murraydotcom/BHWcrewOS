@@ -254,6 +254,7 @@ input,select{width:100%;font-family:inherit;font-size:14px;padding:10px 12px;bor
   <div id="out-assess"></div>
 </div>
 </div>
+<script src="/assets/positive-ana-icap.js"></script>
 <script>
 const $=id=>document.getElementById(id);
 
@@ -276,6 +277,8 @@ const ANA_PATTERNS=[
  {k:"AC-13",group:"Nuclear",label:"AC-13 · PCNA-like"},
  {k:"AC-14",group:"Nuclear",label:"AC-14 · CENP-F-like"},
  {k:"AC-29",group:"Nuclear",label:"AC-29 · Topoisomerase I-like"},
+ {k:"AC-30",group:"Nuclear",label:"AC-30 · Fine speckled with positive mitotic chromatin"},
+ {k:"AC-31",group:"Nuclear",label:"AC-31 · Myriad discrete nuclear speckled (formerly AC-4a)"},
  {k:"AC-15",group:"Cytoplasmic",label:"AC-15 · Cytoplasmic fibrillar linear"},
  {k:"AC-16",group:"Cytoplasmic",label:"AC-16 · Cytoplasmic fibrillar filamentous"},
  {k:"AC-17",group:"Cytoplasmic",label:"AC-17 · Cytoplasmic fibrillar segmental"},
@@ -319,6 +322,7 @@ function refreshAnaPatternRows(){
   });
 }
 function addAnaPatternRow(initial={}){
+  if(document.querySelectorAll('.anarow').length>=12){alert('A review supports up to 12 separately reported patterns. Verify the laboratory report before adding more.');return;}
   const row=document.createElement('div');
   row.className='anarow';
   row.innerHTML=`<div><label data-pattern-label>Pattern</label><select class="ana-pattern">${anaPatternOptions(initial.pattern||'')}</select></div><div><label data-titer-label>Titer</label><select class="ana-titer">${anaTiterOptions(initial.titer??'')}</select></div><button type="button" class="remove-pattern" onclick="removeAnaPatternRow(this)">Remove</button>`;
@@ -1222,10 +1226,11 @@ function buildLongitudinalReview(record){
   const measurements=(record.measurements||[]).map(current=>{const history=measurementHistory.get(comparisonMeasurementKey(current))||[],previous=history[0],result=compareRecordedMeasurement(current,previous,previous);return {key:current.key,label:current.label,subject:current.subject||'',currentPresent:true,current:{value:current.value,unit:current.unit||'',method:current.method||'',referenceRange:current.referenceRange||'',collectedOn:current.collectedOn||''},history,...result}});
   measurementHistory.forEach((history,key)=>{if(!currentMeasurementKeys.has(key))measurements.push({key:history[0].key,label:history[0].label,subject:history[0].subject||'',currentPresent:false,current:null,history,comparability:'not-entered-currently',comparison:'A prior value exists but no matching current value was entered; no change was inferred.'})});
   const latest=prior[0]||null,foodMeasurements=(record.measurements||[]).filter(item=>item.key==='foodIgGValue'),foodSymptoms=(record.symptoms||[]).filter(item=>/GI|Skin|Allergy|Mast-cell|Neuro/i.test(item.group||'')).map(item=>item.label);
-  return {generatedAt:new Date().toISOString(),priorReviewCount:prior.length,provenance:prior.map(item=>({responseId:item.responseId,reviewedAt:comparisonDate(item.submittedAt)})),patterns,measurements,antibodies:compareReviewSnapshot(record.antibodies,latest?.analysis?.antibodies,latest,'findings'),labs:compareReviewSnapshot(record.labs,latest?.analysis?.labs,latest,'findings'),symptoms:compareReviewSnapshot(record.symptoms,latest?.analysis?.symptoms,latest,'symptoms'),foodContext:foodMeasurements.map(item=>({subject:item.subject||'',value:item.value,unit:item.unit||'',coRecordedSymptoms:foodSymptoms,relationship:'The food IgG result and these symptoms were recorded in the same review; timing and causality are not established.',sourceSupportedUse:'This may be retained as one hypothesis-generating exposure signal. If clinically appropriate and safe, a clinician may define a time-limited, nutritionally adequate elimination with planned rechallenge and prespecified endpoints.',missingContext:[item.subject?'':'Food/analyte was not recorded.',item.method?'':'Assay/method was not recorded.',item.referenceRange?'':'Reference interval was not recorded.'].filter(Boolean)})),interpretationBoundaries:['ANA is a gateway test, not a diagnosis; titer and pattern require a compatible phenotype and targeted tissue/organ assessment.','The supplied Field Guide and Version 2 framework do not provide AC-specific ICAP pattern-to-disease associations, so none were inferred.','Food IgG does not diagnose food allergy or intolerance and must not be used to estimate anaphylaxis risk.','Longitudinal differences are factual comparisons of recorded reviews, not diagnoses or disease-activity scores.']};
+  return {generatedAt:new Date().toISOString(),priorReviewCount:prior.length,provenance:prior.map(item=>({responseId:item.responseId,reviewedAt:comparisonDate(item.submittedAt)})),patterns,measurements,antibodies:compareReviewSnapshot(record.antibodies,latest?.analysis?.antibodies,latest,'findings'),labs:compareReviewSnapshot(record.labs,latest?.analysis?.labs,latest,'findings'),symptoms:compareReviewSnapshot(record.symptoms,latest?.analysis?.symptoms,latest,'symptoms'),foodContext:foodMeasurements.map(item=>({subject:item.subject||'',value:item.value,unit:item.unit||'',coRecordedSymptoms:foodSymptoms,relationship:'The food IgG result and these symptoms were recorded in the same review; timing and causality are not established.',sourceSupportedUse:'This may be retained as one hypothesis-generating exposure signal. If clinically appropriate and safe, a clinician may define a time-limited, nutritionally adequate elimination with planned rechallenge and prespecified endpoints.',missingContext:[item.subject?'':'Food/analyte was not recorded.',item.method?'':'Assay/method was not recorded.',item.referenceRange?'':'Reference interval was not recorded.'].filter(Boolean)})),interpretationBoundaries:['ANA is a gateway test, not a diagnosis; titer and pattern require a compatible phenotype and targeted tissue/organ assessment.','ICAP associations are reviewed separately for each reported pattern with antigen confirmation and clinical context; no diagnosis or combined score is inferred.','Food IgG does not diagnose food allergy or intolerance and must not be used to estimate anaphylaxis risk.','Longitudinal differences are factual comparisons of recorded reviews, not diagnoses or disease-activity scores.']};
 }
 
 function buildAnalysisRecord({anaResults,sex,cascade,posAbs,posMeds,posLabs,measurements,checked,redFlags}){
+  const icapReview=BHW_ICAP.review(anaResults);
   const patientResponseIds=[...(window._importedStep5SubmissionIds||[])].slice(0,20);
   const priorAnalysisIds=(linkedPositiveAnaAnalyses||[]).map(item=>item.responseId).filter(Boolean).slice(0,25);
   const supplementalGuideUsed=checked.some(item=>item.dataset.grp===IMMUNE_SUPPORT_GUIDE.historyGroup)||posLabs.some(item=>IMMUNE_SUPPORT_GUIDE.labKeys.includes(item.k));
@@ -1251,13 +1256,13 @@ function buildAnalysisRecord({anaResults,sex,cascade,posAbs,posMeds,posLabs,meas
     redFlags,
     review:{
       clinicianReviewRequired:true,
-      sourceSupportedContext,
+      sourceSupportedContext:[...sourceSupportedContext,...BHW_ICAP.context(icapReview)],
       uncertainty:[
         'No condition ranking, score, hidden ordering, or automated diagnosis was generated.',
         'Interpret results with the assay method and reference range, specimen and symptom timing, medications, objective organ findings, and validated clinical criteria.'
       ],
-      sourceReferences:supplementalGuideUsed?[{title:IMMUNE_SUPPORT_GUIDE.title,author:IMMUNE_SUPPORT_GUIDE.author,year:IMMUNE_SUPPORT_GUIDE.year,pages:IMMUNE_SUPPORT_GUIDE.pages,role:IMMUNE_SUPPORT_GUIDE.role}]:[],
-      sourceGaps:anaResults.length?['AC-specific ICAP pattern-to-disease associations are not provided in the supplied Field Guide or Version 2 framework; no such association was inferred.']:[]
+      sourceReferences:[...(supplementalGuideUsed?[{title:IMMUNE_SUPPORT_GUIDE.title,author:IMMUNE_SUPPORT_GUIDE.author,year:IMMUNE_SUPPORT_GUIDE.year,pages:IMMUNE_SUPPORT_GUIDE.pages,role:IMMUNE_SUPPORT_GUIDE.role}]:[]),...BHW_ICAP.references(icapReview)],
+      sourceGaps:icapReview.filter(item=>!item.sourceUrl).map(item=>`${item.code}: ${item.limitation}`)
     }
   };
   record.longitudinalComparison=buildLongitudinalReview(record);
@@ -1333,7 +1338,8 @@ function analyze(){
   }
   const anaHasNegative=anaResults.some(result=>result.k==='AC-0'||result.titer===0),anaHasPositive=anaResults.some(result=>result.k!=='AC-0'&&result.titer!==0);
   const anaSourceInterpretation=anaHasNegative&&!anaHasPositive?'A negative ANA reduces the likelihood of SLE but does not exclude every autoimmune disease. Pursue phenotype-specific testing only when clinical suspicion remains.':'A positive ANA is a gateway finding, not a diagnosis. Predictive value depends on the phenotype; pattern and titer should direct only phenotype-supported antibodies and tissue or organ assessment.';
-  const anaHtml=anaResults.length?`<div class="card" style="border-left:4px solid var(--clay)"><span class="eyebrow">ANA immunofluorescence observations</span><div class="abnote">Every reported pattern keeps its own titer. These observations are not converted into a disease score or automatic association.</div>${anaResults.map(result=>`<div class="abfind"><b>${anaResultText(result)}</b></div>`).join('')}<div class="abact"><b>Source-supported interpretation:</b> ${anaSourceInterpretation}</div>${anaResults.length>1?'<div class="abnote">Multiple patterns are retained separately. The supplied sources do not define combined AC-pattern disease associations.</div>':''}<div class="abnote"><b>Source gap:</b> The supplied Field Guide and Version 2 framework do not provide AC-specific ICAP pattern-to-disease associations; none are inferred here.</div></div>`:'';
+  const icapReview=BHW_ICAP.review(anaResults);
+  const anaHtml=anaResults.length?`<div class="card" style="border-left:4px solid var(--clay)"><span class="eyebrow">ICAP pattern-to-disease associations · enabled</span><div class="abnote">Every reported pattern keeps its own titer. Associations guide clinical review and confirmatory testing; they are not diagnoses or scores.</div>${anaResults.map((result,index)=>{const item=icapReview[index];return `<div class="abfind"><b>${escapeWorkflowHtml(anaResultText(result))}</b>${item.sourceUrl?`<div class="abact"><b>Associated conditions/context:</b> ${escapeWorkflowHtml(item.associations)}</div><div class="abnote"><b>Antigen targets:</b> ${escapeWorkflowHtml(item.antigens)}</div><div class="abact"><b>Clinical next step:</b> ${escapeWorkflowHtml(item.followUp)}</div>`:''}<div class="abnote"><b>Interpretation limits:</b> ${escapeWorkflowHtml(item.limitation)}</div>${item.sourceUrl?`<a href="${item.sourceUrl}" target="_blank" rel="noopener noreferrer">ICAP ${item.code} source</a> · reviewed ${item.reviewedOn}`:''}</div>`}).join('')}<div class="abact"><b>Clinical context:</b> ${anaSourceInterpretation}</div><div class="abnote">Correlate each association with the symptoms/history, measured results, medications and organ findings below. A pattern does not confirm its antigen. Multiple patterns remain separate; no combined disease probability or ranking is calculated. Titers are not converted into disease activity.</div></div>`:'';
   const groupedSymptoms=Object.keys(SYMPTOMS).map(group=>({group,items:checked.filter(item=>item.dataset.grp===group).map(item=>item.value)})).filter(entry=>entry.items.length);
   const symptomHtml=groupedSymptoms.length?`<div class="card" style="border-left:4px solid var(--gold)"><span class="eyebrow">Symptoms and history observations</span>${groupedSymptoms.map(entry=>`<div class="abfind"><b>${entry.group}</b><div class="abnote">${entry.items.join(' · ')}</div></div>`).join('')}</div>`:'';
   const patientResponseCount=(window._importedStep5SubmissionIds||[]).length;
@@ -1378,7 +1384,9 @@ ${measurementComparisons}
 Symptom selections: ${longitudinal?.symptoms?.baselineResponseId?`continuing ${longitudinal.symptoms.continuing.join(', ')||'none'}; current-only ${longitudinal.symptoms.currentOnly.join(', ')||'none'}; prior-only ${longitudinal.symptoms.previousOnly.join(', ')||'none'}. ${longitudinal.symptoms.note}`:'no prior review available.'}
 
 SOURCE-SUPPORTED INTERPRETATION
-ANA is a gateway test, not a diagnosis. The supplied sources do not provide AC-specific pattern-to-disease associations.
+ANA is a gateway test, not a diagnosis. ICAP associations and conditional follow-up are enabled; confirm antigen specificity and correlate with the clinical phenotype.
+${BHW_ICAP.context(BHW_ICAP.review(window._analysisRecord?.anaPatterns||[])).join('\n')}
+${BHW_ICAP.references(BHW_ICAP.review(window._analysisRecord?.anaPatterns||[])).map(item=>`${item.title}: ${item.url} (reviewed ${BHW_ICAP.reviewedOn})`).join('\n')}
 ${n.foodIgGSelected?'Food-specific IgG is retained as hypothesis-generating exposure/recognition, barrier, or candidate-trigger context; it does not diagnose food allergy or intolerance.\n':''}
 ${n.supplementalGuideUsed?`${IMMUNE_SUPPORT_GUIDE.title} (${IMMUNE_SUPPORT_GUIDE.year}, ${IMMUNE_SUPPORT_GUIDE.pages}) supplied attributed lifestyle, exposure, nutrition, and deficiency context. It did not generate a supplement dose, order, or immune-enhancement protocol.\n`:''}
 UNCERTAINTY
@@ -1750,6 +1758,7 @@ function renderAssess(){
       ${a.cannotprove?`<div class="calm">Cannot prove: ${esc(a.cannotprove)}</div>`:''}
       ${row('Escalation trigger',a.escalation)}${row('Monitoring interval',a.interval)}</div>`).join('')+
     '<h2 style="font-family:var(--serif);font-weight:500;font-size:20px;margin:22px 0 12px">Sources</h2>'+
+    `<div class="acard framework-head"><h3>ICAP pattern-to-disease associations · enabled</h3><div class="arow">International Consensus on ANA Patterns · AC-0 through AC-31 · reviewed ${BHW_ICAP.reviewedOn}</div><div class="arow">Separately attributed clinical associations, antigen context and conditional follow-up appear for each reported pattern in the review. These are not diagnoses, probabilities or disease-activity scores.</div><a href="https://anapatterns.org/" target="_blank" rel="noopener noreferrer">Official ICAP reference</a></div>`+
     `<div class="acard framework-head" style="padding:12px 15px"><div style="font-size:13px;font-weight:600">${esc(IMMUNE_SUPPORT_GUIDE.title)} — ${esc(IMMUNE_SUPPORT_GUIDE.author)}, ${esc(IMMUNE_SUPPORT_GUIDE.year)}</div><div class="arow" style="color:var(--soft)">${esc(IMMUNE_SUPPORT_GUIDE.role)}</div><div class="arow"><b>Material retained</b>${esc(IMMUNE_SUPPORT_GUIDE.pages)} · contextual sections plus concise clinician source-navigation summaries in Integrative Levers.</div><div class="caut">Limitation: This practitioner guide is supplemental education rather than a disease guideline. Its treatment-dose, glandular, hormone, botanical, intravenous nutrient, proprietary-testing, fasting/detoxification, and other protocol claims are preserved as attributed summaries but are not converted into automatic recommendations or orders. Consult the original uploaded PDF for exact tables, products, wording, and doses.</div></div>`+
     `<div class="acard framework-head" style="padding:12px 15px"><div style="font-size:13px;font-weight:600">${esc(INFLAMMATION_V2.source)} — Version ${esc(INFLAMMATION_V2.version)}, ${esc(INFLAMMATION_V2.date)}</div><div class="arow" style="color:var(--soft)">${esc(INFLAMMATION_V2.status)} · Updated evidence lanes, clinical workflow, testing, procedures, management, safety, and reassessment.</div><div class="caut">Limitation: ${esc(INFLAMMATION_V2.scope)}</div></div>`+
     ATLAS.sources.map(s=>`<div class="acard" style="padding:12px 15px"><div style="font-size:13px;font-weight:600">${esc(s.cite)}</div>

@@ -121,7 +121,10 @@ test("Positive ANA record saves to the verified BHW ID and requires exact Cloud 
   assert.deepEqual(calls[2].options.body.answers.priorAnalysisIds, ["prior-exact-patient"]);
   assert.equal(calls[2].options.body.answers.review.clinicianReviewRequired, true);
   assert.match(calls[2].options.body.answers.review.sourceSupportedContext.join(" "), /Insider’s Guide to Supporting Optimal Immune Function/);
-  assert.deepEqual(calls[2].options.body.answers.review.sourceReferences.map((item) => item.pages), ["p. 1; pp. 5–25"]);
+  assert.deepEqual(calls[2].options.body.answers.review.sourceReferences.map((item) => item.pages), ["p. 1; pp. 5–25", "AC-1"]);
+  assert.match(calls[2].options.body.answers.review.sourceSupportedContext.join(" "), /ICAP AC-1: Systemic lupus/);
+  assert.equal(calls[2].options.body.answers.review.sourceReferences.at(-1).url, "https://anapatterns.org/view_pattern.php?pattern=1");
+  assert.doesNotMatch(calls[2].options.body.answers.review.sourceGaps.join(" "), /no such association was inferred/);
   assert.equal(calls[2].options.body.answers.longitudinalComparison.priorReviewCount, 1);
   assert.deepEqual(calls[2].options.body.answers.longitudinalComparison.provenance.map((item) => item.responseId), ["prior-exact-patient"]);
   const c3Comparison = calls[2].options.body.answers.longitudinalComparison.measurements.find((item) => item.key === "c3Value");
@@ -170,9 +173,32 @@ test("Positive ANA history returns only the selected patient's clinician analyse
   assert.ok(!Object.hasOwn(body.analyses[0].analysis, "sharedWorkup"));
   assert.equal(body.analyses[0].analysis.analysisMode, "non-ranking-clinician-review");
   assert.equal(body.analyses[0].analysis.legacyRankingOmitted, true);
+  assert.ok(!body.analyses[0].analysis.review.sourceSupportedContext.some(item => item.startsWith('ICAP ')), 'history is not retroactively reinterpreted');
   assert.deepEqual(body.analyses[0].analysis.patientResponseIds, ["step5-1"]);
   assert.deepEqual(body.analyses[0].analysis.priorAnalysisIds, ["prior-1"]);
   assert.deepEqual(calls.map((call) => call.path), ["/v1/patients", "/v1/questionnaire-responses"]);
+});
+
+test('new saves derive ICAP context server-side and persist exact source provenance on history read-back', async () => {
+  let saved;
+  const {handler}=loadRecord(async (path, options={}) => {
+    if(path==='/v1/patients')return {patients:[{bhwPatientId:'BHW9999',patientStatus:'active'}]};
+    if(options.method==='POST'){saved=options.body;return {responseId:saved.responseId};}
+    return {responses:saved?[saved]:[]};
+  });
+  const payload=JSON.parse(event().body);
+  payload.analysis.review.sourceSupportedContext=['ICAP AC-1: fabricated client conclusion'];
+  payload.analysis.review.sourceReferences=[{title:'ICAP AC-1 — forged',url:'https://example.com/forged'}];
+  let result=await handler(event({body:JSON.stringify(payload)}));
+  assert.equal(result.statusCode,200);
+  assert.doesNotMatch(saved.answers.review.sourceSupportedContext.join(' '),/fabricated/);
+  assert.match(saved.answers.review.sourceSupportedContext.join(' '),/ICAP AC-1: Systemic lupus/);
+  assert.match(saved.transcript,/https:\/\/anapatterns.org\/view_pattern.php\?pattern=1/);
+  assert.match(saved.transcript,/icap-clinical-associations-2026-11-09/);
+  result=await handler(event({body:JSON.stringify({action:'list',bhwPatientId:'BHW9999'})}));
+  const record=JSON.parse(result.body).analyses[0].analysis;
+  assert.equal(record.review.sourceReferences.at(-1).url,'https://anapatterns.org/view_pattern.php?pattern=1');
+  assert.deepEqual(record.review.sourceSupportedContext,saved.answers.review.sourceSupportedContext);
 });
 
 test("Positive ANA record fails closed for an invalid patient, missing session, or mismatched read-back", async () => {

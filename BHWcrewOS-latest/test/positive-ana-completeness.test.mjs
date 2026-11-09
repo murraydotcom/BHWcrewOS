@@ -179,7 +179,7 @@ test("the supplemental immune-support guide is attributed, bounded, and placed i
   }
 
   assert.match(page, /Supplemental immune-support context/);
-  assert.match(page, /sourceReferences:supplementalGuideUsed/);
+  assert.match(page, /BHW_ICAP\.references\(icapReview\)/);
   assert.match(page, /No treatment dose, supplement stack, order set, or “immune-boosting” protocol is generated/);
   assert.match(page, /Clinician source navigation · retained claims, not recommendations/);
   assert.match(page, /Consult the original uploaded PDF for its exact language, tables, product details, and doses/);
@@ -283,7 +283,7 @@ test("Inflammation Framework Version 2 supplies bounded mast-cell, allergy, and 
   assert.match(page, /does not diagnose food allergy or intolerance and must not be used to estimate anaphylaxis risk/i);
   assert.match(page, /exposure\/recognition, relative immune-response, barrier-context, or candidate-trigger hypotheses/);
   assert.match(page, /time-limited, nutritionally adequate elimination with planned rechallenge and prespecified endpoints/);
-  assert.match(page, /AC-specific ICAP pattern-to-disease associations are not provided/);
+  assert.match(page, /ICAP pattern-to-disease associations · enabled/);
 });
 
 test("management library retains all 100 Autoimmune Master Matrix rows", () => {

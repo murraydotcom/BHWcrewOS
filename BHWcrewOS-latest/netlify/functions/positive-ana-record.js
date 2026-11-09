@@ -4,6 +4,7 @@
 // the exact saved record through a Cloud read-back before reporting success.
 
 const crypto = require("crypto");
+const ICAP = require("../../assets/positive-ana-icap.js");
 const { getSession, json } = require("./_lib");
 const { cloudRequest, findCloudPatient } = require("./lib/cloud-patients");
 
@@ -210,7 +211,7 @@ function buildLongitudinalComparison(analysis, priorRecords, generatedAt = new D
     })),
     interpretationBoundaries: [
       "ANA is a gateway test, not a diagnosis; titer and pattern require a compatible phenotype and targeted tissue/organ assessment.",
-      "The supplied Field Guide and Version 2 framework do not provide AC-specific ICAP pattern-to-disease associations, so none were inferred.",
+      "ICAP associations require clinical context and antigen confirmation; no combined pattern score or disease-activity inference is made.",
       "Food IgG does not diagnose food allergy or intolerance and must not be used to estimate anaphylaxis risk.",
       "Longitudinal differences are factual comparisons of recorded reviews, not diagnoses or disease-activity scores.",
     ],
@@ -332,7 +333,7 @@ function normalizeAnalysis(value = {}) {
   const sex = ["", "Female", "Male"].includes(value.sex) ? value.sex : "";
   const cascade = ["", "pos", "neg"].includes(value.cascade) ? value.cascade : "";
   const reviewValue = value.review && typeof value.review === "object" ? value.review : {};
-  const sourceSupportedContext = list(reviewValue.sourceSupportedContext, 20, (item) => text(item, 500)).filter(Boolean);
+  const sourceSupportedContext = list(reviewValue.sourceSupportedContext, 160, (item) => text(item, 500)).filter(Boolean);
   const supplementalGuideUsed = list(value.labs, 220, keyedFinding).some((item) => SUPPLEMENTAL_GUIDE_LAB_KEYS.has(item.key))
     || symptoms.some((item) => item.group === SUPPLEMENTAL_GUIDE_HISTORY_GROUP);
   if (measurements.some((item) => item.key === "foodIgGValue") && !sourceSupportedContext.some((item) => /food-specific IgG/i.test(item))) {
@@ -342,10 +343,10 @@ function normalizeAnalysis(value = {}) {
   if (supplementalGuideUsed && !sourceSupportedContext.some((item) => item.includes(SUPPLEMENTAL_GUIDE_TITLE))) {
     sourceSupportedContext.push(`${SUPPLEMENTAL_GUIDE_TITLE} (2022, p. 1; pp. 5–25) supplies attributed lifestyle, exposure, nutrition, and deficiency context plus clinician source navigation. These observations are not diagnostic criteria and do not generate an immune-enhancement protocol or automatic treatment.`);
   }
-  const sourceReferences = list(reviewValue.sourceReferences, 10, (item) => {
+  const sourceReferences = list(reviewValue.sourceReferences, 40, (item) => {
     const title = text(item?.title, 240);
     if (!title) return null;
-    return { title, author: text(item?.author, 160), year: text(item?.year, 20), pages: text(item?.pages, 120), role: text(item?.role, 500) };
+    return { title, author: text(item?.author, 160), year: text(item?.year, 20), pages: text(item?.pages, 120), role: text(item?.role, 500), url: /^https:\/\/anapatterns\.org\/view_pattern\.php\?pattern=\d+$/.test(item?.url || "") ? item.url : "" };
   });
   if (supplementalGuideUsed && !sourceReferences.some((item) => item.title === SUPPLEMENTAL_GUIDE_TITLE)) {
     sourceReferences.push({ title: SUPPLEMENTAL_GUIDE_TITLE, author: "Dicken Weatherby, N.D.", year: "2022", pages: "p. 1; pp. 5–25", role: "Supplemental practitioner guide; attributed context and clinician source navigation only, not validated diagnostic criteria or an automatic treatment protocol." });
@@ -405,7 +406,7 @@ function transcript(analysis) {
     analysis.redFlags.length ? `Priority flags: ${analysis.redFlags.join(", ")}` : "",
     "Interpretive mode: non-ranking clinician review; no score, confidence label, hidden ordering, or automated diagnosis was generated.",
     analysis.review.sourceSupportedContext.length ? `Source-supported context: ${analysis.review.sourceSupportedContext.join(" ")}` : "",
-    analysis.review.sourceReferences.length ? `Source references: ${analysis.review.sourceReferences.map((item) => `${item.title}${item.author ? ` — ${item.author}` : ""}${item.year ? ` (${item.year})` : ""}${item.pages ? `, ${item.pages}` : ""}`).join("; ")}` : "",
+    analysis.review.sourceReferences.length ? `Source references: ${analysis.review.sourceReferences.map((item) => `${item.title}${item.author ? ` — ${item.author}` : ""}${item.year ? ` (${item.year})` : ""}${item.pages ? `, ${item.pages}` : ""}${item.role ? ` — ${item.role}` : ""}${item.url ? ` — ${item.url}` : ""}`).join("; ")}` : "",
     analysis.review.uncertainty.length ? `Uncertainty: ${analysis.review.uncertainty.join(" ")}` : "",
     "Clinician review is required; correlate with assay details, timing, examination, objective organ findings, and validated criteria.",
   ].filter(Boolean).join("\n").slice(0, 16000);
@@ -471,7 +472,13 @@ exports.handler = async (event) => {
     analysis.review.sourceSupportedContext = analysis.review.sourceSupportedContext.filter((item) => !/prior patient-linked Positive ANA review/i.test(item));
     if (priorRecords.length) analysis.review.sourceSupportedContext.push(`${priorRecords.length} exact-patient prior Positive ANA review(s) were compared factually with the current observations.`);
     analysis.review.sourceGaps = analysis.review.sourceGaps.filter((item) => !/AC-specific ICAP/i.test(item));
-    if (analysis.anaPatterns.length) analysis.review.sourceGaps.push("AC-specific ICAP pattern-to-disease associations are not provided in the supplied Field Guide or Version 2 framework; no such association was inferred.");
+    const icapReview = ICAP.review(analysis.anaPatterns);
+    // Derive new saved associations server-side; do not rewrite historical reviews.
+    analysis.review.sourceSupportedContext = analysis.review.sourceSupportedContext.filter((item) => !/^ICAP /.test(item));
+    analysis.review.sourceSupportedContext.push(...ICAP.context(icapReview));
+    analysis.review.sourceReferences = analysis.review.sourceReferences.filter((item) => !/^ICAP /.test(item.title));
+    analysis.review.sourceReferences.push(...ICAP.references(icapReview));
+    analysis.review.sourceGaps = [...new Set([...analysis.review.sourceGaps, ...icapReview.filter((item) => !item.sourceUrl).map((item) => `${item.code}: ${item.limitation}`)])];
     const submittedAt = new Date().toISOString();
     await cloudRequest("/v1/questionnaire-responses", {
       actor: session,
