@@ -49,6 +49,12 @@ function buildPatientDirectory(cloudPatients) {
         chart: patient.mrn || patient.chart || "",
         insurance: insuranceCategory(patient),
         insuranceLabel: primary ? primary.planName || primary.payerName || primary.payer || "" : patient.insurance || patient.insurancePlanName || patient.primaryPayer || "",
+        coverages: (Array.isArray(patient.coverageRecords) ? patient.coverageRecords : []).map((record) => ({
+          payer: String(record.payerName || record.payer || ""),
+          plan: String(record.planName || ""),
+          priority: String(record.coverageOrder || record.priority || ""),
+        })),
+        pcpName: String(patient.primaryCareProvider?.name || ""),
         memberId: primary ? primary.memberId || "" : patient.memberId || patient.member || "",
         hasMbi: Boolean(resolveMedicareMbi(patient)),
         medicareCoverageOrder: resolveMedicareCoverageOrder(patient),

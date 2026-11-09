@@ -82,6 +82,9 @@ function shapeBooking(pg) {
     division: P.sel(p["Division"]),
     status: P.sel(p["Status"]),
     notes: P.text(p["Notes"]),
+    // Only an explicit canonical BHW ID can link a booking to clinical data.
+    // Never match schedule patients by name or free-form notes.
+    bhwPatientId: String(P.text(p["BHW Patient ID"]) || P.text(p["Patient BHW ID"]) || "").trim().toUpperCase(),
   };
 }
  

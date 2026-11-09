@@ -205,6 +205,26 @@
     @media(max-width:820px){#inboxcols{grid-template-columns:1fr}}
   </style>
 
+
+  <!-- Existing Medicare HETS function; never pretend it verifies other payers. -->
+  <section aria-labelledby="insurance-verification-title" id="insurance-verification">
+    <h2 id="insurance-verification-title">Insurance verification</h2>
+    <p class="sub">Select a verified patient above. Medicare eligibility uses the existing protected Stedi/HETS service. Other benefit types remain review-only until their RCM API is confirmed.</p>
+    <label for="verify-kind" style="display:block;margin:12px 0 6px;font-weight:700;font-size:.78rem">Verification information</label>
+    <select id="verify-kind" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:9px">
+      <option value="coverage">Coverage status and effective benefits (Medicare HETS)</option>
+      <option value="wellness">Medicare Annual Wellness Visit benefit</option>
+      <option value="pcp">Assigned PCP / practice</option>
+      <option value="office">Office visit copay, deductible and coinsurance</option>
+      <option value="secondary">Secondary coverage and coordination of benefits</option>
+      <option value="referral">Referral and prior authorization requirements</option>
+    </select>
+    <div style="margin-top:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <button class="btn" type="button" id="verify-run">Check selected patient</button>
+      <span class="status" role="status" aria-live="polite" id="verify-result">Choose a patient and verification type.</span>
+    </div>
+  </section>
+
   <!-- PATIENT LOOKUP -->
   <section aria-labelledby="lk">
     <h2 id="lk">Patient lookup</h2>
@@ -607,6 +627,35 @@ document.addEventListener('click', async e=>{
   const card=e.target.closest('.request-card');if(card)openRequest(card.dataset.requestId,card.dataset.completed==='1');
 });
 document.addEventListener('keydown',e=>{const card=e.target.closest('.request-card');if(card&&e.target===card&&(e.key==='Enter'||e.key===' ')){e.preventDefault();openRequest(card.dataset.requestId,card.dataset.completed==='1');}});
+
+
+/* Selected-patient verification — uses authenticated CrewOS Medicare endpoint. */
+const VERIFY_API = '/.netlify/functions/stedi';
+document.getElementById('verify-run').addEventListener('click', async () => {
+  const result=document.getElementById('verify-result');
+  const kind=document.getElementById('verify-kind').value;
+  const patient=window.lastPatient;
+  const id=String(patient?.ctl||patient?.bhwPatientId||'').toUpperCase();
+  if(!/^BHW\d{4}$/.test(id) || id==='BHW0000'){
+    result.textContent='Select a verified, non-synthetic Patient Registry record first.';return;
+  }
+  if(!['coverage','wellness'].includes(kind)){
+    result.textContent='This option requires the existing RCM payer-specific API; no live result has been requested.';return;
+  }
+  if(!/medicare/i.test(String(patient?.payer||'')+' '+String(patient?.mco||''))){
+    result.textContent='The connected HETS workflow is Medicare-only. Use the RCM payer workflow for this plan.';return;
+  }
+  const button=document.getElementById('verify-run');
+  button.disabled=true;result.textContent='Checking Medicare HETS…';
+  try{
+    const response=await crewFetch(VERIFY_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'check',patientId:id})});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok || data.error)throw new Error(data.error||'Eligibility request failed');
+    const parts=kind==='wellness'?['AWV: '+(data.awvStatus||'Unknown'),'Next eligible: '+(data.awvNext||'Not returned')]:['Medicare status: '+(data.active===true?'Active':data.active===false?'Inactive':'Unknown'),'Benefit scope: '+(data.requestScope||'Not returned')];
+    result.textContent=parts.join(' · ')+' · Checked just now. Confirm in the protected patient record.';
+  }catch(e){result.textContent='Not verified: '+String(e.message||e).slice(0,180);}
+  finally{button.disabled=false;}
+});
 
 /* patient lookup */
 async function lookup(){
