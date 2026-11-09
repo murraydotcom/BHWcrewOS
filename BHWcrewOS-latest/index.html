@@ -608,6 +608,8 @@ function divisionView(div){
 
     ${isPorter && D.porterhouse ? porterCensus() : ""}
 
+    ${div==="Primary Care" ? primaryDailyRoster() : ""}
+
     ${(div==="Care Management"||div==="Primary Care") ? prevCard() : ""}
 
     ${(div==="Care Management"||div==="Primary Care") ? awvCard(div) : ""}
@@ -2519,6 +2521,36 @@ async function phGoalsSave(id){
   }catch(e){ document.getElementById("f-err").textContent = e.message; }
 }
 
+
+
+/* ============ Primary Care — daily readiness (no inferred patient matching) ============ */
+let PRIMARY_ROSTER_DATE = new Date().toLocaleDateString("en-CA");
+function primaryRosterRows(){
+  const appointments=(D.schedule||[]).filter(b=>b.division==="Primary Care" && b.date===PRIMARY_ROSTER_DATE && b.status==="Scheduled");
+  const registry=new Map((D.patients||[]).map(p=>[p.id,p]));
+  const preventive=new Map((D.prevention||[]).map(p=>[p.patient,p]));
+  return appointments.map(b=>{
+    const validId=/^BHW\\d{4}$/.test(b.bhwPatientId||"") && b.bhwPatientId!=="BHW0000";
+    const p=validId?registry.get(b.bhwPatientId):null;
+    return {b,p,wellness:p?preventive.get(p.id):null};
+  }).sort((a,b)=>(a.b.start||"").localeCompare(b.b.start||""));
+}
+function primaryRosterTable(){
+  if(!D.patientRegistryReady) return '<p class="empty">Patient Registry unavailable. Readiness cannot be confirmed; please retry.</p>';
+  const rows=primaryRosterRows();
+  if(!rows.length) return '<p class="empty">No Primary Care bookings in the connected CrewOS schedule for this date. This does not establish that CharmHealth has no appointments.</p>';
+  const html=rows.map(({b,p,wellness})=>{
+    const ins=p?(p.coverages?.length?p.coverages.map(c=>[c.payer,c.plan].filter(Boolean).join(" — ")).join("; "):(p.insuranceLabel||p.insurance||"Not recorded")):"—";
+    const verified=wellness && wellness.sourceSystem==="Stedi HETS" && !wellness.coverageError && ["Active","Inactive"].includes(wellness.coverage) && wellness.lastChecked;
+    const state=!p?"Patient link needed":verified?wellness.coverage+" · "+wellness.lastChecked:"Not verified";
+    const awv=!p?"—":wellness?(wellness.awvStatus||"Unknown"):"Unknown";
+    return '<tr><td>'+esc(b.start||"—")+'</td><td>'+(p?'<b>'+esc(p.name)+'</b><div class="msub">'+esc(p.id)+'</div>':'<span class="pill warn">Link BHW patient ID</span>')+'</td><td>'+esc(b.service||"—")+'</td><td>'+esc(ins)+'</td><td>'+esc(state)+'</td><td>'+esc(p?(p.pcpName||"Not documented"):"—")+'</td><td>'+esc(awv)+(wellness?.awvNext?' <small>Next '+esc(wellness.awvNext)+'</small>':"")+'</td></tr>';
+  }).join("");
+  return '<div class="tbl-wrap"><table><thead><tr><th>Time</th><th>Patient</th><th>Visit</th><th>Insurance(s)</th><th>Coverage verification</th><th>PCP on record</th><th>Medicare AWV</th></tr></thead><tbody>'+html+'</tbody></table></div>';
+}
+function primaryDailyRoster(){
+  return '<div class="card" id="pc-daily-roster"><h2>Daily patient readiness</h2><p class="lede">CrewOS schedule only; appointments require an explicit BHW patient ID. Stedi HETS verification applies to Medicare, not commercial or Medicaid. AWV status is informational and must be reviewed.</p><label for="pc-roster-date" style="font-size:12px;font-weight:700">Schedule date </label><input id="pc-roster-date" type="date" value="'+esc(PRIMARY_ROSTER_DATE)+'" onchange="PRIMARY_ROSTER_DATE=this.value;document.getElementById(\'pc-roster-results\').innerHTML=primaryRosterTable()" style="padding:8px;margin:8px 0 12px"><div id="pc-roster-results">'+primaryRosterTable()+'</div></div>';
+}
 
 /* ============ Medicare Prevention Tracker (Stedi → HETS) ============ */
 const API_STEDI = "/.netlify/functions/stedi";
