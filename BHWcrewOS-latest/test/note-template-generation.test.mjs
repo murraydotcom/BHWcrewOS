@@ -76,3 +76,13 @@ test("unreviewed source cannot invoke extraction", async () => {
   assert.equal(h.calls(), 0);
   assert.equal(h.row.note, "Existing provider draft");
 });
+
+test("explicitly absent source fields do not carry old generated instructions or orders forward", async () => {
+  const h = harness(async () => ({ noteBuilderInput: { ...fields, orders: "", referrals: "", patientInstructions: "", returnPrecautions: "", followUp: "" } }));
+  h.row.orders = ["OLD ORDER THAT IS NOT IN THE NEW SOURCE"];
+  h.row.patientInstructions = ["STALE GENERATED INSTRUCTIONS"];
+  h.row.followUp = ["STALE FOLLOW-UP"];
+  await h.click();
+  assert.doesNotMatch(h.row.note, /OLD ORDER|STALE/);
+  assert.ok(h.row.noteDraftMeta.missing.includes("Follow-Up"));
+});
