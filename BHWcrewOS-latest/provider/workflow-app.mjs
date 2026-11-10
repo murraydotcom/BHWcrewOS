@@ -212,8 +212,12 @@ function queueEncounterSave(row) {
     try {
       const saved = await cloudClient.saveAndVerify(snapshot);
       const latest = rows.find((candidate) => candidate.id === current.id);
+      const canonical = buildEncounterPacket(saved || snapshot);
+      // The API normalizes structured fields. Adopt its verified shape only
+      // when no newer local edit arrived while the save was in flight.
+      if (latest && cloudFingerprint(latest) === cloudFingerprint(snapshot)) Object.assign(latest, canonical);
       if (latest && saved?.updatedAt) latest.updatedAt = saved.updatedAt;
-      rememberCloudVersion(buildEncounterPacket(saved || snapshot));
+      rememberCloudVersion(canonical);
       setCloudState("connected");
       return saved;
     } catch (error) {
