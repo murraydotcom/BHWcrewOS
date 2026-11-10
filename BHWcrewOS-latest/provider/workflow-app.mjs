@@ -17,6 +17,7 @@ import {
 } from "../engine/coding-opportunities.mjs";
 import {
   approvedAuditAddenda,
+  assertClinicalAuditReport,
   carryForwardClinicalAuditDecisions,
   clinicalAuditSummary,
   controlledClinicalFinding,
@@ -118,6 +119,7 @@ let cloudSaveTimer;
 let activeTab = "clinical";
 let analyzingId = "";
 let structuringId = "";
+const processingErrors = new Map();
 let patients = [];
 let encounterCreationKey = "";
 let registryReady = false;
@@ -232,7 +234,7 @@ async function flushDirtyEncounters() {
 function persist({ cloud = true } = {}) {
   storageSet(localStorage, QUEUE_KEY, serializeQueue(rows));
   const clinical = Object.fromEntries(rows
-    .filter((row) => row.note || row.codes.length || row.diagnoses.length || row.tasks.length || row.documents.length || row.codingRecommendations.length || row.clinicalAudit?.status !== "not_run")
+    .filter((row) => row.note || row.sourceTranscript || Object.keys(row.noteBuilderInput || {}).length || row.codes.length || row.diagnoses.length || row.tasks.length || row.documents.length || row.codingRecommendations.length || row.clinicalAudit?.status !== "not_run")
     .map((row) => [row.id, {
       note: row.note,
       sourceTranscript: row.sourceTranscript,
@@ -488,6 +490,7 @@ function renderQueue() {
   }).join("") : `<div class="empty"><b>No encounters in this view.</b><br>Add the first real encounter using its encounter ID—not the patient name.<br><button class="btn primary" id="emptyAdd">+ Add encounter</button></div>`;
   document.querySelectorAll(".enc").forEach((element) => {
     element.onclick = () => {
+      if (structuringId || analyzingId) { showToast("Wait for this encounter's processing to finish before switching visits."); return; }
       selected = element.dataset.id;
       render();
     };
@@ -535,7 +538,7 @@ function renderNoteBuilder(row) {
   const warnings = row.noteDraftMeta?.warnings || [];
   const sourceEvidence = row.noteDraftMeta?.sourceEvidence || [];
   const warningsResolved = Boolean(row.noteDraftMeta?.warningsResolved);
-  const structuring = structuringId === row.id;
+  const structuring = structuringId === row.id || analyzingId === row.id;
   return `<details open><summary><b>Encounter Note Builder</b> — one primary template plus applicable modules</summary>
     <div class="formgrid" style="margin-top:12px"><div class="field"><label>Primary note template</label><select id="dPrimaryTemplate">${templateOptions(notePlan.primaryTemplate)}</select></div><div class="field"><label>AWV type, when applicable</label><select id="dAwvType"><option value="">Not applicable / select</option><option value="initial" ${notePlan.awvType === "initial" ? "selected" : ""}>Initial AWV</option><option value="subsequent" ${notePlan.awvType === "subsequent" ? "selected" : ""}>Subsequent AWV</option></select></div><div class="field"><label>Chief concern / reason</label><input id="nbChiefConcern" value="${esc(input.chiefConcern || "")}" placeholder="Patient-stated reason for visit"></div></div>
     <div class="field"><label>Additional modules</label><div class="module-grid" id="dModuleGrid">${moduleOptions(notePlan.modules)}</div><div class="privacy">Condition Management covers clinical condition follow-up. Medication content appears only when addressed. CCM is excluded.</div></div>
@@ -545,7 +548,8 @@ function renderNoteBuilder(row) {
     ${warnings.length ? `<div class="notice"><b>${warnings.length} source conflict or missing-information warning${warnings.length === 1 ? "" : "s"} require provider review.</b><ul>${warnings.map((warning) => `<li>${esc(warning)}</li>`).join("")}</ul><label class="module-option"><input type="checkbox" id="nbWarningsResolved" ${warningsResolved ? "checked" : ""}><span>I reviewed these warnings and corrected or addressed them in the note.</span></label></div>` : ""}
     ${sourceEvidence.length ? `<details style="margin-top:10px"><summary>Source evidence used by the organizer</summary><ul>${sourceEvidence.map((item) => `<li>${esc(item)}</li>`).join("")}</ul></details>` : ""}
     ${missing.length ? `<div class="notice"><b>${missing.length} required element${missing.length === 1 ? "" : "s"} still need documentation.</b><br>${missing.map(esc).join(" · ")}</div>` : ""}
-    <div class="actions"><button class="btn primary" id="generateNote" ${structuring ? "disabled" : ""}>${structuring ? "Organizing source into note…" : "Structure source and generate draft"}</button><button class="btn" id="rebuildNote" ${structuring ? "disabled" : ""}>Rebuild from reviewed fields</button></div>
+    <div class="notice"><b>Process the Freed note in one action.</b> Generate the structured draft and run the documentation, coding, and clinical audit together. Review Required Changes and Coding clarification &amp; opportunities afterward. A generated draft alone is not an audited note.</div>
+    <div class="actions"><button class="btn primary" id="generateNote" ${structuring ? "disabled" : ""}>${analyzingId === row.id ? "Draft created — running full audit…" : structuring ? "Organizing source into note…" : "Process Freed note: draft + audit"}</button><button class="btn" id="rebuildNote" ${structuring ? "disabled" : ""}>Rebuild from reviewed fields</button></div>
   </details><details style="margin-top:12px"><summary><b>Imported patient and pre-visit context</b></summary><div style="margin-top:12px">${renderEncounterContext(row)}</div></details>`;
 }
 
@@ -595,10 +599,12 @@ function renderDetail() {
     <div class="panel ${activeTab === "charm" ? "on" : ""}" id="p-charm">${renderCharm(row)}</div>
     <div class="panel ${activeTab === "history" ? "on" : ""}" id="p-history">${renderHistory(row)}</div></div>`;
   wireDetail(row);
+  if (structuringId || analyzingId) document.querySelectorAll("#detail input, #detail textarea, #detail select, #detail button").forEach((control) => { control.disabled = true; });
   setNoteSaveState(row);
 }
 
 function renderClinicalAudit(row) {
+  if (processingErrors.has(row.id)) return `<div class="notice" role="alert"><b>Processing did not complete.</b> ${esc(processingErrors.get(row.id))}<br>The saved draft remains available. Run the audit again before provider approval.</div>`;
   const audit = row.clinicalAudit || {};
   const summary = clinicalAuditSummary(audit);
   const controlledLabels = {
@@ -617,7 +623,7 @@ function renderClinicalAudit(row) {
     return `<div class="check ${check.status === "documented" || (finding?.decision && finding.decision !== "pending") ? "present" : "missing"}"><div class="mark">${check.status === "documented" || (finding?.decision && finding.decision !== "pending") ? "✓" : "!"}</div><div><b>${esc(controlledLabels[key] || key)}</b><small>${esc(status)}${check.evidence ? ` · ${esc(check.evidence)}` : ""}</small></div></div>`;
   }).join("")}</div>`).join("")}` : "";
   if (audit.status === "not_run" || !audit.rawReport) {
-    return `<div class="notice"><b>${analyzingId === row.id ? "Clinical audit is running now." : "Required Changes has not been generated yet."}</b> Use the single <b>Run documentation + coding + clinical audit</b> button above. The note and structured encounter packet are screened together—there is no audit copy/paste step.</div>${controlledHtml}`;
+    return `${processingErrors.has(row.id) ? `<div class="notice" role="alert"><b>Processing did not complete.</b> ${esc(processingErrors.get(row.id))}</div>` : ""}<div class="notice"><b>${analyzingId === row.id ? "Clinical audit is running now." : "Required Changes has not been generated yet — this is not a clean audit."}</b> Use <b>Process Freed note: draft + audit</b> for source material, or <b>Run documentation + coding + clinical audit</b> for an existing structured note. Results appear here only after the audit completes.</div>${controlledHtml}`;
   }
   const risk = audit.recommendedRisk ? audit.recommendedRisk.toUpperCase() : "NOT STATED";
   const suggestedCpt = audit.suggestedCodesAfterChanges?.cpt || [];
@@ -797,6 +803,8 @@ function renderHistory(row) {
 }
 
 async function runEncounterAnalysis(row, { preserveResolvedAudit = false } = {}) {
+  if (analyzingId) return;
+  processingErrors.delete(row.id);
   const previousAudit = normalizeClinicalAudit(row.clinicalAudit);
   sync(row);
   if (row.note.trim().length < 20) {
@@ -822,6 +830,7 @@ async function runEncounterAnalysis(row, { preserveResolvedAudit = false } = {})
     persist({ cloud: false });
     await queueEncounterSave(row);
     const result = await cloudClient.analyze(row);
+    assertClinicalAuditReport(result.rawReport);
     const audit = parseClinicalAuditReport(result.rawReport, row);
     audit.source = result.source || "BHW on-demand documentation analysis";
     audit.sourceNoteHash = result.sourceNoteHash || "";
@@ -842,6 +851,7 @@ async function runEncounterAnalysis(row, { preserveResolvedAudit = false } = {})
       ? "Analysis complete. Required Changes is first—resolve each finding before Charm approval."
       : "Analysis complete with no unresolved Required Changes findings.");
   } catch (error) {
+    processingErrors.set(row.id, error.message || "The clinical audit could not complete. No approval was granted.");
     row.status = WORKFLOW_STATUS.NEEDS_CLARIFICATION;
     log(row, "Clinical audit could not complete; provider review remains blocked");
     showToast(error.message || "The clinical audit could not complete. No approval was granted.", 9000);
@@ -961,6 +971,10 @@ function wireDetail(row) {
   };
   $("dNote").oninput = () => {
     const nextNote = $("dNote").value;
+    if (row.note !== nextNote) {
+      row.clinicalAudit = normalizeClinicalAudit(null);
+      reports.delete(row.id);
+    }
     if (row.note !== nextNote && row.providerApproved) {
       row.providerApproved = false;
       row.charmDraftSaved = false;
@@ -976,6 +990,26 @@ function wireDetail(row) {
     if (noteEditingIds.has(row.id)) autosaveNote();
   };
 
+  // Source-only packets and builder edits need the same save protection as notes.
+  const sourceAndBuilderChanged = (event) => {
+    if (event.target.id === "dTranscript") $("nbTranscriptReviewed").checked = false;
+    sync(row);
+    row.providerApproved = false;
+    row.charmDraftSaved = false;
+    row.clinicalAudit = normalizeClinicalAudit(null);
+    reports.delete(row.id);
+    noteEditingIds.add(row.id);
+    persist({ cloud: false });
+    setNoteSaveState(row);
+    clearTimeout(noteAutosaveTimers.get(row.id));
+    noteAutosaveTimers.set(row.id, setTimeout(autosaveNote, 900));
+  };
+  document.querySelectorAll('#detail [id^="nb"]:not(#nbWarningsResolved), #dTranscript, #dPrimaryTemplate, #dAwvType, #dModuleGrid input').forEach((input) => {
+    if (!["INPUT", "TEXTAREA", "SELECT"].includes(input.tagName)) return;
+    input.addEventListener(input.type === "checkbox" || input.tagName === "SELECT" ? "change" : "input", sourceAndBuilderChanged);
+    input.addEventListener("blur", () => { if (noteEditingIds.has(row.id)) autosaveNote(); });
+  });
+
   if ($("nbWarningsResolved")) $("nbWarningsResolved").onchange = () => {
     row.noteDraftMeta = { ...(row.noteDraftMeta || {}), warningsResolved: $("nbWarningsResolved").checked };
     row.providerApproved = false;
@@ -988,6 +1022,8 @@ function wireDetail(row) {
   };
 
   $("generateNote").onclick = async () => {
+    if (structuringId || analyzingId) return;
+    processingErrors.delete(row.id);
     row.notePlan = notePlanFromDetail(row);
     row.noteBuilderInput = builderInputFromDetail(row);
     row.sourceTranscript = $("dTranscript").value.trim();
@@ -1025,12 +1061,11 @@ function wireDetail(row) {
       });
       log(row, `Protected source organized into a ${PRIMARY_NOTE_TEMPLATES[row.notePlan.primaryTemplate].label} draft; ${warnings.length} warning${warnings.length === 1 ? "" : "s"} require provider review`);
       persist();
-      showToast(warnings.length
-        ? `Structured draft created. Review and resolve ${warnings.length} source warning${warnings.length === 1 ? "" : "s"} before approval.`
-        : result.missing.length
-          ? `Structured draft created. ${result.missing.length} required element${result.missing.length === 1 ? "" : "s"} still need provider documentation.`
-          : "Structured draft created. Review it, then run the full clinical audit.");
+      // Refresh the editors before analysis synchronizes the current packet.
+      render();
+      await runEncounterAnalysis(row);
     } catch (error) {
+      processingErrors.set(row.id, error.message || "The protected note organizer could not complete. No note was replaced.");
       log(row, "Protected structured-note generation did not complete; no note was replaced");
       showToast(error.message || "The protected note organizer could not complete. No note was replaced.", 9000);
     } finally {
@@ -1063,13 +1098,17 @@ function wireDetail(row) {
       const note = await navigator.clipboard.readText();
       if (!note.trim()) throw new Error("The clipboard is empty.");
       $("dTranscript").value = note;
+      $("nbTranscriptReviewed").checked = false;
       sync(row);
+      row.providerApproved = false;
+      row.charmDraftSaved = false;
+      row.clinicalAudit = normalizeClinicalAudit(null);
       row.status = WORKFLOW_STATUS.DRAFT_RECEIVED;
       reports.delete(row.id);
       log(row, "Source transcription or clinical draft pasted into the encounter packet");
       persist();
       render();
-      showToast("Source material loaded. Review it, select the note template and modules, then generate the structured note.");
+      showToast("Source material loaded. Review it, select the note template and modules, then choose Process Freed note: draft + audit.");
     } catch (error) {
       showToast(error.message || "Clipboard access was blocked. Click in the note box and press Ctrl+V.");
     }
@@ -1486,6 +1525,7 @@ function tick() {
 }
 
 async function openEncounterModal() {
+  if (structuringId || analyzingId) { showToast("Wait for this encounter's processing to finish before adding a visit."); return; }
   if (cloudClient) {
     try {
       patients = await cloudClient.listPatients();

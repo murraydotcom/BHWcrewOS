@@ -39,16 +39,19 @@ function harness(extract, reviewed = true) {
   const row = { id: "SYNTHETIC-NOTE", note: "Existing provider draft", notePlan: { primaryTemplate: "established_office", modules: [] }, noteBuilderInput: { transcriptReviewed: reviewed }, providerApproved: true, charmDraftSaved: true };
   const messages = [];
   let calls = 0;
+  let auditCalls = 0;
   const context = vm.createContext({ row, $: id => elements[id], notePlanFromDetail: r => r.notePlan, builderInputFromDetail: r => r.noteBuilderInput, cloudClient: { async structureNote(r) { calls++; return extract(r); } }, structuringId: "", render() {}, persist() {}, log() {}, showToast: message => messages.push(message), composeEncounterNote, PRIMARY_NOTE_TEMPLATES, normalizeClinicalAudit: () => ({ status: "not_run" }), WORKFLOW_STATUS: { DRAFT_RECEIVED: "draft_received" }, reports: new Map(), refreshEncounterIntelligence() {} });
   vm.runInContext(app.slice(app.indexOf("function composeReviewedNote("), app.indexOf("function wireDetail(")), context);
+  Object.assign(context, { analyzingId: "", processingErrors: new Map(), async runEncounterAnalysis(packet) { auditCalls++; assert.match(packet.note, /History of Present Illness/); } });
   vm.runInContext(app.slice(app.indexOf('  $("generateNote").onclick'), app.indexOf('  $("rebuildNote").onclick')), context);
-  return { row, messages, click: () => elements.generateNote.onclick(), calls: () => calls };
+  return { row, messages, click: () => elements.generateNote.onclick(), calls: () => calls, auditCalls: () => auditCalls };
 }
 
 test("Generate organizes source and creates the medical note in one click", async () => {
   const h = harness(async () => ({ noteBuilderInput: fields, warnings: ["Examination is limited to documented findings."], sourceEvidence: ["hpi: Speaker 1"], sourceNoteHash: "synthetic-hash" }));
   await h.click();
   assert.equal(h.calls(), 1);
+  assert.equal(h.auditCalls(), 1);
   assert.match(h.row.note, /History of Present Illness\nKnee pain for two days/);
   assert.match(h.row.note, /Assessment\nKnee pain/);
   assert.ok(!h.row.note.includes(source));
@@ -63,6 +66,7 @@ test("failed extraction preserves the existing note", async () => {
   const h = harness(async () => { throw Error("Synthetic service failure"); });
   await h.click();
   assert.equal(h.row.note, "Existing provider draft");
+  assert.equal(h.auditCalls(), 0);
   assert.ok(h.messages.includes("Synthetic service failure"));
 });
 
