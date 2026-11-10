@@ -1,5 +1,4 @@
 import { controlledMedicationReviews } from "./structured-encounter.mjs";
-import { normalizeEncounterOwner } from "./staff-identity.mjs";
 
 const SEVERITIES = ["critical", "high", "moderate", "low"];
 const RESOLVED_DECISIONS = new Set(["occurred", "already_documented", "not_done", "dismissed"]);
@@ -14,7 +13,10 @@ function severityFromText(text, fallback = "moderate") {
 }
 
 function sectionFor(line) {
-  const normalized = clean(line).replace(/^[^A-Z0-9]+/i, "").toUpperCase();
+  // Match section headings, never ordinary findings or code-evidence lines.
+  const normalized = clean(line).replace(/^[^A-Z0-9]+/i, "").replace(/[*_]+/g, "").toUpperCase();
+  if (normalized.includes("|") || /^\d+[.)]/.test(normalized)) return "";
+  if (!/^(?:FIX BEFORE CLOSING|STRENGTHEN|NOTE FOR FUTURE|GUIDELINE NOTES?|COMPLETE|CODING AS DOCUMENTED|CODES? AS DOCUMENTED|SUPPORTED (?:CODES?|CODING)|CODING AFTER CONFIRMED CHANGES|AFTER (?:THE )?(?:FIX|FIXES|CHANGE|CHANGES)|SUGGESTED (?:CODES?|CODING)|THEN ADD CPT|NEXT ACTION)(?:\s*[:(—–-]|\s*$)/.test(normalized)) return "";
   if (/FIX BEFORE CLOSING/.test(normalized)) return "fix";
   if (/STRENGTHEN/.test(normalized)) return "strengthen";
   if (/NOTE FOR FUTURE/.test(normalized)) return "future";
@@ -24,6 +26,23 @@ function sectionFor(line) {
   if (/CODING AFTER CONFIRMED CHANGES|AFTER (?:THE )?(?:FIX|FIXES|CHANGE|CHANGES)|SUGGESTED (?:CODES?|CODING)|THEN ADD CPT/.test(normalized)) return "codes_after";
   if (/NEXT ACTION/.test(normalized)) return "next";
   return "";
+}
+
+export function assertClinicalAuditReport(reportText) {
+  const text = clean(reportText);
+  const sections = new Map();
+  let current = "";
+  for (const line of text.split("\n")) {
+    const section = sectionFor(line);
+    if (section) { current = section; sections.set(section, []); }
+    else if (current && clean(line)) sections.get(current).push(clean(line));
+  }
+  const required = ["fix", "strengthen", "future", "codes_documented", "codes_after"];
+  if (!/CLOSURE VERDICT\s*\*{0,2}\s*:\s*\*{0,2}\s*(?:Ready to close|Close after fixes below|Needs provider addendum)/i.test(text)
+    || required.some((section) => !sections.get(section)?.length)) {
+    throw new Error("The clinical audit returned an incomplete or unreadable report. No clean result or approval was granted. Run the full audit again.");
+  }
+  return true;
 }
 
 function stripListPrefix(line) {
@@ -72,6 +91,61 @@ function parseSuggestedCodes(lines) {
     if (/ICD(?:-?10)?|DIAGNOS/i.test(line)) icd10.push(...codeCandidates(line, "icd10"));
   });
   return { cpt: unique(cpt), icd10: unique(icd10) };
+}
+
+function codingField(parts, label) {
+  const pattern = new RegExp(`^${label}\\s*:`, "i");
+  const part = parts.find((value) => pattern.test(value));
+  return clean(part?.replace(pattern, ""))
+    .replace(/^["“]|["”]$/g, "")
+    .trim();
+}
+
+function parseCodingEvidence(lines, stage) {
+  const entries = [];
+  lines.forEach((line) => {
+    const item = stripListPrefix(line);
+    const category = /CPT|HCPCS/i.test(item) ? "cpt" : /ICD(?:-?10)?|DIAGNOS/i.test(item) ? "icd" : "";
+    if (!category) return;
+    const parts = item.split(/\s+\|\s+/).map(clean).filter(Boolean);
+    const candidates = codeCandidates(parts[0], category === "cpt" ? "cpt" : "icd10");
+    const evidence = codingField(parts, "(?:exact\\s+)?evidence(?:\\s+after\\s+change)?");
+    const location = codingField(parts, "location");
+    const encounterRole = codingField(parts, "encounter\\s+role");
+    const relationship = codingField(parts, "relationship");
+    const basis = codingField(parts, "basis");
+    candidates.forEach((code) => {
+      const replacementCandidates = codeCandidates(relationship, category === "cpt" ? "cpt" : "icd10");
+      entries.push({
+        category,
+        code,
+        stage,
+        evidence: /^(?:none|not stated|n\/a)$/i.test(evidence) ? "" : evidence,
+        location,
+        encounterRole,
+        relationship,
+        replaceCode: /replac/i.test(relationship)
+          ? replacementCandidates.find((candidate) => candidate !== code) || ""
+          : "",
+        basis,
+      });
+    });
+  });
+  return entries;
+}
+
+function normalizeCodingEvidence(values = [], stage = "documented") {
+  return [].concat(values || []).map((item) => ({
+    category: item?.category === "cpt" ? "cpt" : "icd",
+    code: clean(item?.code).toUpperCase(),
+    stage: item?.stage === "after_changes" ? "after_changes" : stage,
+    evidence: clean(item?.evidence),
+    location: clean(item?.location),
+    encounterRole: clean(item?.encounterRole),
+    relationship: clean(item?.relationship),
+    replaceCode: clean(item?.replaceCode).toUpperCase(),
+    basis: clean(item?.basis),
+  })).filter((item) => item.code);
 }
 
 function makeFinding(text, severity, index) {
@@ -141,6 +215,7 @@ export function emptyClinicalAudit() {
     completeNotes: [],
     codingAsDocumented: { cpt: [], icd10: [], hccRelevance: "", zCodes: [], zCodeEvidence: "" },
     suggestedCodesAfterChanges: { cpt: [], icd10: [] },
+    codingEvidence: { documented: [], afterChanges: [] },
     baselineCodes: [],
     baselineDiagnoses: [],
     sourceNoteHash: "",
@@ -333,6 +408,10 @@ export function parseClinicalAuditReport(reportText, encounter = {}) {
     zCodeEvidence: clean(zCodeLine).replace(/^.*?Z[- ]?code\s+opportunit(?:y|ies)\s*:\s*/i, ""),
   };
   audit.suggestedCodesAfterChanges = parseSuggestedCodes(codeLines);
+  audit.codingEvidence = {
+    documented: parseCodingEvidence(documentedCodeLines, "documented"),
+    afterChanges: parseCodingEvidence(codeLines, "after_changes"),
+  };
   audit.status = audit.findings.some((finding) => finding.decision === "pending") ? "needs_resolution" : "resolved";
   return addRequiredClinicalFindings(audit, encounter);
 }
@@ -365,6 +444,10 @@ export function normalizeClinicalAudit(value) {
   audit.suggestedCodesAfterChanges = {
     cpt: unique([].concat(value.suggestedCodesAfterChanges?.cpt || []).map((value) => clean(value).toUpperCase())),
     icd10: unique([].concat(value.suggestedCodesAfterChanges?.icd10 || []).map((value) => clean(value).toUpperCase())),
+  };
+  audit.codingEvidence = {
+    documented: normalizeCodingEvidence(value.codingEvidence?.documented, "documented"),
+    afterChanges: normalizeCodingEvidence(value.codingEvidence?.afterChanges, "after_changes"),
   };
   audit.status = audit.status === "not_run" ? "not_run" : (audit.findings.some((finding) => finding.decision === "pending") ? "needs_resolution" : "resolved");
   return audit;
@@ -424,7 +507,7 @@ export function auditTasks(auditValue, encounter = {}, now = new Date()) {
       type: "audit_follow_up",
       title: `Audit follow-up: ${finding.issue}`.slice(0, 160),
       reason: finding.providerResponse || "Provider confirmed the recommended action did not occur during the visit; complete follow-up without changing the historical note.",
-      owner: normalizeEncounterOwner(encounter.owner),
+      owner: encounter.owner || "Amaris",
       recommendedRole: "Provider / care team",
       dueAt,
       status: "open",

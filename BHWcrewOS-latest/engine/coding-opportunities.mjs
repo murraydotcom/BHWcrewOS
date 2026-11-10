@@ -2,6 +2,7 @@ const CMS_PFS_URL = "https://www.cms.gov/medicare/payment/fee-schedules/physicia
 const CMS_G2211_URL = "https://www.cms.gov/files/document/mm13473-how-use-office-and-outpatient-evaluation-and-management-visit-complexity-add-code-g2211.pdf";
 const CMS_ACP_URL = "https://www.cms.gov/medicare/coverage/preventive-services/medicare-wellness-visits/annual-wellness-visit";
 const AMA_EM_URL = "https://www.ama-assn.org/practice-management/cpt/cpt-evaluation-and-management-em-revisions-faqs";
+const CDC_ICD10_URL = "https://www.cdc.gov/nchs/icd/icd-10-cm/files.html";
 
 const EM_TIME = Object.freeze({
   new: [
@@ -42,10 +43,169 @@ const EXACT_DIAGNOSES = Object.freeze([
 
 const cleanCodes = (values = []) => new Set([].concat(values || []).map((value) => String(value).trim().toUpperCase()).filter(Boolean));
 
+function codesFromAuditText(value = "", category = "icd") {
+  const text = String(value || "").toUpperCase();
+  const matches = category === "cpt"
+    ? text.match(/\b(?:[0-9]{5}|[A-Z][0-9]{4})\b/g) || []
+    : text.match(/\b[A-Z][0-9][0-9](?:\.[A-Z0-9]{1,4})?\b/g) || [];
+  return Array.from(new Set(matches.filter((code) => !/^20\d{3}$/.test(code))));
+}
+
+function auditFindingText(finding = {}) {
+  return [finding.issue, finding.location, finding.suggestedFix, finding.providerResponse, finding.approvedAddendum]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function normalizedEvidence(value = "") {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[“”"']/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isExactEncounterEvidence(note = "", evidence = "") {
+  const expected = normalizedEvidence(evidence);
+  return expected.length >= 8 && normalizedEvidence(note).includes(expected);
+}
+
+function isCarryForwardLocation(location = "") {
+  return /\b(?:problem\s*list|active\s+problems?|past\s+medical\s+history|medical\s+history|pmh|medication\s*list|active\s+diagnos(?:is|es))\b/i.test(location);
+}
+
+function isAddressedEncounterRole(role = "") {
+  return /\b(?:addressed|assessed|evaluated|managed|treated|monitored|affect(?:ed|s)?\s+(?:care|management)|medical\s+decision[- ]making|mdm)\b/i.test(role);
+}
+
+function icdCategory(code = "") {
+  return String(code || "").toUpperCase().match(/^[A-TV-Z][0-9][0-9]/)?.[0] || "";
+}
+
+function auditCodingOpportunities(encounter, codes, diagnoses) {
+  const audit = encounter.clinicalAudit || {};
+  if (audit.status === "not_run" || !audit.rawReport) return [];
+  const findings = [].concat(audit.findings || []);
+  const payer = String(encounter.payer || "the selected payer");
+  const results = [];
+  const seen = new Set();
+
+  const addAuditItems = (category, values, supportedNow) => {
+    const current = category === "icd" ? diagnoses : codes;
+    [].concat(values || []).forEach((rawCode) => {
+      const code = String(rawCode || "").trim().toUpperCase();
+      const key = `${category}:${code}`;
+      if (!code || seen.has(key)) return;
+      seen.add(key);
+
+      const related = findings.filter((finding) => auditFindingText(finding).toUpperCase().includes(code));
+      const confirmed = related.find((finding) => ["occurred", "already_documented"].includes(finding.decision));
+      const finding = confirmed || related[0] || null;
+      const evidenceEntries = supportedNow ? audit.codingEvidence?.documented : audit.codingEvidence?.afterChanges;
+      const codeEvidence = [].concat(evidenceEntries || []).find((entry) => entry.category === category && entry.code === code) || null;
+      const findingCode = finding
+        ? codesFromAuditText(auditFindingText(finding), category).find((candidate) => candidate !== code && current.has(candidate)) || ""
+        : "";
+      const explicitReplaceCode = current.has(codeEvidence?.replaceCode) ? codeEvidence.replaceCode : "";
+      const existingCode = explicitReplaceCode || (!supportedNow ? findingCode : "");
+      const sameCategoryCode = category === "icd"
+        ? [...current].find((candidate) => candidate !== code && icdCategory(candidate) === icdCategory(code)) || ""
+        : "";
+      const explicitAdditional = /\b(?:additional|separate|coexisting|both|bilateral)\b/i.test(codeEvidence?.relationship || "");
+      const unresolvedOverlap = Boolean(sameCategoryCode && !existingCode && !explicitAdditional);
+      const exactEvidence = isExactEncounterEvidence(encounter.note, codeEvidence?.evidence);
+      const carryForwardOnly = isCarryForwardLocation(codeEvidence?.location);
+      const encounterAddressed = category === "cpt"
+        ? Boolean(codeEvidence?.basis) && !carryForwardOnly
+        : isAddressedEncounterRole(codeEvidence?.encounterRole) && !carryForwardOnly;
+      const supportedByEncounter = supportedNow && exactEvidence && encounterAddressed && !unresolvedOverlap;
+      const alreadyCurrent = current.has(code);
+      if (alreadyCurrent && supportedByEncounter) return;
+      const action = supportedByEncounter && !alreadyCurrent ? (existingCode ? "replace" : "add") : "review";
+      const label = category === "icd" ? "ICD-10-CM" : "CPT/HCPCS";
+      const evidence = exactEvidence
+        ? codeEvidence.evidence
+        : codeEvidence?.evidence
+          ? `The audit supplied evidence that could not be matched exactly to today's note: ${codeEvidence.evidence}`
+          : finding
+            ? `${finding.issue}${finding.location ? ` Location: ${finding.location}` : ""}`
+            : "No exact encounter-level evidence was captured for this code.";
+      let missingDocumentation = "";
+      if (!supportedNow) {
+        missingDocumentation = finding?.suggestedFix || "Resolve the related Required Changes finding, append only provider-confirmed facts, and rerun the audit before adding or replacing a code.";
+      } else if (carryForwardOnly) {
+        missingDocumentation = "This support comes from a problem list or other carry-forward section. Keep it as clinical context unless today's Assessment/Plan shows that the condition affected care, treatment, or management.";
+      } else if (!exactEvidence) {
+        missingDocumentation = "No exact sentence from today's note supports this code. It may remain as clinical context, but it cannot be added to the approved claim fields.";
+      } else if (!encounterAddressed) {
+        missingDocumentation = category === "icd"
+          ? "The note mentions the condition, but the audit did not confirm that it was assessed, treated, monitored, or affected management today. Provider review is required."
+          : "The audit did not state the documented MDM, time, procedure requirement, or add-on basis for this service. Provider review is required.";
+      } else if (unresolvedOverlap) {
+        missingDocumentation = `${sameCategoryCode} is already present in the same code family. Confirm whether ${code} replaces it or represents a separately reportable condition before changing the approved fields.`;
+      } else if (alreadyCurrent) {
+        missingDocumentation = "This code is already in the approved fields but lacks qualifying encounter evidence. Confirm it affected today's care or remove it before claim submission.";
+      } else {
+        missingDocumentation = "Confirm the note still supports this exact code and the stated add-versus-replace relationship before applying it.";
+      }
+
+      results.push(makeOpportunity({
+        id: `audit:${category}:${code}`,
+        origin: "clinical_audit",
+        category,
+        action,
+        code,
+        replaceCode: existingCode,
+        reviewKind: !supportedNow ? "audit_after_changes" : supportedByEncounter ? "audit_supported" : alreadyCurrent ? "current_code_evidence_review" : "encounter_evidence_required",
+        requiresDecision: alreadyCurrent && !supportedByEncounter,
+        eligibleToApply: supportedByEncounter,
+        confidence: supportedByEncounter ? "high" : "review",
+        title: !supportedNow
+          ? `Clinical audit suggests ${label} ${code} after confirmed changes`
+          : supportedByEncounter
+            ? `Encounter evidence supports ${label} ${code}`
+            : alreadyCurrent
+              ? `Current ${label} ${code} needs encounter-evidence review`
+              : `Clinical context only — ${label} ${code} is not claim-ready`,
+        evidence,
+        missingDocumentation,
+        coverageNote: `${payer} is selected. This screen does not guarantee payment. Verify date-of-service code validity, applicable ICD-10-CM instructions, licensed AAPC/Codify guidance when available, and the payer's medical-necessity policy before submission.`,
+        auditSource: finding?.supportingSource || "BHW clinical audit",
+        sourceLabel: category === "icd" ? "CDC/NCHS ICD-10-CM files" : "CMS Evaluation & Management Services",
+        sourceUrl: category === "icd" ? CDC_ICD10_URL : CMS_PFS_URL,
+      }));
+    });
+  };
+
+  addAuditItems("cpt", audit.codingAsDocumented?.cpt, true);
+  addAuditItems("icd", audit.codingAsDocumented?.icd10, true);
+  addAuditItems("cpt", audit.suggestedCodesAfterChanges?.cpt, false);
+  addAuditItems("icd", audit.suggestedCodesAfterChanges?.icd10, false);
+  return results;
+}
+
 function evidenceSnippet(note, index, length) {
   const start = Math.max(0, index - 45);
   const end = Math.min(note.length, index + length + 80);
   return note.slice(start, end).replace(/\s+/g, " ").trim();
+}
+
+function nearestSectionLabel(note, index) {
+  const matches = [...String(note || "").slice(0, index).matchAll(/(?:^|\n)\s*([A-Za-z][A-Za-z0-9 &/()-]{1,48})\s*:\s*/g)];
+  return matches.at(-1)?.[1]?.trim() || "";
+}
+
+function exactDiagnosisEncounterSupport(note, index, length) {
+  const source = String(note || "");
+  const lineStart = source.lastIndexOf("\n", index) + 1;
+  const nextBreak = source.indexOf("\n", index + length);
+  const lineEnd = nextBreak < 0 ? source.length : nextBreak;
+  const line = source.slice(lineStart, lineEnd).trim();
+  const section = nearestSectionLabel(source, index);
+  const carryForward = isCarryForwardLocation(section) || /^\s*(?:problem\s*list|active\s+problems?|past\s+medical\s+history|pmh)\s*:/i.test(line);
+  const management = /\b(?:assess(?:ed|ment)?|plan|stable|controlled|uncontrolled|improved|worsening|continue|monitor|manage|treat|follow[- ]?up|refill|start|stop|discontinue|adjust|reviewed|counsel|refer|order(?:ed)?)\b/i.test(line);
+  const assessmentSection = /\b(?:assessment|impression|plan)\b/i.test(section);
+  return { eligible: !carryForward && (management || assessmentSection), line, section };
 }
 
 function matchEvidence(note, expression) {
@@ -120,7 +280,8 @@ function mergeDecisionState(next, existing = []) {
         addendumAppliedAt: prior.addendumAppliedAt || "",
       } : question;
     });
-    return { ...item, status: previous.status || "pending", decidedAt: previous.decidedAt || "", clarifications };
+    const status = item.action === "review" && previous.status === "applied" ? "pending" : previous.status || "pending";
+    return { ...item, status, decidedAt: status === "pending" ? "" : previous.decidedAt || "", clarifications };
   });
   const currentIds = new Set(merged.map((item) => item.id));
   for (const previous of decisions.values()) {
@@ -396,18 +557,36 @@ export function codingOpportunities(encounter = {}, existing = []) {
     const index = lowerNote.indexOf(diagnosis.phrase);
     if (index < 0 || diagnoses.has(diagnosis.code) || suggestedDiagnoses.has(diagnosis.code)) continue;
     suggestedDiagnoses.add(diagnosis.code);
+    const support = exactDiagnosisEncounterSupport(note, index, diagnosis.phrase.length);
     opportunities.push(makeOpportunity({
       category: "icd",
-      action: "add",
+      action: support.eligible ? "add" : "review",
       code: diagnosis.code,
-      title: `Review adding ${diagnosis.code} — ${diagnosis.label}`,
-      confidence: "high",
-      evidence: evidenceSnippet(note, index, diagnosis.phrase.length),
-      missingDocumentation: "Confirm this diagnosis was assessed or affected management today, is current, and is coded to the highest supported specificity.",
-      coverageNote: "Candidate is based on an exact diagnostic phrase in the note; it is not inferred from symptoms, medications, or test results.",
+      reviewKind: support.eligible ? "exact_encounter_diagnosis" : "encounter_evidence_required",
+      eligibleToApply: support.eligible,
+      title: support.eligible
+        ? `Review adding ${diagnosis.code} — ${diagnosis.label}`
+        : `Clinical context only — ${diagnosis.code} is not claim-ready`,
+      confidence: support.eligible ? "high" : "review",
+      evidence: support.line || evidenceSnippet(note, index, diagnosis.phrase.length),
+      missingDocumentation: support.eligible
+        ? "Confirm this diagnosis was assessed or affected management today, is current, and is coded to the highest supported specificity."
+        : "The diagnostic phrase was found outside a clearly managed Assessment/Plan context. Do not add it from a problem list, history, or carry-forward section alone.",
+      coverageNote: "Candidate is based on an exact diagnostic phrase in the note; payer acceptance still depends on the service, documentation, and current payer policy.",
       sourceLabel: "Current ICD-10-CM code set—verify before claim submission",
-      sourceUrl: "https://www.cdc.gov/nchs/icd/icd-10-cm/files.html",
+      sourceUrl: CDC_ICD10_URL,
     }));
+  }
+
+  for (const auditItem of auditCodingOpportunities(encounter, codes, diagnoses)) {
+    const duplicate = opportunities.find((item) => item.category === auditItem.category && item.code === auditItem.code);
+    if (!duplicate) {
+      opportunities.push(auditItem);
+      continue;
+    }
+    duplicate.auditSource = auditItem.auditSource;
+    duplicate.evidence = [duplicate.evidence, auditItem.evidence].filter(Boolean).join(" | ");
+    duplicate.coverageNote = `${duplicate.coverageNote} Clinical-audit support is also available; verify the selected payer and licensed AAPC/Codify guidance before submission.`;
   }
 
   return mergeDecisionState(opportunities, existing);
@@ -415,6 +594,7 @@ export function codingOpportunities(encounter = {}, existing = []) {
 
 export function applyCodingOpportunity(encounter, opportunity, now = new Date()) {
   if (!encounter || !opportunity || !["add", "replace"].includes(opportunity.action)) return false;
+  if (opportunity.eligibleToApply === false) return false;
   if ([].concat(opportunity.clarifications || []).some((question) => question.decision === "pending")) return false;
   const field = opportunity.category === "icd" ? "diagnoses" : "codes";
   const values = cleanCodes(encounter[field]);
