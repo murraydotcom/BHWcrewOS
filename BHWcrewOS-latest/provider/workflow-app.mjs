@@ -1,4 +1,5 @@
 import { analyzeNote } from "../engine/note-analyze.mjs";
+import { canApproveDocumentation } from "../engine/documentation-authority.mjs";
 import {
   WORKFLOW_STATUS,
   STATUS_LABELS,
@@ -144,6 +145,12 @@ function signedInStaffIdentity() {
 }
 
 const currentOwnerIdentity = signedInStaffIdentity();
+const documentationProvider = (() => {
+  try {
+    const [body] = (sessionStorage.getItem("crewos_token") || "").split(".");
+    return canApproveDocumentation(JSON.parse(atob(body.replace(/-/g, "+").replace(/_/g, "/"))));
+  } catch { return false; }
+})();
 
 const lineValues = (value) => String(value || "").split("\n").map((item) => item.trim()).filter(Boolean);
 
@@ -599,6 +606,13 @@ function renderDetail() {
     <div class="panel ${activeTab === "charm" ? "on" : ""}" id="p-charm">${renderCharm(row)}</div>
     <div class="panel ${activeTab === "history" ? "on" : ""}" id="p-history">${renderHistory(row)}</div></div>`;
   wireDetail(row);
+  if (!documentationProvider) {
+    document.querySelectorAll("#providerApproved, #nbWarningsResolved, .audit-decision, .coding-decision, #applyConfirmedCorrections, .audit-response, .audit-addendum, .coding-response, .coding-addendum").forEach((control) => { control.disabled = true; });
+    const notice = document.createElement("div");
+    notice.className = "notice";
+    notice.textContent = "Documentation staff: prepare the draft, run processing, and send findings to Dr. Murray. Provider decisions, warning resolution, and final clinical approval require her provider account.";
+    $("detail").prepend(notice);
+  }
   if (structuringId || analyzingId) document.querySelectorAll("#detail input, #detail textarea, #detail select, #detail button").forEach((control) => { control.disabled = true; });
   setNoteSaveState(row);
 }
