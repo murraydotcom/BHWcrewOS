@@ -889,11 +889,11 @@ function composeReviewedNote(row, metadata = {}) {
     transcriptReviewed: Boolean(input.transcriptReviewed),
     notePlan: row.notePlan,
     encounterSnapshot: row.encounterSnapshot,
-    orders: input.orders || row.orders,
-    referrals: input.referrals || row.referrals,
-    patientInstructions: input.patientInstructions || row.patientInstructions,
-    returnPrecautions: input.returnPrecautions || row.returnPrecautions,
-    followUp: input.followUp || row.followUp,
+    orders: input.orders ?? row.orders,
+    referrals: input.referrals ?? row.referrals,
+    patientInstructions: input.patientInstructions ?? row.patientInstructions,
+    returnPrecautions: input.returnPrecautions ?? row.returnPrecautions,
+    followUp: input.followUp ?? row.followUp,
   });
   row.note = result.note;
   row.notePlan = result.notePlan;
