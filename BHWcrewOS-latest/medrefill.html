@@ -149,7 +149,7 @@
     const medication=$('medication').value.trim(), pharmacy=$('pharmacy').value.trim(), path=$('medicationPath').value, screen=$('screening').value;
     if(!patient){setStatus('saveStatus','Select an exact active Patient Registry record first.','error');return;}
     const patientId=String(patient.bhwPatientId||patient.ctl||patient.bhwId||'').toUpperCase();
-    if(!/^BHW\\d{4}$/.test(patientId)||patientId==='BHW0000'){setStatus('saveStatus','Choose an active, non-synthetic Patient Registry record.','error');return;}
+    if(!/^BHW\d{4}$/.test(patientId)||patientId==='BHW0000'){setStatus('saveStatus','Choose an active, non-synthetic Patient Registry record.','error');return;}
     if(!medication||!pharmacy){setStatus('saveStatus','Medication and verified pharmacy are required.','error');return;}
     if(!$('verified').checked){setStatus('saveStatus','Confirm chart verification before creating the request.','error');return;}
     if(path==='established'&&!$('noChange').checked){setStatus('saveStatus','For an established continuation, confirm there is no independent change. Otherwise choose the correct medication pathway.','error');return;}
