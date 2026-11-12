@@ -9,6 +9,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const staffPage = fs.readFileSync(path.join(root, "bhw-patient-materials.html"), "utf8");
 const patientPage = fs.readFileSync(path.join(root, "bhw-patient-material-viewer.html"), "utf8");
 const workbookPage = fs.readFileSync(path.join(root, "bhw-neurodivergence-workbook.html"), "utf8");
+const previsitPage = fs.readFileSync(path.join(root, "bhw-previsit-questionnaire.html"), "utf8");
 const workbookAssignment = fs.readFileSync(path.join(root, "assets", "bhw-neurodivergence-assignment.js"), "utf8");
 const checkinLauncher = fs.readFileSync(path.join(root, "assets", "bhw-checkin-launcher.js"), "utf8");
 const checkinPages = [
@@ -52,6 +53,7 @@ test("patient materials inline scripts compile", () => {
   assertInlineScriptsCompile(staffPage, "bhw-patient-materials.html");
   assertInlineScriptsCompile(patientPage, "bhw-patient-material-viewer.html");
   assertInlineScriptsCompile(workbookPage, "bhw-neurodivergence-workbook.html");
+  assertInlineScriptsCompile(previsitPage, "bhw-previsit-questionnaire.html");
 });
 
 test("reviewed HTML library includes the four secure myBHW check-ins", () => {
@@ -76,6 +78,23 @@ test("private check-in launcher validates the assignment and never forwards its 
   assert.match(checkinLauncher, /Nothing has been submitted yet/);
   assert.doesNotMatch(checkinLauncher, /target\.searchParams\.set\((?:"|')token/);
   assert.doesNotMatch(checkinLauncher, /target\.searchParams\.set\((?:"|')assignment/);
+});
+
+test("reviewed HTML library includes the private pre-visit questionnaire", () => {
+  assert.match(staffPage, /value="\/bhw-previsit-questionnaire\.html"/);
+  assert.match(staffPage, /data-kind="previsit"/);
+  assert.match(staffPage, /previsit_questionnaire/);
+  assert.match(staffPage, /PREVISIT_QUESTIONS/);
+  assert.match(staffPage, /Send 1(?:&ndash;|–)2 days before the appointment/);
+  assert.match(staffPage, /document\.getElementById\('expiry'\)\.value='72'/);
+  assert.match(previsitPage, /CONTENT_PATH='\/bhw-previsit-questionnaire\.html'/);
+  assert.match(previsitPage, /\/v1\/public\/content-assignments/);
+  assert.match(previsitPage, /\/v1\/public\/content-submissions/);
+  assert.match(previsitPage, /Most people finish in about five minutes/);
+  assert.match(previsitPage, /Do not wait on this form for urgent help/);
+  assert.match(previsitPage, /urgentConcern/);
+  assert.match(previsitPage, /patientReviewed:true/);
+  assert.doesNotMatch(previsitPage, /recording|AI[- ]assisted transcription/i);
 });
 
 test("staff can select the reviewed CharmEd Minds workbook from the HTML library", () => {

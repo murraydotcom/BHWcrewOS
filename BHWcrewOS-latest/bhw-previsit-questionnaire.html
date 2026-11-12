@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="referrer" content="no-referrer">
+  <meta name="description" content="Private BHW questionnaire to complete before an upcoming visit">
+  <title>Before Your Visit — BHW Medical</title>
+  <link rel="stylesheet" href="/assets/bhw-tokens.css">
+  <style>
+    *{box-sizing:border-box}body{margin:0;font-family:var(--sans);color:var(--ink);background:var(--page-wash),var(--bg);font-size:14px;line-height:1.5}.top{background:var(--deep-grad);color:#fff;padding:20px}.brand{max-width:780px;margin:auto}.brand h1{margin:0;font-size:23px}.brand p{margin:5px 0 0;color:#dce8eb;font-size:12px}.wrap{max-width:780px;margin:auto;padding:22px}.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px;box-shadow:var(--shadow)}h2{margin:0 0 5px;font-size:19px}.intro{color:var(--ink-soft);font-size:13px;line-height:1.6;margin:0 0 16px}.notice{border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:12px;line-height:1.5;background:#eef4f3}.notice.warn{background:#f8eee7;color:#70483d}.section{border-top:1px solid var(--line);padding-top:18px;margin-top:20px}.section h3{margin:0 0 4px;font-size:15px}.section-copy{font-size:11px;color:var(--ink-soft);margin:0 0 13px}.field{margin-bottom:16px}.label{display:block;font-weight:750;font-size:12px;margin-bottom:7px}.required{color:#a85846}.input{width:100%;border:1px solid #d9d5cc;border-radius:10px;padding:11px;font:500 13px/1.45 var(--sans);background:#fff;color:var(--ink)}textarea.input{min-height:90px;resize:vertical}.options{display:grid;gap:7px}.options.cols{grid-template-columns:repeat(2,minmax(0,1fr))}.option{display:flex;gap:9px;align-items:flex-start;border:1px solid #e4dfd6;background:#fff;border-radius:11px;padding:10px 11px;font-size:12px}.option input{margin-top:2px;flex:0 0 auto}.field-note{display:block;color:var(--ink-soft);font-size:10px;margin-top:6px}.btn{width:100%;border:0;border-radius:999px;background:var(--clay-grad);color:#fff;padding:14px;font:750 11px var(--sans);letter-spacing:.05em;text-transform:uppercase;cursor:pointer}.btn:disabled{opacity:.55}.status{display:none;margin:13px 0;padding:11px;border-radius:10px;font-size:12px}.status.on{display:block}.status.ok{background:#eaf2e7;color:#466243}.status.error{background:#f8e8e5;color:#7d382e}.loading{text-align:center;padding:35px;color:var(--ink-soft)}.small{font-size:10px;color:var(--ink-soft);line-height:1.5;margin-top:12px}.conditional[hidden]{display:none}@media(max-width:650px){.wrap{padding:12px}.card{padding:18px}.options.cols{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <header class="top"><div class="brand"><h1>Before Your Visit</h1><p>A short, private questionnaire for your BHW care team</p></div></header>
+  <main class="wrap" id="app"><section class="card loading">Opening your private pre-visit questionnaire…</section></main>
+  <script>
+    const API='https://bhw-medication-api-343692256275.us-east4.run.app';
+    const CONTENT_PATH='/bhw-previsit-questionnaire.html';
+    const params=new URLSearchParams(location.search),assignmentId=params.get('assignment')||'',token=params.get('token')||'',app=document.getElementById('app');
+    const esc=value=>String(value==null?'':value).replace(/[&<>"']/g,character=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
+    const checked=(name)=>[...document.querySelectorAll(`input[name="${name}"]:checked`)].map(input=>input.value);
+    const value=id=>document.getElementById(id)?.value.trim()||'';
+
+    function render(assignment){
+      document.title=`${assignment.title||'Before Your Visit Questionnaire'} — BHW Medical`;
+      app.innerHTML=`<section class="card">
+        <h2>${esc(assignment.title||'Before Your Visit Questionnaire')}</h2>
+        <p class="intro">Tell us what changed and what matters most for your upcoming appointment. Most people finish in about five minutes. Your answers help the care team prepare; your clinician will review and reconcile them with your health record.</p>
+        <div class="notice"><b>Submitting this form does not change your medicines or treatment.</b> Bring medication bottles, home readings, hospital paperwork, or test results when your care team has asked for them.</div>
+        <div class="notice warn"><b>Do not wait on this form for urgent help.</b> Call 911 for severe chest pain, severe trouble breathing, signs of stroke, fainting, a seizure, severe bleeding, or another emergency. Call or text 988 for a mental-health or substance-use crisis.</div>
+        <form id="previsitForm">
+          <section class="section"><h3>Your upcoming visit</h3><p class="section-copy">Start with what would make this appointment useful to you.</p>
+            <div class="field"><label class="label" for="visitGoals">What are the most important things you want to discuss?<span class="required"> *</span></label><textarea class="input" id="visitGoals" maxlength="2000" required placeholder="List your top concerns, questions, or goals"></textarea></div>
+            <div class="field"><label class="label" for="healthChange">Since your last BHW visit, how has your health been overall?<span class="required"> *</span></label><select class="input" id="healthChange" required><option value="">Choose one</option><option>Better</option><option>About the same</option><option>Worse</option><option>I have a new concern</option><option>This is my first BHW visit</option></select></div>
+            <div class="field"><label class="label" for="symptoms">New or worsening symptoms, changes, or concerns</label><textarea class="input" id="symptoms" maxlength="2000" placeholder="What changed, when did it start, and what makes it better or worse?"></textarea></div>
+          </section>
+
+          <section class="section"><h3>Care since your last visit</h3><p class="section-copy">Choose everything that applies. If this is your first BHW visit, choose that option.</p>
+            <div class="field"><div class="options cols" id="recentCareOptions">
+              ${['Emergency room','Hospital stay','Urgent care','Specialist visit','Surgery or procedure','New lab or imaging results','None of these','This is my first BHW visit'].map(option=>`<label class="option"><input type="checkbox" name="recentCare" value="${esc(option)}"><span>${esc(option)}</span></label>`).join('')}
+            </div></div>
+            <div class="field"><label class="label" for="recentCareDetails">Details about recent care, tests, or results</label><textarea class="input" id="recentCareDetails" maxlength="2000" placeholder="Where and when you were seen, why, and any results or follow-up instructions"></textarea></div>
+          </section>
+
+          <section class="section"><h3>Medications and allergies</h3><p class="section-copy">Report what you are actually taking. Your care team will compare it with the medication list in your chart.</p>
+            <div class="field"><label class="label" for="medicationChanges">Have your medications or supplements changed?<span class="required"> *</span></label><select class="input" id="medicationChanges" required><option value="">Choose one</option><option>No changes</option><option>Started something</option><option>Stopped something</option><option>Dose or directions changed</option><option>I am having a medication problem</option><option>I am not sure</option></select></div>
+            <div class="field"><label class="label" for="medicationDetails">Medication or supplement changes, side effects, or questions</label><textarea class="input" id="medicationDetails" maxlength="2000" placeholder="Include the name, dose, what changed, and when if you know"></textarea></div>
+            <div class="field"><label class="label" for="refills">Refills or medication renewals to discuss</label><textarea class="input" id="refills" maxlength="1000" placeholder="Medication name and how much you have left"></textarea><span class="field-note">This questionnaire does not create or guarantee a prescription.</span></div>
+            <div class="field"><label class="label" for="newAllergies">Any new allergy or reaction since your last visit?<span class="required"> *</span></label><select class="input" id="newAllergies" required><option value="">Choose one</option><option value="No">No</option><option value="Yes">Yes</option></select></div>
+            <div class="field conditional" id="allergyDetailsField" hidden><label class="label" for="allergyDetails">What caused the reaction, and what happened?<span class="required"> *</span></label><textarea class="input" id="allergyDetails" maxlength="1200"></textarea></div>
+          </section>
+
+          <section class="section"><h3>Help us prepare</h3><p class="section-copy">Optional details that can make the visit easier and more useful.</p>
+            <div class="field"><label class="label" for="homeReadings">Home readings you want reviewed</label><textarea class="input" id="homeReadings" maxlength="1500" placeholder="Examples: blood pressure, blood sugar, weight, temperature, oxygen level"></textarea></div>
+            <div class="field"><span class="label">What would help you complete this visit?</span><div class="options cols" id="supportOptions">
+              ${['Interpreter or language help','Mobility or accessibility support','Help with forms or reading','Telehealth help','Transportation help','Medication affordability help','A private conversation with the clinician','No additional support needed'].map(option=>`<label class="option"><input type="checkbox" name="supportNeeds" value="${esc(option)}"><span>${esc(option)}</span></label>`).join('')}
+            </div></div>
+            <div class="field"><label class="label" for="privateTopic">Anything else you want your care team to know before the visit?</label><textarea class="input" id="privateTopic" maxlength="2000"></textarea></div>
+          </section>
+
+          <label class="option" style="margin:18px 0 10px"><input id="sameDay" type="checkbox"><span>I believe one of my answers needs review today. I understand this form is not continuously monitored and I will call BHW or seek urgent help when needed.</span></label>
+          <label class="option" style="margin-bottom:16px"><input id="attestation" type="checkbox" required><span>I reviewed these answers and want to send them to BHW for my upcoming visit.<span class="required"> *</span></span></label>
+          <div class="status" id="status"></div><button class="btn" id="submitButton" type="submit">Send to BHW</button>
+          <p class="small">Your response stays connected to this private assignment. Contact the office if your appointment changes or you need help completing the form.</p>
+        </form>
+      </section>`;
+      const allergy=document.getElementById('newAllergies'),allergyField=document.getElementById('allergyDetailsField'),allergyDetails=document.getElementById('allergyDetails');
+      allergy.addEventListener('change',()=>{const show=allergy.value==='Yes';allergyField.hidden=!show;allergyDetails.required=show;if(!show)allergyDetails.value=''});
+      wireExclusive('recentCare',['None of these','This is my first BHW visit']);
+      wireExclusive('supportNeeds',['No additional support needed']);
+      document.getElementById('previsitForm').addEventListener('submit',submit);
+    }
+
+    function wireExclusive(name,exclusiveValues){
+      document.querySelectorAll(`input[name="${name}"]`).forEach(input=>input.addEventListener('change',()=>{
+        if(!input.checked)return;
+        const exclusive=exclusiveValues.includes(input.value);
+        document.querySelectorAll(`input[name="${name}"]`).forEach(other=>{if(other!==input&&(exclusive||exclusiveValues.includes(other.value)))other.checked=false});
+      }));
+    }
+
+    async function submit(event){
+      event.preventDefault();
+      const form=event.currentTarget,status=document.getElementById('status'),button=document.getElementById('submitButton');
+      if(!form.reportValidity())return;
+      const responses={
+        visitGoals:value('visitGoals'),healthChange:value('healthChange'),symptoms:value('symptoms'),recentCare:checked('recentCare'),recentCareDetails:value('recentCareDetails'),
+        medicationChanges:value('medicationChanges'),medicationDetails:value('medicationDetails'),refills:value('refills'),newAllergies:value('newAllergies'),allergyDetails:value('allergyDetails'),
+        homeReadings:value('homeReadings'),supportNeeds:checked('supportNeeds'),privateTopic:value('privateTopic'),patientReviewed:true
+      };
+      const urgentConcern=document.getElementById('sameDay').checked;
+      const problemReported=Boolean(responses.symptoms||responses.medicationDetails||responses.newAllergies==='Yes'||['Worse','I have a new concern'].includes(responses.healthChange));
+      const contactRequested=responses.supportNeeds.some(item=>item!=='No additional support needed')||urgentConcern;
+      button.disabled=true;status.className='status';
+      try{
+        const response=await fetch(`${API}/v1/public/content-submissions`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({assignmentId,token,completionStatus:'completed',responses,feedback:responses.privateTopic,problemReported,contactRequested,urgentConcern})});
+        const result=await response.json().catch(()=>({}));if(!response.ok)throw new Error(result.error||'Unable to send questionnaire');
+        status.textContent=urgentConcern?'Your questionnaire was received and marked for priority review. Do not wait on this form if you need urgent help.':'Your questionnaire was received and is ready for your care team to review before the visit.';status.className='status on ok';button.hidden=true;form.querySelectorAll('input,select,textarea').forEach(input=>{input.disabled=true});
+      }catch(error){status.textContent='We could not send your questionnaire. Please try again or contact the office.';status.className='status on error';button.disabled=false}
+    }
+
+    async function load(){
+      if(!assignmentId||!token){app.innerHTML='<section class="card loading">This private link is incomplete. Please use the complete link sent by BHW.</section>';return}
+      try{const response=await fetch(`${API}/v1/public/content-assignments/${encodeURIComponent(assignmentId)}?token=${encodeURIComponent(token)}`,{cache:'no-store'}),data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Link unavailable');if(data.contentPath!==CONTENT_PATH)throw new Error('Wrong form');render(data)}catch(error){app.innerHTML='<section class="card loading">This pre-visit link is unavailable, expired, revoked, or already used. Please contact BHW for a new link.</section>'}
+    }
+    load();
+  </script>
+</body>
+</html>
