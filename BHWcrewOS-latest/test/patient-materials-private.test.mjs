@@ -94,6 +94,8 @@ test("reviewed HTML library includes the private pre-visit questionnaire", () =>
   assert.match(previsitPage, /Do not wait on this form for urgent help/);
   assert.match(previsitPage, /urgentConcern/);
   assert.match(previsitPage, /patientReviewed:true/);
+  assert.match(previsitPage, /preview=params\.get\('preview'\)==='1'/);
+  assert.match(previsitPage, /Preview only/);
   assert.doesNotMatch(previsitPage, /recording|AI[- ]assisted transcription/i);
 });
 

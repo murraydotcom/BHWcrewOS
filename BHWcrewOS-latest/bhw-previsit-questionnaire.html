@@ -18,7 +18,7 @@
   <script>
     const API='https://bhw-medication-api-343692256275.us-east4.run.app';
     const CONTENT_PATH='/bhw-previsit-questionnaire.html';
-    const params=new URLSearchParams(location.search),assignmentId=params.get('assignment')||'',token=params.get('token')||'',app=document.getElementById('app');
+    const params=new URLSearchParams(location.search),assignmentId=params.get('assignment')||'',token=params.get('token')||'',preview=params.get('preview')==='1',app=document.getElementById('app');
     const esc=value=>String(value==null?'':value).replace(/[&<>"']/g,character=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
     const checked=(name)=>[...document.querySelectorAll(`input[name="${name}"]:checked`)].map(input=>input.value);
     const value=id=>document.getElementById(id)?.value.trim()||'';
@@ -71,6 +71,7 @@
       wireExclusive('recentCare',['None of these','This is my first BHW visit']);
       wireExclusive('supportNeeds',['No additional support needed']);
       document.getElementById('previsitForm').addEventListener('submit',submit);
+      if(preview){const button=document.getElementById('submitButton'),status=document.getElementById('status');button.disabled=true;button.textContent='Preview only — nothing will be sent';status.textContent='Review preview: no patient is selected and no answers can be submitted.';status.className='status on ok'}
     }
 
     function wireExclusive(name,exclusiveValues){
@@ -102,6 +103,7 @@
     }
 
     async function load(){
+      if(preview){render({title:'Before Your Visit Questionnaire'});return}
       if(!assignmentId||!token){app.innerHTML='<section class="card loading">This private link is incomplete. Please use the complete link sent by BHW.</section>';return}
       try{const response=await fetch(`${API}/v1/public/content-assignments/${encodeURIComponent(assignmentId)}?token=${encodeURIComponent(token)}`,{cache:'no-store'}),data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Link unavailable');if(data.contentPath!==CONTENT_PATH)throw new Error('Wrong form');render(data)}catch(error){app.innerHTML='<section class="card loading">This pre-visit link is unavailable, expired, revoked, or already used. Please contact BHW for a new link.</section>'}
     }
