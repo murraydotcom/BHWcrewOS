@@ -2699,7 +2699,7 @@ async function prevCheck(patientId){
   try{
     const r = await api(API_STEDI, {action:"check", patientId});
     if(r.error) toast("⚠ "+r.error);
-    else toast(`✓ Checked — coverage ${r.active?"active":"inactive"}, AWV: ${r.awvStatus}`);
+    else toast(`Checked — coverage ${r.active===true?"active":r.active===false?"inactive":"unknown — needs review"}, AWV: ${r.awvStatus}`);
     await refreshSoft();
   }catch(e){ toast("⚠ "+e.message); }
 }

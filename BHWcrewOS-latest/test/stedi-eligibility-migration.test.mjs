@@ -80,6 +80,36 @@ function checkEvent() {
   };
 }
 
+test("an inconclusive HTTP 200 response remains Unknown in the saved tracker", async () => {
+  const harness = await loadHarness({ response: { errors: [], plans: [] } });
+  const result = JSON.parse((await harness.handler(checkEvent())).body);
+  assert.equal(result.active, null);
+  const tracker = harness.cloudCalls[0].options.body;
+  assert.equal(tracker.coverage, "Unknown");
+  assert.equal(tracker.awvStatus, "Unknown");
+  assert.match(tracker.coverageNotes, /could not be determined/);
+});
+
+test("explicit inactive coverage remains Inactive rather than Unknown", async () => {
+  const harness = await loadHarness({ response: { plans: [{ benefits: { statuses: [{ status: "INACTIVE_COVERAGE", service: { system: "STC", value: "30" } }] } }] } });
+  const result = JSON.parse((await harness.handler(checkEvent())).body);
+  assert.equal(result.active, false);
+  assert.equal(harness.cloudCalls[0].options.body.coverage, "Inactive");
+  assert.equal(harness.cloudCalls[0].options.body.coverageNotes, "");
+});
+
+test("CrewOS check notification preserves unknown, active and inactive outcomes", async () => {
+  const page = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+  const source = page.slice(page.indexOf('async function prevCheck('), page.indexOf('function prevMbi('));
+  for (const [active, expected] of [[null, 'unknown — needs review'], [true, 'coverage active'], [false, 'coverage inactive']]) {
+    const notices = [];
+    const context = { API_STEDI: '/stedi', api: async () => ({ active, awvStatus: 'Unknown' }), toast: message => notices.push(message), refreshSoft: async () => {} };
+    vm.runInNewContext(source, context);
+    await context.prevCheck('BHWTEST1');
+    assert.ok(notices.at(-1).includes(expected));
+  }
+});
+
 test("Stedi eligibility check uses the redesigned request and preserves the BHW tracker contract", async () => {
   const response = {
     id: "ec_synthetic",
