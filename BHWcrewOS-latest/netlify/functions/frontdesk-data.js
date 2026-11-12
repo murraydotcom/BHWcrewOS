@@ -8,7 +8,7 @@ const { listCloudPatients, findCloudPatient, searchCloudPatients } = require('./
 const { createIFaxClient } = require('./lib/ifax');
 const { DB, getSession } = require('./_lib');
 const { queryOperational } = require('./lib/operational-store');
-const { operationsRequest } = require('./lib/operations-cloud');
+const { operationsRequest, createFrontDeskIntake } = require('./lib/operations-cloud');
 const crypto = require('crypto');
 const digits = s => (s || '').replace(/\D/g, '');
 const text = p => (p?.rich_text?.[0]?.plain_text) || (p?.title?.[0]?.plain_text) || '';
@@ -70,11 +70,90 @@ async function handle(event, { queryOperationalImpl = queryOperational } = {}) {
 
     // ---- WRITE-BACK: Patient Requests update the protected Operations queue ----
     if (event.httpMethod === 'POST') {
-      const { pageId, action } = JSON.parse(event.body || '{}');
+      const payload = JSON.parse(event.body || '{}');
+      const { pageId, action } = payload;
       if (!action) return { statusCode: 400, body: JSON.stringify({ error: 'missing action' }) };
       // Fax can be sent without a request row for authorized ad-hoc work.
-      if (!pageId && !['sms', 'fax', 'fax_status'].includes(action)) return { statusCode: 400, body: JSON.stringify({ error: 'missing pageId' }) };
-      if (['start', 'done', 'reopen'].includes(action)) {
+      if (!pageId && !['sms', 'fax', 'fax_status', 'medication_refill'].includes(action)) return { statusCode: 400, body: JSON.stringify({ error: 'missing pageId' }) };
+      if (action === 'medication_refill') {
+        // A refill request is an operational handoff only. It never creates,
+        // alters, signs, or transmits a prescription.
+        const compact = (value, max) => String(value || '').replace(/\s+/g, ' ').trim().slice(0, max);
+        const bhwPatientId = compact(payload.bhwPatientId, 20).toUpperCase();
+        const medication = compact(payload.medication, 160);
+        const pharmacy = compact(payload.pharmacy, 160);
+        const requestSource = compact(payload.requestSource, 40).toLowerCase();
+        const medicationPath = compact(payload.medicationPath, 40).toLowerCase();
+        let screeningPlan = compact(payload.screeningPlan, 40).toLowerCase();
+        const patientReport = compact(payload.patientReport, 2000);
+        if (!/^BHW\d{4}$/.test(bhwPatientId) || bhwPatientId === 'BHW0000') {
+          return { statusCode: 400, body: JSON.stringify({ error: 'choose an existing non-synthetic Patient Registry record' }) };
+        }
+        if (!medication || !pharmacy) {
+          return { statusCode: 400, body: JSON.stringify({ error: 'medication and verified pharmacy are required' }) };
+        }
+        const patient = await findCloudPatient(bhwPatientId, session);
+        if (!patient || String(patient.bhwPatientId || '').toUpperCase() !== bhwPatientId) {
+          return { statusCode: 404, body: JSON.stringify({ error: 'the selected Patient Registry record could not be verified' }) };
+        }
+        const paths = {
+          established: 'Established continuation request',
+          controlled: 'Controlled medication / EPCS workflow',
+          'new-or-changed': 'New, changed, acute, or infection treatment',
+          'clinical-review': 'Clinical concern or monitoring review',
+        };
+        if (!paths[medicationPath]) {
+          return { statusCode: 400, body: JSON.stringify({ error: 'choose a valid medication pathway' }) };
+        }
+        if (!['none', 'controlled', 'substance', 'clinician'].includes(screeningPlan)) screeningPlan = 'none';
+        if (medicationPath === 'controlled' && screeningPlan === 'none') screeningPlan = 'controlled';
+        const needs = [];
+        if (medicationPath === 'controlled') needs.push('Prescriber-controlled medication workflow required.');
+        if (medicationPath === 'new-or-changed') needs.push('Prescriber-directed medication decision required; staff must not modify the prescription.');
+        if (medicationPath === 'clinical-review') needs.push('Clinical review is required before preparation.');
+        if (screeningPlan === 'controlled') needs.push('Complete the current controlled-medication follow-up screen per BHW protocol.');
+        if (screeningPlan === 'substance') needs.push('Send the BHW-approved substance-use follow-up assessment through myBHW and document completion.');
+        if (screeningPlan === 'clinician') needs.push('Send the clinician-directed follow-up questionnaire / screen through myBHW.');
+        const sourceLabels = { patient: 'Patient / caregiver', pharmacy: 'Pharmacy request', mybhw: 'myBHW message', phone: 'Phone call', staff: 'Care team' };
+        const source = sourceLabels[requestSource] || 'Front desk';
+        const submissionId = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/.test(String(payload.submissionId || '').trim())
+          ? String(payload.submissionId).trim()
+          : actionKey('medication-refill');
+        const requestBody = {
+          bhwPatientId,
+          patientMatchStatus: 'matched',
+          requestType: 'medication',
+          priority: 'routine',
+          summary: 'Medication refill request: ' + medication,
+          message: [
+            'Medication refill request received through FrontDeskOS.',
+            'Medication: ' + medication,
+            'Verified pharmacy: ' + pharmacy,
+            'Request source: ' + source,
+            'Pathway: ' + paths[medicationPath],
+            patientReport ? 'Patient-reported request: ' + patientReport : '',
+          ].filter(Boolean).join('\n'),
+          requester: { displayName: source, preferredChannel: requestSource },
+          routing: { targetSystem: 'medication-service', assignedTeam: 'clinical', ownerRole: 'prescriber' },
+          notificationMode: 'none',
+          manualNotifyOnly: true,
+          sourceMetadata: { sourceRecordId: submissionId, sourcePage: 'medrefill', sourceUrl: '/medrefill.html' },
+          workflowContext: { kind: 'patient-request', details: 'Medication refill workflow: ' + paths[medicationPath], needs },
+        };
+        const created = await createFrontDeskIntake({ submissionId, body: requestBody });
+        if (!created?.patientRequest) {
+          return { statusCode: 503, body: JSON.stringify({ error: 'the protected medication request service is not configured' }) };
+        }
+        const saved = created.patientRequest;
+        if (saved.bhwPatientId !== bhwPatientId || saved.requestType !== 'medication') {
+          return { statusCode: 502, body: JSON.stringify({ error: 'the medication request was not confirmed after save' }) };
+        }
+        return {
+          statusCode: 201,
+          headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+          body: JSON.stringify({ ok: true, requestId: saved.patientRequestId || saved.id, savedAt: saved.updatedAt || saved.createdAt, storage: 'BHW Cloud', screeningPlan }),
+        };
+      } else if (['start', 'done', 'reopen'].includes(action)) {
         const current = await operationsRequest(`/v1/patient-requests/${encodeURIComponent(pageId)}`, { actor: session });
         const request = current.request || current.patientRequest || {};
         const requestAction = action === 'done' ? 'resolve' : action;
