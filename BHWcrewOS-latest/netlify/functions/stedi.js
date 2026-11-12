@@ -233,7 +233,7 @@ async function upsertTracker(patient, parsed, errNote, session) {
     body: {
       bhwPatientId: patient.id,
       payer: patient.insurance,
-      coverage: errNote ? "Error — see notes" : (parsed.active ? "Active" : "Inactive"),
+      coverage: errNote ? "Error — see notes" : (parsed.active === true ? "Active" : parsed.active === false ? "Inactive" : "Unknown"),
       planType: parsed.planType,
       medicareAdvantagePlanName: parsed.maName,
       awvStatus: errNote ? "Unknown" : awvStatus(parsed),
@@ -243,7 +243,7 @@ async function upsertTracker(patient, parsed, errNote, session) {
       preventiveServices: parsed.services,
       preventiveMeasureSummary: normalizeHetsMeasures({ preventiveServices: parsed.services }),
       deductibleRemaining: parsed.deductible,
-      coverageNotes: (errNote || parsed.note || "").slice(0, 4000),
+      coverageNotes: (errNote || parsed.note || (parsed.active == null ? "Coverage could not be determined from this response. Review eligibility before billing." : "")).slice(0, 4000),
       sourceSystem: "Stedi HETS",
       sourceRulesVersion: "cms-hets-2026-2-v15.1",
     },
