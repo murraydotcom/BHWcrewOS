@@ -9,6 +9,14 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const staffPage = fs.readFileSync(path.join(root, "bhw-patient-materials.html"), "utf8");
 const patientPage = fs.readFileSync(path.join(root, "bhw-patient-material-viewer.html"), "utf8");
 const workbookPage = fs.readFileSync(path.join(root, "bhw-neurodivergence-workbook.html"), "utf8");
+const workbookAssignment = fs.readFileSync(path.join(root, "assets", "bhw-neurodivergence-assignment.js"), "utf8");
+const checkinLauncher = fs.readFileSync(path.join(root, "assets", "bhw-checkin-launcher.js"), "utf8");
+const checkinPages = [
+  ["primary", "/bhw-primary-care-checkin.html", "bhw-primary-care-checkin.html"],
+  ["mind", "/bhw-mind-mood-checkin.html", "bhw-mind-mood-checkin.html"],
+  ["charmed", "/bhw-charmed-minds-checkin.html", "bhw-charmed-minds-checkin.html"],
+  ["flow", "/bhw-flow-checkin.html", "bhw-flow-checkin.html"],
+].map(([program, contentPath, file]) => ({ program, contentPath, file, source: fs.readFileSync(path.join(root, file), "utf8") }));
 const hqPage = fs.readFileSync(path.join(root, "hq-home.mjs"), "utf8");
 const patientRegistryApp = fs.readFileSync(path.join(root, "provider", "patient-registry-app.mjs"), "utf8");
 const patientRegistryPage = fs.readFileSync(path.join(root, "provider", "patient-registry.html"), "utf8");
@@ -46,6 +54,30 @@ test("patient materials inline scripts compile", () => {
   assertInlineScriptsCompile(workbookPage, "bhw-neurodivergence-workbook.html");
 });
 
+test("reviewed HTML library includes the four secure myBHW check-ins", () => {
+  for (const { program, contentPath, source } of checkinPages) {
+    assert.match(staffPage, new RegExp(`value="${contentPath.replaceAll(".", "\\.")}"`));
+    assert.match(staffPage, new RegExp(`data-program="${program}"`));
+    assert.match(source, new RegExp(`data-checkin-program="${program}"`));
+    assert.match(source, new RegExp(`data-content-path="${contentPath.replaceAll(".", "\\.")}"`));
+    assert.match(source, /noindex,nofollow,noarchive/);
+  }
+  assert.match(staffPage, /patient_checkin_\$\{libraryResource\.program\}/);
+  assert.match(staffPage, /The patient must sign in/);
+  assert.match(staffPage, /generating this link does not save a check-in/i);
+});
+
+test("private check-in launcher validates the assignment and never forwards its token", () => {
+  assert.doesNotThrow(() => new vm.Script(checkinLauncher));
+  assert.match(checkinLauncher, /\/v1\/public\/content-assignments/);
+  assert.match(checkinLauncher, /data\.contentPath !== expectedPath/);
+  assert.match(checkinLauncher, /https:\/\/mybhw\.com\/bhw-checkin\.html/);
+  assert.match(checkinLauncher, /target\.searchParams\.set\("program", program\)/);
+  assert.match(checkinLauncher, /Nothing has been submitted yet/);
+  assert.doesNotMatch(checkinLauncher, /target\.searchParams\.set\((?:"|')token/);
+  assert.doesNotMatch(checkinLauncher, /target\.searchParams\.set\((?:"|')assignment/);
+});
+
 test("staff can select the reviewed CharmEd Minds workbook from the HTML library", () => {
   assert.match(staffPage, /value="library">\s*Use the reviewed HTML library/);
   assert.match(staffPage, /id="libraryMaterial"/);
@@ -61,7 +93,7 @@ test("staff can select the reviewed CharmEd Minds workbook from the HTML library
   assert.match(staffPage, /id="assignmentSummary"/);
   assert.match(workbookPage, /\/v1\/public\/content-assignments/);
   assert.match(workbookPage, /data\.contentPath!==CONTENT_PATH/);
-  assert.match(workbookPage, /patient-resources\/charmed-minds\/neurodivergence-workbook/);
+  assert.match(`${workbookPage}\n${workbookAssignment}`, /patient-resources\/charmed-minds\/neurodivergence-workbook/);
   assert.match(workbookPage, /Nothing is sent to BHW automatically/i);
   assert.match(workbookPage, /selection\.allowAdjustment/);
   assert.match(workbookPage, /BHWNeuroWorkbook\.workbookUrl/);
