@@ -31,6 +31,14 @@ const STATUS_OPTIONS = ["active", "prospective", "inactive", "transferred", "dec
 const CONSENT_SOURCES = ["previsit-form", "new-patient-packet"];
 const CARE_API = "https://bhw-medication-api-343692256275.us-east4.run.app";
 const PORTAL_ACCESS_STATUSES = ["not-invited", "approved", "invited", "active", "paused", "revoked"];
+const REVIEWED_HTML_RESOURCES = [
+  { contentPath: "/bhw-previsit-questionnaire.html", label: "Before Your Visit Questionnaire · responses to Patient Materials & Feedback" },
+  { contentPath: "/bhw-primary-care-checkin.html", label: "Primary Care Daily Check-In · saves to myBHW" },
+  { contentPath: "/bhw-mind-mood-checkin.html", label: "Mind & Mood Recovery Daily Check-In · saves to myBHW" },
+  { contentPath: "/bhw-charmed-minds-checkin.html", label: "CharmEd Minds Daily Check-In · saves to myBHW" },
+  { contentPath: "/bhw-flow-checkin.html", label: "Flow Daily Check-In · saves to myBHW" },
+  { contentPath: "/bhw-neurodivergence-workbook.html", label: "Neurodivergence Self-Reflection Workbook · device only" },
+];
 
 let client = null;
 let patients = [];
@@ -280,6 +288,16 @@ function communicationTime(value) {
   return Number.isFinite(date.getTime()) ? date.toLocaleString() : "";
 }
 
+function patientMaterialsUrl(bhwPatientId, contentPath = "") {
+  const params = new URLSearchParams({ patient: bhwPatientId, source: "library" });
+  if (REVIEWED_HTML_RESOURCES.some((resource) => resource.contentPath === contentPath)) params.set("resource", contentPath);
+  return `/bhw-patient-materials.html?${params.toString()}`;
+}
+
+function reviewedHtmlOptions() {
+  return REVIEWED_HTML_RESOURCES.map((resource) => `<option value="${esc(resource.contentPath)}">${esc(resource.label)}</option>`).join("");
+}
+
 async function renderEducationCommunication(bhwPatientId) {
   const panel = $("educationCommunicationPanel");
   if (!panel) return;
@@ -293,7 +311,10 @@ async function renderEducationCommunication(bhwPatientId) {
       const badgeClass = ["submitted", "opened"].includes(item.status) ? "complete" : ["expired", "revoked"].includes(item.status) ? "needs-review" : "warning";
       return `<div class="communication-row"><div><b>${esc(item.title)}</b><div class="privacy" style="margin-top:4px">Created ${esc(communicationTime(item.createdAt) || "time unavailable")} · Expires ${esc(communicationTime(item.expiresAt) || "time unavailable")}</div><div class="privacy" style="margin-top:3px">${esc(sent)}</div>${activity ? `<div class="privacy" style="margin-top:3px">${esc(activity)}</div>` : ""}</div><span class="badge ${badgeClass}">${esc(communicationStatusLabel(item.status))}</span></div>`;
     }).join("") : '<div class="empty" style="padding:24px">No education or interactive communication assignments are recorded for this patient.</div>';
-    panel.innerHTML = `<div class="card-head" style="padding:0 0 12px;border:0"><div><h3>Education &amp; Interactive Communication</h3><div class="privacy">Patient-specific care plans, education, interactive questions, and communication status.</div></div><a class="btn" href="/bhw-patient-materials.html?patient=${encodeURIComponent(bhwPatientId)}">Create assignment</a></div><div class="communication-list">${rows}</div><div class="privacy"><b>Proof standard:</b> Recorded sent means a staff member attested that the exact link was sent through the documented channel. Opened and submitted are system-recorded. Carrier delivery confirmation is not available until Dialpad is connected.</div>`;
+    panel.innerHTML = `<div class="card-head" style="padding:0 0 12px;border:0"><div><h3>Education &amp; Interactive Communication</h3><div class="privacy">Patient-specific care plans, education, interactive questions, and communication status.</div></div><a class="btn" href="${esc(patientMaterialsUrl(bhwPatientId))}#responses">Patient Materials &amp; Feedback</a></div><div class="registry-html-send"><div class="field"><label for="registryHtmlResource">Reviewed HTML library</label><select id="registryHtmlResource">${reviewedHtmlOptions()}</select></div><a class="btn primary" id="prepareReviewedHtml" href="${esc(patientMaterialsUrl(bhwPatientId, REVIEWED_HTML_RESOURCES[0].contentPath))}">Prepare private link</a><div class="privacy">The verified patient stays selected. Returned responses from CrewOS forms such as Before Your Visit appear in Patient Materials &amp; Feedback. myBHW check-ins follow their Health Core workflow, and device-only workbook entries are not returned.</div></div><div class="communication-list">${rows}</div><div class="privacy"><b>Proof standard:</b> Recorded sent means a staff member attested that the exact link was sent through the documented channel. Opened and submitted are system-recorded. Carrier delivery confirmation is not available until Dialpad is connected.</div>`;
+    const resourceSelect = $("registryHtmlResource");
+    const prepareLink = $("prepareReviewedHtml");
+    resourceSelect.addEventListener("change", () => { prepareLink.href = patientMaterialsUrl(bhwPatientId, resourceSelect.value); });
   } catch (error) {
     if (selectedId === bhwPatientId && $("educationCommunicationPanel")) {
       $("educationCommunicationPanel").innerHTML = `<div class="notice"><b>Education &amp; Interactive Communication is unavailable.</b><br>${esc(error.message || "Try again after the Care Cloud connection is restored.")}</div>`;
@@ -432,7 +453,7 @@ function renderDetail() {
   const patient = patients.find((item) => item.bhwPatientId === selectedId);
   if (!patient) { $("detail").innerHTML = '<div class="empty">Select a patient to review the master record.</div>'; return; }
   const displayedLastName = `${patient.legalLastName}${patient.nameSuffix ? ` ${patient.nameSuffix}` : ""}`;
-  $("detail").innerHTML = `<div class="card-head"><div><h3>${esc(patient.bhwPatientId)} · ${esc(displayedLastName)}, ${esc(patient.preferredName || patient.legalFirstName)}</h3><div class="privacy">Last verified ${patient.lastVerifiedAt ? new Date(patient.lastVerifiedAt).toLocaleString() : "not recorded"}</div></div><span class="badge ${patient.coverageStatus === "verified" ? "complete" : "warning"}">${esc(patient.coverageStatus)}</span></div><div class="detail"><div class="formgrid" id="patientMasterFields">${patientFields(patient)}</div><div class="actions"><a class="btn" href="patient-360.html?patient=${encodeURIComponent(patient.bhwPatientId)}">Open Patient 360</a><button class="btn primary" id="savePatient">Save verified changes</button><button class="btn" id="startEncounter">Create encounter</button></div><div class="privacy">Patient-reported changes must be verified before they replace this authoritative record. This registry supports operations; CharmHealth remains the legal medical record.</div><div class="consent-panel" id="portalAccessPanel"><div class="privacy">Loading Care Connect pilot access…</div></div><div class="consent-panel" id="recordingConsentPanel"><div class="privacy">Loading signed consent status…</div></div><div class="communication-panel" id="educationCommunicationPanel"><div class="privacy">Loading education and interactive communication history…</div></div></div>`;
+  $("detail").innerHTML = `<div class="card-head"><div><h3>${esc(patient.bhwPatientId)} · ${esc(displayedLastName)}, ${esc(patient.preferredName || patient.legalFirstName)}</h3><div class="privacy">Last verified ${patient.lastVerifiedAt ? new Date(patient.lastVerifiedAt).toLocaleString() : "not recorded"}</div></div><span class="badge ${patient.coverageStatus === "verified" ? "complete" : "warning"}">${esc(patient.coverageStatus)}</span></div><div class="detail"><div class="formgrid" id="patientMasterFields">${patientFields(patient)}</div><div class="actions"><a class="btn" href="patient-360.html?patient=${encodeURIComponent(patient.bhwPatientId)}">Open Patient 360</a><a class="btn" href="${esc(patientMaterialsUrl(patient.bhwPatientId))}">Send reviewed HTML</a><button class="btn primary" id="savePatient">Save verified changes</button><button class="btn" id="startEncounter">Create encounter</button></div><div class="privacy">Patient-reported changes must be verified before they replace this authoritative record. This registry supports operations; CharmHealth remains the legal medical record.</div><div class="consent-panel" id="portalAccessPanel"><div class="privacy">Loading Care Connect pilot access…</div></div><div class="consent-panel" id="recordingConsentPanel"><div class="privacy">Loading signed consent status…</div></div><div class="communication-panel" id="educationCommunicationPanel"><div class="privacy">Loading education and interactive communication history…</div></div></div>`;
   registryFormDirty = false;
   document.querySelectorAll("#patientMasterFields input, #patientMasterFields select").forEach((control) => {
     control.addEventListener("input", () => { registryFormDirty = true; });

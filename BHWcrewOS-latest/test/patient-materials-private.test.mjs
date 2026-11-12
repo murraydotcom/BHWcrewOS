@@ -173,6 +173,19 @@ test("staff page records sent communication, supports revocation, and offers lon
 test("Patient 360 displays Education and Interactive Communication history", () => {
   assert.match(patientRegistryApp, /Education &amp; Interactive Communication/);
   assert.match(patientRegistryApp, /\/v1\/staff\/content-assignments\?patientId=/);
+  assert.match(patientRegistryApp, /REVIEWED_HTML_RESOURCES/);
+  assert.match(patientRegistryApp, /Send reviewed HTML/);
+  assert.match(patientRegistryApp, /Reviewed HTML library/);
+  assert.match(patientRegistryApp, /Prepare private link/);
+  assert.match(patientRegistryApp, /Patient Materials &amp; Feedback/);
+  assert.match(patientRegistryApp, /source: "library"/);
+  assert.match(patientRegistryApp, /params\.set\("resource", contentPath\)/);
+  assert.match(staffPage, /id="createAssignment"/);
+  assert.match(staffPage, /id="responses"/);
+  assert.match(staffPage, /href="\/provider\/patient-registry\.html">Patient Registry/);
+  assert.match(staffPage, /pageParams\.get\('source'\)/);
+  assert.match(staffPage, /pageParams\.get\('resource'\)/);
+  assert.match(staffPage, /Completed answers route to Patient Materials &amp; Feedback/);
   assert.match(patientRegistryApp, /Recorded sent means a staff member attested/);
   assert.match(patientRegistryApp, /Opened and submitted are system-recorded/);
   assert.match(patientRegistryPage, /communication-panel/);
