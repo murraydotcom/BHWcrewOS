@@ -92,7 +92,9 @@
     const PREVISIT_QUESTIONS=[
       {id:'visitGoals',label:'What are the most important things you want to discuss at this visit?',type:'long_text',required:true,options:[]},
       {id:'healthChange',label:'Since your last BHW visit, how has your health been overall?',type:'single',required:true,options:['Better','About the same','Worse','I have a new concern','This is my first BHW visit']},
-      {id:'symptoms',label:'New or worsening symptoms, changes, or concerns',type:'long_text',required:false,options:[]},
+      {id:'symptomChange',label:'New, changed, or worsening symptoms or concerns',type:'yes_no',required:true,options:[]},
+      {id:'msqSymptoms',label:'MSQ selected symptoms',type:'long_text',required:false,options:[]},
+      {id:'symptomDetails',label:'Symptom onset, severity, and context',type:'long_text',required:false,options:[]},
       {id:'recentCare',label:'Care received since your last BHW visit',type:'multi',required:false,options:['Emergency room','Hospital stay','Urgent care','Specialist visit','Surgery or procedure','New lab or imaging results','None of these','This is my first BHW visit']},
       {id:'recentCareDetails',label:'Details about recent care, tests, or results',type:'long_text',required:false,options:[]},
       {id:'medicationChanges',label:'Have your medications or supplements changed?',type:'single',required:true,options:['No changes','Started something','Stopped something','Dose or directions changed','I am having a medication problem','I am not sure']},

@@ -92,6 +92,13 @@ test("reviewed HTML library includes the private pre-visit questionnaire", () =>
   assert.match(previsitPage, /\/v1\/public\/content-submissions/);
   assert.match(previsitPage, /Most people finish in about five minutes/);
   assert.match(previsitPage, /Do not wait on this form for urgent help/);
+  assert.match(previsitPage, /id="symptomChange"/);
+  assert.match(previsitPage, /id="msqPanel"/);
+  assert.match(previsitPage, /name="msqSymptoms"/);
+  assert.match(previsitPage, /This checklist is not scored here/);
+  assert.match(previsitPage, /msqPanel\.hidden/);
+  assert.match(previsitPage, /PRIORITY_MSQ/);
+  assert.match(staffPage, /id:'msqSymptoms'/);
   assert.match(previsitPage, /urgentConcern/);
   assert.match(previsitPage, /patientReviewed:true/);
   assert.match(previsitPage, /preview=params\.get\('preview'\)==='1'/);
