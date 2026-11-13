@@ -116,8 +116,6 @@ const FREQ4 = ["Not at all","Several days","More than half the days","Nearly eve
 const RATE5 = ["Excellent","Very good","Good","Fair","Poor","N/A"];
 const HIGH2 = ["More than half the days","Nearly every day"];
 
-const TAPS_FREQUENCY = ["Daily or Almost Daily","Weekly","Monthly","Less Than Monthly","Never"];
-const YES_NO = ["Yes","No"];
 /* Config-driven questionnaires. Question types: section, single, multi, yesno
    (optional follow), scale, text, long. Server (questionnaire-submit.js) mirrors
    the slugs + owning program; it trusts the transcript the page builds here. */
@@ -205,48 +203,6 @@ const QUESTIONNAIRES = {
       if(a.rpm==="Yes, enroll") f.push("Enroll: RPM");
       if(a.hrsn==="Yes") f.push("Complete AHC-HRSN screening");
       return f; } },
-  "taps-v2": { name:"TAPS Tool Parts I & II", program:"Primary Care · Mind & Mood", acc:"#8a6d5c", accGrad:"linear-gradient(100deg,#8a6d5c,#6d5445)", logo:"/assets/brand/bhw-medical.png", who:"Self",
-    intro:"These questions ask about tobacco, alcohol, prescription medications, and other substances. They help your BHW care team decide whether a focused follow-up would be useful. This is a screen, not a diagnosis, and it is not monitored in real time.",
-    questions:[
-      {type:"section",label:"Part I · past 12 months"},
-      {type:"single",id:"tapsTobacco",q:"In the past 12 months, how often have you used any tobacco product (for example, cigarettes, e-cigarettes, cigars, pipes, or smokeless tobacco)?",options:TAPS_FREQUENCY,required:true},
-      {type:"single",id:"tapsAlcohol5",q:"In the past 12 months, how often have you had 5 or more drinks containing alcohol in one day? Answer this item if it applies to you.",options:[...TAPS_FREQUENCY,"Not applicable"],required:true},
-      {type:"single",id:"tapsAlcohol4",q:"In the past 12 months, how often have you had 4 or more drinks containing alcohol in one day? Answer this item if it applies to you.",options:[...TAPS_FREQUENCY,"Not applicable"],required:true},
-      {type:"single",id:"tapsDrug",q:"In the past 12 months, how often have you used any drugs including marijuana, cocaine or crack, heroin, methamphetamine, hallucinogens, or ecstasy/MDMA?",options:TAPS_FREQUENCY,required:true},
-      {type:"single",id:"tapsPrescription",q:"In the past 12 months, how often have you used any prescription medication just for the feeling, more than prescribed, or not prescribed for you?",options:TAPS_FREQUENCY,required:true},
-      {type:"section",label:"Part II · past 3 months"},
-      {type:"yesno",id:"tapsCigarettes",q:"In the past 3 months, did you smoke a cigarette containing tobacco?",required:true,showWhen:"tapsTobacco"},
-      {type:"yesno",id:"tapsCigarettes10",q:"In the past 3 months, did you usually smoke more than 10 cigarettes each day?",required:true,showWhen:{id:"tapsCigarettes",equals:"Yes"}},
-      {type:"yesno",id:"tapsCigarettes30",q:"In the past 3 months, did you usually smoke within 30 minutes after waking?",required:true,showWhen:{id:"tapsCigarettes",equals:"Yes"}},
-      {type:"yesno",id:"tapsAlcoholUse",q:"In the past 3 months, did you have a drink containing alcohol?",required:true,showWhen:{any:["tapsAlcohol5","tapsAlcohol4"]}},
-      {type:"yesno",id:"tapsAlcohol4Day",q:"In the past 3 months, did you have 4 or more drinks containing alcohol in a day?",required:true,showWhen:{id:"tapsAlcoholUse",equals:"Yes"}},
-      {type:"yesno",id:"tapsAlcohol5Day",q:"In the past 3 months, did you have 5 or more drinks containing alcohol in a day?",required:true,showWhen:{id:"tapsAlcoholUse",equals:"Yes"}},
-      {type:"yesno",id:"tapsAlcoholControl",q:"In the past 3 months, have you tried and failed to control, cut down, or stop drinking?",required:true,showWhen:{id:"tapsAlcoholUse",equals:"Yes"}},
-      {type:"yesno",id:"tapsAlcoholConcern",q:"In the past 3 months, has anyone expressed concern about your drinking?",required:true,showWhen:{id:"tapsAlcoholUse",equals:"Yes"}},
-      {type:"yesno",id:"tapsMarijuana",q:"In the past 3 months, did you use marijuana (hash, weed)?",required:true,showWhen:"tapsDrug"},
-      {type:"yesno",id:"tapsMarijuanaUrge",q:"In the past 3 months, have you had a strong desire or urge to use marijuana at least once a week or more often?",required:true,showWhen:{id:"tapsMarijuana",equals:"Yes"}},
-      {type:"yesno",id:"tapsMarijuanaConcern",q:"In the past 3 months, has anyone expressed concern about your use of marijuana?",required:true,showWhen:{id:"tapsMarijuana",equals:"Yes"}},
-      {type:"yesno",id:"tapsStimulants",q:"In the past 3 months, did you use cocaine, crack, or methamphetamine?",required:true,showWhen:"tapsDrug"},
-      {type:"yesno",id:"tapsStimulantsWeekly",q:"In the past 3 months, did you use cocaine, crack, or methamphetamine at least once a week or more often?",required:true,showWhen:{id:"tapsStimulants",equals:"Yes"}},
-      {type:"yesno",id:"tapsStimulantsConcern",q:"In the past 3 months, has anyone expressed concern about your use of cocaine, crack, or methamphetamine?",required:true,showWhen:{id:"tapsStimulants",equals:"Yes"}},
-      {type:"yesno",id:"tapsHeroin",q:"In the past 3 months, did you use heroin?",required:true,showWhen:"tapsDrug"},
-      {type:"yesno",id:"tapsHeroinControl",q:"In the past 3 months, have you tried and failed to control, cut down, or stop using heroin?",required:true,showWhen:{id:"tapsHeroin",equals:"Yes"}},
-      {type:"yesno",id:"tapsHeroinConcern",q:"In the past 3 months, has anyone expressed concern about your use of heroin?",required:true,showWhen:{id:"tapsHeroin",equals:"Yes"}},
-      {type:"yesno",id:"tapsOpiateMisuse",q:"In the past 3 months, did you use a prescription opiate pain reliever not as prescribed or not prescribed for you?",required:true,showWhen:"tapsPrescription"},
-      {type:"yesno",id:"tapsOpiateControl",q:"In the past 3 months, have you tried and failed to control, cut down, or stop using an opiate pain reliever?",required:true,showWhen:{id:"tapsOpiateMisuse",equals:"Yes"}},
-      {type:"yesno",id:"tapsOpiateConcern",q:"In the past 3 months, has anyone expressed concern about your use of an opiate pain reliever?",required:true,showWhen:{id:"tapsOpiateMisuse",equals:"Yes"}},
-      {type:"yesno",id:"tapsAnxietyMisuse",q:"In the past 3 months, did you use a medication for anxiety or sleep not as prescribed or not prescribed for you?",required:true,showWhen:"tapsPrescription"},
-      {type:"yesno",id:"tapsAnxietyUrge",q:"In the past 3 months, have you had a strong desire or urge to use medications for anxiety or sleep at least once a week or more often?",required:true,showWhen:{id:"tapsAnxietyMisuse",equals:"Yes"}},
-      {type:"yesno",id:"tapsAnxietyConcern",q:"In the past 3 months, has anyone expressed concern about your use of medication for anxiety or sleep?",required:true,showWhen:{id:"tapsAnxietyMisuse",equals:"Yes"}},
-      {type:"yesno",id:"tapsAdhdMisuse",q:"In the past 3 months, did you use medication for ADHD not as prescribed or not prescribed for you?",required:true,showWhen:"tapsPrescription"},
-      {type:"yesno",id:"tapsAdhdWeekly",q:"In the past 3 months, did you use medication for ADHD at least once a week or more often?",required:true,showWhen:{id:"tapsAdhdMisuse",equals:"Yes"}},
-      {type:"yesno",id:"tapsAdhdConcern",q:"In the past 3 months, has anyone expressed concern about your use of medication for ADHD?",required:true,showWhen:{id:"tapsAdhdMisuse",equals:"Yes"}},
-      {type:"yesno",id:"tapsOtherDrug",q:"In the past 3 months, did you use any other illegal or recreational drug?",required:true,showWhen:"tapsDrug"},
-      {type:"long",id:"tapsOtherDrugDetail",q:"What other drug or drugs did you use?",required:true,showWhen:{id:"tapsOtherDrug",equals:"Yes"}},
-      {type:"long",id:"tapsComments",q:"Comments (optional)"}
-    ],
-    flags:(a)=>{ const f=[]; const p1=["tapsTobacco","tapsAlcohol5","tapsAlcohol4","tapsDrug","tapsPrescription"].some(id=>a[id]&&a[id]!=="Never"&&a[id]!=="Not applicable"); const p2=Object.keys(a).some(id=>/^taps(?:AlcoholControl|AlcoholConcern|MarijuanaUrge|MarijuanaConcern|StimulantsWeekly|StimulantsConcern|HeroinControl|HeroinConcern|OpiateControl|OpiateConcern|AnxietyUrge|AnxietyConcern|AdhdWeekly|AdhdConcern)$/.test(id)&&a[id]==="Yes"); if(p1) f.push("TAPS Part I positive — clinician review and indicated focused follow-up."); if(p2) f.push("TAPS Part II concern — clinician substance-use assessment needed."); return f; }
-  },
   "charmed-intake": { name:"CharmEd Minds — Pediatric Intake", program:"CharmEd Minds", acc:"#c69a3c", accGrad:"linear-gradient(100deg,#d9b45f,#b3892f)", logo:"/assets/brand/charmed-minds.png", who:"Parent/Caregiver",
     intro:"Tell us about your child so we can prepare the right assessment and supports. Answer what you can — there are no wrong answers, and you know your child best.",
     questions:[
@@ -336,7 +292,7 @@ function renderQ(item,i){
       (item.follow?`<div class="follow" id="follow_${id}"><input class="qtext" id="followtext_${id}" placeholder="${esc(item.follow)}"></div>`:"");
   } else if(item.type==="text"){ inner=`<input class="qtext" name="${name}" placeholder="Type your answer">`; }
   else if(item.type==="long"){ inner=`<textarea name="${name}" placeholder="Type your answer"></textarea>`; }
-  return `<div class="q" data-id="${id}" data-type="${item.type}"${item.showWhen?' hidden':''}><div class="stem">${esc(item.q)}</div>${inner}</div>`;
+  return `<div class="q" data-id="${id}" data-type="${item.type}"><div class="stem">${esc(item.q)}</div>${inner}</div>`;
 }
 
 function render(){
@@ -361,7 +317,6 @@ function render(){
     <p class="foot">${esc(ORG.name)} · Your responses are transmitted securely.</p>
   </div>`;
   wire();
-  refreshConditional();
 }
 
 function wire(){
@@ -373,7 +328,6 @@ function wire(){
     // yes/no follow-up reveal
     const qEl=inp.closest(".q"); const id=qEl&&qEl.dataset.id; const fol=id&&document.getElementById("follow_"+id);
     if(fol) fol.classList.toggle("on", qEl.querySelector('input[value="Yes"]')?.checked);
-    refreshConditional();
     updateProgress();
   });
   app.querySelectorAll(".q textarea, .q input.qtext").forEach(el=>el.addEventListener("input",updateProgress));
@@ -391,24 +345,8 @@ function answered(qEl){
   if(t==="long") return !!qEl.querySelector('textarea')?.value.trim();
   return false;
 }
-function valueFor(id){ return app.querySelector('.q[data-id="'+id+'"] input:checked')?.value||""; }
-function isPositive(value){ return !!value&&value!=="Never"&&value!=="No"&&value!=="N/A"&&value!=="Not applicable"; }
-function shouldShow(item){
-  if(!item.showWhen) return true;
-  if(typeof item.showWhen==="string") return isPositive(valueFor(item.showWhen));
-  if(item.showWhen.any) return item.showWhen.any.some(id=>isPositive(valueFor(id)));
-  return valueFor(item.showWhen.id)===item.showWhen.equals;
-}
-function refreshConditional(){
-  Q.questions.filter(item=>item.showWhen).forEach(item=>{
-    const qEl=app.querySelector('.q[data-id="'+item.id+'"]'); if(!qEl) return;
-    const visible=shouldShow(item);
-    if(!visible&&!qEl.hidden){qEl.querySelectorAll('input').forEach(input=>input.checked=false);qEl.querySelectorAll('textarea').forEach(input=>input.value='');}
-    qEl.hidden=!visible;
-  });
-}
 function updateProgress(){
-  const qs=[...app.querySelectorAll(".q")].filter(q=>!q.hidden); const done=qs.filter(answered).length;
+  const qs=[...app.querySelectorAll(".q")]; const done=qs.filter(answered).length;
   document.getElementById("bar").style.width=Math.round(done/Math.max(qs.length,1)*100)+"%";
 }
 
@@ -433,8 +371,6 @@ function collect(){
 async function submit(){
   const err=document.getElementById("err"); err.textContent="";
   const {answers, pairs}=collect();
-  const missing=Q.questions.filter(item=>item.required&&shouldShow(item)&&!(item.id in answers));
-  if(missing.length){ err.textContent="Please complete each required question before submitting."; const first=app.querySelector('.q[data-id="'+missing[0].id+'"]'); if(first) first.scrollIntoView({behavior:"smooth",block:"center"}); return; }
   if(!pairs.length){ err.textContent="Please answer at least one question before submitting."; return; }
   const go=document.getElementById("go"); go.disabled=true; go.textContent="Submitting…";
   const patientLabel=(document.getElementById("pt").value||"").trim();
