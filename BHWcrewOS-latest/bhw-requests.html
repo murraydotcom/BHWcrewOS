@@ -547,9 +547,9 @@ function renderDetail(){
       <div class="requestid">Request ${esc(it.id)}</div>
       <div class="detailmeta"><span class="stagepill ${st}">${esc(humanStatus(it))}</span><span class="routechip">${esc(it.serviceLine||'general')}</span><span class="routechip">${esc(routeName(it))}</span><span class="routechip">${esc(it.priority||'routine')}</span></div>
     </div>
-    <div class="detailactions"><span class="group-label">Work this request</span>${detailActions(it)}${faxButton}</div>
+    <div class="detailactions"><span class="group-label">Work this request</span>${detailActions(it)}${faxButton}${/^call-[a-f0-9]{40}$/.test(it.callReviewId||'')?`<a class="btn" href="/bhw-call-review.html?call=${encodeURIComponent(it.callReviewId)}">Review phone communication</a>`:''}</div>
     <div class="detailgrid">
-      <section class="detailsection"><h3>Status history</h3>${historyHTML(it)}</section>
+      <section class="detailsection"><h3>Status history</h3>${historyHTML(it)}${it.callNextAction?`<h3>Phone follow-up</h3><p>${esc(it.callNextAction)}</p><p>Owner: ${esc(it.assigned||'Unassigned')}<br>Due: ${esc(it.dueAt?new Date(it.dueAt).toLocaleString():'Not set')}</p>`:''}</section>
       <section class="detailsection"><h3>Communications and delivery</h3><div id="communications"><div class="empty">Loading communication record…</div></div></section>
     </div>
     <section class="teamnotes" aria-label="Internal team notes">
