@@ -118,7 +118,7 @@ async function handle(event, { queryOperationalImpl = queryOperational } = {}) {
         if (medicationPath === 'new-or-changed') needs.push('Prescriber-directed medication decision required; staff must not modify the prescription.');
         if (medicationPath === 'clinical-review') needs.push('Clinical review is required before preparation.');
         if (screeningPlan === 'controlled') needs.push('Complete the current controlled-medication follow-up screen per BHW protocol.');
-        if (screeningPlan === 'substance') needs.push('Send the BHW-approved substance-use follow-up assessment through myBHW and document completion.');
+        if (screeningPlan === 'substance') needs.push('Send TAPS Tool Parts I & II v2 through myBHW; complete clinician review of the response and document follow-through. TAPS is a screen, not a diagnosis.');
         if (screeningPlan === 'clinician') needs.push('Send the clinician-directed follow-up questionnaire / screen through myBHW.');
         const sourceLabels = { patient: 'Patient / caregiver', pharmacy: 'Pharmacy request', mybhw: 'myBHW message', phone: 'Phone call', staff: 'Care team' };
         const source = sourceLabels[requestSource] || 'Front desk';
@@ -144,7 +144,7 @@ async function handle(event, { queryOperationalImpl = queryOperational } = {}) {
           notificationMode: 'none',
           manualNotifyOnly: true,
           sourceMetadata: { sourceRecordId: submissionId, sourcePage: 'medrefill', sourceUrl: '/medrefill.html' },
-          workflowContext: { kind: 'patient-request', details: 'Medication refill workflow: ' + paths[medicationPath], needs },
+          workflowContext: { kind: 'patient-request', details: 'Medication refill workflow: ' + paths[medicationPath], needs, ...(screeningPlan === 'substance' ? { questionnaireSlug: 'taps-v2', questionnaireName: 'TAPS Tool Parts I & II v2' } : {}) },
         };
         const created = await createFrontDeskIntake({ submissionId, body: requestBody });
         if (!created?.patientRequest) {
