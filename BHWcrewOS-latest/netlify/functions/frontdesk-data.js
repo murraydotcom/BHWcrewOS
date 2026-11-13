@@ -83,7 +83,7 @@ async function handle(event, { queryOperationalImpl = queryOperational } = {}) {
         const medication = compact(payload.medication, 160);
         const pharmacy = compact(payload.pharmacy, 160);
         const requestSource = compact(payload.requestSource, 40).toLowerCase();
-        const medicationPath = compact(payload.medicationPath, 40).toLowerCase();
+        let medicationPath = compact(payload.medicationPath, 40).toLowerCase();
         let screeningPlan = compact(payload.screeningPlan, 40).toLowerCase();
         const patientReport = compact(payload.patientReport, 2000);
         if (!/^BHW\d{4}$/.test(bhwPatientId) || bhwPatientId === 'BHW0000') {
@@ -91,6 +91,11 @@ async function handle(event, { queryOperationalImpl = queryOperational } = {}) {
         }
         if (!medication || !pharmacy) {
           return { statusCode: 400, body: JSON.stringify({ error: 'medication and verified pharmacy are required' }) };
+        }
+        const isBuprenorphineMoud = /\\b(?:suboxone|buprenorphine|zubsolv|bunavail|cassipa)\\b/i.test(medication);
+        if (isBuprenorphineMoud) {
+          medicationPath = 'controlled';
+          screeningPlan = 'substance';
         }
         const patient = await findCloudPatient(bhwPatientId, session);
         if (!patient || String(patient.bhwPatientId || '').toUpperCase() !== bhwPatientId) {
@@ -109,6 +114,7 @@ async function handle(event, { queryOperationalImpl = queryOperational } = {}) {
         if (medicationPath === 'controlled' && screeningPlan === 'none') screeningPlan = 'controlled';
         const needs = [];
         if (medicationPath === 'controlled') needs.push('Prescriber-controlled medication workflow required.');
+        if (isBuprenorphineMoud) needs.push('Buprenorphine / Suboxone request recognized: use the treating prescriber’s controlled-MOUD workflow and complete the required substance-use follow-up; staff must not prepare, change, or transmit the prescription.');
         if (medicationPath === 'new-or-changed') needs.push('Prescriber-directed medication decision required; staff must not modify the prescription.');
         if (medicationPath === 'clinical-review') needs.push('Clinical review is required before preparation.');
         if (screeningPlan === 'controlled') needs.push('Complete the current controlled-medication follow-up screen per BHW protocol.');
