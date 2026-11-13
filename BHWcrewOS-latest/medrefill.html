@@ -52,7 +52,7 @@
     <section class="card">
       <h2>3. Screening or patient follow-up</h2>
       <p class="hint">Choose the clinician-directed follow-up needed for this request. Selecting an item creates a visible next action in the Patient Request; it does not send a questionnaire automatically.</p>
-      <label class="field">Required follow-up<select id="screening"><option value="none">No questionnaire indicated by this request</option><option value="controlled">Controlled-medication follow-up screen required</option><option value="substance">Substance-use follow-up assessment required</option><option value="clinician">Other clinician-directed questionnaire / screen</option></select></label>
+      <label class="field">Required follow-up<select id="screening"><option value="none">No questionnaire indicated by this request</option><option value="controlled">Controlled-medication follow-up screen required</option><option value="substance">TAPS substance-use screen (Parts I &amp; II) required</option><option value="clinician">Other clinician-directed questionnaire / screen</option></select></label>
       <div id="screeningNote" class="screen" hidden></div>
       <label class="check"><input id="screeningReviewed" type="checkbox">I recorded the required follow-up and will route it to the clinical team / myBHW workflow.</label>
     </section>
@@ -78,7 +78,7 @@
     </section>
     <section class="card">
       <h2>Questionnaire status</h2>
-      <p class="hint">The Primary Care AWV questionnaire contains preliminary alcohol, recreational-drug, nonmedical-prescription, and opioid-use questions; it flags “Substance-use follow-up.” The earlier Mind &amp; Mood Recovery Readiness Check is only a mockup. Neither is an approved standalone substance-use follow-up instrument for this page, so no questionnaire is sent automatically.</p>
+      <p class="hint">TAPS Tool Parts I &amp; II v2 is the approved substance-use screen for this workflow. It is registered for secure myBHW assignment and returns to BHW Cloud. FrontDeskOS records TAPS as the next action; automatic task sending remains off until the portal-assignment action is connected.</p>
     </section>
   </aside>
 </div>
@@ -106,7 +106,7 @@
   const screeningText={
     none:'',
     controlled:'<strong>Controlled-medication follow-up:</strong> the saved Patient Request will carry a visible screening need for the clinical team. It is not a completed screen.',
-    substance:'<strong>Substance-use follow-up:</strong> the saved Patient Request will say to send the approved substance-use assessment through myBHW and review the response. This page does not send an instrument yet.',
+    substance:'<strong>TAPS substance-use screen:</strong> the saved Patient Request will carry the approved TAPS Tool Parts I &amp; II v2 as its myBHW next action. It is a screen, not a diagnosis. This page does not send the task automatically yet.',
     clinician:'<strong>Clinician-directed follow-up:</strong> the saved Patient Request will carry the required questionnaire/screen as a next action.'
   };
   function showPatient(p){
