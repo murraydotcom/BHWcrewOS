@@ -169,15 +169,22 @@
   </div>
 
 
-  <!-- MEDICATION REFILL LAUNCH -->
-  <section aria-labelledby="medication-refill-launch" style="padding:14px 16px">
-    <details>
-      <summary id="medication-refill-launch" style="cursor:pointer;font-weight:800;color:var(--ink)">Medication refills <span style="font-size:.7rem;color:var(--ink-soft);font-weight:700">· patient-linked intake and status tracking</span></summary>
-      <div style="padding:10px 0 2px;font-size:.82rem;color:var(--ink-soft);line-height:1.55">
-        Create a refill request from a verified Patient Registry record. The request stays visible in FrontDeskOS and Patient Requests; controlled-medication and questionnaire follow-up needs are carried as tracked next actions. CharmHealth remains the prescription record.
-        <div style="margin-top:10px"><a class="btn" href="/medrefill.html" style="display:inline-block;text-decoration:none">Open Medication Refill Desk →</a></div>
+  <!-- MEDICATION REFILL DASHBOARD -->
+  <section id="medication-dashboard" aria-labelledby="medication-refill-dashboard-title" style="padding:14px 16px 4px">
+    <div style="background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow)">
+      <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap">
+        <div><h2 id="medication-refill-dashboard-title" style="margin:0;color:var(--ink);font-size:1.02rem">Medication refill dashboard</h2><p style="margin:6px 0 0;color:var(--ink-soft);font-size:.82rem;line-height:1.55">The live FrontDeskOS view for medication requests, controlled-MOUD follow-up, and refill routing. CharmHealth remains the prescription record.</p></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn" href="/medrefill.html" style="display:inline-block;text-decoration:none">New refill request</a><a class="history-link" href="/bhw-requests.html">Open Patient Requests</a></div>
       </div>
-    </details>
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:10px;margin-top:15px" aria-label="Medication refill queue snapshot">
+        <div style="border:1px solid var(--line);border-radius:10px;padding:11px;background:#f8fbfc"><div id="med-queue-received" style="font-size:1.25rem;font-weight:800;color:var(--ink)">–</div><div style="font-size:.73rem;color:var(--ink-soft);font-weight:700">Received</div></div>
+        <div style="border:1px solid #edd595;border-radius:10px;padding:11px;background:#fff8e4"><div id="med-queue-controlled" style="font-size:1.25rem;font-weight:800;color:#734a00">–</div><div style="font-size:.73rem;color:var(--ink-soft);font-weight:700">Controlled / MOUD</div></div>
+        <div style="border:1px solid #edd595;border-radius:10px;padding:11px;background:#fff8e4"><div id="med-queue-followup" style="font-size:1.25rem;font-weight:800;color:#734a00">–</div><div style="font-size:.73rem;color:var(--ink-soft);font-weight:700">Follow-up needed</div></div>
+        <div style="border:1px solid #b8d6c1;border-radius:10px;padding:11px;background:#f0f8f2"><div id="med-queue-review" style="font-size:1.25rem;font-weight:800;color:#21684f">–</div><div style="font-size:.73rem;color:var(--ink-soft);font-weight:700">In clinical review</div></div>
+      </div>
+      <div id="medication-queue-list" aria-live="polite" style="margin-top:14px"></div><p id="medication-queue-status" style="margin:10px 0 0;color:var(--ink-soft);font-size:.76rem" aria-live="polite">Loading medication requests from the protected FrontDesk queue…</p>
+      <details open style="margin-top:16px;border-top:1px solid var(--line);padding-top:13px"><summary style="cursor:pointer;font-weight:800;color:var(--ink)">Medication finder, routing guide, and CharmHealth workflow</summary><p style="margin:7px 0 11px;color:var(--ink-soft);font-size:.78rem;line-height:1.5">This embedded dashboard does not save patient information or prescription details. Use <b>New refill request</b> above to create the patient-linked work item.</p><iframe title="BHW medication refill reference dashboard" src="/medication-refill-dashboard.html" loading="lazy" style="display:block;width:100%;height:1180px;border:1px solid var(--line);border-radius:10px;background:#f3f7f8"></iframe></details>
+    </div>
   </section>
 
   <!-- LIVE INBOX -->
@@ -511,6 +518,7 @@ function renderInbox(items,faxItems=FAX_ITEMS){
       </article>`);
     });
   });
+  renderMedicationDashboard(items);
   // cards from live data
   const openRef=items.filter(i=>/referral/i.test(i.type||'')&&!/done/i.test(i.status||''));
   $('c-open').textContent=openRef.filter(i=>/progress|scheduled|sent/i.test(i.status||'')).length||openRef.length;
@@ -519,6 +527,8 @@ function renderInbox(items,faxItems=FAX_ITEMS){
   $('fax-history').textContent=FAX_MODE==='completed'?'Back to open faxes':'Review completed';
   $('fax-older').hidden=!FAX_NEXT;
 }
+function isMedicationRequest(item){const workflow=item&&typeof item.workflowContext==='object'&&item.workflowContext?item.workflowContext:{};const needs=Array.isArray(workflow.needs)?workflow.needs.join(' '):(workflow.needs||'');return /\b(?:medication|refill|prescription|pharmacy|suboxone|buprenorphine|zubsolv|bunavail|cassipa)\b/i.test([item?.type,item?.requestType,item?.summary,item?.message,item?.source,item?.status,workflow.details,needs].filter(Boolean).join(' '));}
+function renderMedicationDashboard(items){const queue=$('medication-queue-list'),status=$('medication-queue-status');if(!queue||!status)return;const medication=(Array.isArray(items)?items:[]).filter(isMedicationRequest);const detail=item=>{const workflow=item&&typeof item.workflowContext==='object'&&item.workflowContext?item.workflowContext:{};const needs=Array.isArray(workflow.needs)?workflow.needs.join(' '):(workflow.needs||'');return [item?.type,item?.requestType,item?.summary,item?.message,item?.status,workflow.details,needs].filter(Boolean).join(' ');};const received=medication.filter(awaitsFrontDeskAction),controlled=medication.filter(item=>/\b(?:controlled|epcs|suboxone|buprenorphine|zubsolv|bunavail|cassipa)\b/i.test(detail(item))),followUp=medication.filter(item=>/\b(?:screen(?:ing)?|questionnaire|recovery stability|substance[ -]?use|follow[- ]?up)\b/i.test(detail(item))),clinicalReview=medication.filter(item=>!awaitsFrontDeskAction(item));$('med-queue-received').textContent=received.length;$('med-queue-controlled').textContent=controlled.length;$('med-queue-followup').textContent=followUp.length;$('med-queue-review').textContent=clinicalReview.length;status.textContent=medication.length?medication.length+' medication request'+(medication.length===1?'':'s')+' currently visible in the FrontDesk queue. This snapshot refreshes with the rest of FrontDeskOS.':'No medication requests are currently visible in the FrontDesk queue.';if(!medication.length){queue.innerHTML='<div style="padding:11px 12px;border:1px dashed var(--line);border-radius:10px;color:var(--ink-soft);font-size:.8rem">No medication requests in the current FrontDesk queue. Create a patient-linked request above, or open Patient Requests to review history.</div>';return;}queue.innerHTML='<div style="display:grid;gap:7px">'+medication.slice(0,8).map(item=>{const controlledFlag=/\b(?:controlled|epcs|suboxone|buprenorphine|zubsolv|bunavail|cassipa)\b/i.test(detail(item)),followFlag=/\b(?:screen(?:ing)?|questionnaire|recovery stability|substance[ -]?use|follow[- ]?up)\b/i.test(detail(item)),label=item.summary||item.type||'Medication request',phase=item.status||(awaitsFrontDeskAction(item)?'Received':'Clinical review'),tags=[controlledFlag?'Controlled / MOUD':'',followFlag?'Follow-up needed':''].filter(Boolean).join(' · ');return '<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:9px;padding:9px 10px;background:#fff"><div style="min-width:0"><div style="font-size:.81rem;font-weight:800;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(label)+'</div><div style="font-size:.73rem;color:var(--ink-soft);margin-top:2px">'+esc(phase)+(tags?' · '+esc(tags):'')+'</div></div><button type="button" class="act open-request" data-id="'+esc(item.id)+'">Open</button></div>';}).join('')+'</div>';}
 function withQuery(params){const join=API.includes('?')?'&':'?';return `${API}${join}${params}`;}
 async function loadFaxMode(mode,before='',beforeId=''){
   const key=mode==='completed'?'faxHistory=1':'faxPage=1';
