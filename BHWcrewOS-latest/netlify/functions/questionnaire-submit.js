@@ -4,7 +4,7 @@
 
 const { json } = require("./_lib");
 
-const REG = new Set(["charmed-intake", "charmed-adult", "awv-hra", "taps-v2", "elevated-wellness-lifeskills", "porter-lifeskills"]);
+const REG = new Set(["charmed-intake", "charmed-adult", "awv-hra", "elevated-wellness-lifeskills", "porter-lifeskills"]);
 const WHO = new Set(["Self", "Parent/Caregiver", "Staff"]);
 
 function rcmApiBase() {
