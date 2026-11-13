@@ -37,6 +37,7 @@
       <h2>2. Record the request</h2>
       <p class="hint">Use the exact active medication and pharmacy shown in CharmHealth. The prescription details, including SIG, stay in the existing prescription record - do not re-enter or change them here.</p>
       <label class="field">Requested medication<input id="medication" autocomplete="off" maxlength="160" placeholder="Exact medication name from chart"></label>
+      <div id="medicationRoute" class="screen" hidden></div>
       <div class="row">
         <label class="field">Verified pharmacy<input id="pharmacy" autocomplete="off" maxlength="160" placeholder="Pharmacy name or location"></label>
         <label class="field">Request source<select id="source"><option value="patient">Patient / caregiver</option><option value="pharmacy">Pharmacy request</option><option value="myBHW">myBHW message</option><option value="phone">Phone call</option><option value="staff">Care team</option></select></label>
@@ -77,7 +78,7 @@
     </section>
     <section class="card">
       <h2>Questionnaire status</h2>
-      <p class="hint">A TAPS-style substance-use reference exists in BHW materials, but this page intentionally does not invent or send an assessment. Once the prior BHW questionnaire is identified, the Patient Request can gain an approved “Send in myBHW” action tied to that exact form and its response record.</p>
+      <p class="hint">The Primary Care AWV questionnaire contains preliminary alcohol, recreational-drug, nonmedical-prescription, and opioid-use questions; it flags “Substance-use follow-up.” The earlier Mind &amp; Mood Recovery Readiness Check is only a mockup. Neither is an approved standalone substance-use follow-up instrument for this page, so no questionnaire is sent automatically.</p>
     </section>
   </aside>
 </div>
@@ -135,6 +136,15 @@
       document.querySelectorAll('#matches .match').forEach(button=>button.addEventListener('click',()=>choosePatient(button.dataset.id)));
     }catch(e){setStatus('patientStatus',String(e.message||'Unable to search the Patient Registry.').slice(0,180),'error');}
   }
+  const buprenorphinePattern=/\\b(?:suboxone|buprenorphine|zubsolv|bunavail|cassipa)\\b/i;
+  function refreshMedicationRoute(){
+    const node=$('medicationRoute');
+    if(!buprenorphinePattern.test($('medication').value.trim())){node.hidden=true;node.textContent='';return;}
+    $('medicationPath').value='controlled';
+    $('screening').value='substance';
+    node.hidden=false;
+    node.innerHTML='<strong>Controlled MOUD route:</strong> Suboxone / buprenorphine is recognized. Save only as a controlled-medication and substance-use follow-up request for the treating prescriber; do not prepare, alter, or transmit the prescription.';
+  }
   function refreshPathway(){
     $('pathwayNote').textContent=pathwayText[$('medicationPath').value];
     const controlled=$('medicationPath').value==='controlled';
@@ -167,10 +177,11 @@
   }
   $('searchButton').addEventListener('click',search);
   $('patientSearch').addEventListener('keydown',e=>{if(e.key==='Enter')search();});
+  $('medication').addEventListener('input',()=>{refreshMedicationRoute();refreshPathway();});
   $('medicationPath').addEventListener('change',refreshPathway);
   $('screening').addEventListener('change',refreshScreening);
   $('saveButton').addEventListener('click',save);
-  refreshPathway();refreshScreening();
+  refreshMedicationRoute();refreshPathway();refreshScreening();
 })();
 </script>
 </body>
