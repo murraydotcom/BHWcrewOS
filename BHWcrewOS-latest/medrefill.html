@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>BHW Medication Refill Desk</title>
+<link rel="stylesheet" href="/assets/bhw-tokens.css">
+<style>
+:root{--navy:#10334a;--river:#80abbd;--linen:#f7f5f2;--clay:#b07a55;--sage:#5f8a63;--ink:#22303a;--soft:#5b6b76;--line:#e6e0d8;--white:#fff;--danger:#b0525a;--warn:#9b6100;--radius:14px;--shadow:0 2px 10px rgba(34,48,58,.07)}
+*{box-sizing:border-box}body{margin:0;font-family:Montserrat,Arial,sans-serif;background:var(--linen);color:var(--ink);line-height:1.45}.wrap{max-width:960px;margin:0 auto;padding:20px 16px 48px}header{display:flex;gap:13px;align-items:center;margin-bottom:18px}header img{height:45px;width:auto}h1{margin:0;font-size:1.22rem;letter-spacing:.02em}.sub{color:var(--soft);font-size:.74rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;margin-top:2px}.back{margin-left:auto;border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:.78rem;font-weight:800;text-decoration:none;background:#fff}.back:hover{border-color:var(--river)}.notice{background:#fff8e4;border:1px solid #edd595;border-radius:12px;padding:12px 14px;font-size:.86rem;margin-bottom:16px}.notice b{color:#734a00}.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px}.card{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:16px}.card h2{font-size:.78rem;letter-spacing:.16em;text-transform:uppercase;color:var(--soft);margin:0 0 12px}.hint{font-size:.8rem;color:var(--soft);margin:0 0 13px}.field{display:block;font-size:.78rem;font-weight:800;color:#40525b;margin:0 0 11px}.field input,.field select,.field textarea{display:block;width:100%;margin-top:5px;border:1px solid var(--line);border-radius:9px;padding:10px 11px;background:#fbfbfa;color:var(--ink);font:inherit;font-size:.9rem}.field textarea{min-height:76px;resize:vertical}.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--river);outline-offset:1px;background:#fff}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.btn{border:0;border-radius:9px;background:var(--river);color:#fff;padding:11px 15px;font:inherit;font-size:.84rem;font-weight:800;cursor:pointer}.btn:hover{filter:brightness(.95)}.btn:disabled{opacity:.58;cursor:wait}.btn.secondary{background:#fff;border:1px solid var(--line);color:var(--ink)}.match{width:100%;text-align:left;border:1px solid var(--line);border-radius:9px;padding:9px 10px;background:#fff;margin:6px 0;cursor:pointer;font:inherit}.match:hover{border-color:var(--river);background:#f8fbfc}.patient{border:1.5px solid var(--river);border-radius:11px;padding:12px;background:#f4fafb;margin:10px 0}.patient b{color:var(--navy)}.patient .small{font-size:.78rem;color:var(--soft);margin-top:3px}.status{font-size:.83rem;color:var(--soft);min-height:1.2em;margin:9px 0 0}.status.error{color:var(--danger)}.status.good{color:#21684f}.check{display:flex;align-items:flex-start;gap:8px;font-size:.82rem;margin:8px 0;color:#374e5a}.check input{margin-top:3px;accent-color:var(--river)}.screen{border:1px solid #eed9a5;border-radius:10px;background:#fff9e9;padding:11px 12px;margin-top:7px;font-size:.82rem}.screen strong{color:#734a00}.route{border-left:4px solid var(--river);padding:9px 11px;background:#f7fbfc;border-radius:0 8px 8px 0;font-size:.83rem;margin-top:10px}.queue{list-style:none;margin:12px 0 0;padding:0}.queue li{position:relative;padding:0 0 12px 24px;color:var(--soft);font-size:.82rem}.queue li:before{content:"";position:absolute;left:0;top:2px;width:12px;height:12px;border:2px solid #afc3cb;border-radius:50%;background:#fff}.queue li:after{content:"";position:absolute;left:7px;top:17px;height:14px;border-left:2px solid #d8e4e8}.queue li:last-child:after{display:none}.queue .current{color:var(--navy);font-weight:800}.queue .current:before{border-color:var(--river);background:#dceef1}.saved{border-color:#a9d5bb;background:#edf8f0}.saved h3{margin:0;color:#21684f;font-size:1rem}.saved p{margin:6px 0 0;font-size:.84rem}.saved a{color:#165a7a;font-weight:800}@media(max-width:740px){.grid{grid-template-columns:1fr}.row{grid-template-columns:1fr}.back{font-size:.72rem}header img{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <img src="/assets/bhw-medical-logo.png" alt="BHW Medical" onerror="this.style.display='none'">
+  <div><h1>Medication Refill Desk</h1><div class="sub">FrontDeskOS · Patient Requests</div></div>
+  <a class="back" href="/bhw-front-desk.html">← Front Desk</a>
+</header>
+
+<div class="notice"><b>Workflow boundary:</b> this page records and tracks a refill request. It does not create, alter, transmit, or approve a prescription. CharmHealth remains the prescribing record; an authorized prescriber makes every clinical decision and signs every prescription.</div>
+
+<div class="grid">
+  <div>
+    <section class="card">
+      <h2>1. Find the patient</h2>
+      <p class="hint">Search the protected Patient Registry first. The refill request cannot be saved without an exact, active BHW patient record.</p>
+      <label class="field">Name or phone number<input id="patientSearch" type="search" autocomplete="off" placeholder="Search Patient Registry"></label>
+      <button class="btn secondary" id="searchButton" type="button">Find patient</button>
+      <div id="matches" aria-live="polite"></div>
+      <div id="selectedPatient" hidden class="patient"></div>
+      <p id="patientStatus" class="status" role="status"></p>
+    </section>
+
+    <section class="card">
+      <h2>2. Record the request</h2>
+      <p class="hint">Use the exact active medication and pharmacy shown in CharmHealth. The prescription details, including SIG, stay in the existing prescription record - do not re-enter or change them here.</p>
+      <label class="field">Requested medication<input id="medication" autocomplete="off" maxlength="160" placeholder="Exact medication name from chart"></label>
+      <div id="medicationRoute" class="screen" hidden></div>
+      <div class="row">
+        <label class="field">Verified pharmacy<input id="pharmacy" autocomplete="off" maxlength="160" placeholder="Pharmacy name or location"></label>
+        <label class="field">Request source<select id="source"><option value="patient">Patient / caregiver</option><option value="pharmacy">Pharmacy request</option><option value="myBHW">myBHW message</option><option value="phone">Phone call</option><option value="staff">Care team</option></select></label>
+      </div>
+      <label class="field">Medication pathway<select id="medicationPath"><option value="established">Established continuation request</option><option value="controlled">Controlled medication / EPCS workflow</option><option value="new-or-changed">New, changed, acute, or infection treatment</option><option value="clinical-review">Clinical concern or monitoring review</option></select></label>
+      <label class="field">Patient-reported request / concern<textarea id="patientReport" maxlength="2000" placeholder="Record the patient's own words and relevant administrative facts. Do not add clinical interpretation."></textarea></label>
+      <div id="pathwayNote" class="route">Established continuation: verify the prior prescription, pharmacy, allergies, last completed visit, monitoring, and any hold before routing for prescriber signature.</div>
+      <label class="check"><input id="verified" type="checkbox">I verified the active medication, pharmacy, allergies, and last completed BHW clinical visit in CharmHealth.</label>
+      <label class="check"><input id="noChange" type="checkbox">This request does not independently change strength, form, route, SIG, brand/generic, quantity, refills, or diagnosis.</label>
+    </section>
+
+    <section class="card">
+      <h2>3. Screening or patient follow-up</h2>
+      <p class="hint">Choose the clinician-directed follow-up needed for this request. Selecting an item creates a visible next action in the Patient Request; it does not send a questionnaire automatically.</p>
+      <label class="field">Required follow-up<select id="screening"><option value="none">No questionnaire indicated by this request</option><option value="controlled">Controlled-medication follow-up screen required</option><option value="substance">Recovery stability follow-up assessment required</option><option value="clinician">Other clinician-directed questionnaire / screen</option></select></label>
+      <div id="screeningNote" class="screen" hidden></div>
+      <label class="check"><input id="screeningReviewed" type="checkbox">I recorded the required follow-up and will route it to the clinical team / myBHW workflow.</label>
+    </section>
+
+    <section class="card">
+      <h2>4. Create the request</h2>
+      <p class="hint">Saving creates one patient-linked Medication request in BHW Cloud, visible in FrontDeskOS and Patient Requests. It begins as <b>Received</b>; no automatic patient message is sent.</p>
+      <button id="saveButton" class="btn" type="button">Create refill request</button>
+      <p id="saveStatus" class="status" role="status"></p>
+      <div id="saveResult" class="patient saved" hidden></div>
+    </section>
+  </div>
+
+  <aside>
+    <section class="card">
+      <h2>Where it saves</h2>
+      <p class="hint">One operational request, linked to the Registry patient ID:</p>
+      <ul class="queue"><li class="current">FrontDeskOS - Received</li><li>Patient Requests - status history, owner, and follow-through</li><li>Patient Registry - same BHW patient link</li><li>myBHW - patient-facing questionnaire only after staff selects an approved instrument</li><li>CharmHealth - prescription preparation, signature, and e-Rx status</li></ul>
+    </section>
+    <section class="card">
+      <h2>Immediate holds</h2>
+      <p class="hint">Do not treat the queue as a clinical decision tool. Route urgently for potentially harmful interruption, serious adverse effects, a medication discrepancy, high-risk behavioral-health concern, pregnancy-related change, dehydration/vomiting, abnormal sugar symptoms, or an emergency.</p>
+    </section>
+    <section class="card">
+      <h2>Questionnaire status</h2>
+      <p class="hint">The intended form is the BHW recovery stability follow-up—not the initial substance-use screen. It is for ongoing recovery engagement: cravings, treatment and group attendance, work or daily structure, supports, practical barriers, and safety. FrontDeskOS records it as a next action; automatic task sending stays off until the exact prior form is restored and the portal-assignment action is connected.</p>
+    </section>
+  </aside>
+</div>
+</div>
+<script>
+(function(){
+  const API='/.netlify/functions/frontdesk-data';
+  const $=id=>document.getElementById(id);
+  const esc=value=>String(value||'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  let patient=null;
+  const token=()=>{try{return sessionStorage.getItem('crewos_token')||'';}catch(_){return '';}};
+  const request=(url, options={})=>{
+    const headers={...(options.headers||{})};
+    const signed=token(); if(signed) headers.Authorization='Bearer '+signed;
+    return fetch(url,{...options,headers,cache:'no-store'});
+  };
+  const setStatus=(id,text,kind='')=>{const node=$(id);node.textContent=text;node.className='status'+(kind?' '+kind:'');};
+  const idempotency=()=>{try{return crypto.randomUUID();}catch(_){return 'medrefill-'+Date.now()+'-'+Math.random().toString(16).slice(2);}};
+  const pathwayText={
+    established:'Established continuation: verify the exact prior prescription, pharmacy, allergies, last completed visit, monitoring, and any hold before routing for prescriber signature.',
+    controlled:'Controlled medication / EPCS: route to the treating prescriber’s controlled-substance workflow. A staff member does not prepare a new or changed controlled prescription.',
+    'new-or-changed':'New, changed, acute, or infection treatment: prescriber-directed process. Do not prepare or modify the prescription in this screen.',
+    'clinical-review':'Clinical concern or monitoring review: record the patient-reported concern and route for clinician direction before preparation.'
+  };
+  const screeningText={
+    none:'',
+    controlled:'<strong>Controlled-medication follow-up:</strong> the saved Patient Request will carry a visible screening need for the clinical team. It is not a completed screen.',
+    substance:'<strong>Recovery stability follow-up:</strong> the saved Patient Request will carry the BHW recovery follow-up as its myBHW next action. It covers recovery engagement, cravings, treatment/group participation, daily structure, supports, and barriers. This page does not send the task automatically yet.',
+    clinician:'<strong>Clinician-directed follow-up:</strong> the saved Patient Request will carry the required questionnaire/screen as a next action.'
+  };
+  function showPatient(p){
+    patient=p;
+    const id=p.bhwPatientId||p.ctl||p.bhwId||'';
+    $('selectedPatient').hidden=false;
+    $('selectedPatient').innerHTML='<b>'+esc(p.name||'Selected patient')+'</b><div class="small">'+esc(id)+(p.dob?' · DOB '+esc(String(p.dob).slice(0,10)):'')+'</div><div class="small">Registry patient confirmed. Last visit: '+esc(p.lastVisit?String(p.lastVisit).slice(0,10):'not shown - verify in CharmHealth')+'</div>';
+    $('matches').innerHTML='';setStatus('patientStatus','Selected Patient Registry record.','good');
+  }
+  async function choosePatient(id){
+    setStatus('patientStatus','Loading selected patient…');
+    try{const r=await request(API+'?pid='+encodeURIComponent(id));const d=await r.json().catch(()=>({}));if(!r.ok||!d.patient)throw new Error(d.error||'Patient record was not available.');showPatient(d.patient);}
+    catch(e){setStatus('patientStatus',String(e.message||'Unable to load patient.').slice(0,180),'error');}
+  }
+  async function search(){
+    const q=$('patientSearch').value.trim();
+    if(!q){setStatus('patientStatus','Enter a patient name or phone number.','error');return;}
+    $('matches').innerHTML='';$('selectedPatient').hidden=true;patient=null;setStatus('patientStatus','Searching the Patient Registry…');
+    try{
+      const r=await request(API+'?q='+encodeURIComponent(q));const d=await r.json().catch(()=>({}));
+      if(!r.ok)throw new Error(d.error||'Patient search is unavailable.');
+      if(d.patient){showPatient(d.patient);return;}
+      const rows=Array.isArray(d.matches)?d.matches:[];
+      if(!rows.length){setStatus('patientStatus','No matching Registry record. Check spelling or use the Master Patient List.','error');return;}
+      setStatus('patientStatus',rows.length+' matching records - select the correct patient.');
+      $('matches').innerHTML=rows.map(m=>'<button type="button" class="match" data-id="'+esc(m.id)+'"><b>'+esc(m.name)+'</b><span style="color:#5b6b76"> '+(m.dob?' · DOB '+esc(String(m.dob).slice(0,10)):'')+(m.ctl?' · '+esc(m.ctl):'')+'</span></button>').join('');
+      document.querySelectorAll('#matches .match').forEach(button=>button.addEventListener('click',()=>choosePatient(button.dataset.id)));
+    }catch(e){setStatus('patientStatus',String(e.message||'Unable to search the Patient Registry.').slice(0,180),'error');}
+  }
+  const buprenorphinePattern=/\\b(?:suboxone|buprenorphine|zubsolv|bunavail|cassipa)\\b/i;
+  function refreshMedicationRoute(){
+    const node=$('medicationRoute');
+    if(!buprenorphinePattern.test($('medication').value.trim())){node.hidden=true;node.textContent='';return;}
+    $('medicationPath').value='controlled';
+    $('screening').value='substance';
+    node.hidden=false;
+    node.innerHTML='<strong>Controlled MOUD route:</strong> Suboxone / buprenorphine is recognized. Save only as a controlled-medication and substance-use follow-up request for the treating prescriber; do not prepare, alter, or transmit the prescription.';
+  }
+  function refreshPathway(){
+    $('pathwayNote').textContent=pathwayText[$('medicationPath').value];
+    const controlled=$('medicationPath').value==='controlled';
+    if(controlled&&$('screening').value==='none')$('screening').value='controlled';
+    refreshScreening();
+  }
+  function refreshScreening(){
+    const value=$('screening').value,node=$('screeningNote'), text=screeningText[value];
+    node.hidden=!text;node.innerHTML=text;
+  }
+  async function save(){
+    const medication=$('medication').value.trim(), pharmacy=$('pharmacy').value.trim(), path=$('medicationPath').value, screen=$('screening').value;
+    if(!patient){setStatus('saveStatus','Select an exact active Patient Registry record first.','error');return;}
+    const patientId=String(patient.bhwPatientId||patient.ctl||patient.bhwId||'').toUpperCase();
+    if(!/^BHW\d{4}$/.test(patientId)||patientId==='BHW0000'){setStatus('saveStatus','Choose an active, non-synthetic Patient Registry record.','error');return;}
+    if(!medication||!pharmacy){setStatus('saveStatus','Medication and verified pharmacy are required.','error');return;}
+    if(!$('verified').checked){setStatus('saveStatus','Confirm chart verification before creating the request.','error');return;}
+    if(path==='established'&&!$('noChange').checked){setStatus('saveStatus','For an established continuation, confirm there is no independent change. Otherwise choose the correct medication pathway.','error');return;}
+    if(screen!=='none'&&!$('screeningReviewed').checked){setStatus('saveStatus','Confirm the required screening or patient follow-up before saving.','error');return;}
+    const button=$('saveButton');button.disabled=true;setStatus('saveStatus','Saving a patient-linked refill request…');
+    const body={action:'medication_refill',submissionId:idempotency(),bhwPatientId:patientId,medication,pharmacy,requestSource:$('source').value,medicationPath:path,patientReport:$('patientReport').value,screeningPlan:screen};
+    try{
+      const r=await request(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok||!d.ok)throw new Error(d.error||'The request was not confirmed after save.');
+      setStatus('saveStatus','Saved to BHW Cloud.','good');
+      const out=$('saveResult');out.hidden=false;out.innerHTML='<h3>Refill request created</h3><p><b>'+esc(d.requestId||'Patient Request')+'</b> is now in FrontDeskOS and Patient Requests as <b>Received</b>. '+(screen!=='none'?'The screening / myBHW follow-up is listed as a next action. ':'')+'<a href="/bhw-requests.html">Open Patient Requests →</a></p>';
+      button.textContent='Create another request';button.disabled=false;
+    }catch(e){setStatus('saveStatus',String(e.message||'Not saved.').slice(0,220),'error');button.disabled=false;}
+  }
+  $('searchButton').addEventListener('click',search);
+  $('patientSearch').addEventListener('keydown',e=>{if(e.key==='Enter')search();});
+  $('medication').addEventListener('input',()=>{refreshMedicationRoute();refreshPathway();});
+  $('medicationPath').addEventListener('change',refreshPathway);
+  $('screening').addEventListener('change',refreshScreening);
+  $('saveButton').addEventListener('click',save);
+  refreshMedicationRoute();refreshPathway();refreshScreening();
+})();
+</script>
+</body>
+</html>
