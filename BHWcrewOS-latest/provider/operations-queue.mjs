@@ -74,6 +74,9 @@ export async function createOperationsCloudClient(fetchImpl = fetch) {
 
   return {
     apiBase: config.apiBase,
+    async listCallReviews(bhwPatientId='') {return (await request('/v1/call-reviews'+(bhwPatientId?'?bhwPatientId='+encodeURIComponent(bhwPatientId):''))).calls||[];},
+    async createSyntheticCallReview() {return request('/v1/call-reviews/synthetic-fixture',{method:'POST',body:'{}'});},
+    async reviewCall(id,body) {return request('/v1/call-reviews/'+encodeURIComponent(id)+'/review',{method:'POST',body:JSON.stringify(body)});},
     async staffChat(path, body) {
       if (!/^[a-z0-9/?=&._-]+$/i.test(path)) throw new Error("Invalid chat action");
       return request(`/v1/staff-chat/${path}`, body === undefined ? {} : { method: "POST", body: JSON.stringify(body) });

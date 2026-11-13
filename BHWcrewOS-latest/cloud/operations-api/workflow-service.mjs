@@ -130,6 +130,7 @@ function sanitizeRuleOverride(input = {}, base = null, now = new Date(), actor =
 export function createWorkflowService(repository, {
   environment = process.env,
   dialpad,
+  callReviews,
   chat,
   clock = () => new Date(),
   logger = console,
@@ -728,6 +729,10 @@ export function createWorkflowService(repository, {
   async function handleDialpadWebhook(rawBody) {
     if (!dialpad?.webhookConfigured) throw Object.assign(new Error("Dialpad webhook is not configured"), { status: 503 });
     const payload = dialpad.verifyWebhook(rawBody);
+    if (callReviews?.enabled && payload.call_id) {
+      const review = await callReviews.ingest(payload);
+      return review ? {ok:true,callReviewId:review.record.id,replayed:review.replayed} : {ok:true,ignored:true};
+    }
     const event = normalizeDialpadEvent(payload, clock());
     if (!event) return { ok: true, ignored: true, reason: "non-actionable-event" };
     if (event.kind === "delivery-status" || event.direction === "outbound") {

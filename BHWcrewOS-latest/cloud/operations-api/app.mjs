@@ -196,6 +196,7 @@ export function createOperationsApp({
   now = () => new Date(),
   idFactory,
   blueprintTasks = null,
+  callReviews = null,
 } = {}) {
   if (!repository) throw new Error("repository is required");
   const blueprintTaskHandler = createBlueprintTaskHandler({ ...blueprintTasks, environment, now });
@@ -506,6 +507,20 @@ export function createOperationsApp({
       }
 
       const actor = staffActor(request, environment, now);
+      if (url.pathname === '/v1/call-reviews' && request.method === 'GET') {
+        if (!callReviews) throw apiError(503,'call_review_disabled','Call review is not configured');
+        return json(200,{ok:true,calls:await callReviews.list(actor,url.searchParams.get('bhwPatientId')||'')},cors);
+      }
+      if (url.pathname === '/v1/call-reviews/synthetic-fixture' && request.method === 'POST') {
+        if (!callReviews) throw apiError(503,'call_review_disabled','Call review is not configured');
+        return json(200,{ok:true,...await callReviews.fixture(actor)},cors);
+      }
+      const callReviewPath = url.pathname.match(/^\/v1\/call-reviews\/(call-[a-f0-9]{40})\/review$/);
+      if (callReviewPath && request.method === 'POST') {
+        if (!callReviews) throw apiError(503,'call_review_disabled','Call review is not configured');
+        return json(200,{ok:true,...await callReviews.review(callReviewPath[1],await readJson(request),actor)},cors);
+      }
+
       if (url.pathname === "/v1/staff-activity/billing-toolkit" && request.method === "POST") {
         if (typeof repository.recordStaffActivity !== "function") {
           throw apiError(503, "staff_activity_not_configured", "staff activity audit is not configured");

@@ -1,3 +1,5 @@
+import {createCallReviewService} from './call-review.mjs';
+import {CallReviewRepository} from './call-review-repository.mjs';
 import http from "node:http";
 import {syntheticAcceptanceBoundary} from './synthetic-acceptance-boundary.mjs';
 import { Firestore } from '@google-cloud/firestore';
@@ -14,10 +16,11 @@ import { createStaffChatApp } from "./staff-chat-app.mjs";
 const repository = new ClinicalContextWorkflowRepository();
 const dialpad = createDialpadService();
 const chat = createGoogleChatService();
-const workflow = createWorkflowService(repository, { dialpad, chat });
+const callReviews = createCallReviewService(new CallReviewRepository(repository.db), {environment: process.env});
+const workflow = createWorkflowService(repository, { dialpad, chat, callReviews });
 const blueprintConfig = blueprintTaskConfiguration(process.env);
 const blueprintTasks = blueprintConfig ? { store: createBlueprintTaskStore(new Firestore({projectId:process.env.GOOGLE_CLOUD_PROJECT,databaseId:blueprintConfig.databaseId})), readSource:createBlueprintWorkClient(process.env) } : null;
-const baseApp = createOperationsApp({ repository, workflow, blueprintTasks });
+const baseApp = createOperationsApp({ repository, workflow, blueprintTasks, callReviews });
 const app = createStaffChatApp({ baseApp: createClinicalContextApp({ baseApp, repository }), chat: new StaffChatRepository(repository.db) });
 const port = Number(process.env.PORT || 8080);
 
