@@ -238,8 +238,14 @@
       <option value="secondary">Secondary coverage and coordination of benefits</option>
       <option value="referral">Referral and prior authorization requirements</option>
     </select>
+    <label for="verify-dos" style="display:block;margin:12px 0 6px;font-weight:700;font-size:.78rem">Date of service · optional; blank checks today</label>
+    <input id="verify-dos" type="date" style="padding:11px;border:1px solid var(--line);border-radius:9px">
+    <p class="sub">Coverage and wellness share one Medicare response. Changing the information shown reuses that response and its original check time. An inquiry does not verify a scheduled appointment.</p>
     <div style="margin-top:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
       <button class="btn" type="button" id="verify-run">Check selected patient</button>
+      <button class="btn" type="button" id="verify-refresh">Request a fresh check</button>
+      <a class="btn" href="https://rcm.bhwmedical.org/?view=verify" target="_blank" rel="noopener noreferrer">Open full eligibility and COB in RCM</a>
+      <a class="btn" href="https://rcm.bhwmedical.org/?view=discovery" target="_blank" rel="noopener noreferrer">Discover or resume coverage in RCM</a>
       <span class="status" role="status" aria-live="polite" id="verify-result">Choose a patient and verification type.</span>
     </div>
   </section>
@@ -653,7 +659,14 @@ document.addEventListener('keydown',e=>{const card=e.target.closest('.request-ca
 
 /* Selected-patient verification — uses authenticated CrewOS Medicare endpoint. */
 const VERIFY_API = '/.netlify/functions/stedi';
-document.getElementById('verify-run').addEventListener('click', async () => {
+let VERIFIED_RESPONSE=null;
+function verificationContext(){const p=window.lastPatient||{};return JSON.stringify([p.ctl||p.bhwPatientId||'',p.dob||p.dateOfBirth||'',p.name||'',p.payer||'',p.mco||'',p.medicareMbi||'',p.updatedAt||'',document.getElementById('verify-dos').value]);}
+function showVerification(data,reused){
+  const kind=document.getElementById('verify-kind').value;
+  const parts=kind==='wellness'?['AWV: '+(data.awvStatus||'Unknown'),'Next eligible: '+(data.awvNext||'Not returned')]:['Medicare status: '+(data.active===true?'Active':data.active===false?'Inactive':'Unknown'),'Benefit scope: '+(data.requestScope||'Not returned')];
+  document.getElementById('verify-result').textContent=parts.join(' · ')+' · Service date: '+(data.dateOfService||'payer default today')+' · Checked '+new Date(data.checkedAt).toLocaleString()+(reused?' · Existing response; no new request.':'.')+' Confirm in the protected patient record.';
+}
+async function verifySelectedPatient(fresh=false){
   const result=document.getElementById('verify-result');
   const kind=document.getElementById('verify-kind').value;
   const patient=window.lastPatient;
@@ -668,16 +681,25 @@ document.getElementById('verify-run').addEventListener('click', async () => {
     result.textContent='The connected HETS workflow is Medicare-only. Use the RCM payer workflow for this plan.';return;
   }
   const button=document.getElementById('verify-run');
+  const context=verificationContext();
+  if(!fresh&&VERIFIED_RESPONSE?.context===context){showVerification(VERIFIED_RESPONSE.data,true);return;}
+  if(button.disabled)return;
   button.disabled=true;result.textContent='Checking Medicare HETS…';
+  document.getElementById('verify-refresh').disabled=true;
   try{
-    const response=await crewFetch(VERIFY_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'check',patientId:id})});
+    const dos=document.getElementById('verify-dos').value;
+    const response=await crewFetch(VERIFY_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'check',patientId:id,...(dos?{dos}:{})})});
     const data=await response.json().catch(()=>({}));
     if(!response.ok || data.error)throw new Error(data.error||'Eligibility request failed');
-    const parts=kind==='wellness'?['AWV: '+(data.awvStatus||'Unknown'),'Next eligible: '+(data.awvNext||'Not returned')]:['Medicare status: '+(data.active===true?'Active':data.active===false?'Inactive':'Unknown'),'Benefit scope: '+(data.requestScope||'Not returned')];
-    result.textContent=parts.join(' · ')+' · Checked just now. Confirm in the protected patient record.';
+    if(verificationContext()!==context){result.textContent='Patient or service date changed. This result was not displayed for the new selection.';return;}
+    VERIFIED_RESPONSE={context,data:{...data,checkedAt:data.checkedAt||new Date().toISOString()}};showVerification(VERIFIED_RESPONSE.data,false);
   }catch(e){result.textContent='Not verified: '+String(e.message||e).slice(0,180);}
-  finally{button.disabled=false;}
-});
+  finally{button.disabled=false;document.getElementById('verify-refresh').disabled=false;}
+}
+document.getElementById('verify-run').addEventListener('click',()=>verifySelectedPatient(false));
+document.getElementById('verify-refresh').addEventListener('click',()=>verifySelectedPatient(true));
+document.getElementById('verify-kind').addEventListener('change',()=>{if(['coverage','wellness'].includes(document.getElementById('verify-kind').value)&&VERIFIED_RESPONSE?.context===verificationContext())showVerification(VERIFIED_RESPONSE.data,true);else document.getElementById('verify-result').textContent='Use the RCM links for payer-specific benefits, or check the selected patient and date.';});
+document.getElementById('verify-dos').addEventListener('change',()=>{VERIFIED_RESPONSE=null;document.getElementById('verify-result').textContent='Service date changed. Check the selected date before relying on a result.';});
 
 /* patient lookup */
 async function lookup(){
@@ -722,6 +744,8 @@ async function selectPatient(id){
 }
 // Render one patient's profile card + their logged requests.
 function renderProfile(p,requests){
+  VERIFIED_RESPONSE=null;
+  document.getElementById('verify-result').textContent='Patient selected. Check coverage or resume the same response when switching to wellness.';
   window.lastPatient=p; $('p-name').textContent=p.name;
   $('p-meta').textContent=[p.ctl,p.dob?`DOB ${p.dob}`:null].filter(Boolean).join(' · ');
   const open=$('p-open');
