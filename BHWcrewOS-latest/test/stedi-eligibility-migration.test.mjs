@@ -19,7 +19,7 @@ const syntheticPatient = {
   patientStatus: "Active",
 };
 
-async function loadHarness({ response, statusCode = 200, patients = [syntheticPatient] }) {
+async function loadHarness({ response, statusCode = 200, patients = [syntheticPatient],neverRespond=false }) {
   const source = await readFile(new URL("../netlify/functions/stedi.js", import.meta.url), "utf8");
   const httpCalls = [];
   const cloudCalls = [];
@@ -29,8 +29,11 @@ async function loadHarness({ response, statusCode = 200, patients = [syntheticPa
       httpCalls.push(call);
       const request = {
         on(event, handler) { if (event === "error") call.onError = handler; return request; },
+        setTimeout(ms,handler){call.timeoutMs=ms;call.onTimeout=handler;return request;},
+        destroy(error){call.onError(error);},
         write(chunk) { call.body += String(chunk); },
         end() {
+          if(neverRespond)return;
           const res = new EventEmitter();
           res.statusCode = statusCode;
           callback(res);
@@ -263,4 +266,21 @@ test("BHW0000 never becomes a production CMS HETS request", async () => {
   assert.match(JSON.parse(result.body).error, /approved Stedi mock or local fixture/);
   assert.equal(harness.httpCalls.length, 0);
   assert.equal(harness.cloudCalls.length, 0);
+});
+
+test('a selected future service date uses the modern encounter schema and cannot overwrite current tracker coverage',async()=>{
+  const harness=await loadHarness({response:{plans:[]}});
+  const response=await harness.handler({...checkEvent(),body:JSON.stringify({action:'check',patientId:syntheticPatient.bhwPatientId,dos:'2027-01-05'})});
+  assert.equal(response.statusCode,200);assert.equal(harness.cloudCalls.length,0);
+  const sent=JSON.parse(harness.httpCalls[0].body);assert.equal(sent.encounter.dates.service.start,'2027-01-05');
+  const result=JSON.parse(response.body);assert.equal(result.dateOfService,'2027-01-05');assert.equal(result.appointmentVerified,false);assert.equal(result.trackerUpdated,false);
+});
+
+test('invalid dates make no payer call and a payer timeout remains unverified',async()=>{
+  const invalid=await loadHarness({response:{}});
+  assert.equal((await invalid.handler({...checkEvent(),body:JSON.stringify({action:'check',patientId:syntheticPatient.bhwPatientId,dos:'2026-02-30'})})).statusCode,400);
+  assert.equal(invalid.httpCalls.length,0);
+  const timeout=await loadHarness({response:{},neverRespond:true}),pending=timeout.handler(checkEvent());
+  await new Promise(resolve=>setImmediate(resolve));assert.equal(timeout.httpCalls[0].timeoutMs,35000);timeout.httpCalls[0].onTimeout();
+  const result=await pending;assert.equal(result.statusCode,500);assert.match(JSON.parse(result.body).error,/inconclusive/);assert.equal(timeout.cloudCalls.length,0);
 });

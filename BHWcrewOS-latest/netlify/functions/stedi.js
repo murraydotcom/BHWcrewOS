@@ -32,7 +32,7 @@ function stediKey() {
   return key;
 }
 
-function stediRequest(path, body, clientIp) {
+function stediRequest(path, body, clientIp,timeoutMs=35000) {
   return new Promise((resolve, reject) => {
     const data = JSON.stringify(body);
     const headers = {
@@ -57,6 +57,7 @@ function stediRequest(path, body, clientIp) {
       });
     });
     req.on("error", reject);
+    req.setTimeout?.(timeoutMs,()=>req.destroy(new Error('Medicare check timed out. Coverage is inconclusive; review before requesting another check.')));
     req.write(data);
     req.end();
   });
@@ -251,7 +252,10 @@ async function upsertTracker(patient, parsed, errNote, session) {
   return result.profile?.id || patient.id;
 }
 
-async function runCheck(patient, clientIp, session) {
+async function runCheck(patient, clientIp, session, dos='',timeoutMs=35000) {
+  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  const serviceDate=dos||today;
+  const saveTracker=(parsed,note)=>serviceDate===today?upsertTracker(patient,parsed,note,session):Promise.resolve();
   if (!patient.mbi) return { skipped: "no-mbi" };
   if (!patient.dob) return { skipped: "no-dob" };
   const dateOfBirth = dashDate(patient.dob);
@@ -277,21 +281,21 @@ async function runCheck(patient, clientIp, session) {
     // keeps one button/batch action to one 270 while returning the benefit
     // families needed for the normalized preventive review. BHW0000 remains
     // the release-test fixture until the existing production gate is opened.
-    encounter: { services: HETS_MEDICARE_SERVICE_BUNDLE },
+    encounter: { services: HETS_MEDICARE_SERVICE_BUNDLE,...(serviceDate!==today?{dates:{service:{start:serviceDate}}}:{}) },
   };
-  const res = await stediRequest(STEDI_ELIGIBILITY_PATH, payload, clientIp);
+  const res = await stediRequest(STEDI_ELIGIBILITY_PATH, payload, clientIp,timeoutMs);
   if (!res.ok) {
     const msg = (res.data && (res.data.message || JSON.stringify(res.data))) || `HTTP ${res.status}`;
-    await upsertTracker(patient, parse271({}), `Stedi ${res.status}: ${String(msg).slice(0, 700)}`, session);
+    await saveTracker(parse271({}), `Stedi ${res.status}: ${String(msg).slice(0, 700)}`);
     return { error: `Stedi ${res.status}` };
   }
   const parsed = parse271(res.data);
   if (parsed.note) {
     // Stedi advises ignoring stub benefit data when the payer returns AAA errors.
-    await upsertTracker(patient, parse271({}), `Stedi ${res.status}: ${parsed.note}`, session);
+    await saveTracker(parse271({}), `Stedi ${res.status}: ${parsed.note}`);
     return { error: `Stedi ${res.status}` };
   }
-  await upsertTracker(patient, parsed, "", session);
+  await saveTracker(parsed, "");
   return {
     ok: true,
     active: parsed.active,
@@ -300,6 +304,7 @@ async function runCheck(patient, clientIp, session) {
     awvLast: parsed.awvLast,
     preventiveMeasureCount: normalizeHetsMeasures({ preventiveServices: parsed.services }).length,
     requestScope: "coverage-and-preventive-benefits",
+    dateOfService:serviceDate,checkedAt:new Date().toISOString(),appointmentVerified:false,trackerUpdated:serviceDate===today,
   };
 }
 
@@ -333,6 +338,7 @@ exports.handler = async (event) => {
     }
 
     if (b.action === "check") {
+      if(b.dos&&(!/^\d{4}-\d{2}-\d{2}$/.test(b.dos)||!Number.isFinite(Date.parse(b.dos))||new Date(b.dos).toISOString().slice(0,10)!==b.dos))return json(400,{error:'Enter a valid service date.'});
       const patients = await listCloudPatients(session);
       const raw = patients.find((item) => item.bhwPatientId === String(b.patientId || "").toUpperCase());
       if (!raw) return json(404, { error: "Patient not found" });
@@ -343,21 +349,24 @@ exports.handler = async (event) => {
         });
       }
       if (!patient.mbi) return json(400, { error: "No MBI on file for this patient — add it first" });
-      const result = await runCheck(patient, clientIp, session);
+      const result = await runCheck(patient, clientIp, session,b.dos||'');
       return json(200, result);
     }
 
     if (b.action === "batch") {
       const offset = b.offset || 0;
+      if(!Number.isSafeInteger(offset)||offset<0)return json(400,{error:'Invalid batch position.'});
       const targets = (await listCloudPatients(session)).map(shapePatient).filter((p) =>
-        p.id !== "BHW0000" && ["Medicare", "Medicare + Medicaid"].includes(p.insurance) && p.mbi && p.status !== "Deceased");
+        p.id !== "BHW0000" && ["Medicare", "Medicare + Medicaid"].includes(p.insurance) && p.mbi && !/deceased|inactive|archived|converted/i.test(p.status));
       const slice = targets.slice(offset, offset + 4);
       const results = [];
+      const deadline=Date.now()+42000;
       for (const patient of slice) {
-        try { results.push({ name: patient.name, ...(await runCheck(patient, clientIp, session)) }); }
+        if(deadline-Date.now()<14000)break;
+        try { results.push({ name: patient.name, ...(await runCheck(patient, clientIp, session,'',10000)) }); }
         catch (e) { results.push({ name: patient.name, error: e.message }); }
       }
-      const next = offset + slice.length;
+      const next = offset + results.length;
       return json(200, { processed: results, done: next >= targets.length, nextOffset: next, total: targets.length });
     }
 
