@@ -53,9 +53,10 @@ test('browser and server share the exact reference implementation',async()=>{
 });
 
 test('Patient 360 renders ICAP provenance and limits source links to official pattern pages',async()=>{
-  const source=await readFile(new URL('../provider/patient-360-app.mjs',import.meta.url),'utf8');
+  const source=(await readFile(new URL('../provider/patient-360-app.mjs',import.meta.url),'utf8')).replace(/\r\n?/g,'\n');
   const start=source.indexOf('function positiveAnaAnalysisPanel(');
   const end=source.indexOf('\n}\n',start)+2;
+  assert.ok(start>=0&&end>start,'the real Patient 360 ANA renderer must be present');
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const render=vm.runInNewContext(`(${source.slice(start,end)})`,{esc,dateText:()=> 'synthetic date'});
   const references=ICAP.references(ICAP.review([{code:'AC-3',titer:160}]));
