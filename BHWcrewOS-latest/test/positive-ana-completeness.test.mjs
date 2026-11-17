@@ -6,13 +6,22 @@ const page = await readFile(new URL("../bhw-positive-ana.html", import.meta.url)
 const patient360App = await readFile(new URL("../provider/patient-360-app.mjs", import.meta.url), "utf8");
 const positiveAnaRecord = await readFile(new URL("../netlify/functions/positive-ana-record.js", import.meta.url), "utf8");
 
-function readLiteral(startMarker, endMarker) {
-  const start = page.indexOf(startMarker);
-  const end = page.indexOf(endMarker, start + startMarker.length);
+function readLiteral(startMarker, endMarker, source = page) {
+  const normalized = source.replace(/\r\n?/g, "\n");
+  const start = normalized.indexOf(startMarker);
+  const end = normalized.indexOf(endMarker, start + startMarker.length);
   assert.notEqual(start, -1, `missing ${startMarker}`);
   assert.notEqual(end, -1, `missing ${endMarker}`);
-  return Function(`"use strict"; return (${page.slice(start + startMarker.length, end)});`)();
+  return Function(`"use strict"; return (${normalized.slice(start + startMarker.length, end)});`)();
 }
+
+test("source literals preserve values across Unix and Windows line endings", () => {
+  for (const newline of ["\n", "\r\n", "\r"]) {
+    const source = `const EXAMPLE=[1,2];${newline}const AFTER=`;
+    assert.deepEqual(readLiteral("const EXAMPLE=", ";\nconst AFTER=", source), [1,2]);
+    assert.throws(() => readLiteral("const MISSING=", ";\nconst AFTER=", source), /missing/);
+  }
+});
 
 const anaPatterns = readLiteral("const ANA_PATTERNS=", ";\nconst ANA_TITERS");
 const anaTiters = readLiteral("const ANA_TITERS=", ";\n\nfunction anaPatternOptions");
