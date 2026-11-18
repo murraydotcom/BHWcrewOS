@@ -152,6 +152,8 @@ function verify(token) {
     if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
     const payload = JSON.parse(Buffer.from(body, "base64url").toString());
     if (!payload.exp || Date.now() > payload.exp) return null;
+    const revokedStaffIds = (process.env.CREWOS_REVOKED_STAFF_IDS || "").split(",").map(id => id.trim()).filter(Boolean);
+    if (revokedStaffIds.includes(payload.staffId)) return null;
     return payload; // { staffId, name, divisions, access, landing, canSchedule, exp }
   } catch {
     return null;
