@@ -351,8 +351,15 @@ function builderInputFromDetail(row) {
     relevantHistory: value("nbRelevantHistory", current.relevantHistory),
     ros: value("nbRos", current.ros),
     exam: value("nbExam", current.exam),
+    problemList: value("nbProblemList", current.problemList),
     assessment: value("nbAssessment", current.assessment),
+    assessmentWorkup: value("nbAssessmentWorkup", current.assessmentWorkup),
     plan: value("nbPlan", current.plan),
+    education: value("nbEducation", current.education),
+    medicationChanges: value("nbMedicationChanges", current.medicationChanges),
+    nutrition: value("nbNutrition", current.nutrition),
+    movement: value("nbMovement", current.movement),
+    afterVisit: value("nbAfterVisit", current.afterVisit),
     orders: value("nbOrders", current.orders),
     referrals: value("nbReferrals", current.referrals),
     patientInstructions: value("nbPatientInstructions", current.patientInstructions),
@@ -525,11 +532,11 @@ function moduleOptions(selected = []) {
 function renderEncounterContext(row) {
   const summary = contextReviewSummary(row.encounterSnapshot);
   if (!summary.total) return '<div class="notice"><b>Encounter context has not been imported yet.</b> The Patient Registry link is active; the next data-connection step will populate the pre-visit questionnaire, HRA, medications, allergies, problem list, and other master-list fields here.</div>';
-  return `<div class="notice"><b>${summary.total} imported context item${summary.total === 1 ? "" : "s"}.</b> ${summary.reviewed} reviewed for note use · ${summary.needsReview} still require reconciliation. Imported data never enters the note silently.</div>${summary.fields.map(({ field, items }) => `<div class="context-field"><b>${esc(ENCOUNTER_CONTEXT_FIELDS[field])}</b>${items.map((item) => `<div class="context-item">${esc(item.value)}<span class="context-meta">${esc(item.source)}${item.updatedAt ? ` · updated ${esc(item.updatedAt)}` : ""}${item.patientReported ? " · patient reported" : ""} · ${esc(item.reviewedForNote ? "reviewed for note" : item.reconciliationStatus.replaceAll("_", " "))}</span></div>`).join("")}</div>`).join("")}`;
+  return `<div class="notice"><b>${summary.total} imported context item${summary.total === 1 ? "" : "s"}.</b> ${summary.reviewed} reviewed for note use · ${summary.needsReview} still require reconciliation. Imported data never enters the note silently.</div>${summary.fields.map(({ field, items }) => `<div class="context-field"><b>${esc(ENCOUNTER_CONTEXT_FIELDS[field])}</b>${items.map((item) => `<div class="context-item">${esc(item.value)}${item.clinicalStatus ? ` — ${esc(item.clinicalStatus)}` : ""}<span class="context-meta">${esc(item.source)}${item.updatedAt ? ` · updated ${esc(item.updatedAt)}` : ""}${item.patientReported ? " · patient reported" : ""} · ${esc(item.reviewedForNote ? "reviewed for note" : item.reconciliationStatus.replaceAll("_", " "))}</span></div>`).join("")}</div>`).join("")}`;
 }
 
 function noteField(id, label, value = "", rows = 3) {
-  return `<div class="field"><label>${esc(label)}</label><textarea id="${esc(id)}" rows="${rows}">${esc(value || "")}</textarea></div>`;
+  return `<div class="field"><label for="${esc(id)}">${esc(label)}</label><textarea id="${esc(id)}" rows="${rows}">${esc(value || "")}</textarea></div>`;
 }
 
 function renderModuleBuilderFields(input = {}) {
@@ -553,7 +560,24 @@ function renderNoteBuilder(row) {
   return `<details open><summary><b>Encounter Note Builder</b> — one primary template plus applicable modules</summary>
     <div class="formgrid" style="margin-top:12px"><div class="field"><label>Primary note template</label><select id="dPrimaryTemplate">${templateOptions(notePlan.primaryTemplate)}</select></div><div class="field"><label>AWV type, when applicable</label><select id="dAwvType"><option value="">Not applicable / select</option><option value="initial" ${notePlan.awvType === "initial" ? "selected" : ""}>Initial AWV</option><option value="subsequent" ${notePlan.awvType === "subsequent" ? "selected" : ""}>Subsequent AWV</option></select></div><div class="field"><label>Chief concern / reason</label><input id="nbChiefConcern" value="${esc(input.chiefConcern || "")}" placeholder="Patient-stated reason for visit"></div></div>
     <div class="field"><label>Additional modules</label><div class="module-grid" id="dModuleGrid">${moduleOptions(notePlan.modules)}</div><div class="privacy">Condition Management covers clinical condition follow-up. Medication content appears only when addressed. CCM is excluded.</div></div>
-    <div class="formgrid" style="margin-top:12px"><div class="field"><label>Assessment</label><textarea id="nbAssessment" rows="4">${esc(input.assessment || "")}</textarea></div><div class="field"><label>Plan</label><textarea id="nbPlan" rows="4">${esc(input.plan || "")}</textarea></div><div class="field"><label>Follow-up</label><textarea id="nbFollowUp" rows="4">${esc(input.followUp || "")}</textarea></div></div>
+    <div style="margin-top:12px">${noteField("nbProblemList", "Problem list and status (one per line: problem — status)", input.problemList, 4)}</div>
+    <fieldset class="note-builder-group">
+      <legend>Assessment</legend>
+      ${noteField("nbAssessment", "Clinical impression and reasoning by problem", input.assessment, 5)}
+      ${noteField("nbAssessmentWorkup", "Labs, tests, and other evaluation", input.assessmentWorkup, 4)}
+    </fieldset>
+    <fieldset class="note-builder-group">
+      <legend>Plan</legend>
+      ${noteField("nbPlan", "Treatment and management by problem", input.plan, 4)}
+      <div class="formgrid">
+        ${noteField("nbEducation", "Education", input.education)}
+        ${noteField("nbMedicationChanges", "New medications and medication changes", input.medicationChanges)}
+        ${noteField("nbNutrition", "Food recommendations", input.nutrition)}
+        ${noteField("nbMovement", "Movement recommendations", input.movement)}
+        ${noteField("nbAfterVisit", "After-visit plan", input.afterVisit)}
+        ${noteField("nbFollowUp", "Follow-up", input.followUp)}
+      </div>
+    </fieldset>
     ${renderModuleBuilderFields(input)}
     <label class="module-option"><input type="checkbox" id="nbTranscriptReviewed" ${input.transcriptReviewed ? "checked" : ""}><span>I reviewed the source transcription and confirm it may be used to draft this note.</span></label>
     ${warnings.length ? `<div class="notice"><b>${warnings.length} source conflict or missing-information warning${warnings.length === 1 ? "" : "s"} require provider review.</b><ul>${warnings.map((warning) => `<li>${esc(warning)}</li>`).join("")}</ul><label class="module-option"><input type="checkbox" id="nbWarningsResolved" ${warningsResolved ? "checked" : ""}><span>I reviewed these warnings and corrected or addressed them in the note.</span></label></div>` : ""}

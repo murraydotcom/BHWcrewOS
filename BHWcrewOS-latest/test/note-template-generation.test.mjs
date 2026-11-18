@@ -5,7 +5,7 @@ import vm from "node:vm";
 import { composeEncounterNote, PRIMARY_NOTE_TEMPLATES } from "../engine/note-composer.mjs";
 
 const source = "Speaker 1: My knee hurts for two days. Speaker 2: Exam shows tenderness. Assessment: knee pain. Plan: rest. Return in one week.";
-const fields = { chiefConcern: "Knee pain", hpi: "Knee pain for two days.", exam: "Knee tenderness.", assessment: "Knee pain.", plan: "Rest.", followUp: "One week." };
+const fields = { chiefConcern: "Knee pain", hpi: "Knee pain for two days.", exam: "Knee tenderness.", problemList: "Knee pain — New", assessment: "Knee pain.", plan: "Rest.", followUp: "One week." };
 
 test("every primary template uses organized fields without copying the source into HPI", () => {
   for (const primaryTemplate of Object.keys(PRIMARY_NOTE_TEMPLATES)) {
@@ -13,6 +13,7 @@ test("every primary template uses organized fields without copying the source in
     assert.equal(result.sections.find(s => s.title === "History of Present Illness").content, fields.hpi);
     assert.equal(result.sections.find(s => s.title === "Assessment").content, fields.assessment);
     assert.equal(result.sections.find(s => s.title === "Plan").content, fields.plan);
+    assert.equal(result.sections.find(s => s.title === "Problem List and Status").content, "- Knee pain — New");
     assert.ok(!result.note.includes(source));
     assert.ok(result.note.includes(PRIMARY_NOTE_TEMPLATES[primaryTemplate].label.toUpperCase()));
   }
@@ -85,4 +86,49 @@ test("explicitly absent source fields do not carry old generated instructions or
   await h.click();
   assert.doesNotMatch(h.row.note, /OLD ORDER|STALE/);
   assert.ok(h.row.noteDraftMeta.missing.includes("Follow-Up"));
+});
+
+test("preventive drafts distinguish status, evaluation, and management", async () => {
+  const h = harness(async () => ({ noteBuilderInput: {
+    ...fields,
+    problemList: "Elevated office BP — Under evaluation\r\nLipid monitoring — Ongoing",
+    assessment: "Elevated office BP: Possible white-coat effect.\n\nLipid monitoring: Labs reviewed.",
+    assessmentWorkup: "Review a home BP log.\nRepeat lipid panel if due.",
+    plan: "",
+    education: "Reviewed BP cuff technique.",
+    nutrition: "Discussed ways to add vegetables.",
+    movement: "Continue regular walking.",
+    afterVisit: "Record BP for two weeks.",
+    followUp: "Review log at next visit.",
+  } }));
+  h.row.notePlan.primaryTemplate = "preventive_exam";
+  h.row.encounterSnapshot = { problemList: [
+    { value: "Elevated office BP", clinicalStatus: "Historical", reviewedForNote: true },
+    { value: "History of kidney stones", clinicalStatus: "Historical", reviewedForNote: true },
+    { value: "Unreviewed chart concern", clinicalStatus: "Active" },
+  ] };
+  await h.click();
+  assert.equal(h.auditCalls(), 1);
+  assert.match(h.row.note, /Problem List and Status\n- Elevated office BP — Under evaluation\n- Lipid monitoring — Ongoing\n- History of kidney stones — Historical/);
+  assert.match(h.row.note, /Assessment\nElevated office BP: Possible white-coat effect\.\n\nLipid monitoring: Labs reviewed\.\n\nLabs, Tests, and Other Evaluation\nReview a home BP log\.\nRepeat lipid panel if due\.\n\nPlan\nEducation/);
+  assert.match(h.row.note, /Food Recommendations\nDiscussed ways to add vegetables\.\n\nMovement Recommendations\nContinue regular walking\.\n\nAfter-Visit Plan\nRecord BP for two weeks\./);
+  assert.doesNotMatch(h.row.note, /Unreviewed chart concern|New Medications|\nOrders\n/);
+  assert.ok(!h.row.noteDraftMeta.missing.includes("Plan"));
+});
+
+test("legacy assessment and plan lists regain line breaks without changing their clinical text", () => {
+  const result = composeEncounterNote({
+    assessment: "- Knee pain: New. - Headache: Improving.",
+    plan: "1. Knee pain: • Continue current regimen. • Rest today. 2. Headache: • Track symptoms.",
+  });
+  assert.match(result.note, /Assessment\n- Knee pain: New\.\n- Headache: Improving\./);
+  assert.match(result.note, /Plan\n1\. Knee pain:\n  • Continue current regimen\.\n  • Rest today\.\n\n2\. Headache:\n  • Track symptoms\./);
+});
+
+test("evaluation alone leaves the clinical assessment incomplete", () => {
+  const result = composeEncounterNote({ assessmentWorkup: "Home BP log planned.", medicationChanges: "Documented medication change." });
+  assert.ok(result.missing.includes("Assessment"));
+  assert.ok(!result.missing.includes("Plan"));
+  assert.match(result.note, /Labs, Tests, and Other Evaluation\nHome BP log planned\./);
+  assert.match(result.note, /New Medications and Medication Changes\nDocumented medication change\./);
 });
