@@ -11,7 +11,7 @@
 
 const crypto = require("crypto");
 const { DB, httpJson, P, W, sign, getSession, json } = require("./_lib");
-const { cutoverMode, queryOperational, updateOperationalPage } = require("./lib/operational-store");
+const { operationalMode, queryOperational, updateOperationalPage } = require("./lib/operational-store");
 
 const NOTION = "https://api.notion.com/v1";
 const PIN_PROP = "PIN Hash";
@@ -44,7 +44,7 @@ function staffSession(user, { exp, scope = "staff", authTime = 0 } = {}) {
 }
 
 async function ensurePinProperty() {
-  if (await cutoverMode() !== "notion") return;
+  if (await operationalMode("staff") !== "notion") return;
   // Idempotent: adds the PIN Hash rich_text property to Staff & Roles if missing.
   const res = await httpJson("PATCH", `${NOTION}/databases/${DB.staff}`,
     { properties: { [PIN_PROP]: { rich_text: {} } } });
@@ -85,7 +85,7 @@ exports.handler = async (event) => {
       } });
     }
 
-    if (await cutoverMode() !== "database" && !process.env.NOTION_TOKEN) {
+    if (await operationalMode("staff") !== "database" && !process.env.NOTION_TOKEN) {
       return json(503, { error: "CrewOS staff migration is not finalized and NOTION_TOKEN is unavailable" });
     }
 
@@ -159,4 +159,5 @@ exports.handler = async (event) => {
 };
 
 exports._test = { pinMatches, staffSession };
+
 
