@@ -140,7 +140,7 @@ exports.handler = async (event) => {
       const user = staff.find((s) => s.id === staffId);
       if (!user || !user.active) return json(403, { error: "Account inactive" });
       if (!user.pinHash || !user.pinHash.includes(":")) {
-        return json(403, { error: "No PIN set for this account yet — ask Amaris or Shadé" });
+        return json(403, { error: "No PIN is set for this account. Ask your CrewOS administrator." });
       }
       if (!pinMatches(pin, user.pinHash)) {
         return json(403, { error: "That PIN didn't match" });
