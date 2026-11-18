@@ -80,7 +80,12 @@ function normalizeContextItem(value, index = 0) {
 export function normalizeEncounterSnapshot(input = {}) {
   return Object.fromEntries(Object.keys(ENCOUNTER_CONTEXT_FIELDS).map((field) => {
     const values = Array.isArray(input[field]) ? input[field] : input[field] == null || input[field] === "" ? [] : [input[field]];
-    return [field, values.map(normalizeContextItem).filter((item) => item.value).slice(0, 100)];
+    const items = values.map((value, index) => {
+      const item = normalizeContextItem(value, index);
+      if (field === "problemList" && clean(value?.clinicalStatus)) item.clinicalStatus = clean(value.clinicalStatus);
+      return item;
+    });
+    return [field, items.filter((item) => item.value).slice(0, 100)];
   }));
 }
 
@@ -100,10 +105,59 @@ const list = (value) => Array.isArray(value) ? value.map(clean).filter(Boolean) 
 const lines = (values) => list(values).map((value) => `- ${value}`).join("\n");
 const reviewedValues = (snapshot, field) => (snapshot[field] || []).filter((item) => item.reviewedForNote).map((item) => item.value);
 
-function addSection(sections, title, content, { required = false, missing = [] } = {}) {
-  const text = Array.isArray(content) ? lines(content) : clean(content);
-  sections.push({ title, content: text, required, complete: Boolean(text) });
-  if (required && !text) missing.push(title);
+function noteText(value) {
+  return String(value ?? "").replace(/\r\n?/g, "\n").trim();
+}
+
+function formatProblemList(value, snapshot) {
+  const problems = new Map();
+  function addProblem(entry, chartStatus) {
+    const [name, ...statusParts] = clean(entry).replace(/^(?:[-*•]|\d+[.)])\s+/, "").split(/\s+—(?:\s+|$)/);
+    if (!name) return;
+    const key = name.toLowerCase();
+    const status = statusParts.join(" — ") || chartStatus;
+    if (!problems.has(key) || (!problems.get(key).status && status)) problems.set(key, { name, status });
+  }
+  noteText(value).split("\n").forEach((entry) => addProblem(entry));
+  for (const item of snapshot.problemList) {
+    if (item.reviewedForNote) addProblem(item.value, item.clinicalStatus);
+  }
+  return [...problems.values()].map(({ name, status }) => `${name} — ${status || "Status unspecified"}`);
+}
+
+function formatClinicalList(value) {
+  if (Array.isArray(value)) return lines(value);
+  return noteText(value).split("\n").map((line) => {
+    // Older drafts sometimes have several list items on a single line.
+    const numbered = line.match(/^\s*(\d+)([.)])\s/);
+    if (numbered) {
+      let next = Number(numbered[1]) + 1;
+      return line.replace(/[ \t]+(?=(\d+)([.)])[ \t]+[A-Za-z])/g, (space, number, marker) => {
+        if (Number(number) !== next || marker !== numbered[2]) return space;
+        next++;
+        return "\n\n";
+      }).replace(/[ \t]+(?=•[ \t])/g, "\n  ");
+    }
+    if (/^\s*[-*•]\s/.test(line)) {
+      return line.replace(/[ \t]+(?=- [^:\n]{1,120}:)/g, "\n")
+        .replace(/[ \t]+(?=•[ \t])/g, "\n");
+    }
+    return line;
+  }).join("\n");
+}
+
+function labeledDetails(entries) {
+  return entries.flatMap(([label, value]) => {
+    const content = formatClinicalList(value);
+    return content ? [`${label}\n${content}`] : [];
+  });
+}
+
+function addSection(sections, title, content, { required = false, missing = [], complete } = {}) {
+  const text = Array.isArray(content) ? lines(content) : noteText(content);
+  const documented = complete ?? Boolean(text);
+  sections.push({ title, content: text, required, complete: documented });
+  if (required && !documented) missing.push(title);
 }
 
 function joinNarrative(value) {
@@ -134,7 +188,7 @@ export function composeEncounterNote(input = {}) {
   addSection(sections, "Relevant Medical, Family, and Social History", input.relevantHistory);
   addSection(sections, "Reviewed Medication Context", reviewedValues(snapshot, "medications"));
   addSection(sections, "Reviewed Allergy Context", reviewedValues(snapshot, "allergies"));
-  addSection(sections, "Active Problems Reviewed", reviewedValues(snapshot, "problemList"));
+  addSection(sections, "Problem List and Status", formatProblemList(input.problemList, snapshot));
   addSection(sections, "Relevant Review of Systems", input.ros);
   addSection(sections, "Objective / Examination", input.exam);
 
@@ -196,11 +250,29 @@ export function composeEncounterNote(input = {}) {
     addSection(sections, "CharmEd Minds — Goals, Transfer, and Support Plan", input.charmedMinds?.goalsPlan, { required: true, missing });
   }
 
-  addSection(sections, "Assessment", input.assessment, { required: true, missing });
-  addSection(sections, "Plan", input.plan, { required: true, missing });
+  const assessment = formatClinicalList(input.assessment);
+  addSection(sections, "Assessment", [
+    assessment,
+    ...labeledDetails([["Labs, Tests, and Other Evaluation", input.assessmentWorkup]]),
+  ].filter(Boolean).join("\n\n"), { required: true, missing, complete: Boolean(assessment) });
+
+  const planContent = [
+    formatClinicalList(input.plan),
+    ...labeledDetails([
+      ["Education", input.education],
+      ["New Medications and Medication Changes", input.medicationChanges],
+      ["Food Recommendations", input.nutrition],
+      ["Movement Recommendations", input.movement],
+      ["After-Visit Plan", input.afterVisit],
+    ]),
+  ].filter(Boolean).join("\n\n");
+  addSection(sections, "Plan", planContent, { required: true, missing });
   addSection(sections, "Orders", input.orders);
   addSection(sections, "Referrals / Care Coordination", input.referrals);
-  addSection(sections, "Patient Instructions and Return Precautions", [...list(input.patientInstructions), ...list(input.returnPrecautions)]);
+  const instructions = formatClinicalList(input.patientInstructions);
+  const precautions = formatClinicalList(input.returnPrecautions);
+  addSection(sections, "Patient Instructions and Return Precautions",
+    [instructions, precautions !== instructions ? precautions : ""].filter(Boolean).join("\n\n"));
   addSection(sections, "Follow-Up", input.followUp, { required: true, missing });
   addSection(sections, "Time / Medical Decision-Making Attestation", input.timeMdm);
 
