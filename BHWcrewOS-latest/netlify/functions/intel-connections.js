@@ -220,7 +220,7 @@ async function readNotionRows(databaseId, { httpJsonImpl = httpJson } = {}) {
 }
 
 async function inspectLiveControl(definition, dependencies = {}, cutover = { mode: "notion", sources: [] }) {
-  if (cutover.mode === "database") {
+  if (cutover.mode === "database" || (definition.namespace === "staff" && cutover.staffRecovery?.active)) {
     const source = cutover.sources.find((entry) => entry.namespace === definition.namespace);
     try {
       const rows = await queryOperational(definition.namespace, definition.databaseId, undefined, undefined, dependencies);
@@ -393,3 +393,4 @@ exports._test = {
   probeCloudService,
   buildReport,
 };
+

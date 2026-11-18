@@ -61,6 +61,21 @@ function cutoverInProgressError() {
   return Object.assign(new Error("The protected Notion cutover is in progress. Operational writes will resume as soon as verification finishes."), { status: 503 });
 }
 
+async function operationalMode(key, dependencies = {}) {
+  const mode = await cutoverMode(dependencies);
+  if (mode !== "notion" || key !== "staff") return mode;
+  try {
+    const result = await (await pool(dependencies)).query(
+      "SELECT mode FROM crewos_cutover_state WHERE state_key = $1",
+      ["staff-export-recovery"],
+    );
+    return result.rows[0]?.mode === "database" ? "database" : mode;
+  } catch (error) {
+    if (isMissingDatabaseConfiguration(error)) return mode;
+    throw error;
+  }
+}
+
 function propertyValue(property) {
   if (property?.select) return property.select.name || "";
   if (property?.status) return property.status.name || "";
@@ -90,7 +105,7 @@ async function listDatabasePages(key, filter, dependencies = {}) {
 }
 
 async function queryOperational(key, notionDatabaseId, filter, sorts, dependencies = {}) {
-  const mode = await cutoverMode(dependencies);
+  const mode = await operationalMode(key, dependencies);
   if (mode === "database") return listDatabasePages(key, filter, dependencies);
   const queryDbImpl = dependencies.queryDbImpl || queryDb;
   return queryDbImpl(notionDatabaseId, filter, sorts);
@@ -108,7 +123,7 @@ async function insertDatabasePage(key, page, dependencies = {}) {
 }
 
 async function createOperationalPage(key, notionDatabaseId, properties, dependencies = {}) {
-  const mode = await cutoverMode(dependencies);
+  const mode = await operationalMode(key, dependencies);
   if (mode === "cutover") throw cutoverInProgressError();
   if (mode !== "database") {
     const createPageImpl = dependencies.createPageImpl || createPage;
@@ -146,7 +161,7 @@ async function updateDatabasePage(key, pageId, properties, dependencies = {}) {
 }
 
 async function updateOperationalPage(key, pageId, properties, dependencies = {}) {
-  const mode = await cutoverMode(dependencies);
+  const mode = await operationalMode(key, dependencies);
   if (mode === "cutover") throw cutoverInProgressError();
   if (mode !== "database") {
     const updatePageImpl = dependencies.updatePageImpl || updatePage;
@@ -242,9 +257,10 @@ async function cutoverStatus(dependencies = {}) {
       sources: REQUIRED_NAMESPACES.map((key) => ({ namespace: key, sourceCount: null, importedCount: null, schemaProperties: [], importedAt: null, verified: false })),
     };
   }
-  const [state, sources] = await Promise.all([
+  const [state, sources, staffRecovery] = await Promise.all([
     dbPool.query("SELECT mode, cutover_started_at, finalized_at, finalized_by FROM crewos_cutover_state WHERE state_key = $1", ["notion-exit"]),
     dbPool.query("SELECT namespace, source_count, imported_count, schema_properties, imported_at FROM crewos_operational_sources ORDER BY namespace"),
+    dbPool.query("SELECT mode, finalized_by FROM crewos_cutover_state WHERE state_key = $1", ["staff-export-recovery"]),
   ]);
   const sourceByKey = Object.fromEntries(sources.rows.map((row) => [row.namespace, {
     namespace: row.namespace,
@@ -265,6 +281,10 @@ async function cutoverStatus(dependencies = {}) {
   });
   return {
     mode: stateMode,
+    staffRecovery: {
+      active: staffRecovery.rows[0]?.mode === "database",
+      sourceDate: String(staffRecovery.rows[0]?.finalized_by || "").match(/^staff-export:(\d{4}-\d{2}-\d{2}):/)?.[1] || null,
+    },
     databaseReady: true,
     cutoverStartedAt: startedAt,
     finalizedAt: state.rows[0]?.finalized_at || null,
@@ -315,6 +335,7 @@ async function finalizeCutover(actor, dependencies = {}) {
 module.exports = {
   REQUIRED_NAMESPACES,
   cutoverMode,
+  operationalMode,
   cutoverStatus,
   beginCutover,
   abortCutover,
@@ -331,3 +352,4 @@ module.exports = {
   getOperationalPool: pool,
   _resetDatabaseForTests: () => { databasePromise = undefined; },
 };
+
