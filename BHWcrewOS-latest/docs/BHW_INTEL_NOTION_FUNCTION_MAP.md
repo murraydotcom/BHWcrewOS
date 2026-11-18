@@ -1,6 +1,13 @@
 # BHW Intel / Notion exit map
 
-Last reconciled: 2026-10-08
+Last reconciled: 2026-11-18
+
+## Verified staff recovery
+
+CrewOS staff authentication was recovered into CrewHQ Database on 2026-11-18 from the 2026-10-08 downloaded workspace export. The import preserved all 16 original staff page IDs, account permissions, and 10 saved PIN hashes, then verified stored contents inside the transaction before activating database routing for staff reads and writes. The later departure of Taylor Allen is reconciled through a scoped data migration. The temporary import authorization was removed after recovery.
+
+The live sign-in roster loads from CrewHQ Database. A complete sign-in with the owner's existing PIN still requires user verification. This recovery covers staff authentication only. The other seven operational controls remain pending. The archive has CSVs for referral templates, rooms, resources, projects, and the specialist directory. Availability and schedule pages link to CSV files that are absent from the archive, so these sources require reconciliation before the full cutover can be finalized.
+
 
 The administrator-only **Notion Connections** page is the protected cutover and status center for functions that began in Notion. Its **Manage BHWcrewOS controls** link opens `/crewos-controls.html`, where administrators can create and edit employees (including setting/resetting hashed PINs), referral templates, rooms/rules, resources, crew projects, and specialist directory entries after cutover. Saves use optimistic version checks and transactional read-back verification. The status page reports aggregate health only and never displays patient content or PIN hashes.
 
