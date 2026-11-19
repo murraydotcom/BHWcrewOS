@@ -65,7 +65,7 @@ function workflowRow(item){const a=link('',item.href,'workflow-row');const copy=
   const end=element('div',undefined,'workflow-end');end.append(element('span',item.status,'status-pill'+(item.dueAt&&Date.parse(item.dueAt)<Date.now()&&!item.completed?' late':'')),element('small',item.dueAt?'Due '+fmt(item.dueAt):'Due date not recorded'));a.append(copy,end);return a;}
 function renderHome(data){$('personScope').textContent=`${data.user.name} · ${data.user.role || 'Staff'}${data.user.divisions.length?' · '+data.user.divisions.join(', '):''}`;
   $('homeStatus').textContent='Updated '+fmt(data.checkedAt)+'. Your assignments and role queue.';
-  $('signIn').textContent=data.operationsOverview?'Operations overview →':'Open crewOS →';
+  $('signIn').textContent=data.operationsOverview?'Admin Master →':'Open crewOS →';
   $('signIn').href=data.operationsOverview?.href || '/crewos';$('refreshHome').hidden=false;
   notification('care',data.notifications.care);notification('portal',data.notifications.portal);
   const h=data.handoffs;$('handoffStatus').textContent=h.available?(h.limited?'Recent recorded work; the source window reached its limit. Open crewOS for full history.':'Your assignments, incoming work for your area, and handoffs you sent.'):(h.partial?'Some handoffs could not be loaded. Available items are shown below.':'Handoffs are unavailable. Open crewOS or refresh.');

@@ -66,15 +66,18 @@ test('myBHW uses existing inbox grants, shows own unread threads, and preserves 
  assert(!r.body.includes('PRIVATE SUBJECT'));assert(!r.body.includes('thread-other'));
 });
 
-test('operations leads receive the overview route while personal assignment ownership is preserved',async()=>{
- const lead={...actor,role:'Operations and Coordination Lead',access:'Division Admin',divisions:['All']};
- const d=JSON.parse((await handler({sessionImpl:()=>lead,rows:[request('mine',{assignedTo:'crew:synthetic-a'}),
+test('Admin Master links require a named staff account and preserve personal assignment ownership',async()=>{
+ const lead={...actor,staffId:'39358075-8d30-8125-93b0-d54f9e1fb69b',role:'Operations and Coordination Lead',access:'Division',divisions:['All']};
+ const d=JSON.parse((await handler({sessionImpl:()=>lead,rows:[request('mine',{assignedTo:'crew:'+lead.staffId}),
   request('another-owner',{assignedTo:'crew:synthetic-b'})]})(event)).body);
  assert.equal(d.role,'operations-manager');
- assert.equal(d.operationsOverview.href,'/crewos?view=operations-overview');
+ assert.equal(d.operationsOverview.href,'/crewos?view=admin-master');
+ assert(d.handoffs.items.some(r=>r.id==='mine'));
  assert(!d.handoffs.items.some(r=>r.id==='another-owner'));
  const ordinary=JSON.parse((await handler()(event)).body);
  assert.equal(ordinary.operationsOverview,null);
+ const anotherAdmin=JSON.parse((await handler({sessionImpl:()=>({...actor,access:'Admin'})})(event)).body);
+ assert.equal(anotherAdmin.operationsOverview,null);
 });
 test('failure cannot become zero workload or a fabricated KPI',async()=>{
  const h=handler({operationsImpl:async()=>{throw Error('Private upstream error');},queryImpl:async()=>{throw Error('private');}});

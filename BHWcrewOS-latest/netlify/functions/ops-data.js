@@ -6,7 +6,7 @@ const { queryOperational } = require("./lib/operational-store");
 const { cloudRequest, listCloudPatients } = require("./lib/cloud-patients");
 const { buildPatientDirectory } = require("./lib/crew-patient-directory");
 const { operationsRequest } = require("./lib/operations-cloud");
-const { canAccessOperationsOverview } = require("./lib/staff-access");
+const { canAccessAdminMaster, isAdminMasterView } = require("./lib/staff-access");
  
 function shapeReferral(request) {
   const context = request.workflowContext || {};
@@ -94,7 +94,10 @@ exports.handler = async (event) => {
  
   const vis = visibleDivisions(session);
   const isAdmin = session.access === "Admin";
-  const canOperationsOverview = canAccessOperationsOverview(session);
+  const canAdminMaster = canAccessAdminMaster(session);
+  if (isAdminMasterView(event.queryStringParameters?.view) && !canAdminMaster) {
+    return json(403, { error: "You do not have access to Admin Master." });
+  }
   const inVis = (d) => vis.includes(d);
  
   try {
@@ -108,7 +111,7 @@ exports.handler = async (event) => {
           .then((patients) => ({ ready: true, patients, error: "" }))
           .catch((error) => ({ ready: false, patients: [], error: error.message || "Patient Registry unavailable" })),
         operationsRequest("/v1/patient-requests?source=crewos&limit=500", { actor: session }),
-        cloudRequest("/v1/care-management/logs", { actor: session }),
+        canAdminMaster ? cloudRequest("/v1/care-management/logs", { actor: session }) : { logs: [] },
         cloudRequest("/v1/wellness-visits", { actor: session }),
         cloudRequest("/v1/program-care-plans", { actor: session }),
         cloudRequest("/v1/panel", { actor: session }),
@@ -269,7 +272,7 @@ exports.handler = async (event) => {
       }));
     }
  
-    // The operations overview shares aggregate coordination data, not Admin authority.
+    // The care-management rollup is specific to Admin Master.
     let adminRollup = null;
     let porterhouse = null;
     if (isAdmin || vis.includes("Elevated Wellness")) {
@@ -283,7 +286,7 @@ exports.handler = async (event) => {
         admit: plan.moveInDate || "",
       }));
     }
-    if (canOperationsOverview) {
+    if (canAdminMaster) {
       adminRollup = {};
       for (const log of minuteRows) {
         const d = log.serviceMonth || log.episodeDate || "";
@@ -306,7 +309,7 @@ exports.handler = async (event) => {
       .sort((a, b) => (b.pinned - a.pinned) || a.title.localeCompare(b.title));
  
     return json(200, {
-      user: { name: session.name, role: session.role, divisions: session.divisions, access: session.access, landing: session.landing, canSchedule: session.canSchedule, canOperationsOverview, staffId: session.staffId },
+      user: { name: session.name, role: session.role, divisions: session.divisions, access: session.access, landing: session.landing, canSchedule: session.canSchedule, canAdminMaster, staffId: session.staffId },
       visibleDivisions: vis,
       staff: staff.filter((s) => s.active).map(({ id, name, role, divisions }) => ({ id, name, role, divisions })),
       staffName,
