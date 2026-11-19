@@ -39,7 +39,7 @@ test("CrewOS returns signed-in staff to approved internal tools", async () => {
   for(const path of ["/provider/../index.html", "/provider/%2e%2e/index.html", "/%2f%2fexample.com", "/\\example.com", "/provider//example.html", "/crewos", "/index.html?next=/hq.html", "/.netlify/functions/auth", "/assets/main.js", "/hq.html\n"]) assert.equal(getRequestedNext(encoded(path)), "", path);
 
   assert.match(html, /if\(redirectToRequestedPage\(\)\) return;/);
-  assert.match(html, /resumeSignedInSession\(\)\.catch\(\(\)=>logout\(\)\)/);
+  assert.match(html, /loadDashboard\(resumeSignedInSession\)/);
 });
 
 test("successful login returns to the requested page including query and anchor", async()=>{

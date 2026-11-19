@@ -91,7 +91,12 @@ async function queryDb(dbId, filter, sorts) {
   do {
     const res = await httpJson("POST", `${NOTION}/databases/${dbId}/query`,
       { start_cursor: cursor, ...(filter ? { filter } : {}), ...(sorts ? { sorts } : {}) });
-    if (!res.ok) throw new Error(`Notion ${res.status} querying ${dbId}: ${JSON.stringify(res.data).slice(0, 300)}`);
+    if (!res.ok) {
+      throw Object.assign(new Error(`Notion ${res.status} querying ${dbId}: ${JSON.stringify(res.data).slice(0, 300)}`), {
+        notionStatus: res.status,
+        notionCode: res.data?.code,
+      });
+    }
     results.push(...res.data.results);
     cursor = res.data.has_more ? res.data.next_cursor : undefined;
   } while (cursor);
