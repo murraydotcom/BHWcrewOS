@@ -1,13 +1,29 @@
 # BHW Intel / Notion exit map
 
-Last reconciled: 2026-11-18
+Last reconciled: 2026-11-19
 
 ## Verified staff recovery
 
 CrewOS staff authentication was recovered into CrewHQ Database on 2026-11-18 from the 2026-10-08 downloaded workspace export. The import preserved all 16 original staff page IDs, account permissions, and 10 saved PIN hashes, then verified stored contents inside the transaction before activating database routing for staff reads and writes. The later departure of Taylor Allen is reconciled through a scoped data migration. The temporary import authorization was removed after recovery.
 
-The live sign-in roster loads from CrewHQ Database. A complete sign-in with the owner's existing PIN still requires user verification. This recovery covers staff authentication only. The other seven operational controls remain pending. The archive has CSVs for referral templates, rooms, resources, projects, and the specialist directory. Availability and schedule pages link to CSV files that are absent from the archive, so these sources require reconciliation before the full cutover can be finalized.
+## Production recovery from the downloaded export
 
+The 2026-11-19 production import verified record counts and contents before switching the four controls listed below. The data reflects the 2026-10-08 workspace export.
+
+| Control | Verified production source | Records or recovery gap |
+|---|---|---|
+| Staff roster and authentication | CrewHQ Database | Recovered 2026-11-18 |
+| Rooms and rules | CrewHQ Database | 14 |
+| Referral templates | CrewHQ Database | 11 |
+| Staff resource index | CrewHQ Database | 32 |
+| Specialist directory | CrewHQ Database | 117 |
+| Staff availability | Notion, currently unavailable | Export links to an absent CSV |
+| Shared schedule | Notion, currently unavailable | Export links to an absent CSV |
+| Crew projects | Notion, currently unavailable | 12 exported rows, staff relations absent |
+
+Twenty-one resource index entries still link to Notion. Their matching HTML pages are present in the archive. Tracker and database index pages require a current workflow destination, and any republished reference pages and attachments must use the appropriate staff access controls. The remaining 11 entries link to Google Workspace.
+
+Twenty-six specialist entries had ambiguous original page IDs because identical matching HTML pages were exported. The importer assigned deterministic IDs for those entries and preserved their matched field values. The referring tools use the directory fields independently of those IDs.
 
 The administrator-only **Notion Connections** page is the protected cutover and status center for functions that began in Notion. Its **Manage BHWcrewOS controls** link opens `/crewos-controls.html`, where administrators can create and edit employees (including setting/resetting hashed PINs), referral templates, rooms/rules, resources, crew projects, and specialist directory entries after cutover. Saves use optimistic version checks and transactional read-back verification. The status page reports aggregate health only and never displays patient content or PIN hashes.
 
@@ -24,7 +40,7 @@ The administrator-only **Notion Connections** page is the protected cutover and 
 | Crew projects | Crew Projects — Crew Ops | CrewHQ Database and My Space |
 | Specialist reference data | Specialist Referral Directory | CrewHQ Database and Front Desk |
 
-The cutover briefly pauses operational writes, imports only the allowlisted properties above, verifies both record counts and record-content hashes, and refuses to finalize until all eight sources pass. If an import fails, CrewOS returns to Notion mode and resumes writes. After finalization, every active runtime read and write uses CrewHQ Database; Notion is no longer contacted by these workflows.
+The final cutover briefly pauses operational writes, imports only the outstanding controls and their allowlisted properties, verifies record counts and content hashes, and refuses to finalize until all eight controls pass. If an import fails, CrewOS restores the previous routing and resumes writes. After finalization, every active runtime read and write uses CrewHQ Database; Notion is no longer contacted by these workflows.
 
 ## Historical workflow handoff
 
@@ -45,7 +61,7 @@ The CrewOS lab dashboard remains a synthetic contract preview unless both `LAB_I
 
 1. Deploy the CrewHQ Database migration and application changes.
 2. Sign in as a CrewOS administrator and open `/bhw-intel-connections.html`.
-3. Run **Import, verify & disconnect** and type `DISCONNECT NOTION` exactly.
+3. Reconcile staff availability, scheduling, and project assignments against a verified source. Run **Import, verify & disconnect** only when the outstanding sources can be verified.
 4. Confirm the page displays **Notion runtime disconnected** and all eight controls report CrewHQ Database.
 5. Remove `NOTION_TOKEN` and any Notion integration access from the production environment.
 6. Run the status check again. Authentication, referrals, scheduling, resources, projects, and Front Desk must remain live without Notion.
