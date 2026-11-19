@@ -2525,31 +2525,109 @@ async function phGoalsSave(id){
 
 /* ============ Primary Care — daily readiness (no inferred patient matching) ============ */
 let PRIMARY_ROSTER_DATE = new Date().toLocaleDateString("en-CA");
+let PRIMARY_IMPORT = null; // In-memory only: no localStorage, Cloud or network write.
+function primaryRosterCsvRows(raw){
+  const rows=[];let cells=[],value="",quoted=false;
+  for(let i=0;i<raw.length;i++){
+    const c=raw[i];
+    if(c==='"'){
+      if(quoted&&raw[i+1]==='"'){value+='"';i++;}
+      else quoted=!quoted;
+    }else if(c===','&&!quoted){cells.push(value);value="";}
+    else if((c==='\r'||c==='\n')&&!quoted){
+      if(c==='\r'&&raw[i+1]==='\n')i++;
+      cells.push(value);if(cells.some(x=>x.trim()))rows.push(cells);
+      cells=[];value="";
+    }else value+=c;
+  }
+  if(quoted)throw new Error("Unclosed quoted field in CSV.");
+  cells.push(value);if(cells.some(x=>x.trim()))rows.push(cells);
+  return rows;
+}
+function primaryRosterNormalizeDate(value){
+  const s=String(value||"").trim();
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;
+  const m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(m)return m[3]+"-"+m[1].padStart(2,"0")+"-"+m[2].padStart(2,"0");
+  return "";
+}
+function primaryRosterImportCsv(csv){
+  const rows=primaryRosterCsvRows(csv);
+  if(rows.length<2)throw new Error("CSV needs headers and at least one appointment.");
+  const keys=rows.shift().map(h=>h.trim().toLowerCase().replace(/[^a-z0-9]/g,""));
+  const find=(...names)=>names.map(n=>keys.indexOf(n)).find(n=>n>=0)??-1;
+  const idIdx=find("bhwpatientid","bhwid","patientbhwid");
+  const dateIdx=find("date","appointmentdate","visitdate");
+  const timeIdx=find("time","starttime","appointmenttime");
+  const nameIdx=find("patientname","name");
+  const typeIdx=find("visittype","appointmenttype","service","reason");
+  const statusIdx=find("status","appointmentstatus");
+  if(idIdx<0||dateIdx<0||timeIdx<0)throw new Error("Required columns: BHW Patient ID, Date, and Time. Export must be reconciled to BHW IDs first.");
+  if(rows.length>300)throw new Error("This daily import is limited to 300 appointments.");
+  const appointments=rows.map((row,i)=>{
+    const id=String(row[idIdx]||"").trim().toUpperCase();
+    const date=primaryRosterNormalizeDate(row[dateIdx]);
+    if(!date)throw new Error("Invalid appointment date on CSV row "+(i+2));
+    return {
+      id:"import-"+i,bhwPatientId:id,date,start:String(row[timeIdx]||"").trim(),
+      name:nameIdx<0?"":String(row[nameIdx]||"").trim(),
+      service:typeIdx<0?"":String(row[typeIdx]||"").trim(),
+      division:"Primary Care",
+      status:statusIdx<0?"Scheduled":String(row[statusIdx]||"Scheduled").trim()
+    };
+  });
+  return appointments;
+}
+async function primaryRosterLoadCsv(input){
+  const status=document.getElementById("pc-roster-import-status");
+  if(!input.files?.length)return;
+  try{
+    const file=input.files[0];
+    if(file.size>1024*1024)throw new Error("Choose a CSV under 1 MB.");
+    const appointments=primaryRosterImportCsv(await file.text());
+    PRIMARY_IMPORT={appointments,filename:file.name};
+    if(!appointments.some(a=>a.date===PRIMARY_ROSTER_DATE)) PRIMARY_ROSTER_DATE=appointments[0].date;
+    const dateInput=document.getElementById("pc-roster-date");
+    if(dateInput)dateInput.value=PRIMARY_ROSTER_DATE;
+    status.textContent=appointments.length+" appointment rows loaded into this browser session only; not saved or submitted.";
+    document.getElementById("pc-roster-results").innerHTML=primaryRosterTable();
+  }catch(error){status.textContent="Not imported: "+String(error.message||error);PRIMARY_IMPORT=null;}
+  input.value="";
+}
+function primaryRosterClearImport(){
+  PRIMARY_IMPORT=null;
+  const status=document.getElementById("pc-roster-import-status");
+  if(status)status.textContent="Import cleared from this page.";
+  const results=document.getElementById("pc-roster-results");
+  if(results)results.innerHTML=primaryRosterTable();
+}
 function primaryRosterRows(){
-  const appointments=(D.schedule||[]).filter(b=>b.division==="Primary Care" && b.date===PRIMARY_ROSTER_DATE && b.status==="Scheduled");
+  const source=PRIMARY_IMPORT?.appointments||D.schedule||[];
+  const appointments=source.filter(b=>b.division==="Primary Care"&&b.date===PRIMARY_ROSTER_DATE&&/^(scheduled|confirmed|checked.?in)$/i.test(b.status||"Scheduled"));
   const registry=new Map((D.patients||[]).map(p=>[p.id,p]));
   const preventive=new Map((D.prevention||[]).map(p=>[p.patient,p]));
   return appointments.map(b=>{
-    const validId=/^BHW\d{4}$/.test(b.bhwPatientId||"") && b.bhwPatientId!=="BHW0000";
+    const validId=/^BHW\d{4}$/.test(b.bhwPatientId||"")&&b.bhwPatientId!=="BHW0000";
     const p=validId?registry.get(b.bhwPatientId):null;
     return {b,p,wellness:p?preventive.get(p.id):null};
   }).sort((a,b)=>(a.b.start||"").localeCompare(b.b.start||""));
 }
 function primaryRosterTable(){
-  if(!D.patientRegistryReady) return '<p class="empty">Patient Registry unavailable. Readiness cannot be confirmed; please retry.</p>';
+  if(!D.patientRegistryReady)return '<p class="empty">Patient Registry unavailable. Readiness cannot be confirmed; please retry.</p>';
   const rows=primaryRosterRows();
-  if(!rows.length) return '<p class="empty">No Primary Care bookings in the connected CrewOS schedule for this date. This does not establish that CharmHealth has no appointments.</p>';
+  if(!rows.length)return '<p class="empty">No appointments in the selected '+(PRIMARY_IMPORT?'imported file':'CrewOS schedule')+' for this date. This does not establish that CharmHealth has no appointments.</p>';
   const html=rows.map(({b,p,wellness})=>{
     const ins=p?(p.coverages?.length?p.coverages.map(c=>[c.payer,c.plan].filter(Boolean).join(" — ")).join("; "):(p.insuranceLabel||p.insurance||"Not recorded")):"—";
-    const verified=wellness && wellness.sourceSystem==="Stedi HETS" && !wellness.coverageError && ["Active","Inactive"].includes(wellness.coverage) && wellness.lastChecked;
-    const state=!p?"Patient link needed":verified?wellness.coverage+" · "+wellness.lastChecked:"Not verified";
+    const verified=wellness&&wellness.sourceSystem==="Stedi HETS"&&!wellness.coverageError&&["Active","Inactive"].includes(wellness.coverage)&&wellness.lastChecked;
+    const state=!p?"Patient link needed":verified?wellness.coverage+" · checked "+wellness.lastChecked:"Not verified";
     const awv=!p?"—":wellness?(wellness.awvStatus||"Unknown"):"Unknown";
-    return '<tr><td>'+esc(b.start||"—")+'</td><td>'+(p?'<b>'+esc(p.name)+'</b><div class="msub">'+esc(p.id)+'</div>':'<span class="pill warn">Link BHW patient ID</span>')+'</td><td>'+esc(b.service||"—")+'</td><td>'+esc(ins)+'</td><td>'+esc(state)+'</td><td>'+esc(p?(p.pcpName||"Not documented"):"—")+'</td><td>'+esc(awv)+(wellness?.awvNext?' <small>Next '+esc(wellness.awvNext)+'</small>':"")+'</td></tr>';
+    const shownName=p?p.name:(b.name||"Unmatched appointment");
+    return '<tr><td>'+esc(b.start||"—")+'</td><td>'+(p?'<b>'+esc(shownName)+'</b><div class="msub">'+esc(p.id)+'</div>':'<b>'+esc(shownName)+'</b><div><span class="pill warn">Patient ID linkage needed</span></div>')+'</td><td>'+esc(b.service||"—")+'</td><td>'+esc(ins)+'</td><td>'+esc(state)+'</td><td>'+esc(p?(p.pcpName||"Not documented"):"—")+'</td><td>'+esc(awv)+(wellness?.awvNext?' <small>Next '+esc(wellness.awvNext)+'</small>':"")+'</td></tr>';
   }).join("");
   return '<div class="tbl-wrap"><table><thead><tr><th>Time</th><th>Patient</th><th>Visit</th><th>Insurance(s)</th><th>Coverage verification</th><th>PCP on record</th><th>Medicare AWV</th></tr></thead><tbody>'+html+'</tbody></table></div>';
 }
 function primaryDailyRoster(){
-  return '<div class="card" id="pc-daily-roster"><h2>Daily patient readiness</h2><p class="lede">CrewOS schedule only; appointments require an explicit BHW patient ID. Stedi HETS verification applies to Medicare, not commercial or Medicaid. AWV status is informational and must be reviewed.</p><label for="pc-roster-date" style="font-size:12px;font-weight:700">Schedule date </label><input id="pc-roster-date" type="date" value="'+esc(PRIMARY_ROSTER_DATE)+'" onchange="PRIMARY_ROSTER_DATE=this.value;document.getElementById(\'pc-roster-results\').innerHTML=primaryRosterTable()" style="padding:8px;margin:8px 0 12px"><div id="pc-roster-results">'+primaryRosterTable()+'</div></div>';
+  return '<div class="card" id="pc-daily-roster"><h2>Daily patient readiness</h2><p class="lede">CrewOS schedule, or a local appointment CSV loaded for this browser session. Only explicit canonical BHW patient IDs connect to insurance and preventive records. This does not retrieve CharmHealth appointments automatically.</p><label for="pc-roster-date" style="font-size:12px;font-weight:700">Schedule date </label><input id="pc-roster-date" type="date" value="'+esc(PRIMARY_ROSTER_DATE)+'" onchange="PRIMARY_ROSTER_DATE=this.value;document.getElementById(\'pc-roster-results\').innerHTML=primaryRosterTable()" style="padding:8px;margin:8px 0 12px"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><label style="font-size:12px;font-weight:700" for="pc-roster-file">Load reconciled appointment CSV (browser only)</label><input id="pc-roster-file" aria-label="Choose appointment CSV" type="file" accept=".csv,text/csv" onchange="primaryRosterLoadCsv(this)"><button class="btn sm sec" onclick="primaryRosterClearImport()">Use CrewOS schedule instead</button></div><p class="lede">Required CSV columns: BHW Patient ID, Date, Time. Optional: Patient Name, Visit Type, Status. Missing/unrecognized IDs stay unlinked. Import is never sent to a server or stored in browser storage.</p><p class="lede" id="pc-roster-import-status" role="status">'+(PRIMARY_IMPORT?"Imported CSV in current page session: "+esc(PRIMARY_IMPORT.filename):"Using CrewOS schedule")+'</p><div id="pc-roster-results">'+primaryRosterTable()+'</div></div>';
 }
 
 /* ============ Medicare Prevention Tracker (Stedi → HETS) ============ */
