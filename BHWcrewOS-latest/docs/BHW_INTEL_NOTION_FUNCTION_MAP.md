@@ -8,7 +8,7 @@ CrewOS staff authentication was recovered into CrewHQ Database on 2026-11-18 fro
 
 ## Production recovery from the downloaded export
 
-A staffed admin session in Chrome verified the 2026-11-19 production import. The recovery transaction verified record counts and contents before switching the four controls listed below. The data reflects the 2026-10-08 workspace export.
+The 2026-11-19 production import verified record counts and contents before switching the four controls listed below. The data reflects the 2026-10-08 workspace export.
 
 | Control | Verified production source | Records or recovery gap |
 |---|---|---|
