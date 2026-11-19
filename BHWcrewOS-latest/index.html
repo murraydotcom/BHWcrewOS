@@ -754,8 +754,8 @@ function ccRequest(i){
 function roomName(id){ const r=(D.rooms||[]).find(r=>r.id===id); return r?r.name:"—"; }
 
 const CORE_POLICY_RESOURCES = [
-  {title:"BHW Medical Group Policy & SOP Library",division:"All Divisions",category:"Policy",link:"/bhw-policy-sop-library.html#policies",notes:"13 organization-wide controlled policy sections",pinned:true},
-  {title:"BHW Medical Group Appendix Forms",division:"All Divisions",category:"Form",link:"/bhw-policy-sop-library.html#appendices",notes:"8 controlled forms and patient handouts",pinned:true},
+  {title:"BHW Medical Group Policy & SOP Library",division:"All Divisions",category:"Policy",link:"/bhw-policy-sop-library.html#policies",sameTab:true,notes:"13 organization-wide controlled policy sections",pinned:true},
+  {title:"BHW Medical Group Appendix Forms",division:"All Divisions",category:"Form",link:"/bhw-policy-sop-library.html#appendices",sameTab:true,notes:"8 controlled forms and patient handouts",pinned:true},
 ];
 
 function resourcesCard(div){
@@ -769,7 +769,7 @@ function resourcesCard(div){
     ${groups.map(g=>`
       <div class="res-cat">${esc(g.c)}${g.c==="Assessment" && div==="Care Management" ? " · AWV steps in order" : ""}</div>
       <div class="res-grid">${g.list.map(r=>`
-        <a class="res ${r.pinned?"pin":""}" href="${esc(r.link)}" target="_blank" rel="noopener">
+        <a class="res ${r.pinned?"pin":""}" href="${esc(r.link)}"${r.sameTab ? "" : ' target="_blank" rel="noopener"'}>
           ${r.pinned?'<span class="star">★</span>':''}${esc(r.title)}<span>${esc(r.notes)}</span>
         </a>`).join("")}</div>`).join("")}
   </div>`;
@@ -912,16 +912,16 @@ function frontDeskView(){
 const PAGE_EMBEDS = [
   {id:"pg-patient-messages", title:"Patient Messages", src:"/bhw-portal-messages.html", blurb:"Authenticated Care Connect conversations — BHW0000 synthetic inbox, assignment, escalation, and provider review."},
   {id:"pg-guide",    title:"Staff Guide",         src:"/bhw-staff-guide.html",              blurb:"Where everything is and how to use it — searchable, printable."},
-  {id:"pg-care-sop", title:"Care Program SOP",    src:"/bhw-care-program-sop.html",          blurb:"Intake, enrollment, care plans, documentation, billing readiness, risk scoring, and 2026 Baltimore Medicare fee references."},
+  {id:"pg-care-sop", title:"Care Program SOP",    src:"/bhw-care-program-sop.html", sameTab:true,          blurb:"Intake, enrollment, care plans, documentation, billing readiness, risk scoring, and 2026 Baltimore Medicare fee references."},
   {id:"pg-panel",    title:"Population Health",    src:"/bhw-panel-performance.html",        blurb:"One Registry-connected view of utilization, CRISP/TCM follow-up, care programs, and quality evidence."},
   {id:"pg-hormone",  title:"Hormone Analysis",     src:"/bhw-hormone-analysis.html",         blurb:"Lab-based hormone interpretation tool."},
-  {id:"pg-ana",      title:"Positive ANA?",        src:"/bhw-positive-ana.html",             blurb:"Analyze a result, then immune patterns, cells, antibody mechanisms, 100 conditions, management protocols and integrative levers."},
+  {id:"pg-ana",      title:"Positive ANA?",        src:"/bhw-positive-ana.html", sameTab:true,             blurb:"Analyze a result, then immune patterns, cells, antibody mechanisms, 100 conditions, management protocols and integrative levers."},
   {id:"pg-hormref",  title:"Hormone Reference",    src:"/bhw-hormone-reference.html",        blurb:"Staff resource — hormone feedback systems explained."},
   {id:"pg-hormpt",   title:"Hormones Explained",   src:"/bhw-hormones-explained.html",       blurb:"Patient-facing — open it with a patient to explain how hormones work."},
   {id:"pg-billing",  title:"Billing Toolkit",      src:"/BHW_Care_Management_Toolkit.html",  blurb:"Care management and primary care billing codes."},
   {id:"pg-discharges", title:"CRISP Flow", src:"/bhw-discharges.html",         blurb:"CRISP ADT feed — admissions, discharges, ED visits, and the TCM clock (99495/99496)."},
   {id:"pg-caredue",  title:"CM — Due This Week",    src:"/bhw-care-due.html",                 blurb:"One worklist: overdue / today / this-week follow-ups, TCM contacts, not-started patients, and open inbound requests."},
-  {id:"pg-carelog",  title:"Care Management Log",  src:"/bhw-care-management.html",          blurb:"Care-program worklog — enrollment and billing evidence, time when applicable, activities, referrals, follow-up, and Care Connect monitoring references."},
+  {id:"pg-carelog",  title:"Care Management Log",  src:"/bhw-care-management.html", sameTab:true,          blurb:"Care-program worklog — enrollment and billing evidence, time when applicable, activities, referrals, follow-up, and Care Connect monitoring references."},
   {id:"pg-crewcare", title:"BHWCrewCare Portal",   src:"/bhw-crewcare-portal.html",          blurb:"Provider side — inbox, care plan builder, results, panel."},
   {id:"pg-portal",   title:"Primary Care Portal",  src:"/bhw-patient-portal-mockup.html",    blurb:"Patient-side design preview — sample data."},
   {id:"pg-charmed",  title:"CharmEd Minds",        src:"/bhw-charmed-patient-mockup.html",   blurb:"My Strategy Hub — patient-side preview."},
@@ -948,14 +948,15 @@ function checkEmbeds(){
 }
 
 function embedView(e){
+  const linkTarget = e.sameTab ? "" : ' target="_blank" rel="noopener"';
   return `<section class="view" id="view-${e.id}" style="--pc:var(--clay)">
     <div class="prog-head"><div class="bar"></div><div><h1>${e.title}</h1><p>${e.blurb}</p></div></div>
     <div class="card embed-card">
-      <div class="embed-toolbar"><span class="embed-note">Expand stays in this signed-in CrewOS tab.</span><button class="btn sec sm" type="button" data-expand-embed aria-expanded="false" onclick="toggleEmbedExpanded('view-${e.id}',this)">Expand view</button><a class="btn sec sm" href="${e.src}" target="_blank" style="text-decoration:none">Open in new tab</a></div>
+      <div class="embed-toolbar"><span class="embed-note">Expand stays in this signed-in CrewOS tab.</span><button class="btn sec sm" type="button" data-expand-embed aria-expanded="false" onclick="toggleEmbedExpanded('view-${e.id}',this)">Expand view</button><a class="btn sec sm" href="${e.src}"${linkTarget} style="text-decoration:none">${e.sameTab ? "Open full page" : "Open in new tab"}</a></div>
       <div id="fb-${e.id}" style="display:none;padding:44px 26px;text-align:center">
         <div style="font-size:14.5px;font-weight:600;margin-bottom:8px">This page can't display inside the app yet.</div>
-        <div style="font-size:13px;color:var(--ink-soft);max-width:520px;margin:0 auto 16px">The site's frame protection is still set to <b>DENY</b>. Fix it in <b>netlify.toml</b> — change <code>X-Frame-Options = "DENY"</code> to <code>"SAMEORIGIN"</code> — then redeploy. Until then, use the button below.</div>
-        <a class="btn" href="${e.src}" target="_blank" rel="noopener" style="text-decoration:none">Open ${e.title} in a new tab ↗</a>
+        <div style="font-size:13px;color:var(--ink-soft);max-width:520px;margin:0 auto 16px">Open the page directly to continue.</div>
+        <a class="btn" href="${e.src}"${linkTarget} style="text-decoration:none">Open ${e.title}</a>
       </div>
       <iframe id="if-${e.id}" data-fb="fb-${e.id}" src="${e.src}" title="${e.title}" style="width:100%;height:calc(100vh - 240px);min-height:620px;border:0;border-radius:12px;background:#fff"></iframe>
     </div>
