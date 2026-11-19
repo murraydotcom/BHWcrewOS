@@ -46,12 +46,32 @@
       return `<article class="card" style="--accent:${item.state==='active'?'#4f9b6c':'#c99837'}"><div class="card-head"><div><h3>${esc(item.name)}</h3><div class="source">Current authority · ${esc(item.authority)}</div></div>${status({state:item.state,label:words(item.state)})}</div><p class="description">${esc(item.description)}</p><div class="legacy"><b>Notion:</b> ${esc(legacy.label||'Status unavailable')} · patient rows read: <b>${legacy.rowsRead?'yes':'no'}</b>${legacy.missingProperties?.length?`<br>Missing: ${esc(legacy.missingProperties.join(', '))}`:''}</div>${lab}<div class="actions">${(item.actions||[]).map((action,index)=>link(action,index>0)).join('')}${legacy.sourceHref?link({label:'Open legacy Notion source',href:legacy.sourceHref,external:true},true):''}</div></article>`;
     }
     let currentReport=null;
+    const exportLabels={rooms:'Rooms and rules',referralTemplates:'Referral templates',resources:'Staff resources',specialistDirectory:'Specialist directory'};
+    async function importDownloadedExport(){
+      const input=document.getElementById('offlineExportFile');
+      const button=document.getElementById('offlineExportSubmit');
+      const status=document.getElementById('offlineExportStatus');
+      if(!input.files.length){status.textContent='Select the prepared export first.';return;}
+      button.disabled=true;
+      status.textContent='Importing and verifying the records…';
+      try{
+        const response=await fetch('/.netlify/functions/operational-export-recovery',{
+          method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+sessionStorage.getItem('crewos_token')},
+          body:await input.files[0].text()
+        });
+        const result=await response.json();
+        if(!response.ok)throw new Error(result.error||'The export could not be imported.');
+        status.textContent='Verified in CrewHQ Database: '+result.controls.map(item=>exportLabels[item.namespace]+' ('+item.recordCount+')').join(', ')+'.';
+        input.value='';
+      }catch(error){status.textContent=error.message;}
+      finally{button.disabled=false;}
+    }
     function cutoverPanel(cutover){
       if(cutover.mode==='database')return `<section class="cutover done"><div class="card-head"><div><h2>Notion runtime disconnected</h2><p>CrewHQ Database is now authoritative for all eight operational controls. The Notion connection can be removed without breaking these workflows.</p></div>${status({state:'connected',label:'Cutover complete'})}</div></section>`;
       if(cutover.databaseReady===false)return `<section class="cutover fatal"><div class="card-head"><div><h2>CrewHQ Database connection required</h2><p>${esc(cutover.databaseError||'The production database connection is not configured.')} CrewOS remains safely on Notion until this is corrected; the disconnect button is disabled.</p></div>${status({state:'blocked',label:'Cutover blocked'})}</div></section>`;
       const items=(cutover.sources||[]).map(item=>`<span class="cut-item${item.verified?' ok':''}">${esc(words(item.namespace))}: ${item.verified?esc(item.importedCount)+' verified':'not imported'}</span>`).join('');
       const resuming=cutover.mode==='cutover';
-      return `<section class="cutover"><div class="card-head"><div><h2>${resuming?'Protected cutover paused':'Notion exit ready to run'}</h2><p>${resuming?'Operational writes are paused. Resume now to re-import, verify, and finish the disconnect.':'This protected cutover briefly pauses operational writes, copies and verifies all eight active controls, then switches every runtime read and write to CrewHQ Database.'}</p></div>${status({state:'limited',label:resuming?'Resume cutover':'Notion still connected'})}</div><div class="cut-list">${items}</div><button class="cut-btn" id="cutoverBtn" type="button">${resuming?'Resume verified disconnect':'Import, verify & disconnect'}</button><div class="stamp" id="cutoverProgress"></div></section>`;
+      return `<section class="cutover"><div class="card-head"><div><h2>${resuming?'Protected cutover paused':'Notion exit ready to run'}</h2><p>${resuming?'Operational writes are paused. Resume now to re-import, verify, and finish the disconnect.':'This protected cutover briefly pauses operational writes, copies and verifies all eight active controls, then switches every runtime read and write to CrewHQ Database.'}</p></div>${status({state:'limited',label:resuming?'Resume cutover':'Notion still connected'})}</div><div class="cut-list">${items}</div><button class="cut-btn" id="cutoverBtn" type="button">${resuming?'Resume verified disconnect':'Import, verify & disconnect'}</button><div class="stamp" id="cutoverProgress"></div><details style="margin-top:14px"><summary>Import verified controls from a downloaded export</summary><p>Imports room rules, referral templates, staff resources, and the specialist directory from the approved export.</p><input id="offlineExportFile" type="file" accept=".json,application/json" aria-label="Prepared operational export"><button class="cut-btn" id="offlineExportSubmit" type="button">Import downloaded export</button><p id="offlineExportStatus" role="status"></p></details></section>`;
     }
     function render(data){
       currentReport=data;
@@ -59,6 +79,7 @@
       content.className='';
       content.innerHTML=`${cutoverPanel(data.cutover)}<section class="summary" aria-label="Connection summary"><article><strong>${esc(s.activeOperationalControls)}/${esc(s.totalOperationalControls)}</strong><span>Operational controls live</span></article><article><strong>${esc(s.connectedCloudServices)}/${esc(s.totalCloudServices)}</strong><span>Cloud services live</span></article><article><strong>${esc(data.workflows.filter(item=>item.state==='active').length)}/${esc(data.workflows.length)}</strong><span>Workflows routed</span></article><article><strong>${data.ok?'Ready':'Review'}</strong><span>Overall status</span></article></section><section class="boundary"><h2>Protected data boundary</h2><p><b>Notion:</b> ${esc(data.boundary.notion)}</p><p><b>BHW Cloud:</b> ${esc(data.boundary.cloud)}</p><p><b>Lab analysis:</b> ${esc(data.boundary.lab)}</p></section><div class="section-head"><div><h2>Active controls</h2><p>Functions managed by CrewHQ Database or BHW Cloud after cutover.</p></div></div><section class="grid">${data.controls.map(controlCard).join('')}</section><div class="section-head"><div><h2>Legacy workflow handoff</h2><p>Patient work remains in its protected BHW Cloud destination.</p></div></div><section class="grid">${data.workflows.map(workflowCard).join('')}</section><p class="footer-note">This page reports connection health and routing only. It does not display patient names, PIN hashes, referral details, care-plan text, lab results, or clinical action content.</p>`;
       document.getElementById('cutoverBtn')?.addEventListener('click',runCutover);
+      document.getElementById('offlineExportSubmit')?.addEventListener('click',importDownloadedExport);
       stamp.textContent='Last checked '+new Date(data.generatedAt).toLocaleString();
     }
     async function cutoverCall(body){

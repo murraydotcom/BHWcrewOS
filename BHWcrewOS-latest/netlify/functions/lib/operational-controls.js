@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const { canonicalJson } = require('./operational-store');
+const { canonicalJson, operationalStateKey } = require('./operational-store');
 
 // These are operational configuration fields only. Patient workflows remain
 // in their existing protected Cloud services. PIN hashes never leave this API.
@@ -67,7 +67,12 @@ async function saveControl(pool, namespace, body, actor) {
   try {
     await client.query('BEGIN');
     const state=await client.query('SELECT mode FROM crewos_cutover_state WHERE state_key = $1 FOR SHARE',['notion-exit']);
-    if(state.rows[0]?.mode!=='database') throw Object.assign(new Error('Finish the verified Notion import before editing operational controls.'),{status:409});
+    const mode=state.rows[0]?.mode;
+    const recovered=mode==='notion' && (await client.query(
+      'SELECT mode FROM crewos_cutover_state WHERE state_key = $1 FOR SHARE',
+      [operationalStateKey(namespace)],
+    )).rows[0]?.mode==='database';
+    if(mode!=='database' && !recovered) throw Object.assign(new Error('This control can be edited after its records move to CrewHQ Database.'),{status:409});
     const id=body.id || `crew-${crypto.randomUUID()}`;
     const found=await client.query('SELECT payload, version FROM crewos_operational_records WHERE namespace=$1 AND record_id=$2 FOR UPDATE',[namespace,id]);
     const current=found.rows[0];

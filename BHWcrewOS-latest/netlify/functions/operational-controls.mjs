@@ -25,9 +25,9 @@ export default async function handler(request) {
     }
     const pool = await store.getOperationalPool();
     if (request.method === 'GET') {
-      const mode = await store.cutoverMode();
+      const cutover = await store.cutoverStatus();
       const sections = Object.entries(controls.DEFINITIONS)
-        .filter(([key]) => mode === 'database' || key === 'staff')
+        .filter(([key]) => cutover.mode === 'database' || cutover.sources.some(source => source.namespace === key && source.recovered))
         .map(([key, value]) => ({key, label: value.label}));
       return respond(200, {ok: true, ...await controls.listControls(pool, namespace), sections});
     }
