@@ -394,12 +394,28 @@ async function loadDashboard(load = refresh){
   status.textContent = "Loading dashboard…";
   try {
     await load();
-    status.hidden = true;
+    showControlStatus();
   } catch (error) {
     if (!TOKEN) return;
     const code = error.status ? ` (HTTP ${error.status})` : "";
     status.textContent = `CrewOS could not load the dashboard${code}. Select Refresh to try again.`;
   }
+}
+
+const CONTROL_LABELS = {rooms:"room rules", schedule:"schedule", resources:"Notion resources", crewProjects:"crew projects"};
+function controlUnavailable(key){
+  return D?.unavailableControls?.includes(key) ?? false;
+}
+function showControlStatus(){
+  const status = document.getElementById("dashboardStatus");
+  const unavailable = Object.keys(CONTROL_LABELS).filter(controlUnavailable);
+  status.hidden = unavailable.length === 0;
+  status.textContent = unavailable.length
+    ? `Notion access is restricted. Currently unavailable: ${unavailable.map(key => CONTROL_LABELS[key]).join(", ")}.`
+    : "";
+}
+function roomBookingAvailable(){
+  return !controlUnavailable("schedule") && !controlUnavailable("rooms") && D.user.canSchedule;
 }
 
 async function refresh(){
@@ -454,7 +470,7 @@ function buildRail(){
   let html = `<div class="rail-label">My pages</div>`;
   const pages = [];
   if(D.user.canAdminMaster) pages.push("Admin Master");
-  if(!D.adminMasterOnly) for(const div of D.visibleDivisions) pages.push(div);
+  for(const div of D.visibleDivisions) pages.push(div);
   for(const p of pages){
     const overview = p==="Admin Master";
     const c = overview ? {rIn:D.referrals.filter(r=>!["Completed","Declined/Redirect"].includes(r.status)).length, hIn:D.handoffs.filter(h=>h.status!=="Completed").length} : counts(p);
@@ -463,11 +479,6 @@ function buildRail(){
     const lch = (p==="Elevated Wellness"||overview) && D.phPlans ? D.phPlans.filter(x=>!["Graduated — Independent","Discharged — Other","Extended Stay"].includes(x.stage) && phWeek(x.moveIn)>=14).length : 0;
     const badge = (c.rIn + c.hIn + sig + rts + lch) || "";
     html += `<button class="tab" data-view="${cssId(p)}" style="--spine:${DIV_COLORS[p]}">${esc(p)}<span class="badge">${badge}</span></button>`;
-  }
-  if(D.adminMasterOnly){
-    rail.innerHTML = html;
-    rail.onclick = () => activate("admin-master");
-    return;
   }
   html += `<div class="rail-label">Tools</div>`;
  html += `<button class="tab" data-view="myspace" style="--spine:var(--clay)">My Space</button>`;
@@ -493,7 +504,6 @@ function buildRail(){
 }
 
 function activate(viewId){
-  if (D?.adminMasterOnly) viewId = "admin-master";
   if (viewId === "operations-overview") viewId = "admin-master";
   if (viewId === "admin-master" && !D?.user?.canAdminMaster) {
     toast("You do not have access to Admin Master.");
@@ -548,10 +558,6 @@ function focusRequestedRecord(){
 function buildViews(){
   const host = document.getElementById("views");
   let html = "";
-  if(D.adminMasterOnly){
-    host.innerHTML = adminView();
-    return;
-  }
   if(D.user.canAdminMaster) html += adminView();
   for(const div of D.visibleDivisions) html += divisionView(div);
   html += frontDeskView();
@@ -633,7 +639,7 @@ function divisionView(div){
       <div class="kpi" style="--kc:var(--alert)"><div class="n">${c.rIn}</div><div class="l">Incoming referrals open</div></div>
       <div class="kpi" style="--kc:var(--warn)"><div class="n">${c.hIn}</div><div class="l">Warm handoffs in inbox</div></div>
       <div class="kpi" style="--kc:${DIV_COLORS[div]}"><div class="n">${sent.filter(r=>r.status!=="Completed").length}</div><div class="l">Referrals we sent, pending</div></div>
-      <div class="kpi" style="--kc:var(--sage)"><div class="n">${sched.length}</div><div class="l">Upcoming bookings</div></div>
+      <div class="kpi" style="--kc:var(--sage)"><div class="n">${controlUnavailable("schedule") ? "Unavailable" : sched.length}</div><div class="l">Upcoming bookings</div></div>
     </div>
 
     ${div==="Mind & Mood Recovery" ? `<div style="display:flex;align-items:center;gap:14px;margin:2px 0 14px"><img src="assets/mind-mood-logo.png" alt="BHW Mind and Mood Recovery" style="width:64px;height:64px;object-fit:cover;object-position:top;border-radius:50%"><div><div style="font-family:Montserrat,sans-serif;font-weight:800;letter-spacing:.5px;color:#2f4551">BHW MIND & MOOD RECOVERY</div><div style="font-style:italic;font-size:12.5px;color:#b07a55">Depth restores clarity.</div></div></div>` : ""}
@@ -708,7 +714,7 @@ function divisionView(div){
     <div class="card">
       <h2>Upcoming schedule — ${esc(div)}</h2>
       <div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Time</th><th>Service</th><th>Room</th><th>Staff</th></tr></thead><tbody>
-      ${sched.length ? sched.map(b=>`<tr><td>${esc(b.date)}</td><td>${esc(b.start)}–${esc(b.end)}</td><td>${esc(b.service)}</td><td>${esc(roomName(b.room))}</td><td>${b.staff.map(staffLabel).map(esc).join(", ")}</td></tr>`).join("") : `<tr><td colspan="5" class="empty">No upcoming bookings for this division.</td></tr>`}
+      ${sched.length ? sched.map(b=>`<tr><td>${esc(b.date)}</td><td>${esc(b.start)}–${esc(b.end)}</td><td>${esc(b.service)}</td><td>${esc(roomName(b.room))}</td><td>${b.staff.map(staffLabel).map(esc).join(", ")}</td></tr>`).join("") : `<tr><td colspan="5" class="empty">${controlUnavailable("schedule") ? "Schedule unavailable." : "No upcoming bookings for this division."}</td></tr>`}
       </tbody></table></div>
     </div>
   </section>`;
@@ -760,7 +766,7 @@ function resourcesCard(div){
   const groups = cats.map(c=>({c, list: items.filter(r=>r.category===c)})).filter(g=>g.list.length);
   return `<div class="card">
     <h2>Resources &amp; workflows</h2>
-    <p class="lede">Controlled BHW policies and forms, plus the division's documentation, workflows, and assessments from Notion.</p>
+    <p class="lede">${controlUnavailable("resources") ? "BHW policies and forms are available here. Notion resources are unavailable." : "Controlled BHW policies and forms, plus the division’s documentation, workflows, and assessments from Notion."}</p>
     ${groups.map(g=>`
       <div class="res-cat">${esc(g.c)}${g.c==="Assessment" && div==="Care Management" ? " · AWV steps in order" : ""}</div>
       <div class="res-grid">${g.list.map(r=>`
@@ -852,11 +858,10 @@ function adminView(){
   const upcoming = D.schedule.filter(b=>b.status==="Scheduled" && b.date>=todayStr).slice(0,20);
   const aging = openR.map(r=>({...r, days: r.sentDate? Math.floor((Date.now()-new Date(r.sentDate))/86400000):0})).sort((a,b)=>b.days-a.days);
   const rollup = D.adminRollup||{};
-  const scheduleAvailable = !D.adminMasterOnly;
+  const scheduleAvailable = !controlUnavailable("schedule");
   const divs = ["Primary Care","CharmEd Minds","Mind & Mood Recovery","Elevated Wellness","Care Management","Flow"];
   return `<section class="view" id="view-admin-master" style="--pc:var(--pc-admin)">
     <div class="prog-head"><div class="bar"></div><div><h1>Admin Master</h1><p>${DIV_BLURBS["Admin Master"]}</p></div></div>
-    ${scheduleAvailable ? "" : '<p class="card" role="status">CrewOS is showing Admin Master while Notion access is restricted. The schedule and other Notion-backed pages are unavailable.</p>'}
     <div class="kpis">
       <div class="kpi" style="--kc:var(--alert)"><div class="n">${openR.length}</div><div class="l">Open referrals · all divisions</div></div>
       <div class="kpi" style="--kc:var(--warn)"><div class="n">${openH.length}</div><div class="l">Open warm handoffs</div></div>
@@ -871,7 +876,7 @@ function adminView(){
       <div class="tbl-wrap"><table><thead><tr><th>Days</th><th>Patient</th><th>From → To</th><th>Type</th><th>Status</th></tr></thead><tbody>
       ${aging.slice(0,15).map(r=>`<tr><td>${r.days>=5?pill(r.days+"d","alert"):r.days+"d"}</td><td><b>${esc(patLabel(r.patient))}</b></td><td>${esc(r.from)} → ${esc(r.to)}</td><td>${esc(r.type)}</td><td>${statusPill(r.status)}</td></tr>`).join("")||`<tr><td colspan="5" class="empty">All clear.</td></tr>`}
       </tbody></table></div></div>
-    <div class="card"><h2>Full schedule <span class="grow"></span>${scheduleAvailable && D.user.canSchedule?`<button class="btn sm" onclick="openBookingForm()">+ Book a room</button>`:""}</h2>
+    <div class="card"><h2>Full schedule <span class="grow"></span>${roomBookingAvailable()?`<button class="btn sm" onclick="openBookingForm()">+ Book a room</button>`:""}</h2>
       <div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Time</th><th>Service</th><th>Room</th><th>Division</th><th>Staff</th><th></th></tr></thead><tbody>
       ${scheduleAvailable ? (upcoming.map(b=>`<tr><td>${esc(b.date)}</td><td>${esc(b.start)}–${esc(b.end)}</td><td>${esc(b.service)}</td><td>${esc(roomName(b.room))}</td><td>${esc(b.division)}</td><td>${b.staff.map(staffLabel).map(esc).join(", ")}</td>
       <td>${D.user.canSchedule?`<button class="btn sm sec" onclick="act({action:'booking-status',id:'${b.id}',status:'Cancelled'},'Cancelled')">Cancel</button>`:""}</td></tr>`).join("")||`<tr><td colspan="7" class="empty">Nothing booked yet.</td></tr>`) : `<tr><td colspan="7" class="empty">Schedule unavailable.</td></tr>`}
@@ -1016,7 +1021,7 @@ function calDayOpen(dateStr){
       <b>${esc(b.start)}–${esc(b.end)}</b> · ${esc(b.service)}<br>
       <span style="font-size:12px;color:var(--ink-soft)">${esc(roomName(b.room))} · ${esc(b.division)} · ${b.staff.map(staffLabel).map(esc).join(", ")}</span>
     </div>`).join("") : `<div class="empty">Nothing booked this day.</div>`}
-    <div class="macts"><button class="btn sec" onclick="closeModal()">Close</button><button class="btn" onclick="closeModal();openBookingForm()">+ Book a room</button></div>
+    <div class="macts"><button class="btn sec" onclick="closeModal()">Close</button>${roomBookingAvailable() ? `<button class="btn" onclick="closeModal();openBookingForm()">+ Book a room</button>` : ""}</div>
     </div>`);
 }
 /* ---------- My Space: personal reminders (private per employee, this device) ---------- */
@@ -1064,7 +1069,7 @@ function crewProjectsCard(){
     ${mine.length ? mine.map(p=>`<div style="border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px">
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px"><b style="font-size:14px">${esc(p.title)}</b>${p.status?statusPill(p.status):""}${p.due?`<span class="pill gray">Due ${esc(p.due)}</span>`:""}</div>
       <div style="font-size:13px;color:var(--ink-soft)">${esc(p.summary||"")}</div>
-    </div>`).join("") : `<div class="empty">No crew projects assigned to you right now.</div>`}
+    </div>`).join("") : `<div class="empty">${controlUnavailable("crewProjects") ? "Crew Projects unavailable." : "No crew projects assigned to you right now."}</div>`}
   </div>`;
 }
 function mySpaceRefresh(){
@@ -1080,14 +1085,14 @@ function mySpaceInner(){
   const crewCount = (D.crewProjects||[]).filter(p=>(p.staff||[]).includes(D.user.staffId) && p.status!=="Complete").length;
   return `<div class="prog-head"><div class="bar"></div><div><h1>My Space</h1><p>Your calendar, availability, room bookings, reminders, and crew projects.</p></div></div>
   <div class="kpis">
-    <div class="kpi" style="--kc:var(--blue)"><div class="n">${myUpcoming}</div><div class="l">My upcoming bookings</div></div>
-    <div class="kpi" style="--kc:var(--sand)"><div class="n">${buildingWeek}</div><div class="l">Building bookings this week</div></div>
+    <div class="kpi" style="--kc:var(--blue)"><div class="n">${controlUnavailable("schedule") ? "Unavailable" : myUpcoming}</div><div class="l">My upcoming bookings</div></div>
+    <div class="kpi" style="--kc:var(--sand)"><div class="n">${controlUnavailable("schedule") ? "Unavailable" : buildingWeek}</div><div class="l">Building bookings this week</div></div>
     <div class="kpi" style="--kc:var(--sage)"><div class="n">${openReminders}</div><div class="l">Open reminders</div></div>
-    <div class="kpi" style="--kc:var(--clay)"><div class="n">${crewCount}</div><div class="l">Active crew projects</div></div>
+    <div class="kpi" style="--kc:var(--clay)"><div class="n">${controlUnavailable("crewProjects") ? "Unavailable" : crewCount}</div><div class="l">Active crew projects</div></div>
   </div>
-  <div class="card"><h2>Office calendar <span class="grow"></span><button class="btn sm" onclick="openAvailabilityForm()">+ Submit availability</button> <button class="btn sm sec" onclick="openBookingForm()">+ Book a room</button></h2>
+  <div class="card"><h2>Office calendar <span class="grow"></span>${!D.unavailableControls?.length ? `<button class="btn sm" onclick="openAvailabilityForm()">+ Submit availability</button>` : ""} ${roomBookingAvailable() ? `<button class="btn sm sec" onclick="openBookingForm()">+ Book a room</button>` : ""}</h2>
     <p class="lede">Everything booked in the building. Tap a day for the full list.</p>
-    <div id="cal-host">${calRender()}</div>
+    <div id="cal-host">${controlUnavailable("schedule") ? '<p class="empty">Schedule unavailable.</p>' : calRender()}</div>
   </div>
   ${remindersCard()}
   ${crewProjectsCard()}`;
@@ -2582,6 +2587,7 @@ function primaryRosterRows(){
   }).sort((a,b)=>(a.b.start||"").localeCompare(b.b.start||""));
 }
 function primaryRosterTable(){
+  if(controlUnavailable("schedule")) return '<p class="empty">Schedule unavailable. Daily readiness cannot be confirmed.</p>';
   if(!D.patientRegistryReady) return '<p class="empty">Patient Registry unavailable. Readiness cannot be confirmed; please retry.</p>';
   const rows=primaryRosterRows();
   if(!rows.length) return '<p class="empty">No Primary Care bookings in the connected CrewOS schedule for this date. This does not establish that CharmHealth has no appointments.</p>';
@@ -3203,6 +3209,7 @@ async function submitAvailability(){
 }
 
 function openBookingForm(){
+  if(!roomBookingAvailable()) return toast("Room booking is unavailable.");
   openModal(`<h3>Book a room</h3><div class="msub">The room's allowed services are enforced — pick a room to filter services.</div>
   <div class="f">
     <label>Room</label><select id="f-room" onchange="filterServices()"><option value="">Select room…</option>${D.rooms.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join("")}</select>
@@ -3264,6 +3271,7 @@ async function refreshSoft(){
   CARE_GAPS_ERROR = "";
   buildRail(); buildViews();
   activate(active || cssId(D.user.landing));
+  showControlStatus();
 }
 
 /* ---------- boot ---------- */
