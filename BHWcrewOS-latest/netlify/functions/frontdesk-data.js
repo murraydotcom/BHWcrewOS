@@ -49,6 +49,7 @@ const shapeRequest = (request) => ({
   received: request.workflowContext?.historicalReceivedAt || request.createdAt || request.receivedAt || '',
   updatedAt: request.updatedAt || request.createdAt || request.receivedAt || '',
   summary: request.summary || '',
+  fromCheckIn: request.requestType === 'medication' && request.sourceMetadata?.sourcePage === 'care-connect-check-in',
   sourceUrl: '',
   name: request.patientName || request.bhwPatientId || '',
   patientMatchStatus: request.patientMatchStatus || (request.bhwPatientId ? 'matched' : 'unmatched'),
@@ -92,7 +93,7 @@ async function handle(event, { queryOperationalImpl = queryOperational } = {}) {
         if (!medication || !pharmacy) {
           return { statusCode: 400, body: JSON.stringify({ error: 'medication and verified pharmacy are required' }) };
         }
-        const isBuprenorphineMoud = /\\b(?:suboxone|buprenorphine|zubsolv|bunavail|cassipa)\\b/i.test(medication);
+        const isBuprenorphineMoud = /\b(?:suboxone|buprenorphine|zubsolv|bunavail|cassipa)\b/i.test(medication);
         if (isBuprenorphineMoud) {
           medicationPath = 'controlled';
           screeningPlan = 'substance';

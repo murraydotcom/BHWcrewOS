@@ -36,7 +36,9 @@
     <section class="card">
       <h2>2. Record the request</h2>
       <p class="hint">Use the exact active medication and pharmacy shown in CharmHealth. The prescription details, including SIG, stay in the existing prescription record - do not re-enter or change them here.</p>
-      <label class="field">Requested medication<input id="medication" autocomplete="off" maxlength="160" placeholder="Exact medication name from chart"></label>
+      <label class="field">Requested medication<input id="medication" list="medicationMatches" autocomplete="off" maxlength="160" placeholder="Exact medication name from chart"></label>
+      <datalist id="medicationMatches"></datalist>
+      <p class="hint"><a href="/medication-refill-dashboard.html#directory" target="_blank" rel="noopener">Open the BHW medication reference</a>. Verify the selected name and formulation in CharmHealth.</p>
       <div id="medicationRoute" class="screen" hidden></div>
       <div class="row">
         <label class="field">Verified pharmacy<input id="pharmacy" autocomplete="off" maxlength="160" placeholder="Pharmacy name or location"></label>
@@ -83,7 +85,8 @@
   </aside>
 </div>
 </div>
-<script>
+<script type="module">
+import { findMedications } from '/assets/medication-reference.mjs';
 (function(){
   const API='/.netlify/functions/frontdesk-data';
   const $=id=>document.getElementById(id);
@@ -136,7 +139,7 @@
       document.querySelectorAll('#matches .match').forEach(button=>button.addEventListener('click',()=>choosePatient(button.dataset.id)));
     }catch(e){setStatus('patientStatus',String(e.message||'Unable to search the Patient Registry.').slice(0,180),'error');}
   }
-  const buprenorphinePattern=/\\b(?:suboxone|buprenorphine|zubsolv|bunavail|cassipa)\\b/i;
+  const buprenorphinePattern=/\b(?:suboxone|buprenorphine|zubsolv|bunavail|cassipa)\b/i;
   function refreshMedicationRoute(){
     const node=$('medicationRoute');
     if(!buprenorphinePattern.test($('medication').value.trim())){node.hidden=true;node.textContent='';return;}
@@ -177,7 +180,18 @@
   }
   $('searchButton').addEventListener('click',search);
   $('patientSearch').addEventListener('keydown',e=>{if(e.key==='Enter')search();});
-  $('medication').addEventListener('input',()=>{refreshMedicationRoute();refreshPathway();});
+  $('medication').addEventListener('input',()=>{
+    const query=$('medication').value.trim();
+    $('medicationMatches').replaceChildren();
+    for(const [, generic, brands] of query.length >= 2 ? findMedications(query).slice(0,12) : []){
+      const option=document.createElement('option');
+      option.value=generic;
+      option.label=brands;
+      $('medicationMatches').append(option);
+    }
+    refreshMedicationRoute();
+    refreshPathway();
+  });
   $('medicationPath').addEventListener('change',refreshPathway);
   $('screening').addEventListener('change',refreshScreening);
   $('saveButton').addEventListener('click',save);

@@ -173,7 +173,7 @@
   <section id="medication-dashboard" aria-labelledby="medication-refill-dashboard-title" style="padding:14px 16px 4px">
     <div style="background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow)">
       <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap">
-        <div><h2 id="medication-refill-dashboard-title" style="margin:0;color:var(--ink);font-size:1.02rem">Medication refill dashboard</h2><p style="margin:6px 0 0;color:var(--ink-soft);font-size:.82rem;line-height:1.55">The live FrontDeskOS view for medication requests, controlled-MOUD follow-up, and refill routing. CharmHealth remains the prescription record.</p></div>
+        <div><h2 id="medication-refill-dashboard-title" style="margin:0;color:var(--ink);font-size:1.02rem">Medication refill log</h2><p style="margin:6px 0 0;color:var(--ink-soft);font-size:.82rem;line-height:1.55">Recent medication requests from Front Desk and myBHW Check In. Open a request to review the medication, pharmacy and status history. CharmHealth remains the prescription record.</p></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn" href="/medrefill.html" style="display:inline-block;text-decoration:none">New refill request</a><a class="history-link" href="/bhw-requests.html">Open Patient Requests</a></div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:10px;margin-top:15px" aria-label="Medication refill queue snapshot">
@@ -182,8 +182,8 @@
         <div style="border:1px solid #edd595;border-radius:10px;padding:11px;background:#fff8e4"><div id="med-queue-followup" style="font-size:1.25rem;font-weight:800;color:#734a00">–</div><div style="font-size:.73rem;color:var(--ink-soft);font-weight:700">Follow-up needed</div></div>
         <div style="border:1px solid #b8d6c1;border-radius:10px;padding:11px;background:#f0f8f2"><div id="med-queue-review" style="font-size:1.25rem;font-weight:800;color:#21684f">–</div><div style="font-size:.73rem;color:var(--ink-soft);font-weight:700">In clinical review</div></div>
       </div>
-      <div id="medication-queue-list" aria-live="polite" style="margin-top:14px"></div><p id="medication-queue-status" style="margin:10px 0 0;color:var(--ink-soft);font-size:.76rem" aria-live="polite">Loading medication requests from the protected FrontDesk queue…</p>
-      <details open style="margin-top:16px;border-top:1px solid var(--line);padding-top:13px"><summary style="cursor:pointer;font-weight:800;color:var(--ink)">Medication finder, routing guide, and CharmHealth workflow</summary><p style="margin:7px 0 11px;color:var(--ink-soft);font-size:.78rem;line-height:1.5">This embedded dashboard does not save patient information or prescription details. Use <b>New refill request</b> above to create the patient-linked work item.</p><iframe title="BHW medication refill reference dashboard" src="/medication-refill-dashboard.html" loading="lazy" style="display:block;width:100%;height:1180px;border:1px solid var(--line);border-radius:10px;background:#f3f7f8"></iframe></details>
+      <div id="medication-queue-list" style="display:grid;gap:8px;max-height:420px;overflow:auto;margin-top:14px"></div><p id="medication-queue-status" style="margin:10px 0 0;color:var(--ink-soft);font-size:.76rem" aria-live="polite">Loading medication requests from the protected FrontDesk queue…</p>
+      <details open style="margin-top:16px;border-top:1px solid var(--line);padding-top:13px"><summary style="cursor:pointer;font-weight:800;color:var(--ink)">Medication finder, routing guide, and CharmHealth workflow</summary><p style="margin:7px 0 11px;color:var(--ink-soft);font-size:.78rem;line-height:1.5">This embedded dashboard does not save patient information or prescription details. Use <b>New refill request</b> above to create the patient-linked work item.</p><iframe title="BHW medication refill reference dashboard" src="/medication-refill-dashboard.html#directory" loading="lazy" style="display:block;width:100%;height:1180px;border:1px solid var(--line);border-radius:10px;background:#f3f7f8"></iframe></details>
     </div>
   </section>
 
@@ -533,9 +533,35 @@ function renderInbox(items,faxItems=FAX_ITEMS){
   $('fax-history').textContent=FAX_MODE==='completed'?'Back to open faxes':'Review completed';
   $('fax-older').hidden=!FAX_NEXT;
 }
-function isMedicationRequest(item){const workflow=item&&typeof item.workflowContext==='object'&&item.workflowContext?item.workflowContext:{};const needs=Array.isArray(workflow.needs)?workflow.needs.join(' '):(workflow.needs||'');return /\b(?:medication|refill|prescription|pharmacy|suboxone|buprenorphine|zubsolv|bunavail|cassipa)\b/i.test([item?.type,item?.requestType,item?.summary,item?.message,item?.source,item?.status,workflow.details,needs].filter(Boolean).join(' '));}
-function renderMedicationDashboard(items){const queue=$('medication-queue-list'),status=$('medication-queue-status');if(!queue||!status)return;const medication=(Array.isArray(items)?items:[]).filter(isMedicationRequest);const detail=item=>{const workflow=item&&typeof item.workflowContext==='object'&&item.workflowContext?item.workflowContext:{};const needs=Array.isArray(workflow.needs)?workflow.needs.join(' '):(workflow.needs||'');return [item?.type,item?.requestType,item?.summary,item?.message,item?.status,workflow.details,needs].filter(Boolean).join(' ');};const received=medication.filter(awaitsFrontDeskAction),controlled=medication.filter(item=>/\b(?:controlled|epcs|suboxone|buprenorphine|zubsolv|bunavail|cassipa)\b/i.test(detail(item))),followUp=medication.filter(item=>/\b(?:screen(?:ing)?|questionnaire|recovery stability|substance[ -]?use|follow[- ]?up)\b/i.test(detail(item))),clinicalReview=medication.filter(item=>!awaitsFrontDeskAction(item));$('med-queue-received').textContent=received.length;$('med-queue-controlled').textContent=controlled.length;$('med-queue-followup').textContent=followUp.length;$('med-queue-review').textContent=clinicalReview.length;status.textContent=medication.length?medication.length+' medication request'+(medication.length===1?'':'s')+' currently visible in the FrontDesk queue. This snapshot refreshes with the rest of FrontDeskOS.':'No medication requests are currently visible in the FrontDesk queue.';if(!medication.length){queue.innerHTML='<div style="padding:11px 12px;border:1px dashed var(--line);border-radius:10px;color:var(--ink-soft);font-size:.8rem">No medication requests in the current FrontDesk queue. Create a patient-linked request above, or open Patient Requests to review history.</div>';return;}queue.innerHTML='<div style="display:grid;gap:7px">'+medication.slice(0,8).map(item=>{const controlledFlag=/\b(?:controlled|epcs|suboxone|buprenorphine|zubsolv|bunavail|cassipa)\b/i.test(detail(item)),followFlag=/\b(?:screen(?:ing)?|questionnaire|recovery stability|substance[ -]?use|follow[- ]?up)\b/i.test(detail(item)),label=item.summary||item.type||'Medication request',phase=item.status||(awaitsFrontDeskAction(item)?'Received':'Clinical review'),tags=[controlledFlag?'Controlled / MOUD':'',followFlag?'Follow-up needed':''].filter(Boolean).join(' · ');return '<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:9px;padding:9px 10px;background:#fff"><div style="min-width:0"><div style="font-size:.81rem;font-weight:800;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(label)+'</div><div style="font-size:.73rem;color:var(--ink-soft);margin-top:2px">'+esc(phase)+(tags?' · '+esc(tags):'')+'</div></div><button type="button" class="act open-request" data-id="'+esc(item.id)+'">Open</button></div>';}).join('')+'</div>';}
-function withQuery(params){const join=API.includes('?')?'&':'?';return `${API}${join}${params}`;}
+function medicationRequestDetails(item){
+  const context=item.workflowContext||{};
+  const needs=Array.isArray(context.needs)?context.needs.join(' '):context.needs;
+  return [item.type,item.requestType,item.summary,item.status,context.details,needs].filter(Boolean).join(' ');
+}
+function renderMedicationDashboard(items){
+  const queue=$('medication-queue-list'),status=$('medication-queue-status');
+  const requests=items.filter(item=>item.type==='medication'||item.requestType==='medication');
+  const controlled=/\b(?:controlled|epcs|suboxone|buprenorphine|zubsolv|bunavail|cassipa)\b/i;
+  const followUp=/\b(?:screen(?:ing)?|questionnaire|recovery stability|substance[ -]?use|follow[- ]?up)\b/i;
+  const received=requests.filter(awaitsFrontDeskAction).length;
+  $('med-queue-received').textContent=received;
+  $('med-queue-controlled').textContent=requests.filter(item=>controlled.test(medicationRequestDetails(item))).length;
+  $('med-queue-followup').textContent=requests.filter(item=>followUp.test(medicationRequestDetails(item))).length;
+  $('med-queue-review').textContent=requests.filter(item=>!awaitsFrontDeskAction(item)&&item.statusCategory!=='completed').length;
+  status.textContent=requests.length
+    ? `${requests.length} medication request${requests.length===1?'':'s'} in the recent Front Desk feed. Open Patient Requests for additional history.`
+    : 'No medication requests in the recent Front Desk feed.';
+  queue.innerHTML=requests.map(item=>{
+    const source=item.fromCheckIn?'myBHW Check In':item.source==='care-connect'?'myBHW':item.source;
+    const phase=item.status||(awaitsFrontDeskAction(item)?'Received':'Clinical review');
+    const date=item.received?.slice(0,10);
+    return `<article class="inb">
+      <div class="t">${esc(item.summary||'Medication request')}</div>
+      <div class="s">${[item.name,source,date,phase].filter(Boolean).map(esc).join(' · ')}</div>
+      <div class="actrow"><button type="button" class="act open-request" data-id="${esc(item.id)}" data-completed="${item.statusCategory==='completed'?'1':''}">Open request</button></div>
+    </article>`;
+  }).join('');
+}
 async function loadFaxMode(mode,before='',beforeId=''){
   const key=mode==='completed'?'faxHistory=1':'faxPage=1';
   const cursor=before?`&before=${encodeURIComponent(before)}${beforeId?`&beforeId=${encodeURIComponent(beforeId)}`:''}`:'';
@@ -549,14 +575,14 @@ async function poll(){
   if(!API)return;
   try{
     const res=await crewFetch(API);
-    if(!res.ok)return;
+    if(!res.ok)throw new Error('Front Desk feed unavailable');
     const d=await res.json();
     if(d.items){
       INBOX_ITEMS=d.items;
       if(FAX_MODE==='open'){FAX_ITEMS=d.faxItems||[];FAX_NEXT=d.faxNextBefore||'';FAX_NEXT_ID=d.faxNextBeforeId||'';}
       renderInbox(INBOX_ITEMS,FAX_ITEMS);
     }
-  }catch(e){}
+  }catch(e){$('medication-queue-status').textContent='The medication log could not refresh. Sign in to CrewOS or retry shortly.';}
 }
 poll(); setInterval(poll,60000);
 $('fax-history').addEventListener('click',async()=>{try{await loadFaxMode(FAX_MODE==='completed'?'open':'completed');}catch(e){$('fax-mode-label').textContent=String(e.message||e);}});
