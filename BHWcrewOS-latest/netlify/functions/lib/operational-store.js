@@ -61,15 +61,23 @@ function cutoverInProgressError() {
   return Object.assign(new Error("The protected Notion cutover is in progress. Operational writes will resume as soon as verification finishes."), { status: 503 });
 }
 
+function operationalStateKey(key) {
+  return key === "staff" ? "staff-export-recovery" : `operational-export:${namespace(key)}`;
+}
+
+async function hasLocalAuthority(key, dependencies = {}) {
+  const result = await (await pool(dependencies)).query(
+    "SELECT mode FROM crewos_cutover_state WHERE state_key = $1",
+    [operationalStateKey(key)],
+  );
+  return result.rows[0]?.mode === "database";
+}
+
 async function operationalMode(key, dependencies = {}) {
   const mode = await cutoverMode(dependencies);
-  if (mode !== "notion" || key !== "staff") return mode;
+  if (mode !== "notion") return mode;
   try {
-    const result = await (await pool(dependencies)).query(
-      "SELECT mode FROM crewos_cutover_state WHERE state_key = $1",
-      ["staff-export-recovery"],
-    );
-    return result.rows[0]?.mode === "database" ? "database" : mode;
+    return await hasLocalAuthority(key, dependencies) ? "database" : mode;
   } catch (error) {
     if (isMissingDatabaseConfiguration(error)) return mode;
     throw error;
@@ -106,7 +114,9 @@ async function listDatabasePages(key, filter, dependencies = {}) {
 
 async function queryOperational(key, notionDatabaseId, filter, sorts, dependencies = {}) {
   const mode = await operationalMode(key, dependencies);
-  if (mode === "database") return listDatabasePages(key, filter, dependencies);
+  if (mode === "database" || (mode === "cutover" && await hasLocalAuthority(key, dependencies))) {
+    return listDatabasePages(key, filter, dependencies);
+  }
   const queryDbImpl = dependencies.queryDbImpl || queryDb;
   return queryDbImpl(notionDatabaseId, filter, sorts);
 }
@@ -201,6 +211,10 @@ async function replaceNamespace(key, pages, {
   const client = await dbPool.connect();
   try {
     await client.query("BEGIN");
+    await client.query("SELECT mode FROM crewos_cutover_state WHERE state_key = $1 FOR SHARE", ["notion-exit"]);
+    if (await hasLocalAuthority(checked, { pool: client })) {
+      throw Object.assign(new Error("CrewHQ Database already owns this control."), { status: 409 });
+    }
     await client.query("DELETE FROM crewos_operational_records WHERE namespace = $1", [checked]);
     for (const page of records) {
       await client.query(
@@ -257,10 +271,11 @@ async function cutoverStatus(dependencies = {}) {
       sources: REQUIRED_NAMESPACES.map((key) => ({ namespace: key, sourceCount: null, importedCount: null, schemaProperties: [], importedAt: null, verified: false })),
     };
   }
-  const [state, sources, staffRecovery] = await Promise.all([
+  const [state, sources, staffRecovery, exportRecovery] = await Promise.all([
     dbPool.query("SELECT mode, cutover_started_at, finalized_at, finalized_by FROM crewos_cutover_state WHERE state_key = $1", ["notion-exit"]),
     dbPool.query("SELECT namespace, source_count, imported_count, schema_properties, imported_at FROM crewos_operational_sources ORDER BY namespace"),
     dbPool.query("SELECT mode, finalized_by FROM crewos_cutover_state WHERE state_key = $1", ["staff-export-recovery"]),
+    dbPool.query("SELECT state_key FROM crewos_cutover_state WHERE mode = $1 AND state_key LIKE $2", ["database", "operational-export:%"]),
   ]);
   const sourceByKey = Object.fromEntries(sources.rows.map((row) => [row.namespace, {
     namespace: row.namespace,
@@ -272,12 +287,14 @@ async function cutoverStatus(dependencies = {}) {
   }]));
   const stateMode = ["notion", "cutover", "database"].includes(state.rows[0]?.mode) ? state.rows[0].mode : "notion";
   const startedAt = state.rows[0]?.cutover_started_at || null;
-  const freshForLockedSnapshot = (source) => stateMode !== "cutover"
+  const recoveredNamespaces = new Set(exportRecovery.rows.map(row => row.state_key?.split(":")[1]).filter(key => ALLOWED_NAMESPACES.has(key)));
+  if (staffRecovery.rows[0]?.mode === "database") recoveredNamespaces.add("staff");
+  const freshForLockedSnapshot = (source, key) => recoveredNamespaces.has(key) || stateMode !== "cutover"
     || (startedAt && source?.importedAt && new Date(source.importedAt).getTime() >= new Date(startedAt).getTime());
-  const complete = REQUIRED_NAMESPACES.every((key) => sourceByKey[key]?.verified && freshForLockedSnapshot(sourceByKey[key]));
+  const complete = REQUIRED_NAMESPACES.every((key) => sourceByKey[key]?.verified && freshForLockedSnapshot(sourceByKey[key], key));
   const reportedSources = REQUIRED_NAMESPACES.map((key) => {
     const source = sourceByKey[key] || { namespace: key, sourceCount: null, importedCount: null, schemaProperties: [], importedAt: null, verified: false };
-    return { ...source, verified: Boolean(source.verified && freshForLockedSnapshot(source)) };
+    return { ...source, verified: Boolean(source.verified && freshForLockedSnapshot(source, key)), recovered: recoveredNamespaces.has(key) };
   });
   return {
     mode: stateMode,
@@ -336,6 +353,7 @@ module.exports = {
   REQUIRED_NAMESPACES,
   cutoverMode,
   operationalMode,
+  operationalStateKey,
   cutoverStatus,
   beginCutover,
   abortCutover,
