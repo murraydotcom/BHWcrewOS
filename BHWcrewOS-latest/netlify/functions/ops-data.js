@@ -99,14 +99,24 @@ exports.handler = async (event) => {
     return json(403, { error: "You do not have access to Admin Master." });
   }
   const inVis = (d) => vis.includes(d);
+  const unavailableControls = new Set();
+  async function readControl(key) {
+    try {
+      return await queryOperational(key, DB[key]);
+    } catch (error) {
+      if (!canAdminMaster || error.notionStatus !== 403 || error.notionCode !== "restricted_resource") throw error;
+      unavailableControls.add(key);
+      return [];
+    }
+  }
  
   try {
     const [staffPages, roomPages, schedulePages, resourcePages, patientRegistryResult, operationsRows, careLogRows, wellnessRows, programPlanRows, panelRows] =
       await Promise.all([
         queryOperational("staff", DB.staff),
-        queryOperational("rooms", DB.rooms),
-        queryOperational("schedule", DB.schedule),
-        queryOperational("resources", DB.resources),
+        readControl("rooms"),
+        readControl("schedule"),
+        readControl("resources"),
         listCloudPatients(session)
           .then((patients) => ({ ready: true, patients, error: "" }))
           .catch((error) => ({ ready: false, patients: [], error: error.message || "Patient Registry unavailable" })),
@@ -162,7 +172,7 @@ exports.handler = async (event) => {
     // Crew Projects: posted by team leads and shown to assigned staff in My Space.
     let crewProjects = [];
     if (DB.crewProjects) {
-      const cpPages = await queryOperational("crewProjects", DB.crewProjects);
+      const cpPages = await readControl("crewProjects");
       crewProjects = cpPages.map((pg) => {
         const p = pg.properties;
         return {
@@ -331,6 +341,7 @@ exports.handler = async (event) => {
       phPlans,
       prevention,
       crewProjects,
+      adminMasterOnly: unavailableControls.size > 0,
     });
   } catch (err) {
     return json(500, { error: err.message });

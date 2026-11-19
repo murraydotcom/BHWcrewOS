@@ -231,12 +231,13 @@ body.embed-open{overflow:hidden}
   <button class="btn sm" style="background:rgba(244,247,247,.12);color:#f4f7f7;border:1.5px solid var(--sand)" onclick="openContextPatient()">＋ Patient</button>
   <div class="top-right">
     <a class="btn-ghost" href="/hq.html" style="text-decoration:none">← BHW HQ</a>
-    <button class="btn-ghost" onclick="refresh()">Refresh</button>
+    <button class="btn-ghost" onclick="loadDashboard()">Refresh</button>
     <button class="btn-ghost" onclick="logout()">Sign out</button>
   </div>
 </div></header>
 <div class="gold-rule"></div>
 <main>
+  <p id="dashboardStatus" role="status" hidden></p>
   <nav class="rail" id="rail" aria-label="Pages"></nav>
   <div id="views"></div>
 </main>
@@ -380,13 +381,27 @@ async function doLogin(){
     if(redirectToRequestedPage()) return;
     document.getElementById("login").style.display="none";
     document.getElementById("app").style.display="block";
-    await refresh();
+    await loadDashboard();
   }catch(e){ err.textContent = e.message; }
 }
 document.getElementById("loginPin").addEventListener("keydown",e=>{ if(e.key==="Enter") doLogin(); });
 function logout(){ TOKEN=""; sessionStorage.removeItem("crewos_token"); location.reload(); }
 
 /* ---------- data + render ---------- */
+async function loadDashboard(load = refresh){
+  const status = document.getElementById("dashboardStatus");
+  status.hidden = false;
+  status.textContent = "Loading dashboard…";
+  try {
+    await load();
+    status.hidden = true;
+  } catch (error) {
+    if (!TOKEN) return;
+    const code = error.status ? ` (HTTP ${error.status})` : "";
+    status.textContent = `CrewOS could not load the dashboard${code}. Select Refresh to try again.`;
+  }
+}
+
 async function refresh(){
   const requestedView = cssId(new URLSearchParams(location.search).get("view"));
   const adminRequested = requestedView === "admin-master" || requestedView === "operations-overview";
@@ -439,7 +454,7 @@ function buildRail(){
   let html = `<div class="rail-label">My pages</div>`;
   const pages = [];
   if(D.user.canAdminMaster) pages.push("Admin Master");
-  for(const div of D.visibleDivisions) pages.push(div);
+  if(!D.adminMasterOnly) for(const div of D.visibleDivisions) pages.push(div);
   for(const p of pages){
     const overview = p==="Admin Master";
     const c = overview ? {rIn:D.referrals.filter(r=>!["Completed","Declined/Redirect"].includes(r.status)).length, hIn:D.handoffs.filter(h=>h.status!=="Completed").length} : counts(p);
@@ -448,6 +463,11 @@ function buildRail(){
     const lch = (p==="Elevated Wellness"||overview) && D.phPlans ? D.phPlans.filter(x=>!["Graduated — Independent","Discharged — Other","Extended Stay"].includes(x.stage) && phWeek(x.moveIn)>=14).length : 0;
     const badge = (c.rIn + c.hIn + sig + rts + lch) || "";
     html += `<button class="tab" data-view="${cssId(p)}" style="--spine:${DIV_COLORS[p]}">${esc(p)}<span class="badge">${badge}</span></button>`;
+  }
+  if(D.adminMasterOnly){
+    rail.innerHTML = html;
+    rail.onclick = () => activate("admin-master");
+    return;
   }
   html += `<div class="rail-label">Tools</div>`;
  html += `<button class="tab" data-view="myspace" style="--spine:var(--clay)">My Space</button>`;
@@ -473,6 +493,7 @@ function buildRail(){
 }
 
 function activate(viewId){
+  if (D?.adminMasterOnly) viewId = "admin-master";
   if (viewId === "operations-overview") viewId = "admin-master";
   if (viewId === "admin-master" && !D?.user?.canAdminMaster) {
     toast("You do not have access to Admin Master.");
@@ -527,6 +548,10 @@ function focusRequestedRecord(){
 function buildViews(){
   const host = document.getElementById("views");
   let html = "";
+  if(D.adminMasterOnly){
+    host.innerHTML = adminView();
+    return;
+  }
   if(D.user.canAdminMaster) html += adminView();
   for(const div of D.visibleDivisions) html += divisionView(div);
   html += frontDeskView();
@@ -827,13 +852,15 @@ function adminView(){
   const upcoming = D.schedule.filter(b=>b.status==="Scheduled" && b.date>=todayStr).slice(0,20);
   const aging = openR.map(r=>({...r, days: r.sentDate? Math.floor((Date.now()-new Date(r.sentDate))/86400000):0})).sort((a,b)=>b.days-a.days);
   const rollup = D.adminRollup||{};
+  const scheduleAvailable = !D.adminMasterOnly;
   const divs = ["Primary Care","CharmEd Minds","Mind & Mood Recovery","Elevated Wellness","Care Management","Flow"];
   return `<section class="view" id="view-admin-master" style="--pc:var(--pc-admin)">
     <div class="prog-head"><div class="bar"></div><div><h1>Admin Master</h1><p>${DIV_BLURBS["Admin Master"]}</p></div></div>
+    ${scheduleAvailable ? "" : '<p class="card" role="status">CrewOS is showing Admin Master while Notion access is restricted. The schedule and other Notion-backed pages are unavailable.</p>'}
     <div class="kpis">
       <div class="kpi" style="--kc:var(--alert)"><div class="n">${openR.length}</div><div class="l">Open referrals · all divisions</div></div>
       <div class="kpi" style="--kc:var(--warn)"><div class="n">${openH.length}</div><div class="l">Open warm handoffs</div></div>
-      <div class="kpi" style="--kc:var(--sage)"><div class="n">${upcoming.length}</div><div class="l">Upcoming bookings</div></div>
+      <div class="kpi" style="--kc:var(--sage)"><div class="n">${scheduleAvailable ? upcoming.length : "Unavailable"}</div><div class="l">Upcoming bookings</div></div>
       <div class="kpi" style="--kc:var(--clay)"><div class="n">${Object.values(rollup).reduce((a,b)=>a+b,0)}</div><div class="l">Care mgmt minutes · this month</div></div>
     </div>
     <div class="card"><h2>Division pulse</h2>
@@ -844,10 +871,10 @@ function adminView(){
       <div class="tbl-wrap"><table><thead><tr><th>Days</th><th>Patient</th><th>From → To</th><th>Type</th><th>Status</th></tr></thead><tbody>
       ${aging.slice(0,15).map(r=>`<tr><td>${r.days>=5?pill(r.days+"d","alert"):r.days+"d"}</td><td><b>${esc(patLabel(r.patient))}</b></td><td>${esc(r.from)} → ${esc(r.to)}</td><td>${esc(r.type)}</td><td>${statusPill(r.status)}</td></tr>`).join("")||`<tr><td colspan="5" class="empty">All clear.</td></tr>`}
       </tbody></table></div></div>
-    <div class="card"><h2>Full schedule <span class="grow"></span>${D.user.canSchedule?`<button class="btn sm" onclick="openBookingForm()">+ Book a room</button>`:""}</h2>
+    <div class="card"><h2>Full schedule <span class="grow"></span>${scheduleAvailable && D.user.canSchedule?`<button class="btn sm" onclick="openBookingForm()">+ Book a room</button>`:""}</h2>
       <div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Time</th><th>Service</th><th>Room</th><th>Division</th><th>Staff</th><th></th></tr></thead><tbody>
-      ${upcoming.map(b=>`<tr><td>${esc(b.date)}</td><td>${esc(b.start)}–${esc(b.end)}</td><td>${esc(b.service)}</td><td>${esc(roomName(b.room))}</td><td>${esc(b.division)}</td><td>${b.staff.map(staffLabel).map(esc).join(", ")}</td>
-      <td>${D.user.canSchedule?`<button class="btn sm sec" onclick="act({action:'booking-status',id:'${b.id}',status:'Cancelled'},'Cancelled')">Cancel</button>`:""}</td></tr>`).join("")||`<tr><td colspan="7" class="empty">Nothing booked yet.</td></tr>`}
+      ${scheduleAvailable ? (upcoming.map(b=>`<tr><td>${esc(b.date)}</td><td>${esc(b.start)}–${esc(b.end)}</td><td>${esc(b.service)}</td><td>${esc(roomName(b.room))}</td><td>${esc(b.division)}</td><td>${b.staff.map(staffLabel).map(esc).join(", ")}</td>
+      <td>${D.user.canSchedule?`<button class="btn sm sec" onclick="act({action:'booking-status',id:'${b.id}',status:'Cancelled'},'Cancelled')">Cancel</button>`:""}</td></tr>`).join("")||`<tr><td colspan="7" class="empty">Nothing booked yet.</td></tr>`) : `<tr><td colspan="7" class="empty">Schedule unavailable.</td></tr>`}
       </tbody></table></div></div>
     <div class="card"><h2>Minutes rollup — this month</h2>
       <div class="tbl-wrap"><table><thead><tr><th>Program</th><th>Minutes</th></tr></thead><tbody>
@@ -3243,7 +3270,7 @@ async function refreshSoft(){
 if(TOKEN){
   document.getElementById("login").style.display="none";
   document.getElementById("app").style.display="block";
-  resumeSignedInSession().catch(()=>logout());
+  loadDashboard(resumeSignedInSession);
 }
 </script>
 <script type="module" src="/bhw-alert-center.mjs"></script>
