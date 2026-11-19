@@ -723,14 +723,19 @@ function ccRequest(i){
 
 function roomName(id){ const r=(D.rooms||[]).find(r=>r.id===id); return r?r.name:"—"; }
 
+const CORE_POLICY_RESOURCES = [
+  {title:"BHW Medical Group Policy & SOP Library",division:"All Divisions",category:"Policy",link:"/bhw-policy-sop-library.html#policies",notes:"13 organization-wide controlled policy sections",pinned:true},
+  {title:"BHW Medical Group Appendix Forms",division:"All Divisions",category:"Form",link:"/bhw-policy-sop-library.html#appendices",notes:"8 controlled forms and patient handouts",pinned:true},
+];
+
 function resourcesCard(div){
-  const items = (D.resources||[]).filter(r=>r.division===div || r.division==="All Divisions");
+  const items = [...CORE_POLICY_RESOURCES,...(D.resources||[])].filter(r=>r.division===div || r.division==="All Divisions");
   if(!items.length) return "";
-  const cats = ["Workflow","Assessment","Documentation","Database","Training","Form"];
+  const cats = ["Policy","Workflow","Assessment","Documentation","Database","Training","Form"];
   const groups = cats.map(c=>({c, list: items.filter(r=>r.category===c)})).filter(g=>g.list.length);
   return `<div class="card">
     <h2>Resources &amp; workflows</h2>
-    <p class="lede">The division's documentation, workflows, and assessments — straight from Notion. Add a row to the Resource Library in Notion and it appears here.</p>
+    <p class="lede">Controlled BHW policies and forms, plus the division's documentation, workflows, and assessments from Notion.</p>
     ${groups.map(g=>`
       <div class="res-cat">${esc(g.c)}${g.c==="Assessment" && div==="Care Management" ? " · AWV steps in order" : ""}</div>
       <div class="res-grid">${g.list.map(r=>`

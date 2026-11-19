@@ -23,6 +23,7 @@ const GROUPS = [
   ]],
   ['Training & Resources', [
     ['welcometoBHW','Onboarding and new-teammate checklists.','https://welcometobhw.netlify.app/'],
+    ['Policies & SOPs','BHW-wide controlled policies, compliance standards, and printable appendix forms.','/bhw-policy-sop-library.html'],
     ['Care Program SOP','Enrollment, program guidance, and staff training.','/bhw-care-program-sop.html'],
   ]],
   ['Practice Administration', [
