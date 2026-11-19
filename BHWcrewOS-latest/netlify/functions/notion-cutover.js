@@ -112,7 +112,12 @@ exports.handler = async (event) => {
       if (body.confirmation !== IMPORT_CONFIRMATION) return json(400, { error: `Type ${IMPORT_CONFIRMATION} to begin the protected import.` });
       const current = await cutoverStatus();
       if (current.mode === "database") return json(409, { error: "The Notion exit is already finalized." });
-      const result = await importSource(String(body.namespace || ""), session);
+      const key = String(body.namespace || "");
+      const existing = current.sources.find(source => source.namespace === key);
+      if (existing?.recovered) {
+        return json(200, { ok: true, result: existing, status: current });
+      }
+      const result = await importSource(key, session);
       return json(200, { ok: true, result, status: await cutoverStatus() });
     }
 
