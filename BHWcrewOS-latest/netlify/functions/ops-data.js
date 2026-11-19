@@ -104,7 +104,7 @@ exports.handler = async (event) => {
     try {
       return await queryOperational(key, DB[key]);
     } catch (error) {
-      if (!canAdminMaster || error.notionStatus !== 403 || error.notionCode !== "restricted_resource") throw error;
+      if (error.notionStatus !== 403 || error.notionCode !== "restricted_resource") throw error;
       unavailableControls.add(key);
       return [];
     }
@@ -341,7 +341,7 @@ exports.handler = async (event) => {
       phPlans,
       prevention,
       crewProjects,
-      adminMasterOnly: unavailableControls.size > 0,
+      unavailableControls: [...unavailableControls].sort(),
     });
   } catch (err) {
     return json(500, { error: err.message });
