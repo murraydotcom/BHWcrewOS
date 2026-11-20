@@ -29,15 +29,12 @@ const $ = (id) => document.getElementById(id);
 const esc = (value) => String(value ?? "").replace(/[&<>\"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[character]));
 const STATUS_OPTIONS = ["active", "prospective", "inactive", "transferred", "deceased"];
 const CONSENT_SOURCES = ["previsit-form", "new-patient-packet"];
-const CARE_API = "https://bhw-medication-api-343692256275.us-east4.run.app";
 const PORTAL_ACCESS_STATUSES = ["not-invited", "approved", "invited", "active", "paused", "revoked"];
 
 let client = null;
 let patients = [];
 let selectedId = "";
 let toastTimer;
-let careToken = "";
-let careTokenExpiresAt = 0;
 let registryFormDirty = false;
 let registryRefreshPromise = null;
 let registryLoaded = false;
@@ -241,31 +238,6 @@ function consentSourceLabel(value) {
   return value === "new-patient-packet" ? "New-patient packet" : "Previsit form";
 }
 
-async function getCareToken() {
-  if (careToken && Date.now() < careTokenExpiresAt) return careToken;
-  const crewToken = sessionStorage.getItem("crewos_token") || "";
-  if (!crewToken) throw new Error("CrewHQ session expired. Sign in again.");
-  const response = await fetch("/.netlify/functions/care-cloud-token", {
-    method: "POST",
-    credentials: "same-origin",
-    cache: "no-store",
-    headers: { Authorization: `Bearer ${crewToken}` },
-  });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok || !body.token) throw new Error(body.error || "Patient communication history is unavailable.");
-  careToken = body.token;
-  careTokenExpiresAt = Date.now() + Math.max(30, Number(body.expiresIn || 300) - 30) * 1000;
-  return careToken;
-}
-
-async function careRequest(path) {
-  const token = await getCareToken();
-  const response = await fetch(`${CARE_API}${path}`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.error || "Patient communication history is unavailable.");
-  return body;
-}
-
 function communicationStatusLabel(status) {
   return ({ generated: "Generated", sent_recorded: "Recorded sent", opened: "Opened", submitted: "Submitted", expired: "Expired", revoked: "Revoked" })[status] || status || "Unknown";
 }
@@ -284,9 +256,8 @@ async function renderEducationCommunication(bhwPatientId) {
   const panel = $("educationCommunicationPanel");
   if (!panel) return;
   try {
-    const result = await careRequest(`/v1/staff/content-assignments?patientId=${encodeURIComponent(bhwPatientId)}&limit=100`);
+    const assignments = await client.contentAssignments(bhwPatientId, 100);
     if (selectedId !== bhwPatientId || !$("educationCommunicationPanel")) return;
-    const assignments = Array.isArray(result.assignments) ? result.assignments : [];
     const rows = assignments.length ? assignments.map((item) => {
       const sent = item.sentAt ? `Recorded sent ${communicationTime(item.sentAt)} via ${communicationChannelLabel(item.sendChannel)}${item.destinationMasked ? ` to ${item.destinationMasked}` : ""}` : "Not recorded as sent";
       const activity = [item.openedAt ? `Opened ${communicationTime(item.openedAt)}` : "", item.submittedAt ? `Submitted ${communicationTime(item.submittedAt)}` : "", item.revokedAt ? `Revoked ${communicationTime(item.revokedAt)}` : ""].filter(Boolean).join(" · ");
@@ -359,15 +330,40 @@ async function renderPortalAccess(bhwPatientId) {
     const result = await client.portalAccess(bhwPatientId);
     if (selectedId !== bhwPatientId || !$("portalAccessPanel")) return;
     const access = result.access || {};
+    const previewOnly = result.previewOnly === true;
     const status = PORTAL_ACCESS_STATUSES.includes(access.portalAccessStatus) ? access.portalAccessStatus : "not-invited";
-    const pilotClass = result.organizationPilotEnabled ? "complete" : "warning";
-    panel.innerHTML = `<div class="card-head" style="padding:0 0 12px;border:0"><div><h3>Care Connect pilot access</h3><div class="privacy">Adult Primary Care pilot · patient self-access only · proxy and guardian access disabled.</div></div><span class="badge ${pilotClass}">${result.organizationPilotEnabled ? "Organization access on" : "Organization access off"}</span></div><div class="formgrid">${field("dPortalStatus", "Portal access status", status, "select", PORTAL_ACCESS_STATUSES)}${field("dPortalChannel", "Verified invitation channel", access.preferredChannel || "email", "select", ["email", "sms"])}${field("dPortalConsentStatus", "Portal consent", access.consentStatus || "", "select", ["", "current", "revoked"])}${field("dPortalConsentedAt", "Patient consented at", localDateTimeValue(access.consentedAt), "datetime-local")}${field("dPortalConsentEvidence", "Protected consent reference", access.consentEvidenceReference || "")}${field("dPortalDisableReason", "Pause / revoke reason", access.disableReason || "")}</div>${checked("dPortalAllowlisted", access.allowlisted === true)}Personally selected for the adult Primary Care pilot.</span></label>${checked("dPortalContactVerified", false)}I verified the selected email or phone against the current Patient Registry record.</span></label>${checked("dPortalInvitationConfirmed", false)}I confirm the patient invitation was delivered through the verified channel. This records the invitation; it does not send one.</span></label><div class="notice"><b>Invitation preview · not sent</b><br>${esc(result.invitationPreview?.message || "BHW Medical secure patient portal invitation.")}</div><div class="actions"><button class="btn primary" id="savePortalAccess">Save pilot access</button></div><div class="privacy">Current status: ${esc(status)} · ${access.exactContactBound ? "exact contact verified" : "exact contact not verified"}${access.portalInvitedAt ? ` · invited ${esc(new Date(access.portalInvitedAt).toLocaleString())}` : ""}${access.lastAuthenticatedAt ? ` · last authenticated ${esc(new Date(access.lastAuthenticatedAt).toLocaleString())}` : ""}. Clinical details are never included in the invitation.</div>`;
+    const pilotClass = !previewOnly && result.organizationPilotEnabled ? "complete" : "warning";
+    const pilotLabel = previewOnly ? "Preview only" : result.organizationPilotEnabled ? "Organization access on" : "Organization access off";
+    const evidenceReference = access.consentEvidenceReference || "";
+    panel.innerHTML = `<div class="card-head" style="padding:0 0 12px;border:0"><div><h3>Care Connect pilot access</h3><div class="privacy">Adult Primary Care pilot · patient self-access only · proxy and guardian access disabled.</div></div><span class="badge ${pilotClass}">${pilotLabel}</span></div><div class="formgrid">${field("dPortalStatus", "Portal access status", status, "select", PORTAL_ACCESS_STATUSES)}${field("dPortalChannel", "Verified invitation channel", access.preferredChannel || "email", "select", ["email", "sms"])}${field("dPortalConsentStatus", "Portal consent", access.consentStatus || "", "select", ["", "current", "revoked"])}${field("dPortalConsentedAt", "Patient consented at", localDateTimeValue(access.consentedAt), "datetime-local")}<div class="field"><label>Protected consent proof</label><input id="dPortalConsentEvidence" value="${esc(evidenceReference)}" readonly aria-readonly="true"><input id="dPortalConsentFile" type="file" accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png"><button class="btn" id="uploadPortalConsentEvidence" type="button">Attach and validate proof</button><div class="privacy" id="portalConsentEvidenceStatus">${evidenceReference ? "Protected evidence reference is attached. The server will revalidate it when access is saved." : "Attach a PDF, JPEG, or PNG up to 3 MB. The original filename is not stored. The system validates the file and protected storage; staff must confirm it documents the required consent."}</div></div>${field("dPortalDisableReason", "Pause / revoke reason", access.disableReason || "")}</div>${checked("dPortalAllowlisted", access.allowlisted === true)}Personally selected for the adult Primary Care pilot.</span></label>${checked("dPortalContactVerified", false)}I verified the selected email or phone against the current Patient Registry record.</span></label>${checked("dPortalInvitationConfirmed", false)}I confirm the patient invitation was delivered through the verified channel. This records the invitation; it does not send one.</span></label><div class="notice"><b>Invitation preview · not sent</b><br>${esc(result.invitationPreview?.message || "BHW Medical secure patient portal invitation.")}</div><div class="actions"><button class="btn primary" id="savePortalAccess">Save pilot access</button></div><div class="privacy">Current status: ${esc(status)} · ${access.exactContactBound ? "exact contact verified" : "exact contact not verified"}${access.portalInvitedAt ? ` · invited ${esc(new Date(access.portalInvitedAt).toLocaleString())}` : ""}${access.lastAuthenticatedAt ? ` · last authenticated ${esc(new Date(access.lastAuthenticatedAt).toLocaleString())}` : ""}. Clinical details are never included in the invitation.</div>`;
     $("dPortalStatus").value = status;
     $("dPortalChannel").value = access.preferredChannel || "email";
     $("dPortalConsentStatus").value = access.consentStatus || "";
+    $("uploadPortalConsentEvidence").onclick = async () => {
+      const button = $("uploadPortalConsentEvidence");
+      const file = $("dPortalConsentFile").files?.[0];
+      button.disabled = true;
+      button.textContent = "Validating…";
+      try {
+        const uploaded = await client.uploadVerificationEvidence(bhwPatientId, file, "patient-portal-consent");
+        const evidence = uploaded.evidence || {};
+        if (evidence.status !== "verified" || !evidence.evidenceReference) throw new Error("The protected proof did not return a verified reference.");
+        $("dPortalConsentEvidence").value = evidence.evidenceReference;
+        $("dPortalConsentFile").value = "";
+        $("portalConsentEvidenceStatus").textContent = `Validated ${evidence.contentType || "file"} · ${Math.ceil(Number(evidence.byteLength || 0) / 1024)} KB · protected reference ${evidence.evidenceReference}.`;
+        showToast("Consent proof file and protected storage were validated. Confirm the consent meaning, then save pilot access.");
+      } catch (error) {
+        $("portalConsentEvidenceStatus").textContent = error.message || "Consent proof could not be attached.";
+        showToast(error.message || "Consent proof could not be attached.");
+      } finally {
+        button.disabled = false;
+        button.textContent = "Attach and validate proof";
+      }
+    };
     $("savePortalAccess").onclick = async () => {
       const selectedStatus = $("dPortalStatus").value;
       if (selectedStatus === "active" && status !== "active") { showToast("Active status is created only after the patient's first verified sign-in."); return; }
+      if (!["not-invited", "paused", "revoked"].includes(selectedStatus) && !$("dPortalConsentEvidence").value.trim()) { showToast("Attach and validate protected consent proof first."); return; }
       try {
         const saved = await client.savePortalAccess(bhwPatientId, {
           portalAccessStatus: selectedStatus,
@@ -384,6 +380,14 @@ async function renderPortalAccess(bhwPatientId) {
         showToast(`Care Connect access saved as ${saved.access.portalAccessStatus}. No invitation was sent.`);
       } catch (error) { showToast(error.message || "Care Connect pilot access could not be saved."); }
     };
+    if (previewOnly) {
+      $("dPortalConsentFile").disabled = true;
+      $("uploadPortalConsentEvidence").disabled = true;
+      $("uploadPortalConsentEvidence").textContent = "Preview only — upload disabled";
+      $("portalConsentEvidenceStatus").textContent = "The protected proof control is shown for interface review. Upload remains disabled until a separate synthetic-storage test is authorized.";
+      $("savePortalAccess").disabled = true;
+      $("savePortalAccess").textContent = "Preview only — save disabled";
+    }
   } catch (error) {
     if (selectedId === bhwPatientId && $("portalAccessPanel")) {
       $("portalAccessPanel").innerHTML = `<div class="notice"><b>Care Connect pilot controls are unavailable.</b><br>${esc(error.message || "Try again after the protected services reconnect.")}</div>`;

@@ -144,7 +144,10 @@ test("staff page records sent communication, supports revocation, and offers lon
 
 test("Patient 360 displays Education and Interactive Communication history", () => {
   assert.match(patientRegistryApp, /Education &amp; Interactive Communication/);
-  assert.match(patientRegistryApp, /\/v1\/staff\/content-assignments\?patientId=/);
+  assert.match(patientRegistryApp, /client\.contentAssignments\(bhwPatientId, 100\)/);
+  assert.doesNotMatch(patientRegistryApp, /bhw-medication-api-[^"']+\.run\.app/);
+  assert.match(patientRegistryApp, /Preview only — upload disabled/);
+  assert.match(patientRegistryApp, /separate synthetic-storage test is authorized/);
   assert.match(patientRegistryApp, /Recorded sent means a staff member attested/);
   assert.match(patientRegistryApp, /Opened and submitted are system-recorded/);
   assert.match(patientRegistryPage, /communication-panel/);
