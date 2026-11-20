@@ -29,15 +29,12 @@ const $ = (id) => document.getElementById(id);
 const esc = (value) => String(value ?? "").replace(/[&<>\"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[character]));
 const STATUS_OPTIONS = ["active", "prospective", "inactive", "transferred", "deceased"];
 const CONSENT_SOURCES = ["previsit-form", "new-patient-packet"];
-const CARE_API = "https://bhw-medication-api-343692256275.us-east4.run.app";
 const PORTAL_ACCESS_STATUSES = ["not-invited", "approved", "invited", "active", "paused", "revoked"];
 
 let client = null;
 let patients = [];
 let selectedId = "";
 let toastTimer;
-let careToken = "";
-let careTokenExpiresAt = 0;
 let registryFormDirty = false;
 let registryRefreshPromise = null;
 let registryLoaded = false;
@@ -241,31 +238,6 @@ function consentSourceLabel(value) {
   return value === "new-patient-packet" ? "New-patient packet" : "Previsit form";
 }
 
-async function getCareToken() {
-  if (careToken && Date.now() < careTokenExpiresAt) return careToken;
-  const crewToken = sessionStorage.getItem("crewos_token") || "";
-  if (!crewToken) throw new Error("CrewHQ session expired. Sign in again.");
-  const response = await fetch("/.netlify/functions/care-cloud-token", {
-    method: "POST",
-    credentials: "same-origin",
-    cache: "no-store",
-    headers: { Authorization: `Bearer ${crewToken}` },
-  });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok || !body.token) throw new Error(body.error || "Patient communication history is unavailable.");
-  careToken = body.token;
-  careTokenExpiresAt = Date.now() + Math.max(30, Number(body.expiresIn || 300) - 30) * 1000;
-  return careToken;
-}
-
-async function careRequest(path) {
-  const token = await getCareToken();
-  const response = await fetch(`${CARE_API}${path}`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.error || "Patient communication history is unavailable.");
-  return body;
-}
-
 function communicationStatusLabel(status) {
   return ({ generated: "Generated", sent_recorded: "Recorded sent", opened: "Opened", submitted: "Submitted", expired: "Expired", revoked: "Revoked" })[status] || status || "Unknown";
 }
@@ -284,9 +256,8 @@ async function renderEducationCommunication(bhwPatientId) {
   const panel = $("educationCommunicationPanel");
   if (!panel) return;
   try {
-    const result = await careRequest(`/v1/staff/content-assignments?patientId=${encodeURIComponent(bhwPatientId)}&limit=100`);
+    const assignments = await client.contentAssignments(bhwPatientId, 100);
     if (selectedId !== bhwPatientId || !$("educationCommunicationPanel")) return;
-    const assignments = Array.isArray(result.assignments) ? result.assignments : [];
     const rows = assignments.length ? assignments.map((item) => {
       const sent = item.sentAt ? `Recorded sent ${communicationTime(item.sentAt)} via ${communicationChannelLabel(item.sendChannel)}${item.destinationMasked ? ` to ${item.destinationMasked}` : ""}` : "Not recorded as sent";
       const activity = [item.openedAt ? `Opened ${communicationTime(item.openedAt)}` : "", item.submittedAt ? `Submitted ${communicationTime(item.submittedAt)}` : "", item.revokedAt ? `Revoked ${communicationTime(item.revokedAt)}` : ""].filter(Boolean).join(" · ");
