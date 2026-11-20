@@ -28,12 +28,14 @@ test("Patient Registry browser client stays on the signed-in CrewOS origin", asy
     const body = JSON.parse(options.body);
     calls.push({ url, options, body });
     if (body.action === "list") return Response.json({ patients: [{ bhwPatientId: "BHW9999" }] });
+    if (body.action === "content-assignments") return Response.json({ assignments: [{ id: "assignment-synthetic" }] });
     if (body.action === "save-patient") return Response.json({ patient: body.patient });
     if (body.action === "upload-verification-evidence") return Response.json({ evidence: { status: "verified", evidenceReference: "VE-synthetic" } });
     return Response.json({ consent: body.consent || { status: "current" }, eligible: true });
   }, storage);
 
   const patients = await client.listPatients();
+  const assignments = await client.contentAssignments("BHW0000", 100);
   await client.savePatient({ bhwPatientId: "BHW9999", legalFirstName: "Synthetic", updatedAt: "2026-10-05T12:00:00.000Z" });
   await client.recordingConsent("BHW9999");
   await client.saveRecordingConsent("BHW9999", { status: "current" });
@@ -45,19 +47,21 @@ test("Patient Registry browser client stays on the signed-in CrewOS origin", asy
     arrayBuffer: async () => Uint8Array.from(Buffer.from("%PDF-1.7\nSynthetic\n%%EOF")).buffer,
   });
   assert.equal(patients[0].bhwPatientId, "BHW9999");
+  assert.equal(assignments[0].id, "assignment-synthetic");
   assert.ok(calls.every((call) => call.url === "/.netlify/functions/patient-registry"));
   assert.ok(calls.every((call) => call.options.headers.Authorization === "Bearer synthetic-crew-token"));
   assert.deepEqual(calls[0].body, { action: "list" });
-  assert.equal(calls[1].body.action, "save-patient");
-  assert.equal(calls[1].body.expectedUpdatedAt, "2026-10-05T12:00:00.000Z");
-  assert.deepEqual(calls[2].body, { action: "recording-consent", bhwPatientId: "BHW9999" });
-  assert.deepEqual(calls[3].body, { action: "save-recording-consent", bhwPatientId: "BHW9999", consent: { status: "current" } });
-  assert.deepEqual(calls[4].body, { action: "portal-access", bhwPatientId: "BHW9999" });
-  assert.deepEqual(calls[5].body, { action: "save-portal-access", bhwPatientId: "BHW9999", access: { portalAccessStatus: "paused" } });
-  assert.equal(calls[6].body.action, "upload-verification-evidence");
-  assert.equal(calls[6].body.bhwPatientId, "BHW9999");
-  assert.equal(calls[6].body.evidence.contentType, "application/pdf");
-  assert.doesNotMatch(JSON.stringify(calls[6].body), /patient-name-must-not-leave-browser/);
+  assert.deepEqual(calls[1].body, { action: "content-assignments", bhwPatientId: "BHW0000", limit: 100 });
+  assert.equal(calls[2].body.action, "save-patient");
+  assert.equal(calls[2].body.expectedUpdatedAt, "2026-10-05T12:00:00.000Z");
+  assert.deepEqual(calls[3].body, { action: "recording-consent", bhwPatientId: "BHW9999" });
+  assert.deepEqual(calls[4].body, { action: "save-recording-consent", bhwPatientId: "BHW9999", consent: { status: "current" } });
+  assert.deepEqual(calls[5].body, { action: "portal-access", bhwPatientId: "BHW9999" });
+  assert.deepEqual(calls[6].body, { action: "save-portal-access", bhwPatientId: "BHW9999", access: { portalAccessStatus: "paused" } });
+  assert.equal(calls[7].body.action, "upload-verification-evidence");
+  assert.equal(calls[7].body.bhwPatientId, "BHW9999");
+  assert.equal(calls[7].body.evidence.contentType, "application/pdf");
+  assert.doesNotMatch(JSON.stringify(calls[7].body), /patient-name-must-not-leave-browser/);
 });
 
 test("Patient Registry proxy verifies CrewOS and calls Google Cloud server-side", async () => {
@@ -67,6 +71,9 @@ test("Patient Registry proxy verifies CrewOS and calls Google Cloud server-side"
     ["RCM_CLOUD_API_URL", "https://rcm.example.test"],
     ["OPERATIONS_CLOUD_API_URL", "https://operations.example.test"],
     ["CREWOS_OPERATIONS_TOKEN_SECRET", "synthetic-operations-secret"],
+    ["CREWHQ_CARE_TOKEN_SECRET", "synthetic-care-secret"],
+    ["BHW_MEDICATION_API_URL", "https://care.example.test"],
+    ["CONTEXT", "deploy-preview"],
   ]);
   const priorNetlify = globalThis.Netlify;
   const priorFetch = globalThis.fetch;
@@ -84,6 +91,7 @@ test("Patient Registry proxy verifies CrewOS and calls Google Cloud server-side"
     if (url.endsWith("/v1/verification-evidence")) {
       return Response.json({ ok: true, evidence: { status: "verified", evidenceReference: "VE-00000000-0000-4000-8000-000000000001" } }, { status: 201 });
     }
+    if (url.includes("/v1/staff/content-assignments")) return Response.json({ assignments: [] });
     if (url.endsWith("/recording-consent")) return Response.json({ consent: { status: "current" }, eligible: true });
     if (options.method === "PUT") return Response.json({ patient: JSON.parse(options.body) });
     return Response.json({ patients: [{ bhwPatientId: "BHW9999" }] });
@@ -101,7 +109,8 @@ test("Patient Registry proxy verifies CrewOS and calls Google Cloud server-side"
     const response = await registryHandler(request);
     const result = await response.json();
     assert.equal(response.status, 200);
-    assert.equal(result.patients[0].bhwPatientId, "BHW9999");
+    assert.equal(result.patients[0].bhwPatientId, "BHW0000");
+    assert.equal(result.patients[1].bhwPatientId, "BHW9999");
     assert.equal(outbound[0].url, "https://rcm.example.test/v1/patients");
     const cloudClaims = JSON.parse(Buffer.from(outbound[0].options.headers.Authorization.replace("Bearer ", "").split(".")[0], "base64url").toString("utf8"));
     assert.equal(cloudClaims.aud, "bhw-rcm-cloud");
@@ -210,6 +219,16 @@ test("Patient Registry proxy verifies CrewOS and calls Google Cloud server-side"
     const proofClaims = JSON.parse(Buffer.from(outbound[5].options.headers.Authorization.replace("Bearer ", "").split(".")[0], "base64url").toString("utf8"));
     assert.equal(proofClaims.aud, "bhw-operations-cloud");
     assert.equal(proofClaims.role, "admin");
+
+    const assignmentsResponse = await registryHandler(new Request("https://bhwcrewos.example/.netlify/functions/patient-registry", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${signedCrewToken()}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "content-assignments", bhwPatientId: "BHW0000", limit: 500 }),
+    }));
+    assert.equal(assignmentsResponse.status, 200);
+    assert.equal(outbound[6].url, "https://care.example.test/v1/staff/content-assignments?patientId=BHW0000&limit=100");
+    const careClaims = JSON.parse(Buffer.from(outbound[6].options.headers.Authorization.replace("Bearer ", "").split(".")[0], "base64url").toString("utf8"));
+    assert.equal(careClaims.aud, "bhw-care-cloud");
   } finally {
     globalThis.Netlify = priorNetlify;
     globalThis.fetch = priorFetch;
@@ -238,6 +257,45 @@ test("Patient Registry proxy rejects unauthenticated and unknown requests", asyn
     assert.equal(unknown.status, 400);
   } finally {
     globalThis.Netlify = priorNetlify;
+  }
+});
+
+test("BHW0000 stays preview-only and is never injected into the production registry", async () => {
+  const environment = new Map([
+    ["SESSION_SECRET", "synthetic-session-secret"],
+    ["CREWHQ_CLOUD_TOKEN_SECRET", "synthetic-cloud-secret"],
+    ["RCM_CLOUD_API_URL", "https://rcm.example.test"],
+    ["CONTEXT", "production"],
+  ]);
+  const priorNetlify = globalThis.Netlify;
+  const priorFetch = globalThis.fetch;
+  let externalCalls = 0;
+  globalThis.Netlify = { env: { get: (key) => environment.get(key) || "" } };
+  globalThis.fetch = async () => {
+    externalCalls += 1;
+    return Response.json({ patients: [{ bhwPatientId: "BHW9999" }] });
+  };
+  try {
+    const headers = { Authorization: `Bearer ${signedCrewToken()}`, "Content-Type": "application/json" };
+    const listResponse = await registryHandler(new Request("https://bhwcrewos.example/.netlify/functions/patient-registry", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ action: "list" }),
+    }));
+    const listResult = await listResponse.json();
+    assert.deepEqual(listResult.patients.map((patient) => patient.bhwPatientId), ["BHW9999"]);
+    assert.equal(externalCalls, 1);
+
+    const portalResponse = await registryHandler(new Request("https://bhwcrewos.example/.netlify/functions/patient-registry", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ action: "portal-access", bhwPatientId: "BHW0000" }),
+    }));
+    assert.equal(portalResponse.status, 400);
+    assert.equal(externalCalls, 1);
+  } finally {
+    globalThis.Netlify = priorNetlify;
+    globalThis.fetch = priorFetch;
   }
 });
 
