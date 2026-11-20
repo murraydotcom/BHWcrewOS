@@ -297,6 +297,18 @@ export default async (request) => {
         const access = body.access && typeof body.access === "object" && !Array.isArray(body.access) ? body.access : {};
         return response(200, await operationsRequest(`/v1/patient-portal-access/${encodeURIComponent(id)}`, session, { method: "PUT", body: access }));
       }
+      case "upload-verification-evidence": {
+        const id = patientId(body.bhwPatientId);
+        const supplied = body.evidence && typeof body.evidence === "object" && !Array.isArray(body.evidence) ? body.evidence : {};
+        const evidence = {
+          bhwPatientId: id,
+          purpose: String(supplied.purpose || "").trim(),
+          contentType: String(supplied.contentType || "").trim(),
+          byteLength: Number(supplied.byteLength),
+          contentBase64: String(supplied.contentBase64 || ""),
+        };
+        return response(200, await operationsRequest("/v1/verification-evidence", session, { method: "POST", body: evidence }));
+      }
       default:
         return response(400, { ok: false, error: "Unknown Patient Registry action" });
     }
