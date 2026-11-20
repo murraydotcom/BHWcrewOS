@@ -299,6 +299,34 @@ test("BHW0000 stays preview-only and is never injected into the production regis
   }
 });
 
+test("BHW0000 preview shows portal controls without enabling storage", async () => {
+  const environment = new Map([
+    ["SESSION_SECRET", "synthetic-session-secret"],
+    ["CONTEXT", "deploy-preview"],
+  ]);
+  const priorNetlify = globalThis.Netlify;
+  const priorFetch = globalThis.fetch;
+  let externalCalls = 0;
+  globalThis.Netlify = { env: { get: (key) => environment.get(key) || "" } };
+  globalThis.fetch = async () => { externalCalls += 1; return Response.json({}); };
+  try {
+    const previewResponse = await registryHandler(new Request("https://bhwcrewos.example/.netlify/functions/patient-registry", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${signedCrewToken()}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "portal-access", bhwPatientId: "BHW0000" }),
+    }));
+    const result = await previewResponse.json();
+    assert.equal(previewResponse.status, 200);
+    assert.equal(result.previewOnly, true);
+    assert.equal(result.access.portalAccessStatus, "not-invited");
+    assert.equal(result.invitationPreview.deliveryStatus, "not-sent");
+    assert.equal(externalCalls, 0);
+  } finally {
+    globalThis.Netlify = priorNetlify;
+    globalThis.fetch = priorFetch;
+  }
+});
+
 test("saved synthetic Health Core draft creates an idempotent PCP mention without copying note content", async () => {
   const receipt = validateHealthCoreDraftReceipt({
     handoffId: "handoff-synthetic-1",
