@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>CharmHealth medication match review</title>
+<style>
+body{margin:0;background:#f5f2ec;color:#263940;font:16px/1.5 system-ui,sans-serif}
+main{max-width:76rem;margin:auto;padding:1.5rem}
+a{color:#25576a}section{background:white;border:1px solid #d9dedb;border-radius:.8rem;padding:1rem}
+input,button{font:inherit}button{background:#2f4551;color:white;border:0;border-radius:.4rem;padding:.5rem .8rem}
+table{border-collapse:collapse;width:100%}th,td{text-align:left;vertical-align:top;padding:.6rem;border-bottom:1px solid #ddd}
+.results{overflow:auto;margin-top:1rem}
+</style>
+<script type="module" src="/assets/charm-medication-review-page.mjs"></script>
+</head>
+<body><main>
+<a href="/crewos?view=admin-master">Back to Admin Master</a>
+<h1>CharmHealth medication match review</h1>
+<p id="status" role="status">Checking Admin Master access…</p>
+<section id="review" hidden>
+<p>Select a CharmHealth medication CSV with the patient ID or MRN, date of birth, and medication name. Medication details stay in this tab. Only the ID and date of birth are sent to Patient Registry for matching.</p>
+<p>This preview does not save medication lists or publish them to myBHW. Closing or reloading the tab clears the review.</p>
+<label for="export">CharmHealth medication CSV</label>
+<input id="export" type="file" accept=".csv,text/csv">
+<button id="match" type="button" disabled>Find patient matches</button>
+<div class="results" id="results"></div>
+</section>
+</main></body></html>
