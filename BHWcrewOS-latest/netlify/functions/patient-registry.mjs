@@ -201,6 +201,26 @@ function withSyntheticPreviewPatient(result = {}) {
     : { ...result, patients: [syntheticPreviewPatient(), ...patients] };
 }
 
+function syntheticPreviewPortalAccess() {
+  return {
+    ok: true,
+    previewOnly: true,
+    organizationPilotEnabled: false,
+    access: {
+      portalAccessStatus: "not-invited",
+      preferredChannel: "email",
+      allowlisted: false,
+      consentStatus: "",
+      consentEvidenceReference: "",
+      exactContactBound: false,
+    },
+    invitationPreview: {
+      deliveryStatus: "not-sent",
+      message: "Preview only. No invitation, consent proof, or patient data will be sent or stored.",
+    },
+  };
+}
+
 function patientId(value) {
   const id = String(value || "").trim().toUpperCase();
   if (!/^BHW\d{4}$/.test(id) || id === "BHW0000") {
@@ -373,6 +393,9 @@ export default async (request) => {
       }
       case "portal-access": {
         const id = portalPatientId(body.bhwPatientId);
+        if (id === "BHW0000" && isDeployPreview() && !env("CREWOS_OPERATIONS_TOKEN_SECRET")) {
+          return response(200, syntheticPreviewPortalAccess());
+        }
         return response(200, await operationsRequest(`/v1/patient-portal-access/${encodeURIComponent(id)}`, session));
       }
       case "save-portal-access": {
