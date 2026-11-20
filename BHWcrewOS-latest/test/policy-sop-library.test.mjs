@@ -57,10 +57,28 @@ const peopleCulture = [
   "Day 30 60 90 Workforce Review",
 ];
 
+const employeeCompliance = [
+  "BHW Employee Compliance Safety Competency and Intellectual Property Packet",
+  "Employee File Collection Verification and Renewal Policy",
+  "Competency Assessment and Independent Work Release",
+  "Emergency Action and Safety Plan",
+  "Bloodborne Pathogens Exposure Control Plan",
+  "Hazard Communication Program",
+  "De-escalation Workplace Violence and Incident Response Policy",
+  "Phone, Social Media, Confidentiality and IP Policies",
+  "Employee File Request and Verification Checklist",
+  "Role-Specific Competency Checklist",
+  "EHR Competency Checklist",
+  "Laboratory and Point-of-Care Competency Checklist",
+  "Vascular Device Competency Checklist",
+  "Hepatitis B Vaccine Offer Acceptance or Declination",
+  "Confidentiality and Limited IP Assignment Agreement",
+];
+
 test("protected BHW policy and SOP library includes every required section", () => {
   assert.match(library, /<script src="\/crew-provider-gate\.js"><\/script>/);
   assert.ok(library.indexOf("crew-provider-gate.js") < library.indexOf("</head>"));
-  for (const title of [...policies, ...appendices, ...peopleCulture]) assert.ok(library.includes(title), `${title} missing`);
+  for (const title of [...policies, ...appendices, ...peopleCulture, ...employeeCompliance]) assert.ok(library.includes(title), `${title} missing`);
   assert.match(library, /Controlled Draft/);
   assert.match(library, /not effective policy until the approval and effective-date fields are completed/i);
 });
@@ -78,6 +96,7 @@ test("policy PDFs are available inside the authenticated site bundle", () => {
     "BHW_Master_Compliance_Safety_Culture_Policies.pdf",
     "BHW_Policy_Appendix_Forms.pdf",
     "BHW_People_Culture_and_Workforce_Handbook.pdf",
+    "BHW_Employee_Compliance_Safety_Competency_and_IP_Packet.pdf",
     "BHW_Policies_Procedures_Manual.pdf",
   ]) {
     const path = resolve(root, "docs", name);
