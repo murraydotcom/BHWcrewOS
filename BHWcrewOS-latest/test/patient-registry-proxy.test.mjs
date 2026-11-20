@@ -29,6 +29,7 @@ test("Patient Registry browser client stays on the signed-in CrewOS origin", asy
     calls.push({ url, options, body });
     if (body.action === "list") return Response.json({ patients: [{ bhwPatientId: "BHW9999" }] });
     if (body.action === "save-patient") return Response.json({ patient: body.patient });
+    if (body.action === "upload-verification-evidence") return Response.json({ evidence: { status: "verified", evidenceReference: "VE-synthetic" } });
     return Response.json({ consent: body.consent || { status: "current" }, eligible: true });
   }, storage);
 
@@ -38,6 +39,11 @@ test("Patient Registry browser client stays on the signed-in CrewOS origin", asy
   await client.saveRecordingConsent("BHW9999", { status: "current" });
   await client.portalAccess("BHW9999");
   await client.savePortalAccess("BHW9999", { portalAccessStatus: "paused" });
+  await client.uploadVerificationEvidence("BHW9999", {
+    name: "patient-name-must-not-leave-browser.pdf",
+    type: "application/pdf",
+    arrayBuffer: async () => Uint8Array.from(Buffer.from("%PDF-1.7\nSynthetic\n%%EOF")).buffer,
+  });
   assert.equal(patients[0].bhwPatientId, "BHW9999");
   assert.ok(calls.every((call) => call.url === "/.netlify/functions/patient-registry"));
   assert.ok(calls.every((call) => call.options.headers.Authorization === "Bearer synthetic-crew-token"));
@@ -48,6 +54,10 @@ test("Patient Registry browser client stays on the signed-in CrewOS origin", asy
   assert.deepEqual(calls[3].body, { action: "save-recording-consent", bhwPatientId: "BHW9999", consent: { status: "current" } });
   assert.deepEqual(calls[4].body, { action: "portal-access", bhwPatientId: "BHW9999" });
   assert.deepEqual(calls[5].body, { action: "save-portal-access", bhwPatientId: "BHW9999", access: { portalAccessStatus: "paused" } });
+  assert.equal(calls[6].body.action, "upload-verification-evidence");
+  assert.equal(calls[6].body.bhwPatientId, "BHW9999");
+  assert.equal(calls[6].body.evidence.contentType, "application/pdf");
+  assert.doesNotMatch(JSON.stringify(calls[6].body), /patient-name-must-not-leave-browser/);
 });
 
 test("Patient Registry proxy verifies CrewOS and calls Google Cloud server-side", async () => {
@@ -70,6 +80,9 @@ test("Patient Registry proxy verifies CrewOS and calls Google Cloud server-side"
         access: options.method === "PUT" ? JSON.parse(options.body) : null,
         invitationPreview: { deliveryStatus: "not-sent", message: "BHW Medical secure patient portal invitation." },
       });
+    }
+    if (url.endsWith("/v1/verification-evidence")) {
+      return Response.json({ ok: true, evidence: { status: "verified", evidenceReference: "VE-00000000-0000-4000-8000-000000000001" } }, { status: 201 });
     }
     if (url.endsWith("/recording-consent")) return Response.json({ consent: { status: "current" }, eligible: true });
     if (options.method === "PUT") return Response.json({ patient: JSON.parse(options.body) });
@@ -166,6 +179,37 @@ test("Patient Registry proxy verifies CrewOS and calls Google Cloud server-side"
     assert.equal(updateResponse.status, 200);
     assert.equal(outbound[4].options.method, "PUT");
     assert.deepEqual(JSON.parse(outbound[4].options.body), { portalAccessStatus: "paused", ignored: "server-validates" });
+
+    const uploadResponse = await registryHandler(new Request("https://bhwcrewos.example/.netlify/functions/patient-registry", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${signedCrewToken()}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "upload-verification-evidence",
+        bhwPatientId: "BHW9999",
+        evidence: {
+          purpose: "patient-portal-consent",
+          contentType: "application/pdf",
+          byteLength: 8,
+          contentBase64: "JVBERi0xLjc=",
+          filename: "must-be-dropped.pdf",
+          ignored: "drop-me",
+        },
+      }),
+    }));
+    assert.equal(uploadResponse.status, 200);
+    assert.equal(outbound[5].url, "https://operations.example.test/v1/verification-evidence");
+    assert.equal(outbound[5].options.method, "POST");
+    const forwardedEvidence = JSON.parse(outbound[5].options.body);
+    assert.deepEqual(forwardedEvidence, {
+      bhwPatientId: "BHW9999",
+      purpose: "patient-portal-consent",
+      contentType: "application/pdf",
+      byteLength: 8,
+      contentBase64: "JVBERi0xLjc=",
+    });
+    const proofClaims = JSON.parse(Buffer.from(outbound[5].options.headers.Authorization.replace("Bearer ", "").split(".")[0], "base64url").toString("utf8"));
+    assert.equal(proofClaims.aud, "bhw-operations-cloud");
+    assert.equal(proofClaims.role, "admin");
   } finally {
     globalThis.Netlify = priorNetlify;
     globalThis.fetch = priorFetch;
