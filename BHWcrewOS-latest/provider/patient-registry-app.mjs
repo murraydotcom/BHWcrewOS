@@ -361,13 +361,36 @@ async function renderPortalAccess(bhwPatientId) {
     const access = result.access || {};
     const status = PORTAL_ACCESS_STATUSES.includes(access.portalAccessStatus) ? access.portalAccessStatus : "not-invited";
     const pilotClass = result.organizationPilotEnabled ? "complete" : "warning";
-    panel.innerHTML = `<div class="card-head" style="padding:0 0 12px;border:0"><div><h3>Care Connect pilot access</h3><div class="privacy">Adult Primary Care pilot · patient self-access only · proxy and guardian access disabled.</div></div><span class="badge ${pilotClass}">${result.organizationPilotEnabled ? "Organization access on" : "Organization access off"}</span></div><div class="formgrid">${field("dPortalStatus", "Portal access status", status, "select", PORTAL_ACCESS_STATUSES)}${field("dPortalChannel", "Verified invitation channel", access.preferredChannel || "email", "select", ["email", "sms"])}${field("dPortalConsentStatus", "Portal consent", access.consentStatus || "", "select", ["", "current", "revoked"])}${field("dPortalConsentedAt", "Patient consented at", localDateTimeValue(access.consentedAt), "datetime-local")}${field("dPortalConsentEvidence", "Protected consent reference", access.consentEvidenceReference || "")}${field("dPortalDisableReason", "Pause / revoke reason", access.disableReason || "")}</div>${checked("dPortalAllowlisted", access.allowlisted === true)}Personally selected for the adult Primary Care pilot.</span></label>${checked("dPortalContactVerified", false)}I verified the selected email or phone against the current Patient Registry record.</span></label>${checked("dPortalInvitationConfirmed", false)}I confirm the patient invitation was delivered through the verified channel. This records the invitation; it does not send one.</span></label><div class="notice"><b>Invitation preview · not sent</b><br>${esc(result.invitationPreview?.message || "BHW Medical secure patient portal invitation.")}</div><div class="actions"><button class="btn primary" id="savePortalAccess">Save pilot access</button></div><div class="privacy">Current status: ${esc(status)} · ${access.exactContactBound ? "exact contact verified" : "exact contact not verified"}${access.portalInvitedAt ? ` · invited ${esc(new Date(access.portalInvitedAt).toLocaleString())}` : ""}${access.lastAuthenticatedAt ? ` · last authenticated ${esc(new Date(access.lastAuthenticatedAt).toLocaleString())}` : ""}. Clinical details are never included in the invitation.</div>`;
+    const evidenceReference = access.consentEvidenceReference || "";
+    panel.innerHTML = `<div class="card-head" style="padding:0 0 12px;border:0"><div><h3>Care Connect pilot access</h3><div class="privacy">Adult Primary Care pilot · patient self-access only · proxy and guardian access disabled.</div></div><span class="badge ${pilotClass}">${result.organizationPilotEnabled ? "Organization access on" : "Organization access off"}</span></div><div class="formgrid">${field("dPortalStatus", "Portal access status", status, "select", PORTAL_ACCESS_STATUSES)}${field("dPortalChannel", "Verified invitation channel", access.preferredChannel || "email", "select", ["email", "sms"])}${field("dPortalConsentStatus", "Portal consent", access.consentStatus || "", "select", ["", "current", "revoked"])}${field("dPortalConsentedAt", "Patient consented at", localDateTimeValue(access.consentedAt), "datetime-local")}<div class="field"><label>Protected consent proof</label><input id="dPortalConsentEvidence" value="${esc(evidenceReference)}" readonly aria-readonly="true"><input id="dPortalConsentFile" type="file" accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png"><button class="btn" id="uploadPortalConsentEvidence" type="button">Attach and validate proof</button><div class="privacy" id="portalConsentEvidenceStatus">${evidenceReference ? "Protected evidence reference is attached. The server will revalidate it when access is saved." : "Attach a PDF, JPEG, or PNG up to 3 MB. The original filename is not stored. The system validates the file and protected storage; staff must confirm it documents the required consent."}</div></div>${field("dPortalDisableReason", "Pause / revoke reason", access.disableReason || "")}</div>${checked("dPortalAllowlisted", access.allowlisted === true)}Personally selected for the adult Primary Care pilot.</span></label>${checked("dPortalContactVerified", false)}I verified the selected email or phone against the current Patient Registry record.</span></label>${checked("dPortalInvitationConfirmed", false)}I confirm the patient invitation was delivered through the verified channel. This records the invitation; it does not send one.</span></label><div class="notice"><b>Invitation preview · not sent</b><br>${esc(result.invitationPreview?.message || "BHW Medical secure patient portal invitation.")}</div><div class="actions"><button class="btn primary" id="savePortalAccess">Save pilot access</button></div><div class="privacy">Current status: ${esc(status)} · ${access.exactContactBound ? "exact contact verified" : "exact contact not verified"}${access.portalInvitedAt ? ` · invited ${esc(new Date(access.portalInvitedAt).toLocaleString())}` : ""}${access.lastAuthenticatedAt ? ` · last authenticated ${esc(new Date(access.lastAuthenticatedAt).toLocaleString())}` : ""}. Clinical details are never included in the invitation.</div>`;
     $("dPortalStatus").value = status;
     $("dPortalChannel").value = access.preferredChannel || "email";
     $("dPortalConsentStatus").value = access.consentStatus || "";
+    $("uploadPortalConsentEvidence").onclick = async () => {
+      const button = $("uploadPortalConsentEvidence");
+      const file = $("dPortalConsentFile").files?.[0];
+      button.disabled = true;
+      button.textContent = "Validating…";
+      try {
+        const uploaded = await client.uploadVerificationEvidence(bhwPatientId, file, "patient-portal-consent");
+        const evidence = uploaded.evidence || {};
+        if (evidence.status !== "verified" || !evidence.evidenceReference) throw new Error("The protected proof did not return a verified reference.");
+        $("dPortalConsentEvidence").value = evidence.evidenceReference;
+        $("dPortalConsentFile").value = "";
+        $("portalConsentEvidenceStatus").textContent = `Validated ${evidence.contentType || "file"} · ${Math.ceil(Number(evidence.byteLength || 0) / 1024)} KB · protected reference ${evidence.evidenceReference}.`;
+        showToast("Consent proof file and protected storage were validated. Confirm the consent meaning, then save pilot access.");
+      } catch (error) {
+        $("portalConsentEvidenceStatus").textContent = error.message || "Consent proof could not be attached.";
+        showToast(error.message || "Consent proof could not be attached.");
+      } finally {
+        button.disabled = false;
+        button.textContent = "Attach and validate proof";
+      }
+    };
     $("savePortalAccess").onclick = async () => {
       const selectedStatus = $("dPortalStatus").value;
       if (selectedStatus === "active" && status !== "active") { showToast("Active status is created only after the patient's first verified sign-in."); return; }
+      if (!["not-invited", "paused", "revoked"].includes(selectedStatus) && !$("dPortalConsentEvidence").value.trim()) { showToast("Attach and validate protected consent proof first."); return; }
       try {
         const saved = await client.savePortalAccess(bhwPatientId, {
           portalAccessStatus: selectedStatus,
