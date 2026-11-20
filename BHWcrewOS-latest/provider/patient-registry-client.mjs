@@ -60,6 +60,10 @@ export async function createPatientRegistryClient(fetchImpl = fetch, storage = g
       const body = await request("list");
       return Array.isArray(body.patients) ? body.patients : [];
     },
+    async contentAssignments(bhwPatientId, limit = 100) {
+      const body = await request("content-assignments", { bhwPatientId, limit });
+      return Array.isArray(body.assignments) ? body.assignments : [];
+    },
     savePatient(patient, expectedUpdatedAt = patient?.updatedAt || "") {
       return request("save-patient", { patient, expectedUpdatedAt });
     },
