@@ -862,7 +862,7 @@ function adminView(){
   const scheduleAvailable = !controlUnavailable("schedule");
   const divs = ["Primary Care","CharmEd Minds","Mind & Mood Recovery","Elevated Wellness","Care Management","Flow"];
   return `<section class="view" id="view-admin-master" style="--pc:var(--pc-admin)">
-    <div class="prog-head"><div class="bar"></div><div><h1>Admin Master</h1><p>${DIV_BLURBS["Admin Master"]}</p></div></div>
+    <div class="prog-head"><div class="bar"></div><div><h1>Admin Master</h1><p>${DIV_BLURBS["Admin Master"]}</p><p><a class="btn sec sm" href="/charm-medication-review.html">Review CharmHealth medication export</a></p></div></div>
     <div class="kpis">
       <div class="kpi" style="--kc:var(--alert)"><div class="n">${openR.length}</div><div class="l">Open referrals · all divisions</div></div>
       <div class="kpi" style="--kc:var(--warn)"><div class="n">${openH.length}</div><div class="l">Open warm handoffs</div></div>
