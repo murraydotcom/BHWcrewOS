@@ -95,6 +95,25 @@ function operationsToken(session) {
   return `${payload}.${signature}`;
 }
 
+function careToken(session) {
+  const secret = env("CREWHQ_CARE_TOKEN_SECRET");
+  if (!secret) throw Object.assign(new Error("CrewHQ care access is not configured"), { status: 503 });
+  const now = Math.floor(Date.now() / 1000);
+  const claims = {
+    sub: `crew:${session.staffId || "server"}`,
+    staffId: session.staffId || "server",
+    name: session.name || "CrewOS staff",
+    role: session.role || "staff",
+    iss: "bhw-crewhq",
+    aud: "bhw-care-cloud",
+    iat: now,
+    exp: now + 300,
+  };
+  const payload = Buffer.from(JSON.stringify(claims)).toString("base64url");
+  const signature = crypto.createHmac("sha256", secret).update(payload).digest("base64url");
+  return `${payload}.${signature}`;
+}
+
 async function cloudRequest(path, session, { method = "GET", body } = {}) {
   const base = safeApiBase(env("RCM_CLOUD_API_URL"));
   if (!base) throw Object.assign(new Error("Patient Registry cloud access is not configured"), { status: 503 });
@@ -131,9 +150,68 @@ async function operationsRequest(path, session, { method = "GET", body } = {}) {
   return result;
 }
 
+async function careRequest(path, session) {
+  const base = safeApiBase(env("BHW_MEDICATION_API_URL") || "https://bhw-medication-api-343692256275.us-east4.run.app");
+  if (!base) throw Object.assign(new Error("Patient communication history is not configured"), { status: 503 });
+  let careResponse;
+  try {
+    careResponse = await fetch(`${base}${path}`, {
+      headers: { Authorization: `Bearer ${careToken(session)}` },
+      redirect: "error",
+      signal: AbortSignal.timeout(8000),
+    });
+  } catch {
+    throw Object.assign(new Error("Patient communication history is unavailable"), { status: 502 });
+  }
+  const result = await careResponse.json().catch(() => ({}));
+  if (!careResponse.ok) {
+    throw Object.assign(new Error(result.error || `Patient communication history returned ${careResponse.status}`), { status: careResponse.status });
+  }
+  return result;
+}
+
+function isDeployPreview() {
+  return env("CONTEXT") === "deploy-preview";
+}
+
+function syntheticPreviewPatient() {
+  return {
+    bhwPatientId: "BHW0000",
+    legalFirstName: "Synthetic",
+    legalLastName: "Patient",
+    preferredName: "Preview only",
+    dateOfBirth: "",
+    phone: "",
+    email: "",
+    patientStatus: "active",
+    primaryPayer: "",
+    memberId: "",
+    coverageStatus: "needs-review",
+    referralSource: "Synthetic deploy preview",
+    responsibleStaff: "",
+    lastVerifiedAt: "",
+  };
+}
+
+function withSyntheticPreviewPatient(result = {}) {
+  if (!isDeployPreview()) return result;
+  const patients = Array.isArray(result.patients) ? result.patients : [];
+  return patients.some((patient) => patient?.bhwPatientId === "BHW0000")
+    ? result
+    : { ...result, patients: [syntheticPreviewPatient(), ...patients] };
+}
+
 function patientId(value) {
   const id = String(value || "").trim().toUpperCase();
   if (!/^BHW\d{4}$/.test(id) || id === "BHW0000") {
+    throw Object.assign(new Error("A verified BHW Patient ID is required"), { status: 400 });
+  }
+  return id;
+}
+
+function portalPatientId(value) {
+  const id = String(value || "").trim().toUpperCase();
+  if (!/^BHW\d{4}$/.test(id) || (id === "BHW0000" && !isDeployPreview())) {
     throw Object.assign(new Error("A verified BHW Patient ID is required"), { status: 400 });
   }
   return id;
@@ -250,7 +328,12 @@ export default async (request) => {
   try {
     switch (body.action) {
       case "list":
-        return response(200, await cloudRequest("/v1/patients", session));
+        return response(200, withSyntheticPreviewPatient(await cloudRequest("/v1/patients", session)));
+      case "content-assignments": {
+        const id = portalPatientId(body.bhwPatientId);
+        const limit = Math.min(100, Math.max(1, Number.parseInt(body.limit, 10) || 100));
+        return response(200, await careRequest(`/v1/staff/content-assignments?patientId=${encodeURIComponent(id)}&limit=${limit}`, session));
+      }
       case "save-patient": {
         const patient = pick(body.patient, PATIENT_FIELDS);
         patient.bhwPatientId = patientId(patient.bhwPatientId);
@@ -289,16 +372,16 @@ export default async (request) => {
         return response(200, await cloudRequest(`/v1/patients/${encodeURIComponent(id)}/recording-consent`, session, { method: "PUT", body: consent }));
       }
       case "portal-access": {
-        const id = patientId(body.bhwPatientId);
+        const id = portalPatientId(body.bhwPatientId);
         return response(200, await operationsRequest(`/v1/patient-portal-access/${encodeURIComponent(id)}`, session));
       }
       case "save-portal-access": {
-        const id = patientId(body.bhwPatientId);
+        const id = portalPatientId(body.bhwPatientId);
         const access = body.access && typeof body.access === "object" && !Array.isArray(body.access) ? body.access : {};
         return response(200, await operationsRequest(`/v1/patient-portal-access/${encodeURIComponent(id)}`, session, { method: "PUT", body: access }));
       }
       case "upload-verification-evidence": {
-        const id = patientId(body.bhwPatientId);
+        const id = portalPatientId(body.bhwPatientId);
         const supplied = body.evidence && typeof body.evidence === "object" && !Array.isArray(body.evidence) ? body.evidence : {};
         const evidence = {
           bhwPatientId: id,
